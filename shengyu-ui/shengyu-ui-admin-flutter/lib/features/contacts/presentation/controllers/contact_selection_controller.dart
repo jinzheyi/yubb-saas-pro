@@ -57,6 +57,14 @@ class ContactSelectionController extends StateNotifier<ContactSelectionState> {
       return false;
     }
     final limit = state.limit;
+    if (limit == 1) {
+      next.removeWhere(
+        (_, existing) => !existing.isCurrentUser || existing.id == entry.id,
+      );
+      next[entry.id] = entry;
+      state = state.copyWith(entries: next);
+      return true;
+    }
     if (limit != null && limit > 0 && next.length >= limit) {
       return state.isSelected(entry.id);
     }

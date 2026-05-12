@@ -19,6 +19,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/prov
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class InitiateGroupPage extends ConsumerStatefulWidget {
   const InitiateGroupPage({

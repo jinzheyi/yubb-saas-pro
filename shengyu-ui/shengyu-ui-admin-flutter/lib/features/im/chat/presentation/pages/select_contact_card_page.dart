@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/controllers/contact_selection_controller.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/my_department_page.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/my_following_page.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/my_groups_page.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/org_browser_page.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contact_picker_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
+import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -24,6 +28,7 @@ class SelectContactCardPage extends ConsumerStatefulWidget {
 
 class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
   final TextEditingController _searchController = TextEditingController();
+  late final ContactSelectionController _selectionController;
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -34,15 +39,20 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
   @override
   void initState() {
     super.initState();
-    ref.read(contactSelectionControllerProvider.notifier).start(limit: 1);
-    Future.microtask(_loadContacts);
+    _selectionController = ref.read(contactSelectionControllerProvider.notifier);
+    Future.microtask(_initializeSelection);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    ref.read(contactSelectionControllerProvider.notifier).end();
+    Future.microtask(_selectionController.end);
     super.dispose();
+  }
+
+  Future<void> _initializeSelection() async {
+    _selectionController.start(limit: 1);
+    await _loadContacts();
   }
 
   @override
@@ -180,8 +190,9 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
               label: strings.contactsMyGroups,
               color: const Color(0xFFFFB347),
               onTap: () => _openCategory(
-                RouteNames.contactsMyGroups,
-                const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                MyGroupsPage(
+                  args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                ),
               ),
             ),
             ContactPickerCategoryAction(
@@ -189,8 +200,9 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
               label: strings.contactsFavorites,
               color: const Color(0xFF246BFD),
               onTap: () => _openCategory(
-                RouteNames.contactsMyFollowing,
-                const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                MyFollowingPage(
+                  args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                ),
               ),
             ),
             ContactPickerCategoryAction(
@@ -198,8 +210,9 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
               label: strings.contactsOrganization,
               color: const Color(0xFF10B981),
               onTap: () => _openCategory(
-                RouteNames.contactsOrg,
-                const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                OrgBrowserPage(
+                  args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
+                ),
               ),
             ),
             ContactPickerCategoryAction(
@@ -207,10 +220,11 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
               label: strings.contactsDepartments,
               color: const Color(0xFF8F4CFF),
               onTap: () => _openCategory(
-                RouteNames.contactsMyDepartment,
-                const ContactDepartmentArgs(
-                  selectionMode: true,
-                  selectionLimit: 1,
+                MyDepartmentPage(
+                  args: ContactDepartmentArgs(
+                    selectionMode: true,
+                    selectionLimit: 1,
+                  ),
                 ),
               ),
             ),
@@ -309,22 +323,23 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
     }
   }
 
-  Future<void> _openCategory(String routeName, Object args) async {
-    await context.pushNamed(routeName, extra: args);
+  Future<void> _openCategory(Widget page) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
     if (mounted) {
       setState(() {});
     }
   }
 
   void _toggleLocalSelection(ContactDirectoryItem item) {
-    final controller = ref.read(contactSelectionControllerProvider.notifier);
     final state = ref.read(contactSelectionControllerProvider);
     if (state.isSelected(item.userId)) {
-      controller.removeAll(<String>[item.userId]);
+      _selectionController.removeAll(<String>[item.userId]);
       return;
     }
-    controller.removeAll(state.entries.keys);
-    controller.ensureSelected(
+    _selectionController.removeAll(state.entries.keys);
+    _selectionController.ensureSelected(
       ContactSelectionEntry(
         id: item.userId,
         name: item.name,

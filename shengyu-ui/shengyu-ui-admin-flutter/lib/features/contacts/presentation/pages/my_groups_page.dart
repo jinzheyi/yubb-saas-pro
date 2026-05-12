@@ -7,6 +7,8 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.da
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/group_summary.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/contact_group_members_page.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
@@ -24,6 +26,9 @@ class MyGroupsPage extends ConsumerStatefulWidget {
 
 class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
   final TextEditingController _searchController = TextEditingController();
+
+  bool get _isSingleSelection =>
+      widget.args.selectionMode && widget.args.selectionLimit == 1;
 
   @override
   void dispose() {
@@ -45,19 +50,7 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          label: Text(
-            strings.backAction,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-        ),
+        leading: const ContactsBackButton(),
         centerTitle: true,
         title: Text(strings.contactsMyGroups),
       ),
@@ -152,14 +145,22 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
 
   Future<void> _handleGroupTap(GroupSummary group) async {
     if (widget.args.selectionMode) {
-      context.pushNamed(
-        RouteNames.contactsGroupMembers,
-        extra: ContactGroupMembersArgs(
-          groupId: group.groupId,
-          groupName: group.name,
-          selectionLimit: widget.args.selectionLimit,
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => ContactGroupMembersPage(
+            args: ContactGroupMembersArgs(
+              groupId: group.groupId,
+              groupName: group.name,
+              selectionLimit: widget.args.selectionLimit,
+            ),
+          ),
         ),
       );
+      if (_isSingleSelection &&
+          mounted &&
+          ref.read(contactSelectionControllerProvider).count > 0) {
+        Navigator.of(context).pop();
+      }
       return;
     }
     try {

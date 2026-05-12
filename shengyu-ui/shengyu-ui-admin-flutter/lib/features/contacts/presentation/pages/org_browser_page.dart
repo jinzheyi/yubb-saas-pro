@@ -12,7 +12,6 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
 
 class OrgBrowserPage extends ConsumerStatefulWidget {
   const OrgBrowserPage({super.key, this.args = const ContactPickerArgs()});
@@ -34,6 +33,9 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       <String, List<ContactDirectoryItem>>{};
   final Set<String> _loadingDeptIds = <String>{};
   final Set<String> _expandedIds = <String>{'root'};
+
+  bool get _isSingleSelection =>
+      widget.args.selectionMode && widget.args.selectionLimit == 1;
 
   @override
   void dispose() {
@@ -62,19 +64,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          label: Text(
-            strings.backAction,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-        ),
+        leading: const ContactsBackButton(),
         centerTitle: true,
         title: Text(strings.contactsOrganization),
       ),
@@ -99,16 +89,6 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
               onChanged: _handleSearchChanged,
             ),
           ),
-          PrimaryInfoBanner(
-            icon: Icons.account_tree_outlined,
-            message: strings.contactsOrganizationDataConnected,
-            iconColor: const Color(0xFF8BCF19),
-            iconBackgroundColor: const Color(0xFFEAF6D8),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            borderRadius: 0,
-            messageMaxLines: 2,
-          ),
-          const SizedBox(height: 10),
           if (orgAsync.isLoading || _searching)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
@@ -150,7 +130,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
             ),
         ],
       ),
-      bottomNavigationBar: widget.args.selectionMode
+      bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -405,6 +385,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
           depth: depth,
           expanded: expanded,
           selectionMode: widget.args.selectionMode,
+          singleSelection: _isSingleSelection,
           selected: deptSelected,
           hasChildren: node.children.isNotEmpty,
           onToggleExpand: node.children.isEmpty
@@ -421,6 +402,19 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
                 },
           onTap: () async {
             if (!widget.args.selectionMode) {
+              unawaited(_loadMembersForDept(node.department.deptId));
+              setState(() {
+                if (node.children.isNotEmpty) {
+                  if (expanded) {
+                    _expandedIds.remove(node.department.deptId);
+                  } else {
+                    _expandedIds.add(node.department.deptId);
+                  }
+                }
+              });
+              return;
+            }
+            if (_isSingleSelection) {
               unawaited(_loadMembersForDept(node.department.deptId));
               setState(() {
                 if (node.children.isNotEmpty) {
@@ -468,6 +462,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
               member: member,
               depth: depth + 1,
               selectionMode: widget.args.selectionMode,
+              singleSelection: _isSingleSelection,
               selected: selected,
               onTap: () => _handleMemberTap(member),
             ),
@@ -533,7 +528,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
 
   void _handleMemberTap(ContactDirectoryItem member) {
     if (widget.args.selectionMode) {
-      ref
+      final selected = ref
           .read(contactSelectionControllerProvider.notifier)
           .toggle(
             ContactSelectionEntry(
@@ -545,6 +540,9 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
               avatarUrl: member.avatarUrl,
             ),
           );
+      if (_isSingleSelection && selected && mounted) {
+        Navigator.of(context).pop();
+      }
       return;
     }
     context.pushNamed(
@@ -613,6 +611,7 @@ class _OrgDeptTile extends StatelessWidget {
     required this.depth,
     required this.expanded,
     required this.selectionMode,
+    required this.singleSelection,
     required this.selected,
     required this.hasChildren,
     required this.onTap,
@@ -623,6 +622,7 @@ class _OrgDeptTile extends StatelessWidget {
   final int depth;
   final bool expanded;
   final bool selectionMode;
+  final bool singleSelection;
   final bool selected;
   final bool hasChildren;
   final VoidCallback onTap;
@@ -636,7 +636,7 @@ class _OrgDeptTile extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(16 + depth * 18, 10, 16, 10),
         child: Row(
           children: [
-            if (selectionMode)
+            if (selectionMode && !singleSelection)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Checkbox(value: selected, onChanged: (_) => onTap()),
@@ -684,6 +684,7 @@ class _OrgMemberTile extends StatelessWidget {
     required this.member,
     required this.depth,
     required this.selectionMode,
+    required this.singleSelection,
     required this.selected,
     required this.onTap,
   });
@@ -691,6 +692,7 @@ class _OrgMemberTile extends StatelessWidget {
   final ContactDirectoryItem member;
   final int depth;
   final bool selectionMode;
+  final bool singleSelection;
   final bool selected;
   final VoidCallback onTap;
 
@@ -705,7 +707,16 @@ class _OrgMemberTile extends StatelessWidget {
             if (selectionMode)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Checkbox(value: selected, onChanged: (_) => onTap()),
+                child: singleSelection
+                    ? Icon(
+                        selected
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : const Color(0xFF98A2B3),
+                      )
+                    : Checkbox(value: selected, onChanged: (_) => onTap()),
               ),
             ContactsInitialAvatar(
               name: member.name,

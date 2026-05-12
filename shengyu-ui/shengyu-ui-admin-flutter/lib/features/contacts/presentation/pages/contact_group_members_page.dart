@@ -11,6 +11,8 @@ class ContactGroupMembersPage extends ConsumerWidget {
 
   final ContactGroupMembersArgs args;
 
+  bool get _isSingleSelection => args.selectionLimit == 1;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(groupMembersFutureProvider(args.groupId));
@@ -39,7 +41,7 @@ class ContactGroupMembersPage extends ConsumerWidget {
             final selected = selectionState.isSelected(member.userId);
             return ListTile(
               onTap: () {
-                selectionController.toggle(
+                final selected = selectionController.toggle(
                   ContactSelectionEntry(
                     id: member.userId,
                     name: displayName,
@@ -47,6 +49,9 @@ class ContactGroupMembersPage extends ConsumerWidget {
                     avatarUrl: member.avatarUrl?.trim() ?? '',
                   ),
                 );
+                if (_isSingleSelection && selected) {
+                  Navigator.of(context).pop();
+                }
               },
               leading: ContactsInitialAvatar(
                 name: displayName,
@@ -55,45 +60,56 @@ class ContactGroupMembersPage extends ConsumerWidget {
               ),
               title: Text(displayName),
               subtitle: Text(role),
-              trailing: Checkbox(
-                value: selected,
-                onChanged: (_) {
-                  selectionController.toggle(
-                    ContactSelectionEntry(
-                      id: member.userId,
-                      name: displayName,
-                      role: role,
-                      avatarUrl: member.avatarUrl?.trim() ?? '',
+              trailing: _isSingleSelection
+                  ? Icon(
+                      selected
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_off_rounded,
+                      color: selected
+                          ? Theme.of(context).colorScheme.primary
+                          : const Color(0xFF98A2B3),
+                    )
+                  : Checkbox(
+                      value: selected,
+                      onChanged: (_) {
+                        selectionController.toggle(
+                          ContactSelectionEntry(
+                            id: member.userId,
+                            name: displayName,
+                            role: role,
+                            avatarUrl: member.avatarUrl?.trim() ?? '',
+                      ),
+            );
+          },
                     ),
-                  );
-                },
-              ),
             );
           },
         ),
         error: (error, _) => Center(child: Text(error.toString())),
         loading: () => const Center(child: CircularProgressIndicator()),
       ),
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '已选择 ${selectionState.count} 人',
-                style: const TextStyle(fontSize: 15),
+      bottomNavigationBar: _isSingleSelection
+          ? null
+          : Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '已选择 ${selectionState.count} 人',
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: selectionState.count == 0
+                        ? null
+                        : () => Navigator.of(context).maybePop(),
+                    child: const Text('确定'),
+                  ),
+                ],
               ),
             ),
-            FilledButton(
-              onPressed: selectionState.count == 0
-                  ? null
-                  : () => Navigator.of(context).maybePop(),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

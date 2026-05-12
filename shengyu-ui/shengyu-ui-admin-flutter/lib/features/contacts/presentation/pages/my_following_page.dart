@@ -22,6 +22,9 @@ class MyFollowingPage extends ConsumerStatefulWidget {
 class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
   final TextEditingController _searchController = TextEditingController();
 
+  bool get _isSingleSelection =>
+      widget.args.selectionMode && widget.args.selectionLimit == 1;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -98,11 +101,20 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
                             : item.postName,
                       ),
                       trailing: widget.args.selectionMode
-                          ? Checkbox(
-                              value: selected,
-                              onChanged: (_) =>
-                                  _handleTap(selectionController, item),
-                            )
+                          ? _isSingleSelection
+                                ? Icon(
+                                    selected
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_off_rounded,
+                                    color: selected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : const Color(0xFF98A2B3),
+                                  )
+                                : Checkbox(
+                                    value: selected,
+                                    onChanged: (_) =>
+                                        _handleTap(selectionController, item),
+                                  )
                           : const Icon(Icons.chevron_right_rounded),
                     );
                   },
@@ -114,7 +126,7 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
           ),
         ],
       ),
-      bottomNavigationBar: widget.args.selectionMode
+      bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -144,7 +156,7 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
     ContactDirectoryItem item,
   ) async {
     if (widget.args.selectionMode) {
-      selectionController.toggle(
+      final selected = selectionController.toggle(
         ContactSelectionEntry(
           id: item.userId,
           name: item.name,
@@ -154,6 +166,9 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
           avatarUrl: item.avatarUrl,
         ),
       );
+      if (_isSingleSelection && selected && mounted) {
+        Navigator.of(context).pop();
+      }
       return;
     }
     if (!mounted) {

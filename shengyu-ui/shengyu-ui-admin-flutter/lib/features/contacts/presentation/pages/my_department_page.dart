@@ -13,7 +13,6 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
 
 class MyDepartmentPage extends ConsumerStatefulWidget {
   const MyDepartmentPage({
@@ -36,6 +35,9 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
   List<DepartmentSummary>? _searchedDepartments;
   final Map<String, List<ContactDirectoryItem>> _searchedMembersByDept =
       <String, List<ContactDirectoryItem>>{};
+
+  bool get _isSingleSelection =>
+      widget.args.selectionMode && widget.args.selectionLimit == 1;
 
   @override
   void initState() {
@@ -86,19 +88,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          label: Text(
-            strings.backAction,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-        ),
+        leading: const ContactsBackButton(),
         centerTitle: true,
         title: Text(strings.contactsDepartments),
       ),
@@ -136,15 +126,6 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                   ),
                   onChanged: _handleSearchChanged,
                 ),
-                const SizedBox(height: 10),
-                PrimaryInfoBanner(
-                  icon: Icons.apartment_rounded,
-                  message: strings.contactsDepartmentDataConnected,
-                  iconColor: const Color(0xFF1FB0D8),
-                  iconBackgroundColor: const Color(0xFFE8F8FC),
-                  backgroundColor: const Color(0xFFF8FBFF),
-                  messageMaxLines: 2,
-                ),
               ],
             ),
           ),
@@ -179,7 +160,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
             ),
         ],
       ),
-      bottomNavigationBar: widget.args.selectionMode
+      bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -290,6 +271,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                   : members[index].postName,
               color: _memberColor(members[index].name),
               selectionMode: widget.args.selectionMode,
+              singleSelection: _isSingleSelection,
               selected: selectionState.isSelected(members[index].userId),
               onTap: () => widget.args.selectionMode
                   ? _toggleSelected(selectionController, members[index])
@@ -569,7 +551,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     ContactSelectionController controller,
     ContactDirectoryItem member,
   ) {
-    controller.toggle(
+    final selected = controller.toggle(
       ContactSelectionEntry(
         id: member.userId,
         name: member.name,
@@ -577,6 +559,9 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
         avatarUrl: member.avatarUrl,
       ),
     );
+    if (_isSingleSelection && selected && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Color _memberColor(String name) {
@@ -605,6 +590,7 @@ class _DepartmentMemberTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     required this.selectionMode,
+    required this.singleSelection,
     required this.selected,
   });
 
@@ -613,6 +599,7 @@ class _DepartmentMemberTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final bool selectionMode;
+  final bool singleSelection;
   final bool selected;
 
   @override
@@ -639,7 +626,16 @@ class _DepartmentMemberTile extends StatelessWidget {
           top: 0,
           bottom: 0,
           child: Center(
-            child: Checkbox(value: selected, onChanged: (_) => onTap()),
+            child: singleSelection
+                ? Icon(
+                    selected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_off_rounded,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : const Color(0xFF98A2B3),
+                  )
+                : Checkbox(value: selected, onChanged: (_) => onTap()),
           ),
         ),
       ],

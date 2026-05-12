@@ -334,6 +334,7 @@ class _FavoriteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),

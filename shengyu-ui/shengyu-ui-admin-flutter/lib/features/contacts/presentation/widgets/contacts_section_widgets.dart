@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
+class ContactsBackButton extends StatelessWidget {
+  const ContactsBackButton({super.key, this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
+      icon: const AppIcon(
+        AppIconKind.chevronLeft,
+        size: 20,
+        color: Color(0xFF202531),
+      ),
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+    );
+  }
+}
+
 class ContactsSectionCard extends StatelessWidget {
   const ContactsSectionCard({
     super.key,

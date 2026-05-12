@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
@@ -88,46 +89,56 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.login,
         name: RouteNames.login,
-        builder: (context, state) => const LoginPage(),
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const LoginPage()),
       ),
       GoRoute(
         path: RoutePaths.browser,
         name: RouteNames.browser,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is BrowserPageArgs
               ? state.extra! as BrowserPageArgs
               : const BrowserPageArgs(url: '');
-          return BrowserPage(args: args);
+          return _buildRoutePage(state: state, child: BrowserPage(args: args));
         },
       ),
       GoRoute(
         path: RoutePaths.callIncoming,
         name: RouteNames.callIncoming,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is CallLaunchArgs
               ? state.extra! as CallLaunchArgs
               : const CallLaunchArgs.empty();
-          return IncomingCallPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: IncomingCallPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.callOutgoing,
         name: RouteNames.callOutgoing,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is CallLaunchArgs
               ? state.extra! as CallLaunchArgs
               : const CallLaunchArgs.empty();
-          return OutgoingCallPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: OutgoingCallPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.callSession,
         name: RouteNames.callSession,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is CallLaunchArgs
               ? state.extra! as CallLaunchArgs
               : const CallLaunchArgs.empty();
-          return CallSessionPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: CallSessionPage(args: args),
+          );
         },
       ),
       ShellRoute(
@@ -140,245 +151,319 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.conversations,
             name: RouteNames.conversations,
-            builder: (context, state) => const ConversationListPage(),
+            pageBuilder: (context, state) => _buildRoutePage(
+              state: state,
+              child: const ConversationListPage(),
+            ),
           ),
           GoRoute(
             path: RoutePaths.contacts,
             name: RouteNames.contacts,
-            builder: (context, state) => const ContactsPage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const ContactsPage()),
           ),
           GoRoute(
             path: RoutePaths.contactsOrg,
             name: RouteNames.contactsOrg,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is ContactPickerArgs
                   ? state.extra! as ContactPickerArgs
                   : const ContactPickerArgs();
-              return OrgBrowserPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: OrgBrowserPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsMyDepartment,
             name: RouteNames.contactsMyDepartment,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final extra = state.extra;
               if (extra is ContactDepartmentArgs) {
-                return MyDepartmentPage(args: extra);
+                return _buildRoutePage(
+                  state: state,
+                  child: MyDepartmentPage(args: extra),
+                );
               }
               if (extra is Map<String, String>) {
-                return MyDepartmentPage(
-                  args: ContactDepartmentArgs(
-                    initialDeptId: extra['deptId'],
-                    initialDeptName: extra['deptName'],
+                return _buildRoutePage(
+                  state: state,
+                  child: MyDepartmentPage(
+                    args: ContactDepartmentArgs(
+                      initialDeptId: extra['deptId'],
+                      initialDeptName: extra['deptName'],
+                    ),
                   ),
                 );
               }
-              return const MyDepartmentPage();
+              return _buildRoutePage(
+                state: state,
+                child: const MyDepartmentPage(),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsMyGroups,
             name: RouteNames.contactsMyGroups,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is ContactPickerArgs
                   ? state.extra! as ContactPickerArgs
                   : const ContactPickerArgs();
-              return MyGroupsPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: MyGroupsPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsMyFollowing,
             name: RouteNames.contactsMyFollowing,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is ContactPickerArgs
                   ? state.extra! as ContactPickerArgs
                   : const ContactPickerArgs();
-              return MyFollowingPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: MyFollowingPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsGroupMembers,
             name: RouteNames.contactsGroupMembers,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is ContactGroupMembersArgs
                   ? state.extra! as ContactGroupMembersArgs
                   : const ContactGroupMembersArgs(
                       groupId: '',
                       groupName: '群成员',
                     );
-              return ContactGroupMembersPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: ContactGroupMembersPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsFavorites,
             name: RouteNames.contactsFavorites,
-            builder: (context, state) => const StarContactsPage(),
+            pageBuilder: (context, state) => _buildRoutePage(
+              state: state,
+              child: const StarContactsPage(),
+            ),
           ),
           GoRoute(
             path: RoutePaths.favoriteDetail,
             name: RouteNames.favoriteDetail,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is FavoriteDetailRouteArgs
                   ? state.extra! as FavoriteDetailRouteArgs
                   : const FavoriteDetailRouteArgs(favoriteId: '');
-              return FavoriteDetailPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: FavoriteDetailPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsProfile,
             name: RouteNames.contactsProfile,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final extra = state.extra;
               if (extra is Map<String, String>) {
-                return ContactProfilePage(
-                  userId: extra['userId'] ?? '',
-                  name: extra['name'] ?? '用户',
-                  departmentName: extra['departmentName'] ?? '',
+                return _buildRoutePage(
+                  state: state,
+                  child: ContactProfilePage(
+                    userId: extra['userId'] ?? '',
+                    name: extra['name'] ?? '用户',
+                    departmentName: extra['departmentName'] ?? '',
+                  ),
                 );
               }
-              return const ContactProfilePage(
-                userId: '',
-                name: '用户',
-                departmentName: '',
+              return _buildRoutePage(
+                state: state,
+                child: const ContactProfilePage(
+                  userId: '',
+                  name: '用户',
+                  departmentName: '',
+                ),
               );
             },
           ),
           GoRoute(
             path: RoutePaths.contactsSearchResult,
             name: RouteNames.contactsSearchResult,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final keyword = state.extra is String
                   ? state.extra! as String
                   : '';
-              return ContactSearchResultPage(keyword: keyword);
+              return _buildRoutePage(
+                state: state,
+                child: ContactSearchResultPage(keyword: keyword),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.globalChatSearch,
             name: RouteNames.globalChatSearch,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final keyword = state.extra is String
                   ? state.extra! as String
                   : state.uri.queryParameters['keyword'] ?? '';
-              return CommonGlobalSearchPage(initialKeyword: keyword);
+              return _buildRoutePage(
+                state: state,
+                child: CommonGlobalSearchPage(initialKeyword: keyword),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.scan,
             name: RouteNames.scan,
-            builder: (context, state) => const ScanPage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const ScanPage()),
           ),
           GoRoute(
             path: RoutePaths.joinGroup,
             name: RouteNames.joinGroup,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final payload = state.extra is String
                   ? state.extra! as String
                   : null;
-              return JoinGroupPage(initialPayload: payload);
+              return _buildRoutePage(
+                state: state,
+                child: JoinGroupPage(initialPayload: payload),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.initiateGroup,
             name: RouteNames.initiateGroup,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra is InitiateGroupArgs
                   ? state.extra! as InitiateGroupArgs
                   : const InitiateGroupArgs.create();
-              return InitiateGroupPage(args: args);
+              return _buildRoutePage(
+                state: state,
+                child: InitiateGroupPage(args: args),
+              );
             },
           ),
           GoRoute(
             path: RoutePaths.workbench,
             name: RouteNames.workbench,
-            builder: (context, state) => const WorkbenchPage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const WorkbenchPage()),
           ),
           GoRoute(
             path: RoutePaths.profile,
             name: RouteNames.profile,
-            builder: (context, state) => const ProfilePage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const ProfilePage()),
           ),
           GoRoute(
             path: RoutePaths.favorites,
             name: RouteNames.favorites,
-            builder: (context, state) => const FavoritesPage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const FavoritesPage()),
           ),
           GoRoute(
             path: RoutePaths.settings,
             name: RouteNames.settings,
-            builder: (context, state) => const SettingsPage(),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const SettingsPage()),
           ),
           GoRoute(
             path: RoutePaths.themeSettings,
             name: RouteNames.themeSettings,
-            builder: (context, state) => const ThemeSettingsPage(),
+            pageBuilder: (context, state) => _buildRoutePage(
+              state: state,
+              child: const ThemeSettingsPage(),
+            ),
           ),
           GoRoute(
             path: RoutePaths.languageSettings,
             name: RouteNames.languageSettings,
-            builder: (context, state) => const LanguageSettingsPage(),
+            pageBuilder: (context, state) => _buildRoutePage(
+              state: state,
+              child: const LanguageSettingsPage(),
+            ),
           ),
         ],
       ),
       GoRoute(
         path: RoutePaths.chat,
         name: RouteNames.chat,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ChatEntryArgs
               ? state.extra! as ChatEntryArgs
               : const ChatEntryArgs.empty();
-          return ChatPage(args: args);
+          return _buildRoutePage(state: state, child: ChatPage(args: args));
         },
       ),
       GoRoute(
         path: RoutePaths.chatSelectContactCard,
         name: RouteNames.chatSelectContactCard,
-        builder: (context, state) => const SelectContactCardPage(),
+        pageBuilder: (context, state) => _buildRoutePage(
+          state: state,
+          child: const SelectContactCardPage(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.chatSelectLocation,
         name: RouteNames.chatSelectLocation,
-        builder: (context, state) => const SelectLocationPage(),
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const SelectLocationPage()),
       ),
       GoRoute(
         path: RoutePaths.chatStickerManage,
         name: RouteNames.chatStickerManage,
-        builder: (context, state) => const StickerManagePage(),
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const StickerManagePage()),
       ),
       GoRoute(
         path: RoutePaths.chatSettings,
         name: RouteNames.chatSettings,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ChatEntryArgs
               ? state.extra! as ChatEntryArgs
               : const ChatEntryArgs.empty();
-          return ChatSettingsPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ChatSettingsPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatMedia,
         name: RouteNames.chatMedia,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ChatEntryArgs
               ? state.extra! as ChatEntryArgs
               : const ChatEntryArgs.empty();
-          return ChatMediaPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ChatMediaPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatHistory,
         name: RouteNames.chatHistory,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ChatEntryArgs
               ? state.extra! as ChatEntryArgs
               : const ChatEntryArgs.empty();
-          return ChatHistoryPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ChatHistoryPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatReadReceipt,
         name: RouteNames.chatReadReceipt,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ReadReceiptRouteArgs
               ? state.extra! as ReadReceiptRouteArgs
               : const ReadReceiptRouteArgs(
@@ -386,43 +471,55 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   chatTitle: '',
                   messagePreview: '',
                 );
-          return ReadReceiptPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ReadReceiptPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatForwardTarget,
         name: RouteNames.chatForwardTarget,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ForwardTargetRouteArgs
               ? state.extra! as ForwardTargetRouteArgs
               : const ForwardTargetRouteArgs(messageIds: <String>[]);
-          return ForwardTargetPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ForwardTargetPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatForwardCombineDetail,
         name: RouteNames.chatForwardCombineDetail,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is ForwardCombineDetailRouteArgs
               ? state.extra! as ForwardCombineDetailRouteArgs
               : const ForwardCombineDetailRouteArgs(messageId: '');
-          return ForwardCombineDetailPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: ForwardCombineDetailPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.chatVideoPlayer,
         name: RouteNames.chatVideoPlayer,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is VideoPlayerRouteArgs
               ? state.extra! as VideoPlayerRouteArgs
               : const VideoPlayerRouteArgs(url: '');
-          return VideoPlayerPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: VideoPlayerPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.filePreview,
         name: RouteNames.filePreview,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is FilePreviewRouteArgs
               ? state.extra! as FilePreviewRouteArgs
               : const FilePreviewRouteArgs(
@@ -431,16 +528,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   mimeType: 'application/octet-stream',
                   fileSize: 0,
                 );
-          return FilePreviewPage(
-            args: FilePreviewArgs(
-              fileId: args.fileId,
-              fileName: args.fileName,
-              mimeType: args.mimeType,
-              fileSize: args.fileSize,
-              fileUrl: args.fileUrl,
-              messageId: args.messageId,
-              chatId: args.chatId,
-              sourceType: args.sourceType,
+          return _buildRoutePage(
+            state: state,
+            child: FilePreviewPage(
+              args: FilePreviewArgs(
+                fileId: args.fileId,
+                fileName: args.fileName,
+                mimeType: args.mimeType,
+                fileSize: args.fileSize,
+                fileUrl: args.fileUrl,
+                messageId: args.messageId,
+                chatId: args.chatId,
+                sourceType: args.sourceType,
+              ),
             ),
           );
         },
@@ -448,77 +548,98 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.groupSettings,
         name: RouteNames.groupSettings,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
               : const GroupContextArgs(groupId: '', groupName: '群聊设置');
-          return GroupSettingsPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupSettingsPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupMembers,
         name: RouteNames.groupMembers,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
               : const GroupContextArgs(groupId: '', groupName: '群成员');
-          return GroupMembersPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupMembersPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupQrCode,
         name: RouteNames.groupQrCode,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
               : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
-          return GroupQrCodePage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupQrCodePage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupAnnouncement,
         name: RouteNames.groupAnnouncement,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
               : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
-          return GroupAnnouncementPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupAnnouncementPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupFiles,
         name: RouteNames.groupFiles,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
               : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
-          return GroupFilesPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupFilesPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupChatHistory,
         name: RouteNames.groupChatHistory,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
               : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
-          return GroupChatHistoryPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupChatHistoryPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupJoinRequests,
         name: RouteNames.groupJoinRequests,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
               : const GroupContextArgs(groupId: '', groupName: '群聊设置');
-          return GroupJoinRequestsPage(args: args);
+          return _buildRoutePage(
+            state: state,
+            child: GroupJoinRequestsPage(args: args),
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.groupMemberDetail,
         name: RouteNames.groupMemberDetail,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra is GroupMemberDetailArgs
               ? state.extra! as GroupMemberDetailArgs
               : const GroupMemberDetailArgs(
@@ -535,23 +656,42 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   canToggleAdmin: false,
                   canToggleMute: false,
                 );
-          return GroupMemberDetailPage(
-            args: args.groupContext,
-            memberUserId: args.memberUserId,
-            memberName: args.memberName,
-            memberRoleCode: args.memberRoleCode,
-            colorValue: args.colorValue,
-            avatarUrl: args.avatarUrl,
-            canTransferOwner: args.canTransferOwner,
-            canRemoveMember: args.canRemoveMember,
-            canToggleAdmin: args.canToggleAdmin,
-            canToggleMute: args.canToggleMute,
-            joinTime: args.joinTime,
-            muteEndTime: args.muteEndTime,
-            isMuted: args.isMuted,
+          return _buildRoutePage(
+            state: state,
+            child: GroupMemberDetailPage(
+              args: args.groupContext,
+              memberUserId: args.memberUserId,
+              memberName: args.memberName,
+              memberRoleCode: args.memberRoleCode,
+              colorValue: args.colorValue,
+              avatarUrl: args.avatarUrl,
+              canTransferOwner: args.canTransferOwner,
+              canRemoveMember: args.canRemoveMember,
+              canToggleAdmin: args.canToggleAdmin,
+              canToggleMute: args.canToggleMute,
+              joinTime: args.joinTime,
+              muteEndTime: args.muteEndTime,
+              isMuted: args.isMuted,
+            ),
           );
         },
       ),
     ],
   );
 });
+
+MaterialPage<void> _buildRoutePage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return MaterialPage<void>(
+    key: state.pageKey,
+    name: state.name ?? state.path,
+    arguments: <String, String>{
+      ...state.pathParameters,
+      ...state.uri.queryParameters,
+    },
+    restorationId: state.pageKey.value,
+    child: child,
+  );
+}

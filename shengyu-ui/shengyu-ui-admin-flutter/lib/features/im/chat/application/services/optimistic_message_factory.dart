@@ -233,7 +233,7 @@ class OptimisticMessageFactory {
       chatId: chatId,
       senderId: session.userId,
       senderName: '',
-      type: MessageType.custom,
+      type: MessageType.contactCard,
       status: MessageStatus.sending,
       content: contentRaw,
       sentAt: DateTime.now(),
