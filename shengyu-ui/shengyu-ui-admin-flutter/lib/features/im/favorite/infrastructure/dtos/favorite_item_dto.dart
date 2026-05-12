@@ -1,29 +1,25 @@
-import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
-
 class FavoriteItemDto {
   const FavoriteItemDto({
     required this.favoriteId,
     required this.messageId,
-    required this.chatId,
-    required this.conversationType,
-    required this.title,
-    required this.summary,
-    required this.senderName,
     required this.messageType,
-    required this.status,
-    required this.createdAt,
+    required this.messagePreview,
+    required this.messageContent,
+    required this.messageExtra,
+    required this.messageSnapshot,
+    required this.sendTime,
+    required this.favoriteTime,
   });
 
   final String favoriteId;
   final String messageId;
-  final String chatId;
-  final ConversationType conversationType;
-  final String title;
-  final String summary;
-  final String senderName;
-  final String messageType;
-  final String status;
-  final DateTime createdAt;
+  final int messageType;
+  final String messagePreview;
+  final String messageContent;
+  final String messageExtra;
+  final String messageSnapshot;
+  final String sendTime;
+  final String favoriteTime;
 
   factory FavoriteItemDto.fromJson(Map<String, dynamic> json) {
     return FavoriteItemDto(
@@ -33,92 +29,24 @@ class FavoriteItemDto {
           json['messageId']?.toString() ??
           json['sourceMessageId']?.toString() ??
           '',
-      chatId:
-          json['sourceChatId']?.toString() ?? json['chatId']?.toString() ?? '',
-      conversationType: _parseConversationType(
-        json['conversationType']?.toString() ??
-            json['sourceConversationType']?.toString() ??
-            json['chatType']?.toString(),
-      ),
-      title:
-          json['title']?.toString() ??
-          json['conversationName']?.toString() ??
-          json['sourceChatName']?.toString() ??
-          json['sourceConversationName']?.toString() ??
-          json['chatName']?.toString() ??
-          '',
-      summary:
-          json['summary']?.toString() ??
-          json['contentSummary']?.toString() ??
-          json['messageSummary']?.toString() ??
+      messageType: _parseMessageType(json),
+      messagePreview:
+          json['messagePreview']?.toString() ??
           json['previewText']?.toString() ??
-          json['content']?.toString() ??
           '',
-      senderName:
-          json['senderName']?.toString() ??
-          json['sourceSenderName']?.toString() ??
-          json['senderNickname']?.toString() ??
-          '',
-      messageType:
-          json['messageType']?.toString() ?? json['type']?.toString() ?? '',
-      status:
-          json['status']?.toString() ??
-          json['messageStatus']?.toString() ??
-          json['sourceMessageStatus']?.toString() ??
-          '',
-      createdAt: _parseCreatedAt(json),
+      messageContent: json['messageContent']?.toString() ?? '',
+      messageExtra: json['messageExtra']?.toString() ?? '',
+      messageSnapshot: json['messageSnapshot']?.toString() ?? '',
+      sendTime: json['sendTime']?.toString() ?? '',
+      favoriteTime: json['favoriteTime']?.toString() ?? '',
     );
   }
 
-  static ConversationType _parseConversationType(String? raw) {
-    switch (raw?.trim().toLowerCase()) {
-      case 'group':
-      case '2':
-        return ConversationType.group;
-      case 'direct':
-      case 'single':
-      case 'private':
-      case '1':
-        return ConversationType.direct;
-      default:
-        return ConversationType.direct;
+  static int _parseMessageType(Map<String, dynamic> json) {
+    final raw = json['messageType'] ?? json['type'];
+    if (raw is num) {
+      return raw.toInt();
     }
-  }
-
-  static DateTime _parseCreatedAt(Map<String, dynamic> json) {
-    final candidates = <Object?>[
-      json['createdTime'],
-      json['createTime'],
-      json['createdAt'],
-      json['favoriteTime'],
-    ];
-    for (final raw in candidates) {
-      if (raw == null) {
-        continue;
-      }
-      if (raw is num) {
-        final value = raw.toInt();
-        if (value > 0) {
-          return DateTime.fromMillisecondsSinceEpoch(value);
-        }
-        continue;
-      }
-      final text = raw.toString().trim();
-      if (text.isEmpty) {
-        continue;
-      }
-      final millis = int.tryParse(text);
-      if (millis != null && millis > 0) {
-        return DateTime.fromMillisecondsSinceEpoch(millis);
-      }
-      final normalized = text.contains(' ')
-          ? text.replaceFirst(' ', 'T')
-          : text;
-      final parsed = DateTime.tryParse(normalized);
-      if (parsed != null) {
-        return parsed;
-      }
-    }
-    return DateTime.fromMillisecondsSinceEpoch(0);
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
   }
 }

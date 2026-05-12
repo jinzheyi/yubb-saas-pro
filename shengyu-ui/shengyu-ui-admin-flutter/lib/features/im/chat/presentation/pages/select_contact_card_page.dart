@@ -9,7 +9,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
-import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contact_picker_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -23,6 +23,7 @@ class SelectContactCardPage extends ConsumerStatefulWidget {
 }
 
 class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
+  final TextEditingController _searchController = TextEditingController();
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -39,6 +40,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     ref.read(contactSelectionControllerProvider.notifier).end();
     super.dispose();
   }
@@ -75,6 +77,15 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
       ),
       body: Column(
         children: [
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: ContactPickerSearchField(
+              controller: _searchController,
+              hintText: strings.chatSelectContactCardSearchHint,
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
           Expanded(child: _buildBody(context, strings, selectionState)),
           Container(
             decoration: const BoxDecoration(
@@ -150,12 +161,21 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
         ),
       );
     }
+    final keyword = _searchController.text.trim().toLowerCase();
+    final filteredContacts = _contacts.where((item) {
+      if (keyword.isEmpty) {
+        return true;
+      }
+      return item.name.toLowerCase().contains(keyword) ||
+          item.departmentName.toLowerCase().contains(keyword) ||
+          item.postName.toLowerCase().contains(keyword);
+    }).toList(growable: false);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        _CategorySection(
+        ContactPickerCategoryPanel(
           items: [
-            _CategoryItem(
+            ContactPickerCategoryAction(
               icon: AppIconKind.groupsFill,
               label: strings.contactsMyGroups,
               color: const Color(0xFFFFB347),
@@ -164,7 +184,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
                 const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
               ),
             ),
-            _CategoryItem(
+            ContactPickerCategoryAction(
               icon: AppIconKind.starOutline,
               label: strings.contactsFavorites,
               color: const Color(0xFF246BFD),
@@ -173,7 +193,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
                 const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
               ),
             ),
-            _CategoryItem(
+            ContactPickerCategoryAction(
               icon: AppIconKind.tree,
               label: strings.contactsOrganization,
               color: const Color(0xFF10B981),
@@ -182,7 +202,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
                 const ContactPickerArgs(selectionMode: true, selectionLimit: 1),
               ),
             ),
-            _CategoryItem(
+            ContactPickerCategoryAction(
               icon: AppIconKind.apartment,
               label: strings.contactsDepartments,
               color: const Color(0xFF8F4CFF),
@@ -197,7 +217,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
           ],
         ),
         const SizedBox(height: 12),
-        if (_contacts.isEmpty)
+        if (filteredContacts.isEmpty)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 64),
             alignment: Alignment.center,
@@ -214,48 +234,16 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ),
             child: Column(
               children: [
-                for (var index = 0; index < _contacts.length; index++) ...[
-                  ListTile(
-                    onTap: () => _toggleLocalSelection(_contacts[index]),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
+                for (var index = 0; index < filteredContacts.length; index++) ...[
+                  ContactPickerSelectableTile(
+                    item: filteredContacts[index],
+                    selected: selectionState.isSelected(
+                      filteredContacts[index].userId,
                     ),
-                    leading: ContactsInitialAvatar(
-                      name: _contacts[index].name,
-                      color: const Color(0xFF246BFD),
-                      avatarUrl: _contacts[index].avatarUrl,
-                      size: 42,
-                      borderRadius: 21,
-                    ),
-                    title: Text(
-                      _contacts[index].name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF202531),
-                      ),
-                    ),
-                    subtitle: Text(
-                      _contacts[index].postName.trim().isNotEmpty
-                          ? _contacts[index].postName
-                          : _contacts[index].departmentName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF8F96A3),
-                      ),
-                    ),
-                    trailing: Checkbox(
-                      value: selectionState.isSelected(_contacts[index].userId),
-                      onChanged: (_) => _toggleLocalSelection(_contacts[index]),
-                      shape: const CircleBorder(),
-                    ),
+                    onTap: () => _toggleLocalSelection(filteredContacts[index]),
+                    avatarColor: const Color(0xFF246BFD),
                   ),
-                  if (index != _contacts.length - 1)
+                  if (index != filteredContacts.length - 1)
                     const Divider(
                       height: 1,
                       indent: 74,
@@ -277,11 +265,18 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
     });
     try {
       final items = await ref.read(contactsRepositoryProvider).getContacts();
+      final currentUserId = (await ref.read(currentUserProfileProvider.future))
+          .userId
+          .trim();
       if (!mounted) {
         return;
       }
       final filtered = items
-          .where((item) => item.userId.trim().isNotEmpty)
+          .where(
+            (item) =>
+                item.userId.trim().isNotEmpty &&
+                item.userId.trim() != currentUserId,
+          )
           .toList(growable: false);
       _payloadCache
         ..clear()
@@ -395,81 +390,4 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
       avatar: profile.avatarUrl,
     );
   }
-}
-
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({required this.items});
-
-  final List<_CategoryItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          for (var index = 0; index < items.length; index++) ...[
-            ListTile(
-              onTap: items[index].onTap,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: items[index].color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: AppIcon(
-                  items[index].icon,
-                  size: 22,
-                  color: items[index].color,
-                ),
-              ),
-              title: Text(
-                items[index].label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF202531),
-                ),
-              ),
-              trailing: const AppIcon(
-                AppIconKind.chevronRight,
-                size: 18,
-                color: Color(0xFFB8C0CC),
-              ),
-            ),
-            if (index != items.length - 1)
-              const Divider(
-                height: 1,
-                indent: 72,
-                endIndent: 16,
-                color: Color(0xFFF0F2F6),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryItem {
-  const _CategoryItem({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final AppIconKind icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
 }

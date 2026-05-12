@@ -5564,8 +5564,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<void> _showContactPicker() async {
-    final picked = await context.push<ContactCardSharePayload>(
-      RoutePaths.chatSelectContactCard,
+    final picked = await context.pushNamed<ContactCardSharePayload>(
+      RouteNames.chatSelectContactCard,
       extra: const SelectContactCardRouteArgs(),
     );
     if (picked == null || !mounted) {

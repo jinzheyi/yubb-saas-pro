@@ -148,9 +148,18 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
     return _repository.quitGroup(groupId: _args.groupId);
   }
 
-  void updateMuteAll(bool value) {
+  Future<void> updateMuteAll(bool value) async {
+    final previous = state.muteAll;
+    if (previous == value) {
+      return;
+    }
     _setStateIfActive(state.copyWith(muteAll: value));
-    _repository.updateMuteAll(groupId: _args.groupId, muted: value);
+    try {
+      await _repository.updateMuteAll(groupId: _args.groupId, muted: value);
+    } catch (_) {
+      _setStateIfActive(state.copyWith(muteAll: previous));
+      rethrow;
+    }
   }
 
   Future<void> updateAllowMemberInvite(bool value) async {
@@ -185,13 +194,22 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
     }
   }
 
-  void updateGroupName(String value) {
+  Future<void> updateGroupName(String value) async {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
       return;
     }
+    final previous = state.groupName;
+    if (previous == trimmed) {
+      return;
+    }
     _setStateIfActive(state.copyWith(groupName: trimmed));
-    _repository.updateGroupName(groupId: _args.groupId, groupName: trimmed);
+    try {
+      await _repository.updateGroupName(groupId: _args.groupId, groupName: trimmed);
+    } catch (_) {
+      _setStateIfActive(state.copyWith(groupName: previous));
+      rethrow;
+    }
   }
 
   void updateNotice(
@@ -208,13 +226,22 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
     ));
   }
 
-  void updateMyNickname(String value) {
+  Future<void> updateMyNickname(String value) async {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
       return;
     }
+    final previous = state.myNickname;
+    if (previous == trimmed) {
+      return;
+    }
     _setStateIfActive(state.copyWith(myNickname: trimmed));
-    _repository.updateMyNickname(groupId: _args.groupId, nickname: trimmed);
+    try {
+      await _repository.updateMyNickname(groupId: _args.groupId, nickname: trimmed);
+    } catch (_) {
+      _setStateIfActive(state.copyWith(myNickname: previous));
+      rethrow;
+    }
   }
 
   void markMembershipRestored() {

@@ -1,5 +1,6 @@
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_detail.dart';
+import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_page_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/repositories/favorite_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/infrastructure/datasources/favorite_remote_data_source.dart';
 
@@ -9,34 +10,37 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
   final FavoriteRemoteDataSource _remoteDataSource;
 
   @override
-  Future<List<FavoriteItem>> getFavorites({
+  Future<FavoritePageResult> getFavorites({
     String keyword = '',
     String tab = 'default',
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = 20,
   }) async {
-    final items = await _remoteDataSource.getFavorites(
+    final page = await _remoteDataSource.getFavorites(
       keyword: keyword,
       tab: tab,
       pageNo: pageNo,
       pageSize: pageSize,
     );
-    return items
-        .map(
+    return FavoritePageResult(
+      items: page.items
+          .map(
           (item) => FavoriteItem(
             favoriteId: item.favoriteId,
             messageId: item.messageId,
-            chatId: item.chatId,
-            conversationType: item.conversationType,
-            title: item.title,
-            summary: item.summary,
-            senderName: item.senderName,
             messageType: item.messageType,
-            status: item.status,
-            createdAt: item.createdAt,
+            messagePreview: item.messagePreview,
+            messageContent: item.messageContent,
+            messageExtra: item.messageExtra,
+            messageSnapshot: item.messageSnapshot,
+            sendTime: item.sendTime,
+            favoriteTime: item.favoriteTime,
           ),
         )
-        .toList();
+        .toList(growable: false),
+      total: page.total,
+      hasMore: page.hasMore,
+    );
   }
 
   @override

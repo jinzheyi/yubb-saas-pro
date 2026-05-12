@@ -3,16 +3,28 @@ import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/infrastructure/dtos/favorite_detail_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/infrastructure/dtos/favorite_item_dto.dart';
 
+class FavoritePageDto {
+  const FavoritePageDto({
+    required this.items,
+    required this.total,
+    required this.hasMore,
+  });
+
+  final List<FavoriteItemDto> items;
+  final int total;
+  final bool hasMore;
+}
+
 class FavoriteRemoteDataSource {
   const FavoriteRemoteDataSource({required this.dio});
 
   final Dio dio;
 
-  Future<List<FavoriteItemDto>> getFavorites({
+  Future<FavoritePageDto> getFavorites({
     String keyword = '',
     String tab = 'default',
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = 20,
   }) async {
     final normalizedKeyword = keyword.trim();
     final response = await dio.get(
@@ -26,9 +38,9 @@ class FavoriteRemoteDataSource {
         'pageSize': pageSize,
       },
     );
-    final result = ApiResult.fromJson<List<FavoriteItemDto>>(
+    final result = ApiResult.fromJson<FavoritePageDto>(
       response.data as Map<String, dynamic>,
-      dataParser: (raw) => _mapPageList(raw, FavoriteItemDto.fromJson),
+      dataParser: (raw) => _mapPage(raw, FavoriteItemDto.fromJson),
     );
     return result.requireData();
   }
@@ -66,12 +78,28 @@ class FavoriteRemoteDataSource {
     );
   }
 
-  List<T> _mapPageList<T>(
+  FavoritePageDto _mapPage(
     Object? raw,
-    T Function(Map<String, dynamic> json) parser,
+    FavoriteItemDto Function(Map<String, dynamic> json) parser,
   ) {
     final data = raw as Map<String, dynamic>? ?? const {};
     final items = data['list'] as List<dynamic>? ?? const [];
-    return items.whereType<Map<String, dynamic>>().map(parser).toList();
+    final parsedItems = items
+        .whereType<Map<String, dynamic>>()
+        .map(parser)
+        .toList(growable: false);
+    final totalRaw = data['total'];
+    final total = totalRaw is num
+        ? totalRaw.toInt()
+        : int.tryParse(totalRaw?.toString() ?? '') ?? parsedItems.length;
+    final hasMoreRaw = data['hasMore'];
+    final hasMore = hasMoreRaw is bool
+        ? hasMoreRaw
+        : parsedItems.length < total;
+    return FavoritePageDto(
+      items: parsedItems,
+      total: total,
+      hasMore: hasMore,
+    );
   }
 }

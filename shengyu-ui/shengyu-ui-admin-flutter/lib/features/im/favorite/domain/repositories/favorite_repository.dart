@@ -1,12 +1,13 @@
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_detail.dart';
+import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_page_result.dart';
 
 abstract class FavoriteRepository {
-  Future<List<FavoriteItem>> getFavorites({
+  Future<FavoritePageResult> getFavorites({
     String keyword = '',
     String tab = 'default',
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = 20,
   });
 
   Future<void> removeFavorite(String favoriteId);

@@ -295,7 +295,7 @@ class GroupSettingsRemoteDataSource {
   }) async {
     await dio.put(
       '/system/im/group/update',
-      data: {'id': groupId, 'groupName': groupName},
+      data: {'id': groupId, 'name': groupName},
     );
   }
 

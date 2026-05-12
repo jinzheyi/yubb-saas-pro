@@ -12,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contact_picker_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
@@ -106,7 +107,59 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
-                _CategoryPanel(onTap: _handleCategoryTap),
+                ContactPickerCategoryPanel(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  items: [
+                    ContactPickerCategoryAction(
+                      icon: AppIconKind.groupsFill,
+                      label: '鎴戠殑缇ょ粍',
+                      color: const Color(0xFFFB923C),
+                      onTap: () => _openPickerCategory(
+                        RouteNames.contactsMyGroups,
+                        ContactPickerArgs(
+                          selectionMode: true,
+                          selectionLimit: widget.args.selectionLimit,
+                        ),
+                      ),
+                    ),
+                    ContactPickerCategoryAction(
+                      icon: AppIconKind.starOutline,
+                      label: '鎴戠殑鍏虫敞',
+                      color: const Color(0xFFEAB308),
+                      onTap: () => _openPickerCategory(
+                        RouteNames.contactsMyFollowing,
+                        ContactPickerArgs(
+                          selectionMode: true,
+                          selectionLimit: widget.args.selectionLimit,
+                        ),
+                      ),
+                    ),
+                    ContactPickerCategoryAction(
+                      icon: AppIconKind.tree,
+                      label: '缁勭粐鏋舵瀯',
+                      color: const Color(0xFF84CC16),
+                      onTap: () => _openPickerCategory(
+                        RouteNames.contactsOrg,
+                        ContactPickerArgs(
+                          selectionMode: true,
+                          selectionLimit: widget.args.selectionLimit,
+                        ),
+                      ),
+                    ),
+                    ContactPickerCategoryAction(
+                      icon: AppIconKind.apartment,
+                      label: '鎴戠殑閮ㄩ棬',
+                      color: const Color(0xFF06B6D4),
+                      onTap: () => _openPickerCategory(
+                        RouteNames.contactsMyDepartment,
+                        ContactDepartmentArgs(
+                          selectionMode: true,
+                          selectionLimit: widget.args.selectionLimit,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -336,26 +389,10 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
     }
   }
 
-  void _handleCategoryTap(_CategoryItem item) {
-    final pickerArgs = ContactPickerArgs(
-      selectionMode: true,
-      selectionLimit: widget.args.selectionLimit,
-    );
-    switch (item.kind) {
-      case _CategoryKind.groups:
-        context.pushNamed(RouteNames.contactsMyGroups, extra: pickerArgs);
-      case _CategoryKind.following:
-        context.pushNamed(RouteNames.contactsMyFollowing, extra: pickerArgs);
-      case _CategoryKind.organization:
-        context.pushNamed(RouteNames.contactsOrg, extra: pickerArgs);
-      case _CategoryKind.department:
-        context.pushNamed(
-          RouteNames.contactsMyDepartment,
-          extra: ContactDepartmentArgs(
-            selectionMode: true,
-            selectionLimit: widget.args.selectionLimit,
-          ),
-        );
+  Future<void> _openPickerCategory(String routeName, Object args) async {
+    await context.pushNamed(routeName, extra: args);
+    if (mounted) {
+      setState(() {});
     }
   }
 

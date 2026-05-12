@@ -9,6 +9,12 @@ class FavoritesState {
     this.items = const <FavoriteItem>[],
     this.keyword = '',
     this.tab = 'default',
+    this.pageNo = 1,
+    this.pageSize = 20,
+    this.hasMore = true,
+    this.totalCount = 0,
+    this.loadingMore = false,
+    this.refreshing = false,
     this.error,
   });
 
@@ -16,6 +22,12 @@ class FavoritesState {
   final List<FavoriteItem> items;
   final String keyword;
   final String tab;
+  final int pageNo;
+  final int pageSize;
+  final bool hasMore;
+  final int totalCount;
+  final bool loadingMore;
+  final bool refreshing;
   final AppError? error;
 
   FavoritesState copyWith({
@@ -23,6 +35,12 @@ class FavoritesState {
     List<FavoriteItem>? items,
     String? keyword,
     String? tab,
+    int? pageNo,
+    int? pageSize,
+    bool? hasMore,
+    int? totalCount,
+    bool? loadingMore,
+    bool? refreshing,
     AppError? error,
   }) {
     return FavoritesState(
@@ -30,6 +48,12 @@ class FavoritesState {
       items: items ?? this.items,
       keyword: keyword ?? this.keyword,
       tab: tab ?? this.tab,
+      pageNo: pageNo ?? this.pageNo,
+      pageSize: pageSize ?? this.pageSize,
+      hasMore: hasMore ?? this.hasMore,
+      totalCount: totalCount ?? this.totalCount,
+      loadingMore: loadingMore ?? this.loadingMore,
+      refreshing: refreshing ?? this.refreshing,
       error: error,
     );
   }
