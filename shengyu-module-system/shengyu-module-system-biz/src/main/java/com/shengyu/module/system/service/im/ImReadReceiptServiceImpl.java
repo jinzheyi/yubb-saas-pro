@@ -18,6 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
@@ -90,6 +94,38 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
         respVO.setMessageType(msg.getMessageType());
         respVO.setReadBasis("conversation_read_watermark");
         return respVO;
+    }
+
+    @Override
+    public List<AppImReadReceiptSummaryRespVO> getSummaryBatch(Long userId, List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Set<Long> normalizedIds = new LinkedHashSet<>();
+        for (Long messageId : messageIds) {
+            if (messageId != null && messageId > 0) {
+                normalizedIds.add(messageId);
+            }
+            if (normalizedIds.size() >= 50) {
+                break;
+            }
+        }
+        if (normalizedIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<AppImReadReceiptSummaryRespVO> result = new ArrayList<>(normalizedIds.size());
+        for (Long messageId : normalizedIds) {
+            try {
+                AppImReadReceiptSummaryRespVO summary = getSummary(userId, messageId);
+                if (summary != null) {
+                    result.add(summary);
+                }
+            } catch (Exception e) {
+                log.warn("[ImReadReceiptService] 批量摘要跳过 messageId={}, reason={}", messageId, e.getMessage());
+            }
+        }
+        return result;
     }
 
     @Override

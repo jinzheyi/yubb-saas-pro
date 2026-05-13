@@ -5,7 +5,10 @@ class MarkConversationReadUseCase {
 
   final MessageRepository _repository;
 
-  Future<void> call({required String chatId}) {
-    return _repository.markConversationRead(chatId: chatId);
+  Future<void> call({required String chatId, required String readSequence}) {
+    return _repository.markConversationRead(
+      chatId: chatId,
+      readSequence: readSequence,
+    );
   }
 }

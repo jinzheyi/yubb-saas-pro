@@ -9,6 +9,8 @@ public interface ImReadReceiptService {
 
     AppImReadReceiptSummaryRespVO getSummary(Long userId, Long messageId);
 
+    java.util.List<AppImReadReceiptSummaryRespVO> getSummaryBatch(Long userId, java.util.List<Long> messageIds);
+
     PageResult<AppImReadReceiptDetailRespVO> getDetail(Long userId, AppImReadReceiptDetailReqVO reqVO);
 
 }

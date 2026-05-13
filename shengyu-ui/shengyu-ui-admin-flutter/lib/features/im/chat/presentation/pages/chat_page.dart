@@ -52,7 +52,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_me
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_more_panel_action.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_realtime_binding.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/read_receipt_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_page_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/read_receipt_summary_store_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_timeline_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_composer.dart';
@@ -103,8 +105,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
   static const int _voicePlayedCompensateBatchSize = 40;
   static const Duration _typingTimeout = Duration(seconds: 3);
   static const Duration _typingDebounce = Duration(milliseconds: 500);
-  static const Duration _readReceiptSummaryTtl = Duration(minutes: 10);
-  static const int _readReceiptSummaryCacheMax = 200;
   bool _isMorePanelVisible = false;
   bool _isEmojiPanelVisible = false;
   bool _isSelectionMode = false;
@@ -156,11 +156,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
   bool _keepBottomOnNextLayout = false;
   double _lastViewInsetsBottom = 0;
   late final ScrollController _timelineScrollController;
-  final Map<String, _ReadReceiptSummaryCacheEntry> _readReceiptSummaryCache =
-      <String, _ReadReceiptSummaryCacheEntry>{};
-  final Map<String, bool> _readReceiptSummaryInFlight = <String, bool>{};
-  final Map<String, int> _readReceiptSummaryRetryCount = <String, int>{};
-  String _lastReadReceiptPrefetchKey = '';
   final Map<String, GlobalKey> _messageItemKeys = <String, GlobalKey>{};
   final Set<String> _transientSystemNotifyKeys = <String>{};
   double _lastTimelineScrollTop = 0;
@@ -233,6 +228,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
   ) {
     if (!mounted || next.messages.isEmpty) {
       return;
+    }
+    if (widget.args.conversationType == ConversationType.group) {
+      final recentOutgoingMessageIds = next.messages
+          .where(_isReadReceiptMessageConfirmed)
+          .map(_resolveReadReceiptTargetMessageId)
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+      unawaited(
+        ref
+            .read(readReceiptSummaryStoreProvider.notifier)
+            .prefetchSummaries(recentOutgoingMessageIds),
+      );
     }
     if (_initialBottomAlignmentPending &&
         widget.args.entryMode != ChatEntryMode.anchor &&
@@ -320,6 +327,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final strings = ref.watch(appStringsProvider);
     final pageState = ref.watch(chatControllerProvider);
     final timelineState = ref.watch(chatTimelineControllerProvider);
+    final readReceiptSummaryState = ref.watch(readReceiptSummaryStoreProvider);
     final composer = ref.watch(chatComposerControllerProvider);
     final mediaState = ref.watch(chatMediaControllerProvider);
     final morePanelController = ref.watch(chatMorePanelControllerProvider);
@@ -339,9 +347,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
             ),
           );
     final groupNoticeText = _resolveGroupNoticeText(groupSettingsState);
-    if (isGroupChat && timelineState.messages.isNotEmpty) {
-      _scheduleReadReceiptPrefetch(timelineState.messages);
-    }
     final groupMembersAsync = groupId == null
         ? const AsyncValue<List<GroupMember>>.data(<GroupMember>[])
         : ref.watch(groupMembersFutureProvider(groupId));
@@ -775,8 +780,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               : currentUserId.trim(),
                           currentUserAvatarUrl: currentUserAvatarUrl,
                           outgoingFooterLabelBuilder: isGroupChat
-                              ? (message) =>
-                                    _buildReadReceiptEntryText(message, strings)
+                              ? (message) => _buildReadReceiptEntryText(
+                                  message,
+                                  strings,
+                                  readReceiptSummaryState,
+                                )
                               : null,
                         ),
                       },
@@ -1924,10 +1932,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     context.pushNamed(
       RouteNames.contactsProfile,
       pathParameters: <String, String>{'userId': resolvedUserId},
-      extra: <String, String>{
-        'name': displayName.trim(),
-        'departmentName': '',
-      },
+      extra: <String, String>{'name': displayName.trim(), 'departmentName': ''},
     );
   }
 
@@ -2618,9 +2623,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
           chatTitle: chatTitle,
           messagePreview: _buildQuotePreview(message),
           isVoiceMessage: message.type == MessageType.voice,
+          initialSummary: ref
+              .read(readReceiptSummaryStoreProvider.notifier)
+              .getSummary(messageId),
           repository: ref.read(messageRepositoryProvider),
           onSummaryLoaded: (summary) {
-            _storeReadReceiptSummary(messageId, summary);
+            ref.read(readReceiptSummaryStoreProvider.notifier).hydrate(summary);
           },
           onShowNotice: (text) => _showAttachmentError(context, text),
         );
@@ -2651,157 +2659,27 @@ class _ChatPageState extends ConsumerState<ChatPage>
     return _resolveReadReceiptTargetMessageId(message).isNotEmpty;
   }
 
-  _ReadReceiptSummaryCacheEntry? _getCachedReadReceiptSummary(
-    String messageId,
+  String _buildReadReceiptEntryText(
+    Message message,
+    AppLocalizations strings,
+    ReadReceiptSummaryStoreState readReceiptSummaryState,
   ) {
-    return _readReceiptSummaryCache[messageId];
-  }
-
-  void _storeReadReceiptSummary(String messageId, ReadReceiptSummary? summary) {
-    if (messageId.isEmpty) {
-      return;
-    }
-    _readReceiptSummaryCache[messageId] = _ReadReceiptSummaryCacheEntry(
-      summary: summary,
-      fetchedAt: DateTime.now(),
-    );
-    _pruneReadReceiptSummaryCache();
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void _pruneReadReceiptSummaryCache() {
-    if (_readReceiptSummaryCache.isEmpty) {
-      return;
-    }
-    final now = DateTime.now();
-    final kept =
-        _readReceiptSummaryCache.entries
-            .where(
-              (entry) =>
-                  now.difference(entry.value.fetchedAt) <=
-                  _readReceiptSummaryTtl,
-            )
-            .toList(growable: false)
-          ..sort(
-            (left, right) =>
-                right.value.fetchedAt.compareTo(left.value.fetchedAt),
-          );
-    _readReceiptSummaryCache
-      ..clear()
-      ..addEntries(kept.take(_readReceiptSummaryCacheMax));
-  }
-
-  bool _shouldFetchReadReceiptSummary(String messageId) {
-    final cached = _getCachedReadReceiptSummary(messageId);
-    if (cached == null) {
-      return true;
-    }
-    return DateTime.now().difference(cached.fetchedAt) > _readReceiptSummaryTtl;
-  }
-
-  bool _isReadReceiptSummaryInFlight(String messageId) {
-    return _readReceiptSummaryInFlight[messageId] == true;
-  }
-
-  int _getReadReceiptSummaryRetryCount(String messageId) {
-    return _readReceiptSummaryRetryCount[messageId] ?? 0;
-  }
-
-  void _setReadReceiptSummaryRetryCount(String messageId, int count) {
-    if (messageId.isEmpty) {
-      return;
-    }
-    if (count > 0) {
-      _readReceiptSummaryRetryCount[messageId] = count;
-    } else {
-      _readReceiptSummaryRetryCount.remove(messageId);
-    }
-  }
-
-  void _scheduleReadReceiptSummaryRetry(String messageId, int attempt) {
-    if (messageId.isEmpty || attempt > 3) {
-      return;
-    }
-    final delay = switch (attempt) {
-      1 => const Duration(milliseconds: 600),
-      2 => const Duration(milliseconds: 1500),
-      _ => const Duration(milliseconds: 3000),
+    final defaultLabel = switch (message.status) {
+      MessageStatus.sending => strings.messageSending,
+      MessageStatus.sent => strings.messageSent,
+      MessageStatus.delivered => strings.messageDelivered,
+      MessageStatus.read => strings.messageRead,
+      MessageStatus.recalled => strings.chatPreviewRecalled,
+      MessageStatus.failed => strings.messageFailed,
     };
-    Future<void>.delayed(delay, () {
-      unawaited(_ensureReadReceiptSummaryFetched(messageId));
-    });
-  }
-
-  Future<void> _ensureReadReceiptSummaryFetched(String messageId) async {
-    if (messageId.isEmpty ||
-        !_shouldFetchReadReceiptSummary(messageId) ||
-        _isReadReceiptSummaryInFlight(messageId)) {
-      return;
-    }
-    _readReceiptSummaryInFlight[messageId] = true;
-    try {
-      final summary = await ref
-          .read(messageRepositoryProvider)
-          .getReadReceiptSummary(messageId: messageId);
-      if (summary != null) {
-        _setReadReceiptSummaryRetryCount(messageId, 0);
-        _storeReadReceiptSummary(messageId, summary);
-      } else {
-        final nextAttempt = _getReadReceiptSummaryRetryCount(messageId) + 1;
-        _setReadReceiptSummaryRetryCount(messageId, nextAttempt);
-        if (nextAttempt <= 3) {
-          _scheduleReadReceiptSummaryRetry(messageId, nextAttempt);
-        } else {
-          _storeReadReceiptSummary(messageId, null);
-        }
-      }
-    } catch (_) {
-      // Keep silent to match old page prefetch behavior.
-    } finally {
-      _readReceiptSummaryInFlight.remove(messageId);
-    }
-  }
-
-  void _scheduleReadReceiptPrefetch(List<Message> messages) {
-    final candidates = messages
-        .where(_isReadReceiptMessageConfirmed)
-        .map(_resolveReadReceiptTargetMessageId)
-        .where((item) => item.isNotEmpty)
-        .toList(growable: false);
-    final latest = candidates.length > 20
-        ? candidates.sublist(candidates.length - 20)
-        : candidates;
-    final nextKey = latest.join(',');
-    if (nextKey.isEmpty || nextKey == _lastReadReceiptPrefetchKey) {
-      return;
-    }
-    _lastReadReceiptPrefetchKey = nextKey;
-    Future<void>.microtask(() async {
-      for (final messageId in latest) {
-        await _ensureReadReceiptSummaryFetched(messageId);
-      }
-    });
-  }
-
-  String _buildReadReceiptEntryText(Message message, AppLocalizations strings) {
     if (!_isReadReceiptMessageConfirmed(message)) {
-      return switch (message.status) {
-        MessageStatus.sending => strings.messageSending,
-        MessageStatus.sent => strings.messageSent,
-        MessageStatus.delivered => strings.messageDelivered,
-        MessageStatus.read => strings.messageRead,
-        MessageStatus.recalled => strings.chatPreviewRecalled,
-        MessageStatus.failed => strings.messageFailed,
-      };
+      return defaultLabel;
     }
     final messageId = _resolveReadReceiptTargetMessageId(message);
     if (messageId.isEmpty) {
-      return strings.chatReadReceiptPending;
+      return defaultLabel;
     }
-    final cached = _getCachedReadReceiptSummary(messageId);
-    final summary = cached?.summary;
+    final summary = readReceiptSummaryState.entries[messageId]?.summary;
     if (summary != null) {
       final unread = summary.unreadCount;
       if (unread > 0) {
@@ -2809,8 +2687,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       return strings.chatReadReceiptReadLabel;
     }
-    unawaited(_ensureReadReceiptSummaryFetched(messageId));
-    return strings.chatReadReceiptPending;
+    return defaultLabel;
   }
 
   String _previewFileNameFor(Message message) {
@@ -5790,6 +5667,7 @@ class _ReadReceiptBottomSheet extends StatefulWidget {
     required this.chatTitle,
     required this.messagePreview,
     required this.isVoiceMessage,
+    this.initialSummary,
     required this.repository,
     required this.onSummaryLoaded,
     required this.onShowNotice,
@@ -5799,6 +5677,7 @@ class _ReadReceiptBottomSheet extends StatefulWidget {
   final String chatTitle;
   final String messagePreview;
   final bool isVoiceMessage;
+  final ReadReceiptSummary? initialSummary;
   final MessageRepository repository;
   final ValueChanged<ReadReceiptSummary?> onSummaryLoaded;
   final ValueChanged<String> onShowNotice;
@@ -5844,12 +5723,15 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
       _pageNo = 1;
       _selectedTab = 'read';
       _error = null;
+      _summary = widget.initialSummary;
     });
     try {
       await Future<void>.delayed(const Duration(milliseconds: 200));
-      final summary = await widget.repository.getReadReceiptSummary(
-        messageId: widget.messageId,
-      );
+      final summary =
+          widget.initialSummary ??
+          await widget.repository.getReadReceiptSummary(
+            messageId: widget.messageId,
+          );
       if (summary == null) {
         if (!mounted) {
           return;
@@ -6270,16 +6152,6 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
     final day = time.day.toString().padLeft(2, '0');
     return '$yyyy-$month-$day $hh:$mm';
   }
-}
-
-class _ReadReceiptSummaryCacheEntry {
-  const _ReadReceiptSummaryCacheEntry({
-    required this.summary,
-    required this.fetchedAt,
-  });
-
-  final ReadReceiptSummary? summary;
-  final DateTime fetchedAt;
 }
 
 class _ReadReceiptTabSummary extends StatelessWidget {

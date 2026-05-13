@@ -562,10 +562,13 @@ class MessageRemoteDataSource {
     );
   }
 
-  Future<void> markConversationRead({required String chatId}) async {
-    await dio.post(
+  Future<void> markConversationRead({
+    required String chatId,
+    required String readSequence,
+  }) async {
+    await dio.put(
       '/system/im/conversation/mark-read-seq',
-      data: {'chatId': chatId},
+      queryParameters: {'chatId': chatId, 'readSequence': readSequence},
     );
   }
 
@@ -694,6 +697,37 @@ class MessageRemoteDataSource {
         return ReadReceiptSummaryDto.fromJson(
           raw as Map<String, dynamic>? ?? const {},
         );
+      },
+    );
+    return result.data;
+  }
+
+  Future<List<ReadReceiptSummaryDto>> fetchReadReceiptSummaries({
+    required List<String> messageIds,
+  }) async {
+    final normalizedIds = messageIds
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty && item != '0')
+        .toList(growable: false);
+    if (normalizedIds.isEmpty) {
+      return const <ReadReceiptSummaryDto>[];
+    }
+    final response = await dio.get(
+      '/system/im/read-receipt/summary/batch',
+      queryParameters: {'messageIds': normalizedIds},
+    );
+    final result = ApiResult.fromJson<List<ReadReceiptSummaryDto>>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) {
+        final items = raw is Map<String, dynamic>
+            ? _resolveList(raw)
+            : raw is List
+            ? raw
+            : const <dynamic>[];
+        return items
+            .whereType<Map<String, dynamic>>()
+            .map((item) => ReadReceiptSummaryDto.fromJson(item))
+            .toList(growable: false);
       },
     );
     return result.data;

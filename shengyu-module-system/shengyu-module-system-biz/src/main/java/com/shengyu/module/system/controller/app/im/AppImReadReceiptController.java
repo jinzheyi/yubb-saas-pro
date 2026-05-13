@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+import java.util.List;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 
@@ -38,6 +39,14 @@ public class AppImReadReceiptController {
     public CommonResult<AppImReadReceiptSummaryRespVO> getSummary(@RequestParam("messageId") Long messageId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(readReceiptService.getSummary(userId, messageId));
+    }
+
+    @GetMapping("/summary/batch")
+    @Operation(summary = "群聊已读聚合摘要批量查询")
+    @Parameter(name = "messageIds", description = "消息ID列表", required = true)
+    public CommonResult<List<AppImReadReceiptSummaryRespVO>> getSummaryBatch(@RequestParam("messageIds") List<Long> messageIds) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(readReceiptService.getSummaryBatch(userId, messageIds));
     }
 
     @GetMapping("/detail")

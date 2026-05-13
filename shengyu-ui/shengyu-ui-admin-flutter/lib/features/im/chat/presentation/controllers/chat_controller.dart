@@ -53,7 +53,15 @@ class ChatController extends StateNotifier<ChatPageState> {
       final result = await _openChatUseCase(OpenChatCommand.fromArgs(args));
       _timelineController.applyWindow(result.window);
       _receiptController.markVisible(args.chatId);
-      await _markConversationReadUseCase(chatId: args.chatId);
+      final readSequence = _resolveLatestReadableSequence(
+        result.window.messages,
+      );
+      if (readSequence != null) {
+        await _markConversationReadUseCase(
+          chatId: args.chatId,
+          readSequence: readSequence,
+        );
+      }
       _conversationListController.markConversationRead(args.chatId);
       state = state.copyWith(
         pageStatus: ChatPageStatus.ready,
@@ -67,6 +75,16 @@ class ChatController extends StateNotifier<ChatPageState> {
         error: AppErrorMapper.map(error, stackTrace),
       );
     }
+  }
+
+  String? _resolveLatestReadableSequence(List<Message> messages) {
+    for (final message in messages.reversed) {
+      final sequence = message.sequence?.trim() ?? '';
+      if (sequence.isNotEmpty && sequence != '0') {
+        return sequence;
+      }
+    }
+    return null;
   }
 
   Future<bool> sendText(

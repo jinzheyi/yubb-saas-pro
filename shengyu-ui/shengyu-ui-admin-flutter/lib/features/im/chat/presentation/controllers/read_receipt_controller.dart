@@ -2,21 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/read_receipt_route_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/read_receipt_summary_store.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/read_receipt_state.dart';
 
 class ReadReceiptController extends StateNotifier<ReadReceiptState> {
-  ReadReceiptController(this._messageRepository, this._args)
+  ReadReceiptController(this._messageRepository, this._summaryStore, this._args)
     : super(const ReadReceiptState());
 
   final MessageRepository _messageRepository;
+  final ReadReceiptSummaryStore _summaryStore;
   final ReadReceiptRouteArgs _args;
 
   Future<void> load() async {
     state = state.copyWith(status: ReadReceiptPageStatus.loading, error: null);
     try {
-      final summary = await _messageRepository.getReadReceiptSummary(
-        messageId: _args.messageId,
-      );
+      final summary = await _summaryStore.ensureSummary(_args.messageId);
       final selectedTab = (summary?.readCount ?? 0) > 0
           ? state.selectedTab
           : 'unread';

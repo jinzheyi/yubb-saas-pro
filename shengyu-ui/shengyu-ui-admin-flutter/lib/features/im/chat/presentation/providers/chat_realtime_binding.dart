@@ -12,7 +12,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_c
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/message_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/mappers/message_dto_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/read_receipt_summary.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/read_receipt_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -146,6 +148,20 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             messageId: messageId,
             status: MessageStatus.read,
           );
+      final summaryStore = ref.read(readReceiptSummaryStoreProvider.notifier);
+      final hydrated = _hydrateReadReceiptSummaryFromPayload(event.payload);
+      if (hydrated != null) {
+        summaryStore.hydrate(hydrated);
+      } else {
+        final messageIds = _resolveReadReceiptMessageIds(
+          event.payload,
+          messageId,
+        );
+        for (final item in messageIds) {
+          summaryStore.invalidate(item);
+          unawaited(summaryStore.ensureSummary(item));
+        }
+      }
       break;
     case SocketEventTypes.typingReceived:
       final raw = Map<String, dynamic>.from(event.payload);
@@ -281,6 +297,62 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
     default:
       break;
   }
+}
+
+List<String> _resolveReadReceiptMessageIds(
+  Map<String, Object?> payload,
+  String fallbackMessageId,
+) {
+  final resolved = <String>[];
+  final rawIds = payload['messageIds'];
+  if (rawIds is List) {
+    for (final item in rawIds) {
+      final value = item?.toString().trim() ?? '';
+      if (value.isNotEmpty && value != '0' && !resolved.contains(value)) {
+        resolved.add(value);
+      }
+    }
+  }
+  final normalizedFallback = fallbackMessageId.trim();
+  if (resolved.isEmpty &&
+      normalizedFallback.isNotEmpty &&
+      normalizedFallback != '0') {
+    resolved.add(normalizedFallback);
+  }
+  return resolved;
+}
+
+ReadReceiptSummary? _hydrateReadReceiptSummaryFromPayload(
+  Map<String, Object?> payload,
+) {
+  final messageId = payload['messageId']?.toString().trim() ?? '';
+  final chatId = payload['chatId']?.toString().trim() ?? '';
+  final sequence = payload['sequence']?.toString().trim() ?? '';
+  final readCount = _tryParseInt(payload['readCount']);
+  final unreadCount = _tryParseInt(payload['unreadCount']);
+  final totalCount = _tryParseInt(payload['totalCount']);
+  if (messageId.isEmpty ||
+      chatId.isEmpty ||
+      readCount == null ||
+      unreadCount == null ||
+      totalCount == null) {
+    return null;
+  }
+  return ReadReceiptSummary(
+    messageId: messageId,
+    chatId: chatId,
+    sequence: sequence,
+    readCount: readCount,
+    unreadCount: unreadCount,
+    totalCount: totalCount,
+  );
+}
+
+int? _tryParseInt(Object? value) {
+  if (value is num) {
+    return value.toInt();
+  }
+  return int.tryParse(value?.toString() ?? '');
 }
 
 bool _belongsToCurrentConversation(

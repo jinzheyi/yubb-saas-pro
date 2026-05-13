@@ -50,8 +50,14 @@ class MessageRepositoryImpl implements MessageRepository {
   }
 
   @override
-  Future<void> markConversationRead({required String chatId}) async {
-    await _remoteDataSource.markConversationRead(chatId: chatId);
+  Future<void> markConversationRead({
+    required String chatId,
+    required String readSequence,
+  }) async {
+    await _remoteDataSource.markConversationRead(
+      chatId: chatId,
+      readSequence: readSequence,
+    );
   }
 
   @override
@@ -118,6 +124,27 @@ class MessageRepositoryImpl implements MessageRepository {
       unreadCount: item.unreadCount,
       totalCount: item.totalCount,
     );
+  }
+
+  @override
+  Future<List<ReadReceiptSummary>> getReadReceiptSummaries({
+    required List<String> messageIds,
+  }) async {
+    final items = await _remoteDataSource.fetchReadReceiptSummaries(
+      messageIds: messageIds,
+    );
+    return items
+        .map(
+          (item) => ReadReceiptSummary(
+            messageId: item.messageId,
+            chatId: item.chatId,
+            sequence: item.sequence,
+            readCount: item.readCount,
+            unreadCount: item.unreadCount,
+            totalCount: item.totalCount,
+          ),
+        )
+        .toList(growable: false);
   }
 
   @override

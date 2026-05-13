@@ -114,7 +114,10 @@ abstract class MessageRepository {
     String? groupId,
   });
 
-  Future<void> markConversationRead({required String chatId});
+  Future<void> markConversationRead({
+    required String chatId,
+    required String readSequence,
+  });
 
   Future<void> addFavorite({required String messageId});
 
@@ -137,6 +140,10 @@ abstract class MessageRepository {
 
   Future<ReadReceiptSummary?> getReadReceiptSummary({
     required String messageId,
+  });
+
+  Future<List<ReadReceiptSummary>> getReadReceiptSummaries({
+    required List<String> messageIds,
   });
 
   Future<List<ReadReceiptDetailItem>> getReadReceiptDetail({
