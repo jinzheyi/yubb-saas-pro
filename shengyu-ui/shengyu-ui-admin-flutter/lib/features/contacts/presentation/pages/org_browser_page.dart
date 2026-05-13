@@ -547,8 +547,8 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
     }
     context.pushNamed(
       RouteNames.contactsProfile,
+      pathParameters: <String, String>{'userId': member.userId},
       extra: <String, String>{
-        'userId': member.userId,
         'name': member.name,
         'departmentName': member.departmentName,
       },

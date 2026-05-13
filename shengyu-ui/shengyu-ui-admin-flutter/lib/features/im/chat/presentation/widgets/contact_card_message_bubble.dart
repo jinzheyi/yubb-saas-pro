@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
-import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_avatar.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -85,14 +85,12 @@ class ContactCardMessageBubble extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  ContactsInitialAvatar(
-                    name: displayName,
-                    color: message.isOutgoing
-                        ? Colors.white.withValues(alpha: 0.16)
-                        : const Color(0xFF246BFD),
-                    avatarUrl: message.extra.contactAvatar,
+                  ChatAvatar(
+                    seed: displayName,
+                    imageUrl: message.extra.contactAvatar,
                     size: 40,
                     borderRadius: 20,
+                    fontSize: 15,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

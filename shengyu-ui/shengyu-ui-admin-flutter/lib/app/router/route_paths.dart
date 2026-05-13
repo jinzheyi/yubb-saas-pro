@@ -15,7 +15,7 @@ abstract final class RoutePaths {
   static const contactsMyFollowing = '/contacts/my-following';
   static const contactsGroupMembers = '/contacts/group-members';
   static const contactsFavorites = '/contacts/favorites';
-  static const contactsProfile = '/contacts/profile';
+  static const contactsProfile = '/contacts/profile/:userId';
   static const contactsSearchResult = '/contacts/search-result';
   static const globalChatSearch = '/search/chat-history';
   static const browser = '/browser';

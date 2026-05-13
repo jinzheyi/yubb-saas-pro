@@ -267,31 +267,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
-            path: RoutePaths.contactsProfile,
-            name: RouteNames.contactsProfile,
-            pageBuilder: (context, state) {
-              final extra = state.extra;
-              if (extra is Map<String, String>) {
-                return _buildRoutePage(
-                  state: state,
-                  child: ContactProfilePage(
-                    userId: extra['userId'] ?? '',
-                    name: extra['name'] ?? '用户',
-                    departmentName: extra['departmentName'] ?? '',
-                  ),
-                );
-              }
-              return _buildRoutePage(
-                state: state,
-                child: const ContactProfilePage(
-                  userId: '',
-                  name: '用户',
-                  departmentName: '',
-                ),
-              );
-            },
-          ),
-          GoRoute(
             path: RoutePaths.contactsSearchResult,
             name: RouteNames.contactsSearchResult,
             pageBuilder: (context, state) {
@@ -390,6 +365,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: RoutePaths.contactsProfile,
+        name: RouteNames.contactsProfile,
+        pageBuilder: (context, state) {
+          final userId = state.pathParameters['userId'] ?? '';
+          final extra = state.extra;
+          if (extra is Map<String, String>) {
+            return _buildRoutePage(
+              state: state,
+              child: ContactProfilePage(
+                userId: userId,
+                name: extra['name'] ?? '用户',
+                departmentName: extra['departmentName'] ?? '',
+              ),
+            );
+          }
+          return _buildRoutePage(
+            state: state,
+            child: ContactProfilePage(
+              userId: userId,
+              name: '用户',
+              departmentName: '',
+            ),
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.chat,

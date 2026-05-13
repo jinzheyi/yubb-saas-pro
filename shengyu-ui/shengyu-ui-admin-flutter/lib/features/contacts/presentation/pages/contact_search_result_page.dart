@@ -96,8 +96,8 @@ class _ContactResultBlock extends StatelessWidget {
           ContactsChevronTile(
             onTap: () => context.pushNamed(
               RouteNames.contactsProfile,
+              pathParameters: <String, String>{'userId': items[index].userId},
               extra: <String, String>{
-                'userId': items[index].userId,
                 'name': items[index].name,
                 'departmentName': items[index].departmentName,
               },

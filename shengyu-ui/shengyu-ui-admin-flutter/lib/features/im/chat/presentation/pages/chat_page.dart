@@ -1923,8 +1923,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     context.pushNamed(
       RouteNames.contactsProfile,
+      pathParameters: <String, String>{'userId': resolvedUserId},
       extra: <String, String>{
-        'userId': resolvedUserId,
         'name': displayName.trim(),
         'departmentName': '',
       },
@@ -2069,8 +2069,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       context.pushNamed(
         RouteNames.contactsProfile,
+        pathParameters: <String, String>{'userId': userId},
         extra: <String, String>{
-          'userId': userId,
           'name': message.extra.contactDisplayName ?? message.senderName,
           'departmentName': message.extra.contactDepartmentName ?? '',
         },
@@ -2097,8 +2097,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         }
         context.pushNamed(
           RouteNames.contactsProfile,
+          pathParameters: <String, String>{'userId': userId},
           extra: <String, String>{
-            'userId': userId,
             'name': message.extra.contactDisplayName ?? message.senderName,
             'departmentName': message.extra.contactDepartmentName ?? '',
           },
@@ -5619,7 +5619,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (!context.mounted) {
         return;
       }
-      _showAttachmentSuccess(context, strings.chatContactCardSendSuccess);
     } catch (error) {
       if (_handleGroupLifecycleRequestError(
         context,

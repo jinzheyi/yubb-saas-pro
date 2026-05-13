@@ -192,8 +192,8 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
                   Navigator.of(sheetContext).pop();
                   context.pushNamed(
                     RouteNames.contactsProfile,
+                    pathParameters: <String, String>{'userId': contact.userId},
                     extra: <String, String>{
-                      'userId': contact.userId,
                       'name': contact.name,
                       'departmentName': contact.departmentName,
                     },

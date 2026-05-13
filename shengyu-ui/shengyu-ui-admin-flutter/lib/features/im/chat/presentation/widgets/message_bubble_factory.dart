@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/services/message_semantics_normalizer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/contact_card_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/custom_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/file_message_bubble.dart';
@@ -32,10 +33,11 @@ abstract final class MessageBubbleFactory {
     bool showOutgoingStatusFooter = true,
     String? outgoingFooterLabel,
   }) {
-    switch (message.type) {
+    final normalizedMessage = MessageSemanticsNormalizer.normalize(message);
+    switch (normalizedMessage.type) {
       case MessageType.text:
         return TextMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -49,7 +51,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.image:
         return ImageMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -60,7 +62,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.voice:
         return VoiceMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onPauseMessage: onPauseMessage,
@@ -78,7 +80,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.video:
         return VideoMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -89,7 +91,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.file:
         return FileMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -100,7 +102,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.location:
         return LocationMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -111,7 +113,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.contactCard:
         return ContactCardMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -123,7 +125,7 @@ abstract final class MessageBubbleFactory {
       case MessageType.emoji:
       case MessageType.sticker:
         return StickerMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onLongPressMessage: onLongPressMessage,
           onOpenReadReceipt: onOpenReadReceipt,
           enableReadReceiptEntry: enableReadReceiptEntry,
@@ -131,10 +133,10 @@ abstract final class MessageBubbleFactory {
           outgoingFooterLabel: outgoingFooterLabel,
         );
       case MessageType.custom:
-        if ((message.extra.customType?.trim().toUpperCase() ?? '') ==
+        if ((normalizedMessage.extra.customType?.trim().toUpperCase() ?? '') ==
             'CONTACT_CARD') {
           return ContactCardMessageBubble(
-            message: message,
+            message: normalizedMessage,
             onRetryMessage: onRetryMessage,
             onOpenMessage: onOpenMessage,
             onLongPressMessage: onLongPressMessage,
@@ -145,7 +147,7 @@ abstract final class MessageBubbleFactory {
           );
         }
         return CustomMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -156,7 +158,7 @@ abstract final class MessageBubbleFactory {
         );
       case MessageType.system:
         return TextMessageBubble(
-          message: message,
+          message: normalizedMessage,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onLongPressMessage: onLongPressMessage,
@@ -169,4 +171,5 @@ abstract final class MessageBubbleFactory {
         );
     }
   }
+
 }

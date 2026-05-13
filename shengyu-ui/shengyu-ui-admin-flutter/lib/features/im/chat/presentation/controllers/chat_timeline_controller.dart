@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_window_result.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/services/message_semantics_normalizer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/load_chat_window_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/load_older_messages_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
@@ -91,16 +92,17 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   void appendSingleMessage(Message message) {
+    final normalizedMessage = MessageSemanticsNormalizer.normalize(message);
     final index = state.messages.indexWhere(
-      (item) => _isSameMessage(item, message),
+      (item) => _isSameMessage(item, normalizedMessage),
     );
     if (index >= 0) {
       final previous = state.messages[index];
-      if (!_shouldMergeIncoming(previous, message)) {
+      if (!_shouldMergeIncoming(previous, normalizedMessage)) {
         return;
       }
       final nextMessages = [...state.messages];
-      nextMessages[index] = _mergeMessage(previous, message);
+      nextMessages[index] = _mergeMessage(previous, normalizedMessage);
       state = state.copyWith(
         status: ChatTimelineStatus.ready,
         messages: nextMessages,
@@ -110,7 +112,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
-      messages: [...state.messages, message],
+      messages: [...state.messages, normalizedMessage],
     );
   }
 
@@ -118,18 +120,19 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     required String clientMessageId,
     required Message message,
   }) {
+    final normalizedMessage = MessageSemanticsNormalizer.normalize(message);
     final index = state.messages.indexWhere(
       (item) =>
           item.clientMessageId == clientMessageId ||
           item.messageId == clientMessageId,
     );
     if (index < 0) {
-      appendSingleMessage(message);
+      appendSingleMessage(normalizedMessage);
       return;
     }
 
     final nextMessages = [...state.messages];
-    nextMessages[index] = _mergeMessage(nextMessages[index], message);
+    nextMessages[index] = _mergeMessage(nextMessages[index], normalizedMessage);
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
@@ -464,6 +467,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   Message _mergeMessage(Message previous, Message next) {
+    previous = MessageSemanticsNormalizer.normalize(previous);
+    next = MessageSemanticsNormalizer.normalize(next);
     final resolvedType = _resolveMergedType(previous, next);
     final resolvedStatus = _resolveMergedStatus(previous, next, resolvedType);
     final resolvedContent = _resolveMergedContent(previous, next, resolvedType);

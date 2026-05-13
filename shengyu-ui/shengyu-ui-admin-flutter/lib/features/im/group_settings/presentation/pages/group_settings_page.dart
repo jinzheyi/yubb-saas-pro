@@ -180,8 +180,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                               : strings.profileUnknownUser;
                           context.pushNamed(
                             RouteNames.contactsProfile,
-                            extra: {
+                            pathParameters: <String, String>{
                               'userId': member.id,
+                            },
+                            extra: {
                               'name': displayName,
                               'departmentName': member.deptName?.trim() ?? '',
                             },
@@ -554,6 +556,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     );
     inputController.dispose();
     if (result == null) {
+      return;
+    }
+    if (!context.mounted) {
       return;
     }
     await _handleAsyncAction(

@@ -866,7 +866,8 @@ class _CommonGlobalSearchPageState
     if (item.type == 'contact') {
       context.pushNamed(
         RouteNames.contactsProfile,
-        extra: <String, String>{'userId': item.id, 'name': item.title},
+        pathParameters: <String, String>{'userId': item.id},
+        extra: <String, String>{'name': item.title},
       );
       return;
     }

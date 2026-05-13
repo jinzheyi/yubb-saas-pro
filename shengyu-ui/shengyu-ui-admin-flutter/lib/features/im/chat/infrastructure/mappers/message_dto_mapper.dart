@@ -1,6 +1,7 @@
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_viewport_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/services/message_semantics_normalizer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/message_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/message_window_response_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_window_result.dart';
@@ -8,7 +9,7 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 abstract final class MessageDtoMapper {
   static Message toEntity(MessageDto dto) {
-    return Message(
+    return MessageSemanticsNormalizer.normalize(Message(
       messageId: dto.messageId,
       chatId: dto.chatId,
       senderId: dto.senderId,
@@ -61,7 +62,7 @@ abstract final class MessageDtoMapper {
         reeditDeadlineTs: dto.reeditDeadlineTs,
         systemEventKey: dto.systemEventKey,
       ),
-    );
+    ));
   }
 
   static ChatWindowResult toWindowResult(MessageWindowResponseDto dto) {

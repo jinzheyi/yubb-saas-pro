@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_avatar.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/text_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -359,7 +360,7 @@ class _MessageRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _Avatar(seed: senderDisplayName, imageUrl: currentUserAvatarUrl),
+          ChatAvatar(seed: senderDisplayName, imageUrl: currentUserAvatarUrl),
         ],
       );
     }
@@ -367,7 +368,7 @@ class _MessageRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Avatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
+        ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -772,68 +773,6 @@ class _LoadOlderBar extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(AppLocalizations.of(context).chatLoadOlder),
-        ),
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.seed, this.imageUrl});
-
-  final String seed;
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = seed.isEmpty ? '?' : seed.substring(0, 1);
-    final resolvedImage = imageUrl?.trim() ?? '';
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: _avatarColor(seed),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      alignment: Alignment.center,
-      clipBehavior: Clip.antiAlias,
-      child: resolvedImage.isNotEmpty
-          ? Image.network(
-              resolvedImage,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _AvatarFallback(initials: initials);
-              },
-            )
-          : _AvatarFallback(initials: initials),
-    );
-  }
-
-  Color _avatarColor(String seed) {
-    const colors = <Color>[
-      Color(0xFFE97CAB),
-      Color(0xFF93D3A8),
-      Color(0xFFF6CFA9),
-      Color(0xFF8FB8F7),
-    ];
-    return colors[seed.isEmpty ? 0 : seed.codeUnitAt(0) % colors.length];
-  }
-}
-
-class _AvatarFallback extends StatelessWidget {
-  const _AvatarFallback({required this.initials});
-
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        initials,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
         ),
       ),
     );

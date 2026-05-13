@@ -539,8 +539,8 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
   void _openProfile(BuildContext context, ContactDirectoryItem member) {
     context.pushNamed(
       RouteNames.contactsProfile,
+      pathParameters: <String, String>{'userId': member.userId},
       extra: <String, String>{
-        'userId': member.userId,
         'name': member.name,
         'departmentName': member.departmentName,
       },

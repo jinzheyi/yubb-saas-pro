@@ -177,8 +177,10 @@ class GroupMemberDetailPage extends ConsumerWidget {
                     : () {
                         context.pushNamed(
                           RouteNames.contactsProfile,
-                          extra: {
+                          pathParameters: <String, String>{
                             'userId': memberUserId,
+                          },
+                          extra: {
                             'name': displayName,
                             'departmentName': '',
                           },

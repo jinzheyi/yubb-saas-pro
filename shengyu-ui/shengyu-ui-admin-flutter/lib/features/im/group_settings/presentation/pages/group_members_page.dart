@@ -309,8 +309,8 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         : strings.profileUnknownUser;
     context.pushNamed(
       RouteNames.contactsProfile,
+      pathParameters: <String, String>{'userId': member.id},
       extra: {
-        'userId': member.id,
         'name': displayName,
         'departmentName': member.deptName?.trim() ?? '',
       },

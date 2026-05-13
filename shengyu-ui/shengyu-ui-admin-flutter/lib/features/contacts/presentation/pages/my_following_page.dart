@@ -176,8 +176,8 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
     }
     context.pushNamed(
       RouteNames.contactsProfile,
+      pathParameters: <String, String>{'userId': item.userId},
       extra: <String, String>{
-        'userId': item.userId,
         'name': item.name,
         'departmentName': item.departmentName,
       },
