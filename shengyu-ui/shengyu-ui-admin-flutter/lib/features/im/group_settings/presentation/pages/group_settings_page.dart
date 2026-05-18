@@ -12,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/cont
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class GroupSettingsPage extends ConsumerStatefulWidget {
   const GroupSettingsPage({super.key, required this.args});
@@ -86,7 +87,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 style: const TextStyle(color: Color(0xFF8F96A3)),
               ),
               const SizedBox(height: 12),
-              FilledButton(onPressed: controller.load, child: Text(strings.retry)),
+              FilledButton(
+                onPressed: controller.load,
+                child: Text(strings.retry),
+              ),
             ],
           ),
         ),
@@ -136,7 +140,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            strings.groupSettingsMembersCount(state.memberCount),
+                            strings.groupSettingsMembersCount(
+                              state.memberCount,
+                            ),
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF8F96A3),
@@ -750,7 +756,10 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, child: Column(children: children));
+    return Container(
+      color: Colors.white,
+      child: Column(children: children),
+    );
   }
 }
 
@@ -901,41 +910,14 @@ class _MemberPreviewAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedAvatar = avatarUrl?.trim() ?? '';
-    if (resolvedAvatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          resolvedAvatar,
-          width: 54,
-          height: 54,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(),
-        ),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    final trimmedName = name.trim();
-    final initial = trimmedName.isEmpty ? '?' : trimmedName.substring(0, 1);
-    return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      avatarUrl: avatarUrl,
+      backgroundColor: color,
+      size: 54,
+      borderRadius: 10,
+      fontSize: 18,
+      textColor: Colors.white,
     );
   }
 }

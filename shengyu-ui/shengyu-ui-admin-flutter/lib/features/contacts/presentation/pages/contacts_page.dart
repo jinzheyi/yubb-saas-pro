@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/states/contacts_page_state.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
-import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
 
 class ContactsPage extends ConsumerStatefulWidget {
   const ContactsPage({super.key});
@@ -20,6 +17,10 @@ class ContactsPage extends ConsumerStatefulWidget {
 }
 
 class _ContactsPageState extends ConsumerState<ContactsPage> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _sectionKeys = <String, GlobalKey>{};
+
   @override
   void initState() {
     super.initState();
@@ -29,285 +30,433 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final strings = ref.watch(appStringsProvider);
-    final state = ref.watch(contactsPageControllerProvider);
-    final quickEntries = [
-      _QuickEntry(
-        strings.contactsMyGroups,
-        AppIconKind.groupsFill,
-        const Color(0xFFFF9738),
-        RouteNames.contactsMyGroups,
-      ),
-      _QuickEntry(
-        strings.contactsFavorites,
-        AppIconKind.history,
-        const Color(0xFFFFCA1F),
-        RouteNames.contactsFavorites,
-      ),
-      _QuickEntry(
-        strings.contactsOrganization,
-        AppIconKind.widgetsOutline,
-        const Color(0xFF8BCF19),
-        RouteNames.contactsOrg,
-      ),
-      _QuickEntry(
-        strings.contactsDepartments,
-        AppIconKind.contactsFill,
-        const Color(0xFF1FB0D8),
-        RouteNames.contactsMyDepartment,
-      ),
-    ];
-    final sections = _buildSections(state);
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-    return PrimaryPageScaffold(
-      title: strings.contactsTitle,
-      searchBar: PrimarySearchBar(
-        hintText: strings.searchHint,
-        onTap: () => _showSearchSheet(context),
-      ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () =>
-                ref.read(contactsPageControllerProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 16),
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final state = ref.watch(contactsPageControllerProvider);
+    final myGroupsAsync = ref.watch(myGroupsProvider);
+    final sections = _buildSections(state);
+    final hasPendingGroupRequest =
+        myGroupsAsync.valueOrNull?.any(
+          (item) => item.pendingJoinRequestCount > 0,
+        ) ??
+        false;
+
+    _syncKeyword(state.keyword);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            Column(
               children: [
-                PrimaryMenuSection(
-                  indent: 16,
-                  endIndent: 16,
-                  children: [
-                    for (final entry in quickEntries)
-                      PrimaryMenuTile(
-                        icon: entry.icon,
-                        iconColor: entry.color,
-                        title: entry.title,
-                        horizontalPadding: 16,
-                        iconBoxSize: 34,
-                        iconSize: 18,
-                        onTap: () {
-                          final routeName = entry.routeName;
-                          if (routeName == null) {
-                            return;
-                          }
-                          context.pushNamed(routeName);
-                        },
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (state.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 48),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (state.errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _ContactsErrorCard(
-                      message: state.errorMessage!,
-                      onRetry: () => ref
-                          .read(contactsPageControllerProvider.notifier)
-                          .load(),
-                    ),
-                  )
-                else ...[
-                  for (final section in sections)
-                    _ContactSectionBlock(
-                      section: section,
-                      onOpenContact: (contact) =>
-                          _openContactActions(context, contact),
-                    ),
-                  if (sections.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 48),
-                      child: Center(
-                        child: Text(
-                          strings.contactsListEmpty,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF8F96A3),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 44,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            strings.contactsTitle,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF202531),
+                            ),
                           ),
                         ),
                       ),
+                      _ContactsSearchBar(
+                        controller: _searchController,
+                        hintText: strings.searchHint,
+                        onChanged: (value) => ref
+                            .read(contactsPageControllerProvider.notifier)
+                            .updateKeyword(value),
+                        onClear: () => ref
+                            .read(contactsPageControllerProvider.notifier)
+                            .updateKeyword(''),
+                        onSearch: _openSearchResult,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(contactsPageControllerProvider.notifier)
+                        .refresh(),
+                    child: ListView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.only(bottom: 16),
+                      children: [
+                        _CategoryGroup(
+                          items: [
+                            _CategoryEntry(
+                              title: strings.contactsMyGroups,
+                              icon: AppIconKind.groupsFill,
+                              color: const Color(0xFFFB923C),
+                              showDot: hasPendingGroupRequest,
+                              onTap: () => context.pushNamed(
+                                RouteNames.contactsMyGroups,
+                              ),
+                            ),
+                            _CategoryEntry(
+                              title: strings.contactsFavorites,
+                              icon: AppIconKind.starOutline,
+                              color: const Color(0xFFFACC15),
+                              onTap: () => context.pushNamed(
+                                RouteNames.contactsMyFollowing,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _CategoryGroup(
+                          items: [
+                            _CategoryEntry(
+                              title: strings.contactsOrganization,
+                              icon: AppIconKind.tree,
+                              color: const Color(0xFF84CC16),
+                              onTap: () =>
+                                  context.pushNamed(RouteNames.contactsOrg),
+                            ),
+                            _CategoryEntry(
+                              title: strings.contactsDepartments,
+                              icon: AppIconKind.apartment,
+                              color: const Color(0xFF06B6D4),
+                              onTap: () => context.pushNamed(
+                                RouteNames.contactsMyDepartment,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (state.isLoading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 48),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (state.errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: _ContactsErrorCard(
+                              message: state.errorMessage!,
+                              onRetry: () => ref
+                                  .read(contactsPageControllerProvider.notifier)
+                                  .load(),
+                            ),
+                          )
+                        else ...[
+                          for (final section in sections)
+                            _ContactSectionBlock(
+                              key: _sectionKeys.putIfAbsent(
+                                section.indexLabel,
+                                GlobalKey.new,
+                              ),
+                              section: section,
+                              onOpenContact: (contact) => context.pushNamed(
+                                RouteNames.contactsProfile,
+                                pathParameters: <String, String>{
+                                  'userId': contact.userId,
+                                },
+                                extra: <String, String>{
+                                  'name': contact.name,
+                                  'departmentName': contact.departmentName,
+                                },
+                              ),
+                            ),
+                          if (sections.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 48),
+                              child: Center(
+                                child: Text(
+                                  strings.contactsListEmpty,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF8F96A3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ],
             ),
-          ),
-          if (sections.isNotEmpty)
-            Positioned(
-              right: 4,
-              top: 182,
-              child: _IndexRail(
-                labels: sections.map((section) => section.indexLabel).toList(),
+            if (sections.isNotEmpty)
+              Positioned(
+                right: 6,
+                top: 210,
+                child: _IndexRail(
+                  labels: sections
+                      .map((section) => section.indexLabel)
+                      .toList(),
+                  onTap: _scrollToSection,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  void _syncKeyword(String keyword) {
+    if (_searchController.text == keyword) {
+      return;
+    }
+    _searchController.value = TextEditingValue(
+      text: keyword,
+      selection: TextSelection.collapsed(offset: keyword.length),
     );
   }
 
   List<_ContactSection> _buildSections(ContactsPageState state) {
-    final sections = <String, List<_ContactItem>>{};
+    final letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    final groups = <String, List<_ContactItem>>{
+      for (final letter in letters) letter: <_ContactItem>[],
+    };
     for (final item in state.filteredItems) {
-      final trimmedName = item.name.trim();
-      final key = trimmedName.isEmpty
-          ? '#'
-          : trimmedName.substring(0, 1).toUpperCase();
-      sections
-          .putIfAbsent(key, () => <_ContactItem>[])
-          .add(
-            _ContactItem(
-              item.userId,
-              item.name,
-              item.departmentName,
-              item.avatarUrl,
-            ),
-          );
+      final letter = _normalizePinyin(item.name, item.pinyin);
+      if (!groups.containsKey(letter)) {
+        continue;
+      }
+      groups[letter]!.add(
+        _ContactItem(
+          userId: item.userId,
+          name: item.name,
+          departmentName: item.departmentName,
+          avatarUrl: item.avatarUrl,
+        ),
+      );
     }
-    final keys = sections.keys.toList()..sort();
-    return [for (final key in keys) _ContactSection(key, sections[key]!)];
-  }
-
-  void _openContactActions(BuildContext context, _ContactItem contact) {
-    final strings = ref.read(appStringsProvider);
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.personOutline,
-                  size: 20,
-                  color: Color(0xFF202531),
-                ),
-                title: Text(strings.groupSettingsViewProfile),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  context.pushNamed(
-                    RouteNames.contactsProfile,
-                    pathParameters: <String, String>{'userId': contact.userId},
-                    extra: <String, String>{
-                      'name': contact.name,
-                      'departmentName': contact.departmentName,
-                    },
-                  );
-                },
-              ),
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.chatOutline,
-                  size: 20,
-                  color: Color(0xFF202531),
-                ),
-                title: Text(strings.groupSettingsSendMessage),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  try {
-                    final conversation = await ref.read(
-                      directConversationProvider(contact.userId).future,
-                    );
-                    if (!context.mounted) {
-                      return;
-                    }
-                    context.pushNamed(
-                      RouteNames.chat,
-                      extra: ChatEntryArgs.latest(
-                        chatId: conversation.chatId,
-                        conversationType: ConversationType.direct,
-                        targetId: conversation.targetId,
-                        title: conversation.title.trim().isEmpty
-                            ? contact.name
-                            : conversation.title.trim(),
-                      ),
-                    );
-                  } catch (error) {
-                    if (!context.mounted) {
-                      return;
-                    }
-                    _showComingSoon(context, error.toString());
-                  }
-                },
-              ),
-            ],
+    return [
+      for (final entry in groups.entries)
+        if (entry.value.isNotEmpty)
+          _ContactSection(
+            entry.key,
+            entry.value..sort((left, right) => left.name.compareTo(right.name)),
           ),
-        );
-      },
-    );
+    ];
   }
 
-  void _showComingSoon(BuildContext context, String message) {
-    ScaffoldMessenger.of(
+  String _normalizePinyin(String name, String rawPinyin) {
+    var letter = rawPinyin.trim();
+    if (letter.length > 1) {
+      letter = letter.substring(0, 1);
+    }
+    if (letter.isEmpty) {
+      return _fallbackLetter(name);
+    }
+    final normalized = letter.toUpperCase();
+    return RegExp(r'^[A-Z]$').hasMatch(normalized)
+        ? normalized
+        : _fallbackLetter(name);
+  }
+
+  String _fallbackLetter(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return 'A';
+    }
+    final firstCode = trimmed.codeUnitAt(0);
+    if (firstCode >= 19968 && firstCode <= 40869) {
+      final index = (firstCode - 19968) % 26;
+      return String.fromCharCode(65 + index);
+    }
+    final letter = trimmed.substring(0, 1).toUpperCase();
+    return RegExp(r'^[A-Z]$').hasMatch(letter) ? letter : 'A';
+  }
+
+  void _scrollToSection(String label) {
+    final context = _sectionKeys[label]?.currentContext;
+    if (context == null) {
+      return;
+    }
+    Scrollable.ensureVisible(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      alignment: 0,
+    );
   }
 
-  Future<void> _showSearchSheet(BuildContext context) async {
-    final strings = ref.read(appStringsProvider);
-    final controller = TextEditingController(
-      text: ref.read(contactsPageControllerProvider).keyword,
+  void _openSearchResult() {
+    final keyword = _searchController.text.trim();
+    if (keyword.isEmpty) {
+      return;
+    }
+    context.pushNamed(RouteNames.contactsSearchResult, extra: keyword);
+  }
+}
+
+class _ContactsSearchBar extends StatelessWidget {
+  const _ContactsSearchBar({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    required this.onClear,
+    required this.onSearch,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F3F8),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onSearch,
+            child: const AppIcon(
+              AppIconKind.search,
+              size: 16,
+              color: Color(0xFF98A1B2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              onSubmitted: (_) => onSearch(),
+              decoration: InputDecoration(
+                hintText: hintText,
+                border: InputBorder.none,
+                isCollapsed: true,
+                hintStyle: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFFA7AFB9),
+                ),
+              ),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF202531)),
+            ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              if (value.text.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return GestureDetector(
+                onTap: onClear,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: AppIcon(
+                    AppIconKind.close,
+                    size: 16,
+                    color: Color(0xFF98A1B2),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+  }
+}
+
+class _CategoryGroup extends StatelessWidget {
+  const _CategoryGroup({required this.items});
+
+  final List<_CategoryEntry> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            _CategoryTile(item: items[index]),
+            if (index != items.length - 1)
+              const Divider(
+                height: 1,
+                indent: 64,
+                endIndent: 0,
+                color: Color(0xFFF0F0F0),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.item});
+
+  final _CategoryEntry item;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: item.onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: strings.contactsSearchInputHint,
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: AppIcon(
-                        AppIconKind.search,
-                        size: 18,
-                        color: Color(0xFF98A1B2),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: item.color,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: AppIcon(item.icon, size: 18, color: Colors.white),
+                ),
+                if (item.showDot)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF04438),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                     ),
                   ),
-                  onChanged: ref
-                      .read(contactsPageControllerProvider.notifier)
-                      .updateKeyword,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      final keyword = controller.text.trim();
-                      ref
-                          .read(contactsPageControllerProvider.notifier)
-                          .updateKeyword(keyword);
-                      Navigator.of(context).pop();
-                      if (keyword.isNotEmpty) {
-                        context.pushNamed(
-                          RouteNames.contactsSearchResult,
-                          extra: keyword,
-                        );
-                      }
-                    },
-                    child: Text(strings.groupSettingsDone),
-                  ),
-                ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                item.title,
+                style: const TextStyle(fontSize: 16, color: Color(0xFF202531)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    controller.dispose();
   }
 }
 
@@ -320,34 +469,27 @@ class _ContactsErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return PrimaryMenuSection(
-      indent: 0,
-      endIndent: 0,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            children: [
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Color(0xFFE54D4F)),
-              ),
-              const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: Text(strings.retry),
-              ),
-            ],
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Color(0xFFE54D4F)),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          FilledButton.tonal(onPressed: onRetry, child: Text(strings.retry)),
+        ],
+      ),
     );
   }
 }
 
 class _ContactSectionBlock extends StatelessWidget {
   const _ContactSectionBlock({
+    super.key,
     required this.section,
     required this.onOpenContact,
   });
@@ -360,7 +502,19 @@ class _ContactSectionBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PrimaryIndexedSectionHeader(label: section.indexLabel),
+        Container(
+          width: double.infinity,
+          color: const Color(0xFFF5F7FB),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Text(
+            section.indexLabel,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF8F96A3),
+            ),
+          ),
+        ),
         Container(
           color: Colors.white,
           child: Column(
@@ -374,8 +528,8 @@ class _ContactSectionBlock extends StatelessWidget {
                   const Divider(
                     height: 1,
                     indent: 64,
-                    endIndent: 16,
-                    color: Color(0xFFF0F2F6),
+                    endIndent: 0,
+                    color: Color(0xFFF0F0F0),
                   ),
               ],
             ],
@@ -394,20 +548,19 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
             ContactsInitialAvatar(
               name: contact.name,
-              color: _avatarColor(contact.name),
+              color: getUserAvatarColor(contact.userId),
               avatarUrl: contact.avatarUrl,
-              size: 38,
-              borderRadius: 8,
-              fontSize: 16,
+              size: 40,
+              borderRadius: 10,
+              fontSize: 15,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -416,63 +569,55 @@ class _ContactTile extends StatelessWidget {
                 children: [
                   Text(
                     contact.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF202531),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF202531),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    contact.departmentName,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF8F96A3),
+                  if (contact.departmentName.trim().isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      contact.departmentName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8F96A3),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
-            ),
-            const AppIcon(
-              AppIconKind.chevronRight,
-              color: Color(0xFFB8C0CC),
-              size: 16,
             ),
           ],
         ),
       ),
     );
   }
-
-  Color _avatarColor(String seed) {
-    const colors = <Color>[
-      Color(0xFFE97CAB),
-      Color(0xFFF6CFA9),
-      Color(0xFF93D3A8),
-      Color(0xFF8FB8F7),
-    ];
-    final trimmedSeed = seed.trim();
-    final index = trimmedSeed.isEmpty
-        ? 0
-        : trimmedSeed.codeUnitAt(0) % colors.length;
-    return colors[index];
-  }
 }
 
-class _QuickEntry {
-  const _QuickEntry(this.title, this.icon, this.color, this.routeName);
+class _CategoryEntry {
+  const _CategoryEntry({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.showDot = false,
+  });
 
   final String title;
   final AppIconKind icon;
   final Color color;
-  final String? routeName;
+  final VoidCallback onTap;
+  final bool showDot;
 }
 
 class _ContactItem {
-  const _ContactItem(
-    this.userId,
-    this.name,
-    this.departmentName,
-    this.avatarUrl,
-  );
+  const _ContactItem({
+    required this.userId,
+    required this.name,
+    required this.departmentName,
+    required this.avatarUrl,
+  });
 
   final String userId;
   final String name;
@@ -488,31 +633,31 @@ class _ContactSection {
 }
 
 class _IndexRail extends StatelessWidget {
-  const _IndexRail({required this.labels});
+  const _IndexRail({required this.labels, required this.onTap});
 
   final List<String> labels;
+  final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return SizedBox(
+      width: 18,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final label in labels)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7380),
+            GestureDetector(
+              onTap: () => onTap(label),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF202531),
+                  ),
                 ),
               ),
             ),

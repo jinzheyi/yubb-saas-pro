@@ -119,6 +119,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contactsPostLabel => '岗位';
 
   @override
+  String get contactsDetailMore => '更多';
+
+  @override
+  String get contactsDetailFollow => '关注';
+
+  @override
+  String get contactsDetailUnfollow => '取消关注';
+
+  @override
+  String get contactsDetailShareCard => '分享名片';
+
+  @override
+  String get contactsDetailName => '姓名';
+
+  @override
+  String get contactsDetailMobile => '手机号';
+
+  @override
+  String get contactsDetailEmail => '邮箱';
+
+  @override
+  String get contactsDetailPost => '岗位';
+
+  @override
+  String get contactsDetailDepartment => '部门';
+
+  @override
+  String get contactsDetailUnset => '未设置';
+
+  @override
+  String get contactsDetailMessage => '发消息';
+
+  @override
+  String get contactsDetailCall => '打电话';
+
+  @override
+  String get contactsDetailInvalidUser => '用户信息无效';
+
+  @override
+  String get contactsDetailFollowSuccess => '关注成功';
+
+  @override
+  String get contactsDetailUnfollowSuccess => '已取消关注';
+
+  @override
+  String get contactsDetailActionFailedRetry => '操作失败，请重试';
+
+  @override
+  String get contactsDetailLoadFailed => '加载用户详情失败';
+
+  @override
+  String get contactsDetailCallInDevelopment => '通话功能开发中';
+
+  @override
+  String get contactsDetailShareUnsupported => '分享名片暂未接入';
+
+  @override
   String get chatSettingsTitle => '聊天设置';
 
   @override

@@ -314,6 +314,120 @@ abstract class AppLocalizations {
   /// **'Position'**
   String get contactsPostLabel;
 
+  /// No description provided for @contactsDetailMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get contactsDetailMore;
+
+  /// No description provided for @contactsDetailFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get contactsDetailFollow;
+
+  /// No description provided for @contactsDetailUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow'**
+  String get contactsDetailUnfollow;
+
+  /// No description provided for @contactsDetailShareCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Contact Card'**
+  String get contactsDetailShareCard;
+
+  /// No description provided for @contactsDetailName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get contactsDetailName;
+
+  /// No description provided for @contactsDetailMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get contactsDetailMobile;
+
+  /// No description provided for @contactsDetailEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get contactsDetailEmail;
+
+  /// No description provided for @contactsDetailPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get contactsDetailPost;
+
+  /// No description provided for @contactsDetailDepartment.
+  ///
+  /// In en, this message translates to:
+  /// **'Department'**
+  String get contactsDetailDepartment;
+
+  /// No description provided for @contactsDetailUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Unset'**
+  String get contactsDetailUnset;
+
+  /// No description provided for @contactsDetailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get contactsDetailMessage;
+
+  /// No description provided for @contactsDetailCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get contactsDetailCall;
+
+  /// No description provided for @contactsDetailInvalidUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid user'**
+  String get contactsDetailInvalidUser;
+
+  /// No description provided for @contactsDetailFollowSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Followed'**
+  String get contactsDetailFollowSuccess;
+
+  /// No description provided for @contactsDetailUnfollowSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollowed'**
+  String get contactsDetailUnfollowSuccess;
+
+  /// No description provided for @contactsDetailActionFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Action failed, please retry'**
+  String get contactsDetailActionFailedRetry;
+
+  /// No description provided for @contactsDetailLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load user details'**
+  String get contactsDetailLoadFailed;
+
+  /// No description provided for @contactsDetailCallInDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling is under development'**
+  String get contactsDetailCallInDevelopment;
+
+  /// No description provided for @contactsDetailShareUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact card sharing is not wired yet'**
+  String get contactsDetailShareUnsupported;
+
   /// No description provided for @chatSettingsTitle.
   ///
   /// In en, this message translates to:

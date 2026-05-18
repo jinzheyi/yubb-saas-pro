@@ -14,6 +14,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/conta
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class MyGroupsPage extends ConsumerStatefulWidget {
   const MyGroupsPage({super.key, this.args = const ContactPickerArgs()});
@@ -278,22 +279,11 @@ class _GroupAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = group.avatarUrl?.trim() ?? '';
-    if (avatarUrl.isNotEmpty) {
-      return Image.network(
-        avatarUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildFallback(),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    return Container(
-      color: color,
-      alignment: Alignment.center,
-      child: const Icon(Icons.groups_2_outlined, color: Colors.white),
+    return AppAvatar(
+      name: group.name,
+      avatarUrl: group.avatarUrl,
+      backgroundColor: color,
+      fallbackChild: const Icon(Icons.groups_2_outlined, color: Colors.white),
     );
   }
 }

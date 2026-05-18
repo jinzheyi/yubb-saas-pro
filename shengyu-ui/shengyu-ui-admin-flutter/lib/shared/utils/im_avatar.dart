@@ -39,6 +39,14 @@ Color getConversationAvatarColor(
   return getUserAvatarColor(targetId);
 }
 
+String normalizeAvatarUrl(String? raw) {
+  final value = raw?.trim() ?? '';
+  if (value.isEmpty || value == 'null' || value == 'undefined') {
+    return '';
+  }
+  return value;
+}
+
 String getAvatarText(String name) {
   final trimmed = name.trim();
   if (trimmed.isEmpty) {

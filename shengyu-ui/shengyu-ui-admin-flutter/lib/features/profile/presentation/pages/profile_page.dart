@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
 
@@ -230,29 +231,14 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedAvatar = avatarUrl?.trim() ?? '';
-    if (resolvedAvatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          resolvedAvatar,
-          width: 56,
-          height: 56,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(),
-        ),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    return PrimaryInitialAvatar(
+    return AppAvatar(
       name: name,
-      color: Colors.white.withValues(alpha: 0.2),
+      avatarUrl: avatarUrl,
+      backgroundColor: Colors.white.withValues(alpha: 0.2),
       size: 56,
       borderRadius: 14,
       fontSize: fontSize,
+      textColor: Colors.white,
     );
   }
 }

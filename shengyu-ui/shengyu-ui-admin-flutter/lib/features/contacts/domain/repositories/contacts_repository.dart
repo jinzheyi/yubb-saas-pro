@@ -12,6 +12,10 @@ abstract class ContactsRepository {
 
   Future<ContactProfile> getContactProfile(String userId);
 
+  Future<bool> getContactStar(String userId);
+
+  Future<void> updateContactStar(String userId, bool star);
+
   Future<List<ContactDirectoryItem>> getContactsByDepartment(
     String deptId, {
     String keyword = '',

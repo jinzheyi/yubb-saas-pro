@@ -112,24 +112,32 @@ void main() {
 
     expect(controller.state.conversations, hasLength(1));
     expect(controller.state.conversations.single.chatId, 'chat-1');
+    expect(repository.listCallCount, 1);
+    expect(repository.syncCallCount, 0);
+  });
+
+  test('coordinator uses incremental sync after cursor is established', () async {
+    repository.syncResult = ConversationSyncResult(
+      items: <Conversation>[_buildConversation(chatId: 'chat-2')],
+      cursorVersion: '42',
+      hasMore: false,
+    );
+    final coordinator = ConversationSyncCoordinator(
+      _FakeLoadConversationListUseCase(repository),
+      _FakeSyncConversationsIncrementallyUseCase(repository),
+    );
+
+    final result = await coordinator.bootstrap(cursorVersion: '41');
+
+    expect(result.items.single.chatId, 'chat-2');
+    expect(repository.syncCallCount, 1);
+    expect(repository.listCallCount, 0);
   });
 
   test(
     'incremental sync keeps current conversations when response is empty',
     () async {
-      controller = ConversationListController(
-        ConversationSyncCoordinator(
-          _FakeLoadConversationListUseCase(repository),
-          _FakeSyncConversationsIncrementallyUseCase(repository),
-        ),
-        _FakeSyncConversationsIncrementallyUseCase(repository),
-        repository,
-      );
-      repository.syncResult = ConversationSyncResult(
-        items: <Conversation>[_buildConversation(chatId: 'chat-1')],
-        cursorVersion: '40',
-        hasMore: false,
-      );
+      repository.listResult = <Conversation>[_buildConversation(chatId: 'chat-1')];
       await controller.load();
 
       repository.syncResult = const ConversationSyncResult(
@@ -147,17 +155,13 @@ void main() {
   test(
     'incremental sync preserves avatar fields when delta omits them',
     () async {
-      repository.syncResult = ConversationSyncResult(
-        items: <Conversation>[
-          _buildConversation(
-            chatId: 'chat-1',
-            avatarText: '张三',
-            avatarBg: '#abcdef',
-          ),
-        ],
-        cursorVersion: '40',
-        hasMore: false,
-      );
+      repository.listResult = <Conversation>[
+        _buildConversation(
+          chatId: 'chat-1',
+          avatarText: '张三',
+          avatarBg: '#abcdef',
+        ),
+      ];
       await controller.load();
 
       repository.syncResult = ConversationSyncResult(
@@ -195,13 +199,19 @@ class _FakeConversationRepository implements ConversationRepository {
     cursorVersion: '0',
     hasMore: false,
   );
+  int listCallCount = 0;
+  int syncCallCount = 0;
 
   @override
-  Future<List<Conversation>> getConversationList() async => listResult;
+  Future<List<Conversation>> getConversationList() async {
+    listCallCount += 1;
+    return listResult;
+  }
 
   Future<ConversationSyncResult> _syncIncrementally({
     required String cursorVersion,
   }) async {
+    syncCallCount += 1;
     return syncResult;
   }
 

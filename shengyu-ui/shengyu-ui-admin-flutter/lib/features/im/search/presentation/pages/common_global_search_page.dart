@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 const _searchHistoryKey = 'IM_SEARCH_HISTORY';
 const _searchHotKey = 'IM_SEARCH_HOT';
@@ -1205,33 +1206,16 @@ class _ResultAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = item.avatarUrl.trim();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: avatarUrl.isNotEmpty
-          ? Image.network(
-              avatarUrl,
-              width: 44,
-              height: 44,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  onAvatarError();
-                });
-                return _fallback();
-              },
-            )
-          : _fallback(),
-    );
-  }
-
-  Widget _fallback() {
-    return Container(
-      width: 44,
-      height: 44,
-      color: item.avatarBg,
-      alignment: Alignment.center,
-      child: item.avatarIcon.isNotEmpty
+    return AppAvatar(
+      name: item.avatarText,
+      avatarUrl: item.avatarUrl,
+      backgroundColor: item.avatarBg,
+      size: 44,
+      borderRadius: 8,
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      onImageError: onAvatarError,
+      fallbackChild: item.avatarIcon.isNotEmpty
           ? Text(
               item.avatarIcon,
               style: const TextStyle(
@@ -1240,14 +1224,7 @@ class _ResultAvatar extends StatelessWidget {
                 fontSize: 22,
               ),
             )
-          : Text(
-              item.avatarText,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
+          : null,
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_me
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_more_panel_action.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ChatPageHeader extends StatelessWidget {
@@ -1204,29 +1205,16 @@ class _MentionMemberTile extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
           child: Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: avatarColor,
-                  borderRadius: BorderRadius.circular(18),
-                  image:
-                      !isAtAll &&
-                          item!.avatarUrl != null &&
-                          item!.avatarUrl!.trim().isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(item!.avatarUrl!.trim()),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child:
-                    (!isAtAll &&
-                        item!.avatarUrl != null &&
-                        item!.avatarUrl!.trim().isNotEmpty)
-                    ? null
-                    : Text(
+              isAtAll
+                  ? Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: avatarColor,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
                         avatarText,
                         style: const TextStyle(
                           color: Colors.white,
@@ -1234,7 +1222,16 @@ class _MentionMemberTile extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-              ),
+                    )
+                  : AppAvatar(
+                      name: displayName,
+                      avatarUrl: item!.avatarUrl,
+                      backgroundColor: avatarColor,
+                      size: 36,
+                      borderRadius: 18,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

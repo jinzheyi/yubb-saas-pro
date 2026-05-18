@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/states/call_state.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class OutgoingCallPage extends ConsumerStatefulWidget {
   const OutgoingCallPage({super.key, required this.args});
@@ -45,6 +45,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage> {
     final statusText = ref.watch(outgoingCallStatusTextProvider);
     final canCancel = ref.watch(canCancelOutgoingCallProvider);
     final title = state.title ?? widget.args.title ?? '新通话';
+    final avatarUrl = state.calleeProfile?.avatarUrl;
     return Scaffold(
       backgroundColor: const Color(0xFF111A28),
       body: SafeArea(
@@ -61,12 +62,14 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage> {
                 ),
               ),
               const Spacer(),
-              PrimaryInitialAvatar(
+              AppAvatar(
                 name: title,
-                color: const Color(0xFF246BFD),
+                avatarUrl: avatarUrl,
+                backgroundColor: const Color(0xFF246BFD),
                 size: 76,
                 borderRadius: 24,
                 fontSize: 30,
+                textColor: Colors.white,
               ),
               const SizedBox(height: 18),
               Text(

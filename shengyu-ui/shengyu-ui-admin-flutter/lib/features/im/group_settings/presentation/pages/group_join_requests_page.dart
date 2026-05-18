@@ -5,6 +5,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dar
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_join_request_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 enum _JoinRequestTab { pending, processed }
 
@@ -28,18 +29,18 @@ class _GroupJoinRequestsPageState extends ConsumerState<GroupJoinRequestsPage> {
   @override
   void initState() {
     super.initState();
-    ref.listenManual<GroupJoinRequestSignal?>(
-      groupJoinRequestSignalProvider,
-      (previous, next) {
-        if (!mounted || next == null) {
-          return;
-        }
-        if (next.groupId != widget.args.groupId) {
-          return;
-        }
-        _loadRequests();
-      },
-    );
+    ref.listenManual<GroupJoinRequestSignal?>(groupJoinRequestSignalProvider, (
+      previous,
+      next,
+    ) {
+      if (!mounted || next == null) {
+        return;
+      }
+      if (next.groupId != widget.args.groupId) {
+        return;
+      }
+      _loadRequests();
+    });
     Future.microtask(_loadRequests);
   }
 
@@ -477,41 +478,14 @@ class _RequestAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedAvatar = avatarUrl?.trim() ?? '';
-    if (resolvedAvatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          resolvedAvatar,
-          width: 44,
-          height: 44,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(),
-        ),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    final trimmedName = name.trim();
-    final initial = trimmedName.isEmpty ? '?' : trimmedName.characters.first;
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF3FF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF246BFD),
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      avatarUrl: avatarUrl,
+      backgroundColor: const Color(0xFFEEF3FF),
+      size: 44,
+      borderRadius: 12,
+      fontSize: 18,
+      textColor: const Color(0xFF246BFD),
     );
   }
 }

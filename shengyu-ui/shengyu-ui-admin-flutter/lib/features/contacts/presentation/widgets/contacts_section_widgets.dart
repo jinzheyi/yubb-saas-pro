@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ContactsBackButton extends StatelessWidget {
@@ -183,41 +184,14 @@ class ContactsInitialAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedAvatar = avatarUrl?.trim() ?? '';
-    if (resolvedAvatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: Image.network(
-          resolvedAvatar,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(),
-        ),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    final trimmedName = name.trim();
-    final initial = trimmedName.isEmpty ? '?' : trimmedName.substring(0, 1);
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      avatarUrl: avatarUrl,
+      backgroundColor: color,
+      size: size,
+      borderRadius: borderRadius,
+      fontSize: fontSize,
+      textColor: Colors.white,
     );
   }
 }

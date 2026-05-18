@@ -266,6 +266,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                 ? '我'
                 : profile.nickname.trim(),
             departmentName: profile.departmentName,
+            pinyin: 'W',
             postName: profile.postName,
             avatarUrl: profile.avatarUrl,
             isCurrentUser: true,
@@ -305,6 +306,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                 userId: item.userId,
                 name: item.name.trim().isEmpty ? '未命名用户' : item.name.trim(),
                 departmentName: item.departmentName,
+                pinyin: item.pinyin,
                 postName: item.postName,
                 avatarUrl: item.avatarUrl,
               ),
@@ -547,6 +549,7 @@ class _SelectableContact extends ContactDirectoryItem {
     required super.userId,
     required super.name,
     required super.departmentName,
+    required super.pinyin,
     required super.avatarUrl,
     required super.postName,
     this.isCurrentUser = false,
@@ -566,131 +569,3 @@ class _SelectableContact extends ContactDirectoryItem {
     return '未分配部门';
   }
 }
-
-class _CategoryPanel extends StatelessWidget {
-  const _CategoryPanel({required this.onTap});
-
-  final ValueChanged<_CategoryItem> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const items = <_CategoryItem>[
-      _CategoryItem(
-        kind: _CategoryKind.groups,
-        icon: Icons.groups_rounded,
-        title: '我的群组',
-        backgroundColor: Color(0xFFFFE9DA),
-        iconColor: Color(0xFFFB923C),
-      ),
-      _CategoryItem(
-        kind: _CategoryKind.following,
-        icon: Icons.star_rounded,
-        title: '我的关注',
-        backgroundColor: Color(0xFFFFF4CC),
-        iconColor: Color(0xFFEAB308),
-      ),
-      _CategoryItem(
-        kind: _CategoryKind.organization,
-        icon: Icons.account_tree_rounded,
-        title: '组织架构',
-        backgroundColor: Color(0xFFEEF8DB),
-        iconColor: Color(0xFF84CC16),
-      ),
-      _CategoryItem(
-        kind: _CategoryKind.department,
-        icon: Icons.apartment_rounded,
-        title: '我的部门',
-        backgroundColor: Color(0xFFE7F8FB),
-        iconColor: Color(0xFF06B6D4),
-      ),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '从已有分类中选择',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF8F96A3)),
-                ),
-              ),
-            ),
-            for (var index = 0; index < items.length; index++) ...[
-              InkWell(
-                onTap: () => onTap(items[index]),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: items[index].backgroundColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          items[index].icon,
-                          color: items[index].iconColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          items[index].title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Color(0xFF202531),
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFFB8BFCC),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (index != items.length - 1)
-                const Divider(
-                  height: 1,
-                  indent: 64,
-                  endIndent: 16,
-                  color: Color(0xFFF0F2F6),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryItem {
-  const _CategoryItem({
-    required this.kind,
-    required this.icon,
-    required this.title,
-    required this.backgroundColor,
-    required this.iconColor,
-  });
-
-  final _CategoryKind kind;
-  final IconData icon;
-  final String title;
-  final Color backgroundColor;
-  final Color iconColor;
-}
-
-enum _CategoryKind { groups, following, organization, department }

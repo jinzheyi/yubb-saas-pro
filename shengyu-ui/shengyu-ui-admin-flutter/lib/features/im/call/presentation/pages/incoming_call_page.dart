@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/states/call_state.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/primary_page_scaffold.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class IncomingCallPage extends ConsumerStatefulWidget {
   const IncomingCallPage({super.key, required this.args});
@@ -47,6 +47,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
     final canReject = ref.watch(canRejectIncomingCallProvider);
     final canAccept = ref.watch(canAcceptIncomingCallProvider);
     final title = state.title ?? widget.args.title ?? '语音通话';
+    final avatarUrl = state.callerProfile?.avatarUrl;
     return Scaffold(
       backgroundColor: const Color(0xFF101521),
       body: SafeArea(
@@ -55,12 +56,14 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
           child: Column(
             children: [
               const Spacer(),
-              PrimaryInitialAvatar(
+              AppAvatar(
                 name: title,
-                color: const Color(0xFF3D75F6),
+                avatarUrl: avatarUrl,
+                backgroundColor: const Color(0xFF3D75F6),
                 size: 72,
                 borderRadius: 24,
                 fontSize: 28,
+                textColor: Colors.white,
               ),
               const SizedBox(height: 18),
               Text(

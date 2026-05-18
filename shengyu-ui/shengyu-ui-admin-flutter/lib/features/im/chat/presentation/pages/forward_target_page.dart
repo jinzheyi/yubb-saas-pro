@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
@@ -11,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/providers/favorite_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ForwardTargetPage extends ConsumerStatefulWidget {
@@ -24,6 +26,7 @@ class ForwardTargetPage extends ConsumerStatefulWidget {
 
 class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
   static const int _maxForwardMessageCount = 50;
+  static const Uuid _uuid = Uuid();
 
   late final TextEditingController _keywordController;
   String _keyword = '';
@@ -72,8 +75,10 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
     final conversations = conversationState.conversations;
     final filtered = _filteredConversations(conversations);
     final isFavoriteMode = widget.args.isFavoriteMode;
-    final messageCount = isFavoriteMode ? 1 : widget.args.messageIds.length;
-    final showForwardType = !isFavoriteMode && messageCount > 1;
+    final isContactCardMode = widget.args.isContactCardMode;
+    final isSendMode = isFavoriteMode || isContactCardMode;
+    final messageCount = isSendMode ? 1 : widget.args.messageIds.length;
+    final showForwardType = !isSendMode && messageCount > 1;
 
     return Stack(
       children: [
@@ -165,7 +170,7 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
                   color: Colors.white,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   child: Text(
-                    '${isFavoriteMode ? strings.chatForwardTargetSummarySend : strings.chatForwardTargetSummaryForward} '
+                    '${isSendMode ? strings.chatForwardTargetSummarySend : strings.chatForwardTargetSummaryForward} '
                     '${strings.chatForwardTargetMessageCount(messageCount)} '
                     '${strings.chatForwardTargetSummaryTo}',
                     style: const TextStyle(
@@ -299,19 +304,23 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
   ) async {
     final strings = AppLocalizations.of(context);
     final isFavoriteMode = widget.args.isFavoriteMode;
+    final isContactCardMode = widget.args.isContactCardMode;
     final favoriteId = widget.args.favoriteId?.trim() ?? '';
+    final contactCardPayload = widget.args.contactCardPayload;
     final rawIds = widget.args.messageIds;
     final messageIds = rawIds
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty && item != '0')
         .toList(growable: false);
-    if (!isFavoriteMode && messageIds.isEmpty) {
+    if (!isFavoriteMode && !isContactCardMode && messageIds.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(strings.chatChooseForwardMessage)));
       return;
     }
-    if (!isFavoriteMode && messageIds.length > _maxForwardMessageCount) {
+    if (!isFavoriteMode &&
+        !isContactCardMode &&
+        messageIds.length > _maxForwardMessageCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(strings.chatMaxSelectReached(_maxForwardMessageCount)),
@@ -336,9 +345,42 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
         if (!context.mounted) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.chatForwardTargetSent)),
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.chatForwardTargetSent)));
+        final entryArgs = ChatEntryArgs.latest(
+          chatId: conversation.chatId,
+          conversationType: conversation.conversationType,
+          targetId: conversation.targetId,
+          title: _displayConversationTitle(conversation),
         );
+        context.pushReplacementNamed(RouteNames.chat, extra: entryArgs);
+        return;
+      }
+      if (isContactCardMode && contactCardPayload != null) {
+        await ref
+            .read(messageRepositoryProvider)
+            .sendContactCardMessage(
+              chatId: conversation.chatId,
+              payload: contactCardPayload,
+              clientMessageId: _uuid.v4(),
+              receiverId:
+                  conversation.conversationType == ConversationType.direct
+                  ? conversation.targetId
+                  : null,
+              groupId: conversation.conversationType == ConversationType.group
+                  ? conversation.targetId
+                  : null,
+            );
+        await ref
+            .read(conversationListControllerProvider.notifier)
+            .syncIncrementally();
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.chatForwardTargetSent)));
         final entryArgs = ChatEntryArgs.latest(
           chatId: conversation.chatId,
           conversationType: conversation.conversationType,
@@ -472,7 +514,6 @@ class _ForwardConversationTile extends StatelessWidget {
     final title = _displayConversationTitle(conversation);
     final preview = _displayConversationPreview(conversation);
     final isGroup = conversation.conversationType == ConversationType.group;
-    final avatar = conversation.targetAvatar?.trim() ?? '';
 
     return Material(
       color: Colors.white,
@@ -484,31 +525,23 @@ class _ForwardConversationTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isGroup
-                      ? const Color(0xFFFFB347)
-                      : const Color(0xFF246BFD),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: avatar.isNotEmpty
-                    ? Image.network(
-                        avatar,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _ConversationAvatarFallback(
-                            title: title,
-                            isGroup: isGroup,
-                          );
-                        },
+              AppAvatar(
+                name: title,
+                avatarUrl: conversation.targetAvatar,
+                backgroundColor: isGroup
+                    ? const Color(0xFFFFB347)
+                    : const Color(0xFF246BFD),
+                size: 44,
+                borderRadius: 10,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fallbackChild: isGroup
+                    ? const AppIcon(
+                        AppIconKind.groupsOutline,
+                        size: 18,
+                        color: Colors.white,
                       )
-                    : _ConversationAvatarFallback(
-                        title: title,
-                        isGroup: isGroup,
-                      ),
+                    : null,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -540,37 +573,6 @@ class _ForwardConversationTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConversationAvatarFallback extends StatelessWidget {
-  const _ConversationAvatarFallback({
-    required this.title,
-    required this.isGroup,
-  });
-
-  final String title;
-  final bool isGroup;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isGroup) {
-      return const Center(
-        child: AppIcon(AppIconKind.groupsOutline, size: 18, color: Colors.white),
-      );
-    }
-    final trimmed = title.trim();
-    final text = trimmed.isEmpty ? '?' : trimmed.substring(0, 1);
-    return Center(
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
         ),
       ),
     );

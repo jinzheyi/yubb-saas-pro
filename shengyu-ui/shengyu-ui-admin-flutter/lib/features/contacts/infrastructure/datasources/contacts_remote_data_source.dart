@@ -42,6 +42,26 @@ class ContactsRemoteDataSource {
     return result.requireData();
   }
 
+  Future<bool> getContactStar(String userId) async {
+    final response = await dio.get(
+      '/system/im/contact/get',
+      queryParameters: {'contactId': userId},
+    );
+    final result = ApiResult.fromJson<bool>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) =>
+          (raw as Map<String, dynamic>? ?? const {})['star'] == true,
+    );
+    return result.requireData();
+  }
+
+  Future<void> updateContactStar(String userId, bool star) async {
+    await dio.put(
+      '/system/im/contact/setting/update',
+      data: <String, dynamic>{'contactId': userId, 'star': star},
+    );
+  }
+
   Future<List<ContactDto>> getContactsByDepartment(
     String deptId, {
     String keyword = '',

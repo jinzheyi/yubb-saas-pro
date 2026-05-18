@@ -31,12 +31,23 @@ class ContactsRepositoryImpl implements ContactsRepository {
     return ContactProfile(
       userId: dto.userId,
       name: dto.nickname,
+      sex: dto.sex,
       departmentName: dto.departmentName,
       postName: dto.postName,
       phone: dto.mobile,
       email: dto.email,
       avatarUrl: dto.avatarUrl,
     );
+  }
+
+  @override
+  Future<bool> getContactStar(String userId) {
+    return _remoteDataSource.getContactStar(userId);
+  }
+
+  @override
+  Future<void> updateContactStar(String userId, bool star) {
+    return _remoteDataSource.updateContactStar(userId, star);
   }
 
   @override
@@ -132,10 +143,14 @@ class ContactsRepositoryImpl implements ContactsRepository {
   }
 
   ContactDirectoryItem _toDirectoryItem(ContactDto dto) {
+    final displayName = dto.remarkName.trim().isNotEmpty
+        ? dto.remarkName.trim()
+        : dto.nickname.trim();
     return ContactDirectoryItem(
       userId: dto.userId,
-      name: dto.nickname,
+      name: displayName,
       departmentName: dto.departmentName,
+      pinyin: dto.pinyin,
       chatId: '',
       avatarUrl: dto.avatarUrl,
       postName: dto.postName,

@@ -3,6 +3,7 @@ class ContactDirectoryItem {
     required this.userId,
     required this.name,
     required this.departmentName,
+    required this.pinyin,
     required this.chatId,
     required this.avatarUrl,
     required this.postName,
@@ -13,6 +14,7 @@ class ContactDirectoryItem {
   final String userId;
   final String name;
   final String departmentName;
+  final String pinyin;
   final String chatId;
   final String avatarUrl;
   final String postName;

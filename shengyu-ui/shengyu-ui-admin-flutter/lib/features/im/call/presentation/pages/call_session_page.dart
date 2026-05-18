@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/states/call_state.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class CallSessionPage extends ConsumerStatefulWidget {
   const CallSessionPage({super.key, required this.args});
@@ -55,6 +56,9 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
     );
     final mediaState = state.mediaState;
     final title = state.title ?? widget.args.title ?? '通话中';
+    final remoteAvatarUrl = state.isIncoming
+        ? state.callerProfile?.avatarUrl
+        : state.calleeProfile?.avatarUrl;
     return Scaffold(
       backgroundColor: const Color(0xFF0F1522),
       body: SafeArea(
@@ -112,6 +116,16 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    AppAvatar(
+                      name: title,
+                      avatarUrl: remoteAvatarUrl,
+                      backgroundColor: const Color(0xFF246BFD),
+                      size: 72,
+                      borderRadius: 24,
+                      fontSize: 28,
+                      textColor: Colors.white,
+                    ),
+                    const SizedBox(height: 14),
                     Icon(
                       isVideoEnabled
                           ? Icons.video_call_rounded

@@ -15,26 +15,27 @@ class ConversationSyncCoordinator {
   Future<ConversationSyncResult> bootstrap({
     required String cursorVersion,
   }) async {
+    final normalizedCursor = cursorVersion.trim().isEmpty
+        ? '0'
+        : cursorVersion.trim();
+    if (normalizedCursor == '0') {
+      final items = await _loadConversationListUseCase();
+      return ConversationSyncResult(
+        cursorVersion: normalizedCursor,
+        items: items,
+        hasMore: false,
+      );
+    }
+
     try {
       final result = await _syncConversationsIncrementallyUseCase(
-        cursorVersion: cursorVersion,
+        cursorVersion: normalizedCursor,
       );
-      final normalizedCursor = cursorVersion.trim().isEmpty
-          ? '0'
-          : cursorVersion.trim();
-      if (normalizedCursor == '0' && result.items.isEmpty) {
-        final items = await _loadConversationListUseCase();
-        return ConversationSyncResult(
-          cursorVersion: result.cursorVersion,
-          items: items,
-          hasMore: false,
-        );
-      }
       return result;
     } catch (_) {
       final items = await _loadConversationListUseCase();
       return ConversationSyncResult(
-        cursorVersion: cursorVersion,
+        cursorVersion: normalizedCursor,
         items: items,
         hasMore: false,
       );

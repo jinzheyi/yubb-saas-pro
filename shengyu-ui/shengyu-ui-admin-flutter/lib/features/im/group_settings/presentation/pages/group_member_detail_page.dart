@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class GroupMemberDetailPage extends ConsumerWidget {
   const GroupMemberDetailPage({
@@ -180,10 +181,7 @@ class GroupMemberDetailPage extends ConsumerWidget {
                           pathParameters: <String, String>{
                             'userId': memberUserId,
                           },
-                          extra: {
-                            'name': displayName,
-                            'departmentName': '',
-                          },
+                          extra: {'name': displayName, 'departmentName': ''},
                         );
                       },
               ),
@@ -535,41 +533,14 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedAvatar = avatarUrl?.trim() ?? '';
-    if (resolvedAvatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: Image.network(
-          resolvedAvatar,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(),
-        ),
-      );
-    }
-    return _buildFallback();
-  }
-
-  Widget _buildFallback() {
-    final trimmedName = name.trim();
-    final initial = trimmedName.isEmpty ? '?' : trimmedName.characters.first;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Color(colorValue),
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      avatarUrl: avatarUrl,
+      backgroundColor: Color(colorValue),
+      size: size,
+      borderRadius: borderRadius,
+      fontSize: fontSize,
+      textColor: Colors.white,
     );
   }
 }

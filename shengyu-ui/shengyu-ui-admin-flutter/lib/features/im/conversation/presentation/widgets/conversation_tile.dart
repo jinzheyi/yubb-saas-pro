@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ConversationTile extends StatefulWidget {
@@ -418,21 +419,29 @@ class _ConversationAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = conversation.targetAvatar?.trim() ?? '';
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: avatarUrl.isNotEmpty
-              ? Image.network(
-                  avatarUrl,
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _buildFallback(),
+        AppAvatar(
+          name: _fallbackText(),
+          avatarUrl: conversation.targetAvatar,
+          backgroundColor: resolveConversationAvatarBg(
+            avatarBg: conversation.avatarBg,
+            conversationType: conversation.conversationType,
+            targetId: conversation.targetId,
+            chatId: conversation.chatId,
+          ),
+          size: 48,
+          borderRadius: 8,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          fallbackChild: conversation.conversationType == ConversationType.group
+              ? const Icon(
+                  ShengyuIconFont.yonghu1,
+                  color: Colors.white,
+                  size: 24,
                 )
-              : _buildFallback(),
+              : null,
         ),
         if (conversation.unreadCount > 0)
           Positioned(
@@ -471,32 +480,6 @@ class _ConversationAvatar extends StatelessWidget {
                   ),
           ),
       ],
-    );
-  }
-
-  Widget _buildFallback() {
-    final isGroup = conversation.conversationType == ConversationType.group;
-    final backgroundColor = resolveConversationAvatarBg(
-      avatarBg: conversation.avatarBg,
-      conversationType: conversation.conversationType,
-      targetId: conversation.targetId,
-      chatId: conversation.chatId,
-    );
-    return Container(
-      width: 48,
-      height: 48,
-      color: backgroundColor,
-      alignment: Alignment.center,
-      child: isGroup
-          ? const Icon(ShengyuIconFont.yonghu1, color: Colors.white, size: 24)
-          : Text(
-              _fallbackText(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
     );
   }
 

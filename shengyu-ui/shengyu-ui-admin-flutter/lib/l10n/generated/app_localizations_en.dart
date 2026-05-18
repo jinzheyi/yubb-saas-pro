@@ -121,6 +121,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactsPostLabel => 'Position';
 
   @override
+  String get contactsDetailMore => 'More';
+
+  @override
+  String get contactsDetailFollow => 'Follow';
+
+  @override
+  String get contactsDetailUnfollow => 'Unfollow';
+
+  @override
+  String get contactsDetailShareCard => 'Share Contact Card';
+
+  @override
+  String get contactsDetailName => 'Name';
+
+  @override
+  String get contactsDetailMobile => 'Phone';
+
+  @override
+  String get contactsDetailEmail => 'Email';
+
+  @override
+  String get contactsDetailPost => 'Position';
+
+  @override
+  String get contactsDetailDepartment => 'Department';
+
+  @override
+  String get contactsDetailUnset => 'Unset';
+
+  @override
+  String get contactsDetailMessage => 'Message';
+
+  @override
+  String get contactsDetailCall => 'Call';
+
+  @override
+  String get contactsDetailInvalidUser => 'Invalid user';
+
+  @override
+  String get contactsDetailFollowSuccess => 'Followed';
+
+  @override
+  String get contactsDetailUnfollowSuccess => 'Unfollowed';
+
+  @override
+  String get contactsDetailActionFailedRetry => 'Action failed, please retry';
+
+  @override
+  String get contactsDetailLoadFailed => 'Failed to load user details';
+
+  @override
+  String get contactsDetailCallInDevelopment => 'Calling is under development';
+
+  @override
+  String get contactsDetailShareUnsupported =>
+      'Contact card sharing is not wired yet';
+
+  @override
   String get chatSettingsTitle => 'Chat Settings';
 
   @override
