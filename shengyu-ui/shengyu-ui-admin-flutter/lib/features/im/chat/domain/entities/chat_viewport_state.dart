@@ -14,4 +14,22 @@ class ChatViewportState {
   final bool anchorFound;
   final String? oldestSequence;
   final String? newestSequence;
+
+  ChatViewportState copyWith({
+    String? anchorMessageId,
+    bool? hasMoreBefore,
+    bool? hasMoreAfter,
+    bool? anchorFound,
+    String? oldestSequence,
+    String? newestSequence,
+  }) {
+    return ChatViewportState(
+      anchorMessageId: anchorMessageId ?? this.anchorMessageId,
+      hasMoreBefore: hasMoreBefore ?? this.hasMoreBefore,
+      hasMoreAfter: hasMoreAfter ?? this.hasMoreAfter,
+      anchorFound: anchorFound ?? this.anchorFound,
+      oldestSequence: oldestSequence ?? this.oldestSequence,
+      newestSequence: newestSequence ?? this.newestSequence,
+    );
+  }
 }

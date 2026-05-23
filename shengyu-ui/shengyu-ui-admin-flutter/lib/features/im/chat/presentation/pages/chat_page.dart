@@ -656,24 +656,26 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           isLoadingOlder:
                               timelineState.status ==
                               ChatTimelineStatus.loading,
-                          onLoadOlder: () async {
-                            final notice = strings.chatNoMoreMessages;
-                            final beforeCount = timelineState.messages.length;
-                            await ref
-                                .read(chatTimelineControllerProvider.notifier)
-                                .loadOlder(chatId: pageState.entryArgs.chatId);
-                            if (!mounted || !context.mounted) {
-                              return;
-                            }
-                            final nextTimeline = ref.read(
-                              chatTimelineControllerProvider,
-                            );
-                            if (beforeCount == nextTimeline.messages.length &&
-                                nextTimeline.viewportState?.hasMoreBefore ==
-                                    false) {
-                              _showAttachmentError(context, notice);
-                            }
-                          },
+                          onLoadOlder: timelineState.viewportState?.hasMoreBefore == true
+                              ? () async {
+                                  final notice = strings.chatNoMoreMessages;
+                                  final beforeCount = timelineState.messages.length;
+                                  await ref
+                                      .read(chatTimelineControllerProvider.notifier)
+                                      .loadOlder(chatId: pageState.entryArgs.chatId);
+                                  if (!mounted || !context.mounted) {
+                                    return;
+                                  }
+                                  final nextTimeline = ref.read(
+                                    chatTimelineControllerProvider,
+                                  );
+                                  if (beforeCount == nextTimeline.messages.length &&
+                                      nextTimeline.viewportState?.hasMoreBefore ==
+                                          false) {
+                                    _showAttachmentError(context, notice);
+                                  }
+                                }
+                              : null,
                           onRetryMessage: (message) async {
                             if (message.type == MessageType.text) {
                               final retried = await ref

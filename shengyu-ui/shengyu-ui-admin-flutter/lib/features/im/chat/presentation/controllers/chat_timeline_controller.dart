@@ -32,14 +32,40 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   Future<void> loadOlder({required String chatId}) async {
+    // 如果没有更多历史消息，直接返回
+    if (state.viewportState?.hasMoreBefore == false) {
+      return;
+    }
+    
     state = state.copyWith(status: ChatTimelineStatus.loading, error: null);
     try {
       final viewportState = state.viewportState;
-      final resolvedBeforeSequence = state.messages.isEmpty
-          ? null
-          : (state.messages.first.sequence?.trim().isNotEmpty == true
-                ? state.messages.first.sequence
-                : viewportState?.oldestSequence);
+      
+      // 优先使用第一条消息的sequence
+      String? resolvedBeforeSequence;
+      if (state.messages.isNotEmpty) {
+        final firstMessage = state.messages.first;
+        if (firstMessage.sequence?.trim().isNotEmpty == true) {
+          resolvedBeforeSequence = firstMessage.sequence;
+        }
+      }
+      
+      // 如果第一条消息没有sequence，使用viewportState的oldestSequence
+      if (resolvedBeforeSequence == null || resolvedBeforeSequence.trim().isEmpty) {
+        resolvedBeforeSequence = viewportState?.oldestSequence;
+      }
+      
+      // 如果仍然没有有效的beforeSequence，说明没有更多消息
+      if (resolvedBeforeSequence == null || 
+          resolvedBeforeSequence.trim().isEmpty || 
+          resolvedBeforeSequence == '0') {
+        state = state.copyWith(
+          status: ChatTimelineStatus.ready,
+          viewportState: viewportState?.copyWith(hasMoreBefore: false),
+        );
+        return;
+      }
+      
       final result = await _loadOlderMessagesUseCase(
         chatId: chatId,
         beforeSequence: resolvedBeforeSequence,

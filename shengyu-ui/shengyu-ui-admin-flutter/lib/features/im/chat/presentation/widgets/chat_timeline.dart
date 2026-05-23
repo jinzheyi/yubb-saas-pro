@@ -751,6 +751,11 @@ class _LoadOlderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 如果没有onTap回调，说明没有更多消息，不显示任何内容
+    if (onTap == null) {
+      return const SizedBox.shrink();
+    }
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Center(
