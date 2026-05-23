@@ -337,12 +337,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 _buildRoutePage(state: state, child: const ProfilePage()),
           ),
           GoRoute(
-            path: RoutePaths.favorites,
-            name: RouteNames.favorites,
-            pageBuilder: (context, state) =>
-                _buildRoutePage(state: state, child: const FavoritesPage()),
-          ),
-          GoRoute(
             path: RoutePaths.settings,
             name: RouteNames.settings,
             pageBuilder: (context, state) =>
@@ -365,6 +359,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      // favorites 路由放在 ShellRoute 外部，与 chat 平级，避免从 chat 页面导航时出现 key 冲突
+      GoRoute(
+        path: RoutePaths.favorites,
+        name: RouteNames.favorites,
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const FavoritesPage()),
       ),
       GoRoute(
         path: RoutePaths.contactsProfile,

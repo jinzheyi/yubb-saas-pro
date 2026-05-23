@@ -1,0 +1,74 @@
+══╡ EXCEPTION CAUGHT BY WIDGETS LIBRARY ╞═══════════════════════════════════════════════════════════
+The following assertion was thrown building HeroControllerScope:
+Assertion failed:
+file:///Users/zsy/app/flutter/packages/flutter/lib/src/widgets/navigator.dart:4049:18
+!keyReservation.contains(key)
+is not true
+
+The relevant error-causing widget was:
+  HeroControllerScope
+  HeroControllerScope:file:///Users/zsy/.pub-cache/hosted/pub.dev/go_router-16.3.0/lib/src/builder.dart:458:14
+
+When the exception was thrown, this was the stack:
+dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 274:3       throw_
+dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 44:3        assertFailed
+package:flutter/src/widgets/navigator.dart 4049:46                                <fn>
+package:flutter/src/widgets/navigator.dart 4053:14                                [_debugCheckDuplicatedPageKeys]
+package:flutter/src/widgets/navigator.dart 4115:7                                 <fn>
+package:flutter/src/widgets/navigator.dart 4117:14                                [_updatePages]
+package:flutter/src/widgets/navigator.dart 4033:7                                 didUpdateWidget
+package:flutter/src/widgets/framework.dart 5991:55                                update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6149:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6149:5                                 update
+package:flutter/src/widgets/inherited_notifier.dart 108:11                        update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5982:11                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6007:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6149:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 5895:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6149:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 6149:5                                 update
+package:flutter/src/widgets/framework.dart 4037:14                                updateChild
+package:flutter/src/widgets/framework.dart 5841:16                                performRebuild
+package:flutter/src/widgets/framework.dart 5982:11                                performRebuild
+package:flutter/src/widgets/framework.dart 5529:7                                 rebuild
+package:flutter/src/widgets/framework.dart 2750:14                                [_tryRebuild]
+package:flutter/src/widgets/framework.dart 2807:11                                [_flushDirtyElements]
+package:flutter/src/widgets/framework.dart 3111:17                                buildScope
+package:flutter/src/widgets/binding.dart 1302:9                                   drawFrame
+package:flutter/src/rendering/binding.dart 495:5                                  [_handlePersistentFrameCallback]
+dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 118:77  tear
+package:flutter/src/scheduler/binding.dart 1430:7                                 [_invokeFrameCallback]
+package:flutter/src/scheduler/binding.dart 1345:9                                 handleDrawFrame
+package:flutter/src/scheduler/binding.dart 1198:5                                 [_handleDrawFrame]
+dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 118:77  tear
+lib/_engine/engine/platform_dispatcher.dart 1689:5                                invoke
+lib/_engine/engine/platform_dispatcher.dart 265:5                                 invokeOnDrawFrame
+lib/_engine/engine/frame_service.dart 209:32                                      [_renderFrame]
+lib/_engine/engine/frame_service.dart 117:9                                       <fn>
+dart-sdk/lib/async/zone.dart 962:54                                               runUnary
+dart-sdk/lib/async/zone.dart 917:26                                               <fn>
+dart-sdk/lib/_internal/js_dev_runtime/patch/js_allow_interop_patch.dart 224:27    _callDartFunctionFast1
+dart-sdk/lib/_internal/js_dev_runtime/patch/js_allow_interop_patch.dart 84:15     ret
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
