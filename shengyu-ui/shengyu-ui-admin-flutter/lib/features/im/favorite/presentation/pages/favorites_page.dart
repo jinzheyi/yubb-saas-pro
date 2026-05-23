@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorit
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/providers/favorite_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/states/favorites_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
 
 class FavoritesPage extends ConsumerStatefulWidget {
@@ -378,25 +379,34 @@ class _FavoriteCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          display.title,
+                        RichText(
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: Color(0xFF202531),
+                          text: TextSpan(
+                            children: buildEmojiInlineSpans(
+                              text: display.title,
+                              textStyle: const TextStyle(
+                                fontSize: 14,
+                                height: 1.5,
+                                color: Color(0xFF202531),
+                              ),
+                            ),
                           ),
                         ),
                         if (display.subTitle.isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          Text(
-                            display.subTitle,
+                          RichText(
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF8A93A0),
+                            text: TextSpan(
+                              children: buildEmojiInlineSpans(
+                                text: display.subTitle,
+                                textStyle: const TextStyle(
+                                  fontSize: 12,
+                                  height: 1.5,
+                                  color: Color(0xFF8A93A0),
+                                ),
+                              ),
                             ),
                           ),
                         ],
