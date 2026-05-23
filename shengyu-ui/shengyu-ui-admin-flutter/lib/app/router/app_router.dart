@@ -254,19 +254,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: RoutePaths.favoriteDetail,
-            name: RouteNames.favoriteDetail,
-            pageBuilder: (context, state) {
-              final args = state.extra is FavoriteDetailRouteArgs
-                  ? state.extra! as FavoriteDetailRouteArgs
-                  : const FavoriteDetailRouteArgs(favoriteId: '');
-              return _buildRoutePage(
-                state: state,
-                child: FavoriteDetailPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
             path: RoutePaths.contactsSearchResult,
             name: RouteNames.contactsSearchResult,
             pageBuilder: (context, state) {
@@ -366,6 +353,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.favorites,
         pageBuilder: (context, state) =>
             _buildRoutePage(state: state, child: const FavoritesPage()),
+      ),
+      GoRoute(
+        path: RoutePaths.favoriteDetail,
+        name: RouteNames.favoriteDetail,
+        pageBuilder: (context, state) {
+          final args = state.extra is FavoriteDetailRouteArgs
+              ? state.extra! as FavoriteDetailRouteArgs
+              : const FavoriteDetailRouteArgs(favoriteId: '');
+          return _buildRoutePage(
+            state: state,
+            child: FavoriteDetailPage(args: args),
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.contactsProfile,

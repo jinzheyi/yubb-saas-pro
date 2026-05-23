@@ -1,4 +1,3 @@
-import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_detail.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_page_result.dart';
 
