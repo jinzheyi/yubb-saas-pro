@@ -17,6 +17,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_detail.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/providers/favorite_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 
 class FavoriteDetailPage extends ConsumerStatefulWidget {
   const FavoriteDetailPage({super.key, required this.args});
@@ -410,12 +411,16 @@ class _FavoriteDetailBody extends StatelessWidget {
               onTap: () => onOpenLocation(renderData),
               child: _InfoBlock(data: renderData, icon: Icons.place_outlined),
             ),
-            _ => Text(
-              renderData.text,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: Color(0xFF202531),
+            _ => RichText(
+              text: TextSpan(
+                children: buildEmojiInlineSpans(
+                  text: renderData.text,
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    height: 1.6,
+                    color: Color(0xFF202531),
+                  ),
+                ),
               ),
             ),
           },

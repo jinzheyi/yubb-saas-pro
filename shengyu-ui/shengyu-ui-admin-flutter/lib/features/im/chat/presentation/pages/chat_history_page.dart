@@ -8,6 +8,8 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/conta
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -580,52 +582,121 @@ class _HighlightedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 无搜索关键词时，使用 emoji 渲染
     if (keyword.isEmpty || text.isEmpty) {
-      return Text(
-        text,
-        style: const TextStyle(
-          fontSize: 14,
-          height: 1.6,
-          color: Color(0xFF4E5666),
-        ),
-      );
-    }
-    final lowerSource = text.toLowerCase();
-    final lowerKeyword = keyword.toLowerCase();
-    final spans = <TextSpan>[];
-    var start = 0;
-    while (true) {
-      final index = lowerSource.indexOf(lowerKeyword, start);
-      if (index < 0) {
-        if (start < text.length) {
-          spans.add(TextSpan(text: text.substring(start)));
-        }
-        break;
-      }
-      if (index > start) {
-        spans.add(TextSpan(text: text.substring(start, index)));
-      }
-      spans.add(
-        TextSpan(
-          text: text.substring(index, index + keyword.length),
-          style: const TextStyle(
-            color: Color(0xFF246BFD),
-            backgroundColor: Color(0xFFEAF1FF),
-            fontWeight: FontWeight.w600,
+      return RichText(
+        text: TextSpan(
+          children: buildEmojiInlineSpans(
+            text: text,
+            textStyle: const TextStyle(
+              fontSize: 14,
+              height: 1.6,
+              color: Color(0xFF4E5666),
+            ),
           ),
         ),
       );
-      start = index + keyword.length;
     }
+    // 有搜索关键词时，同时处理 emoji 渲染和高亮
     return RichText(
       text: TextSpan(
-        style: const TextStyle(
-          fontSize: 14,
-          height: 1.6,
-          color: Color(0xFF4E5666),
-        ),
-        children: spans,
+        children: _buildHighlightedEmojiSpans(),
       ),
     );
   }
+
+  List<InlineSpan> _buildHighlightedEmojiSpans() {
+    final normalized = normalizeEmojiDisplayText(text);
+    final spans = <InlineSpan>[];
+    final lowerKeyword = keyword.toLowerCase();
+
+    // 先按 emoji token 分割文本，保留 token 位置信息
+    final segments = <_EmojiSegment>[];
+    var lastEnd = 0;
+    for (final match in ChatEmojiCatalog.tokenRegExp.allMatches(normalized)) {
+      if (match.start > lastEnd) {
+        segments.add(_EmojiSegment(
+          text: normalized.substring(lastEnd, match.start),
+          isEmoji: false,
+        ));
+      }
+      segments.add(_EmojiSegment(
+        text: match.group(0) ?? '',
+        isEmoji: true,
+        emojiToken: match.group(0),
+      ));
+      lastEnd = match.end;
+    }
+    if (lastEnd < normalized.length) {
+      segments.add(_EmojiSegment(
+        text: normalized.substring(lastEnd),
+        isEmoji: false,
+      ));
+    }
+
+    // 对每个文本片段进行关键词高亮处理
+    for (final segment in segments) {
+      if (segment.isEmoji) {
+        // emoji 片段直接添加
+        final assets = ChatEmojiCatalog.candidateAssetsFor(segment.emojiToken ?? segment.text);
+        if (assets.isNotEmpty) {
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              child: ChatEmojiAssetImage(assets: assets, size: 20),
+            ),
+          ));
+        } else {
+          spans.add(TextSpan(text: segment.text, style: const TextStyle(
+            fontSize: 14,
+            height: 1.6,
+            color: Color(0xFF4E5666),
+          )));
+        }
+      } else {
+        // 文本片段进行关键词高亮
+        final lowerSource = segment.text.toLowerCase();
+        var searchStart = 0;
+        while (true) {
+          final idx = lowerSource.indexOf(lowerKeyword, searchStart);
+          if (idx < 0) {
+            if (searchStart < segment.text.length) {
+              spans.add(TextSpan(text: segment.text.substring(searchStart), style: const TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: Color(0xFF4E5666),
+              )));
+            }
+            break;
+          }
+          if (idx > searchStart) {
+            spans.add(TextSpan(text: segment.text.substring(searchStart, idx), style: const TextStyle(
+              fontSize: 14,
+              height: 1.6,
+              color: Color(0xFF4E5666),
+            )));
+          }
+          spans.add(TextSpan(
+            text: segment.text.substring(idx, idx + keyword.length),
+            style: const TextStyle(
+              color: Color(0xFF246BFD),
+              backgroundColor: Color(0xFFEAF1FF),
+              fontWeight: FontWeight.w600,
+            ),
+          ));
+          searchStart = idx + keyword.length;
+        }
+      }
+    }
+    return spans;
+  }
+}
+
+class _EmojiSegment {
+  final String text;
+  final bool isEmoji;
+  final String? emojiToken;
+
+  _EmojiSegment({required this.text, required this.isEmoji, this.emojiToken});
 }
