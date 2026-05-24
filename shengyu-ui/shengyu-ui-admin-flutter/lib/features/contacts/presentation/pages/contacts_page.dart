@@ -197,7 +197,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
             if (sections.isNotEmpty)
               Positioned(
                 right: 6,
-                top: 210,
+                top: MediaQuery.of(context).padding.top + 176,
                 child: _IndexRail(
                   labels: sections
                       .map((section) => section.indexLabel)

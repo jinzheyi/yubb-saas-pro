@@ -64,79 +64,89 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
         : selectionState.entries.values.first;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
-          icon: const AppIcon(
-            AppIconKind.chevronLeft,
-            size: 22,
-            color: Color(0xFF202531),
-          ),
-          label: Text(
-            strings.backAction,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-        ),
-        centerTitle: true,
-        title: Text(strings.chatSelectContactCardTitle),
-      ),
-      body: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: ContactPickerSearchField(
-              controller: _searchController,
-              hintText: strings.chatSelectContactCardSearchHint,
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          Expanded(child: _buildBody(context, strings, selectionState)),
-          Container(
-            decoration: const BoxDecoration(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Container(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFECEFF5))),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              12 + MediaQuery.of(context).padding.bottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  selectedEntry == null
-                      ? strings.chatSelectContactCardPlaceholder
-                      : strings.chatSelectContactCardSelected(
-                          selectedEntry.name,
-                        ),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF667085),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const AppIcon(
+                      AppIconKind.chevronLeft,
+                      size: 20,
+                      color: Color(0xFF202531),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 44,
-                  child: FilledButton(
-                    onPressed: selectionState.count == 0 || _submitting
-                        ? null
-                        : _confirmSelection,
-                    child: Text(strings.confirmAction),
+                  Expanded(
+                    child: Text(
+                      strings.chatSelectContactCardTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF202531),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 40),
+                ],
+              ),
             ),
-          ),
-        ],
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: ContactPickerSearchField(
+                controller: _searchController,
+                hintText: strings.chatSelectContactCardSearchHint,
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            Expanded(child: _buildBody(context, strings, selectionState)),
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Color(0xFFECEFF5))),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                12 + MediaQuery.of(context).padding.bottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    selectedEntry == null
+                        ? strings.chatSelectContactCardPlaceholder
+                        : strings.chatSelectContactCardSelected(
+                            selectedEntry.name,
+                          ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF667085),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 44,
+                    child: FilledButton(
+                      onPressed: selectionState.count == 0 || _submitting
+                          ? null
+                          : _confirmSelection,
+                      child: Text(strings.confirmAction),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -188,7 +198,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ContactPickerCategoryAction(
               icon: AppIconKind.groupsFill,
               label: strings.contactsMyGroups,
-              color: const Color(0xFFFFB347),
+              color: const Color(0xFFFB923C),
               onTap: () => _openCategory(
                 MyGroupsPage(
                   args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
@@ -198,7 +208,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ContactPickerCategoryAction(
               icon: AppIconKind.starOutline,
               label: strings.contactsFavorites,
-              color: const Color(0xFF246BFD),
+              color: const Color(0xFFFACC15),
               onTap: () => _openCategory(
                 MyFollowingPage(
                   args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
@@ -208,7 +218,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ContactPickerCategoryAction(
               icon: AppIconKind.tree,
               label: strings.contactsOrganization,
-              color: const Color(0xFF10B981),
+              color: const Color(0xFF84CC16),
               onTap: () => _openCategory(
                 OrgBrowserPage(
                   args: ContactPickerArgs(selectionMode: true, selectionLimit: 1),
@@ -218,7 +228,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ContactPickerCategoryAction(
               icon: AppIconKind.apartment,
               label: strings.contactsDepartments,
-              color: const Color(0xFF8F4CFF),
+              color: const Color(0xFF06B6D4),
               onTap: () => _openCategory(
                 MyDepartmentPage(
                   args: ContactDepartmentArgs(

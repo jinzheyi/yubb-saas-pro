@@ -170,6 +170,10 @@ IconData? _resolveLegacyIconData(AppIconKind kind) {
       return ShengyuIconFont.fuzhi;
     case AppIconKind.checklist:
       return ShengyuIconFont.messageMultiSelect;
+    case AppIconKind.tree:
+      return ShengyuIconFont.flZuzhi;
+    case AppIconKind.apartment:
+      return ShengyuIconFont.bumen;
     default:
       return null;
   }
@@ -310,9 +314,11 @@ class _AppIconPainter extends CustomPainter {
       case AppIconKind.place:
         _drawPlace(canvas, size);
       case AppIconKind.tree:
-        _drawTree(canvas, size);
+        // Falls through to iconfont via _resolveLegacyIconData, never reaches here
+        break;
       case AppIconKind.apartment:
-        _drawApartment(canvas, size);
+        // Falls through to iconfont via _resolveLegacyIconData, never reaches here
+        break;
     }
   }
 
