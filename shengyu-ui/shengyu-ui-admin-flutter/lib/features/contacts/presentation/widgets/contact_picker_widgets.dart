@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ContactPickerSearchField extends StatelessWidget {
@@ -134,13 +135,11 @@ class ContactPickerSelectableTile extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.onTap,
-    required this.avatarColor,
   });
 
   final ContactDirectoryItem item;
   final bool selected;
   final VoidCallback onTap;
-  final Color avatarColor;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +151,7 @@ class ContactPickerSelectableTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: ContactsInitialAvatar(
         name: item.name,
-        color: avatarColor,
+        color: getUserAvatarColor(item.userId),
         avatarUrl: item.avatarUrl,
         size: 42,
         borderRadius: 21,

@@ -19,6 +19,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/prov
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class InitiateGroupPage extends ConsumerStatefulWidget {
@@ -523,15 +524,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
   }
 
   Color _avatarColor(String seed) {
-    const palette = <Color>[
-      Color(0xFF5B8FF9),
-      Color(0xFF61DDAA),
-      Color(0xFFF6BD16),
-      Color(0xFF7262FD),
-      Color(0xFF78D3F8),
-      Color(0xFF9661BC),
-    ];
-    return palette[seed.hashCode.abs() % palette.length];
+    return getUserAvatarColor(seed);
   }
 
   void _showMessage(String message) {

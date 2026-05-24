@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ChatHistoryPage extends ConsumerStatefulWidget {
@@ -487,15 +488,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   }
 
   Color _avatarColorFor(String seed) {
-    const palette = <Color>[
-      Color(0xFF246BFD),
-      Color(0xFF8F4CFF),
-      Color(0xFF10B981),
-      Color(0xFFFF9F43),
-      Color(0xFFE85D75),
-    ];
-    final index = seed.hashCode.abs() % palette.length;
-    return palette[index];
+    return getUserAvatarColor(seed);
   }
 }
 

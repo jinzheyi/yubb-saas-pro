@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class MyFollowingPage extends ConsumerStatefulWidget {
   const MyFollowingPage({super.key, this.args = const ContactPickerArgs()});
@@ -91,7 +92,7 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
                       onTap: () => _handleTap(selectionController, item),
                       leading: ContactsInitialAvatar(
                         name: item.name,
-                        color: const Color(0xFFE97CAB),
+                        color: getUserAvatarColor(item.userId),
                         avatarUrl: item.avatarUrl,
                       ),
                       title: Text(item.name),

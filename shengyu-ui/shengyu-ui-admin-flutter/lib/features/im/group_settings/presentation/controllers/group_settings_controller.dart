@@ -4,6 +4,7 @@ import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/repositories/group_settings_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class GroupSettingsController extends StateNotifier<GroupSettingsState> {
   GroupSettingsController(this._repository, this._args, this._currentUserId)
@@ -257,13 +258,6 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
   }
 
   int _memberColorValue(String seed) {
-    const colors = <int>[
-      0xFF27C38A,
-      0xFFFF9AA8,
-      0xFFF6D2B3,
-      0xFFE97CAB,
-      0xFF8FB8F7,
-    ];
-    return colors[seed.hashCode.abs() % colors.length];
+    return getUserAvatarColor(seed).toARGB32();
   }
 }

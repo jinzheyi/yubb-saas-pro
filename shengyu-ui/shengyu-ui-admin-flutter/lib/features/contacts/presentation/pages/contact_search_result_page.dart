@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_se
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class ContactSearchResultPage extends ConsumerWidget {
   const ContactSearchResultPage({super.key, required this.keyword});
@@ -104,7 +105,7 @@ class _ContactResultBlock extends StatelessWidget {
             ),
             leading: ContactsInitialAvatar(
               name: items[index].name,
-              color: const Color(0xFFE97CAB),
+              color: getUserAvatarColor(items[index].userId),
               avatarUrl: items[index].avatarUrl,
               size: 42,
             ),

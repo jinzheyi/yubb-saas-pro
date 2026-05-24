@@ -12,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class OrgBrowserPage extends ConsumerStatefulWidget {
   const OrgBrowserPage({super.key, this.args = const ContactPickerArgs()});
@@ -721,7 +722,7 @@ class _OrgMemberTile extends StatelessWidget {
             ContactsInitialAvatar(
               name: member.name,
               avatarUrl: member.avatarUrl,
-              color: const Color(0xFF5B8FF9),
+              color: getUserAvatarColor(member.userId),
               size: 38,
             ),
             const SizedBox(width: 12),

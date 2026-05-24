@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_me
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_more_panel_action.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -1195,7 +1196,7 @@ class _MentionMemberTile extends StatelessWidget {
         : (displayName.isEmpty ? '?' : displayName.substring(0, 1));
     final avatarColor = isAtAll
         ? const Color(0xFF3370FF)
-        : const Color(0xFF8F959E);
+        : getUserAvatarColor(item!.userId);
 
     return Material(
       color: Colors.white,

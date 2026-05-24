@@ -27,6 +27,7 @@ class GroupJoinRequestItemDto {
           '${json['applicantNickname'] ?? json['nickname'] ?? ''}',
       applicantAvatar:
           json['applicantAvatar']?.toString() ??
+          json['userAvatar']?.toString() ??
           json['avatarUrl']?.toString() ??
           json['avatar']?.toString(),
       status: _parseInt(json['status']) ?? 1,

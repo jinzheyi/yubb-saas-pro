@@ -5,6 +5,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class ContactGroupMembersPage extends ConsumerWidget {
   const ContactGroupMembersPage({super.key, required this.args});
@@ -56,7 +57,7 @@ class ContactGroupMembersPage extends ConsumerWidget {
               leading: ContactsInitialAvatar(
                 name: displayName,
                 avatarUrl: member.avatarUrl,
-                color: const Color(0xFF5B8FF9),
+                color: getUserAvatarColor(member.userId),
               ),
               title: Text(displayName),
               subtitle: Text(role),

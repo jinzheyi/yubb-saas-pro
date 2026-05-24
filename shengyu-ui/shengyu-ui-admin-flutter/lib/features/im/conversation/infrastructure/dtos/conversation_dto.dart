@@ -95,6 +95,7 @@ class ConversationDto {
           json['toUserId']?.toString() ??
           '',
       targetAvatar:
+          json['userAvatar']?.toString() ??
           json['targetAvatar']?.toString() ??
           json['avatarUrl']?.toString() ??
           json['avatar']?.toString() ??

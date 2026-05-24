@@ -12,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/cont
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
@@ -178,7 +179,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         name: member.name.trim().isNotEmpty
                             ? member.name.trim()
                             : strings.profileUnknownUser,
-                        color: Color(member.colorValue),
+                        userId: member.id,
                         avatarUrl: member.avatarUrl,
                         onTap: () {
                           final displayName = member.name.trim().isNotEmpty
@@ -865,13 +866,13 @@ class _DangerActionTile extends StatelessWidget {
 class _MemberGridItem extends StatelessWidget {
   const _MemberGridItem({
     required this.name,
-    required this.color,
+    required this.userId,
     this.onTap,
     this.avatarUrl,
   });
 
   final String name;
-  final Color color;
+  final String userId;
   final VoidCallback? onTap;
   final String? avatarUrl;
 
@@ -882,7 +883,11 @@ class _MemberGridItem extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          _MemberPreviewAvatar(name: name, color: color, avatarUrl: avatarUrl),
+          _MemberPreviewAvatar(
+            name: name,
+            userId: userId,
+            avatarUrl: avatarUrl,
+          ),
           const SizedBox(height: 8),
           Text(
             name,
@@ -900,12 +905,12 @@ class _MemberGridItem extends StatelessWidget {
 class _MemberPreviewAvatar extends StatelessWidget {
   const _MemberPreviewAvatar({
     required this.name,
-    required this.color,
+    required this.userId,
     this.avatarUrl,
   });
 
   final String name;
-  final Color color;
+  final String userId;
   final String? avatarUrl;
 
   @override
@@ -913,7 +918,7 @@ class _MemberPreviewAvatar extends StatelessWidget {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
-      backgroundColor: color,
+      backgroundColor: getUserAvatarColor(userId),
       size: 54,
       borderRadius: 10,
       fontSize: 18,

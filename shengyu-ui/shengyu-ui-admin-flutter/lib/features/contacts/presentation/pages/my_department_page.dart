@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class MyDepartmentPage extends ConsumerStatefulWidget {
   const MyDepartmentPage({
@@ -269,7 +269,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
               role: members[index].postName.isEmpty
                   ? members[index].departmentName
                   : members[index].postName,
-              color: _memberColor(members[index].name),
+              color: _memberColor(members[index].userId),
               selectionMode: widget.args.selectionMode,
               singleSelection: _isSingleSelection,
               selected: selectionState.isSelected(members[index].userId),
@@ -564,15 +564,8 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     }
   }
 
-  Color _memberColor(String name) {
-    const colors = <Color>[
-      Color(0xFF27C38A),
-      Color(0xFFFF9AA8),
-      Color(0xFFF6D2B3),
-      Color(0xFFE97CAB),
-      Color(0xFF8FB8F7),
-    ];
-    return colors[name.hashCode.abs() % colors.length];
+  Color _memberColor(String userId) {
+    return getUserAvatarColor(userId);
   }
 }
 

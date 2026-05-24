@@ -25,7 +25,7 @@ class ContactDto {
       nickname:
           '${json['nickname'] ?? json['userName'] ?? json['realName'] ?? json['name'] ?? ''}',
       remarkName: '${json['remarkName'] ?? ''}',
-      avatarUrl: '${json['avatarUrl'] ?? json['avatar'] ?? ''}',
+      avatarUrl: '${json['avatarUrl'] ?? json['avatar'] ?? json['userAvatar'] ?? ''}',
       departmentId: '${json['deptId'] ?? json['departmentId'] ?? ''}',
       departmentName:
           '${json['deptName'] ?? json['departmentName'] ?? json['department'] ?? ''}',

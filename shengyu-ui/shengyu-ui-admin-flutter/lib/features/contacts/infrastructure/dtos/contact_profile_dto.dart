@@ -27,7 +27,7 @@ class ContactProfileDto {
       sex: (json['sex'] as num?)?.toInt(),
       mobile: '${json['mobile'] ?? json['phone'] ?? ''}',
       email: '${json['email'] ?? ''}',
-      avatarUrl: '${json['avatarUrl'] ?? json['avatar'] ?? ''}',
+      avatarUrl: '${json['userAvatar'] ?? json['avatarUrl'] ?? json['avatar'] ?? ''}',
       departmentName:
           '${json['deptName'] ?? json['departmentName'] ?? json['department'] ?? ''}',
       postName: '${json['postName'] ?? json['positionName'] ?? ''}',

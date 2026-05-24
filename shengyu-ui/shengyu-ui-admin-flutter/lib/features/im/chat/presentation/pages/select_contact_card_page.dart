@@ -255,7 +255,6 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
                       filteredContacts[index].userId,
                     ),
                     onTap: () => _toggleLocalSelection(filteredContacts[index]),
-                    avatarColor: const Color(0xFF246BFD),
                   ),
                   if (index != filteredContacts.length - 1)
                     const Divider(

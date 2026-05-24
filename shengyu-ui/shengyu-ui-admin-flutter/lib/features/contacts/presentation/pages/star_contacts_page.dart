@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class StarContactsPage extends ConsumerWidget {
   const StarContactsPage({super.key});
@@ -59,7 +60,7 @@ class StarContactsPage extends ConsumerWidget {
                     ContactsChevronTile(
                       leading: ContactsInitialAvatar(
                         name: contact.name,
-                        color: const Color(0xFFE97CAB),
+                        color: getUserAvatarColor(contact.userId),
                         avatarUrl: contact.avatarUrl,
                         size: 44,
                         borderRadius: 12,

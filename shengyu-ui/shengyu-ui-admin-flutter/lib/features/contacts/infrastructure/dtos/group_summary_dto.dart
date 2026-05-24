@@ -24,7 +24,9 @@ class GroupSummaryDto {
       groupId: '${json['id'] ?? json['groupId'] ?? ''}',
       name: '${json['name'] ?? json['groupName'] ?? ''}',
       memberCount: _parseInt(json['memberCount'] ?? json['memberNum']) ?? 0,
-      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar']?.toString(),
+      avatarUrl: json['userAvatar']?.toString() ??
+          json['avatarUrl']?.toString() ??
+          json['avatar']?.toString(),
       myRole: _parseInt(json['myRole'] ?? json['role']) ?? 0,
       pendingJoinRequestCount:
           _parseInt(json['pendingJoinRequestCount'] ?? json['pendingCount']) ??
