@@ -47,12 +47,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import javax.annotation.Resource;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -331,6 +326,43 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .map(ImGroupUserDO::getGroupId)
                 .collect(Collectors.toList());
 
+        // 获取群成员信息列表（最多4个，用于组合头像）
+        Map<Long, java.util.List<AppImGroupRespVO.GroupMemberItem>> groupMemberItemsMap = new HashMap<>();
+        if (!groupIds.isEmpty()) {
+            for (Long groupId : groupIds) {
+                List<ImGroupUserDO> members = groupUserMapper.selectList(
+                        new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImGroupUserDO>()
+                                .eq(ImGroupUserDO::getGroupId, groupId)
+                                .orderByAsc(ImGroupUserDO::getJoinTime)
+                                .last("LIMIT 4"));
+                if (members != null && !members.isEmpty()) {
+                    List<Long> memberUserIds = members.stream()
+                            .map(ImGroupUserDO::getUserId)
+                            .collect(Collectors.toList());
+                    List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+                    if (memberUsers != null) {
+                        List<AppImGroupRespVO.GroupMemberItem> items = new ArrayList<>();
+                        for (ImGroupUserDO member : members) {
+                            AdminUserDO user = memberUsers.stream()
+                                    .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (user != null) {
+                                AppImGroupRespVO.GroupMemberItem item = new AppImGroupRespVO.GroupMemberItem();
+                                item.setUserId(user.getId());
+                                item.setName(user.getNickname());
+                                item.setAvatar(user.getAvatar());
+                                items.add(item);
+                            }
+                        }
+                        if (!items.isEmpty()) {
+                            groupMemberItemsMap.put(groupId, items);
+                        }
+                    }
+                }
+            }
+        }
+
         List<AppImGroupRespVO> result = new ArrayList<>();
         for (Long groupId : groupIds) {
             ImGroupDO group = groupMapper.selectById(groupId);
@@ -348,6 +380,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                         respVO.setPendingJoinRequestCount(0L);
                     }
                 }
+                respVO.setGroupMemberItems(groupMemberItemsMap.get(groupId));
                 result.add(respVO);
             }
         }

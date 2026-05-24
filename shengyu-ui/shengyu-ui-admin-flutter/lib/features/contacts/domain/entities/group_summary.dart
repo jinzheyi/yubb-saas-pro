@@ -1,3 +1,5 @@
+import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
+
 class GroupSummary {
   const GroupSummary({
     required this.groupId,
@@ -6,6 +8,7 @@ class GroupSummary {
     this.avatarUrl,
     this.myRole = 0,
     this.pendingJoinRequestCount = 0,
+    this.groupMemberItems = const [],
   });
 
   final String groupId;
@@ -14,4 +17,5 @@ class GroupSummary {
   final String? avatarUrl;
   final int myRole;
   final int pendingJoinRequestCount;
+  final List<GroupMemberItem> groupMemberItems;
 }

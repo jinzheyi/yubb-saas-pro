@@ -1,3 +1,4 @@
+import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -25,6 +26,8 @@ class ConversationDto {
     required this.lastMessageStatus,
     required this.lastMessageHasAtMe,
     required this.groupMemberCount,
+    required this.groupMemberAvatars,
+    required this.groupMemberItems,
     required this.updatedAt,
     required this.unreadCount,
     required this.isPinned,
@@ -56,6 +59,8 @@ class ConversationDto {
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
+  final List<String> groupMemberAvatars;
+  final List<GroupMemberItem> groupMemberItems;
   final DateTime updatedAt;
   final int unreadCount;
   final bool isPinned;
@@ -162,6 +167,8 @@ class ConversationDto {
           _parseInt(json['memberCount']) ??
           _parseInt(json['memberNum']) ??
           0,
+      groupMemberAvatars: _parseStringList(json['groupMemberAvatars']),
+      groupMemberItems: _parseGroupMemberItems(json['groupMemberItems']),
       updatedAt:
           _parseDateTime(json['updatedAt']) ??
           _parseDateTime(json['lastMessageTime']) ??
@@ -264,6 +271,26 @@ class ConversationDto {
       return raw.toInt();
     }
     return int.tryParse(raw?.toString().trim() ?? '');
+  }
+
+  static List<String> _parseStringList(Object? raw) {
+    if (raw is List) {
+      return raw.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+    }
+    return const [];
+  }
+
+  static List<GroupMemberItem> _parseGroupMemberItems(Object? raw) {
+    if (raw is List) {
+      return raw.whereType<Map>().map((e) {
+        return GroupMemberItem(
+          userId: e['userId']?.toString(),
+          name: e['name']?.toString(),
+          avatar: e['avatar']?.toString(),
+        );
+      }).toList();
+    }
+    return const [];
   }
 
   static List<int> _parseIntList(Object? raw) {

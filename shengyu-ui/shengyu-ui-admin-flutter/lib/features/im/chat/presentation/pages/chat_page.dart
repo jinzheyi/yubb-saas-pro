@@ -76,6 +76,7 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_loading_view.dart';
@@ -6044,16 +6045,16 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                   child: item.avatar.trim().isEmpty
                                       ? DecoratedBox(
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFEEF3FF),
+                                            color: getUserAvatarColor(item.userId),
                                             borderRadius: BorderRadius.circular(
                                               8,
                                             ),
                                           ),
                                           child: Center(
                                             child: Text(
-                                              _initials(item.userName),
+                                              getAvatarText(item.userName),
                                               style: const TextStyle(
-                                                color: Color(0xFF246BFD),
+                                                color: Colors.white,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -6114,14 +6115,6 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
         ),
       ),
     );
-  }
-
-  String _initials(String value) {
-    final text = value.trim();
-    if (text.isEmpty) {
-      return '?';
-    }
-    return text.substring(0, 1).toUpperCase();
   }
 
   String _buildReadTime(ReadReceiptDetailItem item) {

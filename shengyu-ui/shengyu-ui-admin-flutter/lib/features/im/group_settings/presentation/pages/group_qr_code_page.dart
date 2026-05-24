@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_a
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class GroupQrCodePage extends ConsumerStatefulWidget {
   const GroupQrCodePage({super.key, required this.args});
@@ -67,7 +68,7 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
                   width: 62,
                   height: 62,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C08C),
+                    color: getGroupAvatarColor(widget.args.groupId),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(

@@ -12,8 +12,10 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/providers/favorite_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class ForwardTargetPage extends ConsumerStatefulWidget {
   const ForwardTargetPage({super.key, required this.args});
@@ -525,24 +527,28 @@ class _ForwardConversationTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              AppAvatar(
-                name: title,
-                avatarUrl: conversation.targetAvatar,
-                backgroundColor: isGroup
-                    ? const Color(0xFFFFB347)
-                    : const Color(0xFF246BFD),
-                size: 44,
-                borderRadius: 10,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                fallbackChild: isGroup
-                    ? const AppIcon(
-                        AppIconKind.groupsOutline,
-                        size: 18,
-                        color: Colors.white,
-                      )
-                    : null,
-              ),
+              if (isGroup)
+                GroupAvatarWidget.fromMembers(
+                  members: conversation.groupMemberItems
+                      .map((item) => GroupAvatarMember(
+                            userId: item.userId ?? '',
+                            name: item.name ?? '',
+                            avatarUrl: item.avatar,
+                          ))
+                      .toList(),
+                  size: 44,
+                  borderRadius: 10,
+                )
+              else
+                AppAvatar(
+                  name: title,
+                  avatarUrl: conversation.targetAvatar,
+                  backgroundColor: getUserAvatarColor(conversation.targetId ?? ''),
+                  size: 44,
+                  borderRadius: 10,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

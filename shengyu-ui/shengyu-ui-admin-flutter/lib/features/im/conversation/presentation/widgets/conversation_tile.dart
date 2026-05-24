@@ -4,8 +4,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
-import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -422,27 +422,33 @@ class _ConversationAvatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        AppAvatar(
-          name: _fallbackText(),
-          avatarUrl: conversation.targetAvatar,
-          backgroundColor: resolveConversationAvatarBg(
-            avatarBg: conversation.avatarBg,
-            conversationType: conversation.conversationType,
-            targetId: conversation.targetId,
-            chatId: conversation.chatId,
+        if (conversation.conversationType == ConversationType.group)
+          GroupAvatarWidget.fromMembers(
+            members: conversation.groupMemberItems
+                .map((item) => GroupAvatarMember(
+                      userId: item.userId ?? '',
+                      name: item.name ?? '',
+                      avatarUrl: item.avatar,
+                    ))
+                .toList(),
+            size: 48,
+            borderRadius: 8,
+          )
+        else
+          AppAvatar(
+            name: _fallbackText(),
+            avatarUrl: conversation.targetAvatar,
+            backgroundColor: resolveConversationAvatarBg(
+              avatarBg: conversation.avatarBg,
+              conversationType: conversation.conversationType,
+              targetId: conversation.targetId,
+              chatId: conversation.chatId,
+            ),
+            size: 48,
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          size: 48,
-          borderRadius: 8,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          fallbackChild: conversation.conversationType == ConversationType.group
-              ? const Icon(
-                  ShengyuIconFont.yonghu1,
-                  color: Colors.white,
-                  size: 24,
-                )
-              : null,
-        ),
         if (conversation.unreadCount > 0)
           Positioned(
             top: conversation.isMuted ? -3 : -7,

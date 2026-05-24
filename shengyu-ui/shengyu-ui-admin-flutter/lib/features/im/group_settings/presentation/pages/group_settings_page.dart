@@ -13,6 +13,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/prov
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class GroupSettingsPage extends ConsumerStatefulWidget {
   const GroupSettingsPage({super.key, required this.args});
@@ -112,18 +113,17 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 Center(
                   child: Column(
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF22C08C),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.groups_2_outlined,
-                          size: 30,
-                          color: Colors.white,
-                        ),
+                      GroupAvatarWidget(
+                        members: state.members
+                            .take(4)
+                            .map((m) => GroupAvatarMember(
+                                  userId: m.id,
+                                  name: m.name,
+                                  avatarUrl: m.avatarUrl,
+                                ))
+                            .toList(),
+                        size: 64,
+                        borderRadius: 14,
                       ),
                       const SizedBox(height: 12),
                       Text(

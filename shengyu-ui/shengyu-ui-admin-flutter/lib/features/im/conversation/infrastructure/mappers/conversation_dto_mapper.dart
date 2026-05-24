@@ -39,6 +39,8 @@ abstract final class ConversationDtoMapper {
       lastMessageStatus: dto.lastMessageStatus,
       lastMessageHasAtMe: dto.lastMessageHasAtMe,
       groupMemberCount: dto.groupMemberCount,
+      groupMemberAvatars: dto.groupMemberAvatars,
+      groupMemberItems: dto.groupMemberItems,
       updatedAt: dto.updatedAt,
       unreadCount: dto.unreadCount,
       isPinned: dto.isPinned,

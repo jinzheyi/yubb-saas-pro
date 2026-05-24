@@ -106,6 +106,7 @@ class ContactsRepositoryImpl implements ContactsRepository {
             avatarUrl: item.avatarUrl,
             myRole: item.myRole,
             pendingJoinRequestCount: item.pendingJoinRequestCount,
+            groupMemberItems: item.groupMemberItems,
           ),
         )
         .toList();

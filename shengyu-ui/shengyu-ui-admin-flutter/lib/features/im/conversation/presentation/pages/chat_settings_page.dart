@@ -9,6 +9,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class ChatSettingsPage extends ConsumerStatefulWidget {
   const ChatSettingsPage({super.key, required this.args});
@@ -66,6 +69,10 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
     final avatarUrl = (profile?.avatarUrl.trim().isNotEmpty == true)
         ? profile!.avatarUrl
         : conversation?.targetAvatar;
+    final isGroupChat = widget.args.conversationType == ConversationType.group;
+    final avatarColor = isGroupChat
+        ? getGroupAvatarColor(targetId ?? '')
+        : getUserAvatarColor(targetId ?? '');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -94,14 +101,27 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
             child: Column(
               children: [
-                ContactsInitialAvatar(
-                  name: displayName,
-                  color: const Color(0xFFE97CAB),
-                  avatarUrl: avatarUrl,
-                  size: 64,
-                  borderRadius: 12,
-                  fontSize: 24,
-                ),
+                if (isGroupChat)
+                  GroupAvatarWidget.fromMembers(
+                    members: (conversation?.groupMemberItems ?? const [])
+                        .map((item) => GroupAvatarMember(
+                              userId: item.userId ?? '',
+                              name: item.name ?? '',
+                              avatarUrl: item.avatar,
+                            ))
+                        .toList(),
+                    size: 64,
+                    borderRadius: 12,
+                  )
+                else
+                  ContactsInitialAvatar(
+                    name: displayName,
+                    color: avatarColor,
+                    avatarUrl: avatarUrl,
+                    size: 64,
+                    borderRadius: 12,
+                    fontSize: 24,
+                  ),
                 const SizedBox(height: 12),
                 Text(
                   displayName,

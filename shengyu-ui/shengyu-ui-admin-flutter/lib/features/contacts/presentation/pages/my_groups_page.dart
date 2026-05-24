@@ -14,7 +14,9 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/conta
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class MyGroupsPage extends ConsumerStatefulWidget {
   const MyGroupsPage({super.key, this.args = const ContactPickerArgs()});
@@ -191,13 +193,7 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
   }
 
   Color _groupColor(String name) {
-    const colors = <Color>[
-      Color(0xFFFF9738),
-      Color(0xFF22C08C),
-      Color(0xFF3D75F6),
-      Color(0xFFFF9F43),
-    ];
-    return colors[name.hashCode.abs() % colors.length];
+    return getGroupAvatarColor(name.hashCode.toString());
   }
 
   String _roleLabel(int role) {
@@ -279,11 +275,16 @@ class _GroupAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppAvatar(
-      name: group.name,
-      avatarUrl: group.avatarUrl,
-      backgroundColor: color,
-      fallbackChild: const Icon(Icons.groups_2_outlined, color: Colors.white),
+    return GroupAvatarWidget.fromMembers(
+      members: group.groupMemberItems
+          .map((item) => GroupAvatarMember(
+                userId: item.userId ?? '',
+                name: item.name ?? '',
+                avatarUrl: item.avatar,
+              ))
+          .toList(),
+      size: 42,
+      borderRadius: 10,
     );
   }
 }

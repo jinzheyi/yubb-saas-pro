@@ -64,4 +64,17 @@ public class AppImGroupRespVO {
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createTime;
 
+    @Schema(description = "群成员信息列表(用于组合头像,最多4个)", example = "[{\"userId\":1,\"name\":\"张三\",\"avatar\":\"url1\"}]")
+    private java.util.List<GroupMemberItem> groupMemberItems;
+
+    @Data
+    @Schema(description = "群成员信息项(用于组合头像)")
+    public static class GroupMemberItem {
+        @Schema(description = "用户ID")
+        private Long userId;
+        @Schema(description = "用户名称")
+        private String name;
+        @Schema(description = "用户头像")
+        private String avatar;
+    }
 }

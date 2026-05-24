@@ -2,6 +2,15 @@ import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
+/// 群成员信息项（用于组合头像）
+class GroupMemberItem {
+  final String? userId;
+  final String? name;
+  final String? avatar;
+
+  const GroupMemberItem({this.userId, this.name, this.avatar});
+}
+
 class Conversation {
   const Conversation({
     required this.chatId,
@@ -25,6 +34,8 @@ class Conversation {
     required this.lastMessageStatus,
     this.lastMessageHasAtMe = false,
     this.groupMemberCount = 0,
+    this.groupMemberAvatars = const [],
+    this.groupMemberItems = const [],
     required this.updatedAt,
     required this.unreadCount,
     required this.isPinned,
@@ -56,6 +67,8 @@ class Conversation {
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
+  final List<String> groupMemberAvatars;
+  final List<GroupMemberItem> groupMemberItems;
   final DateTime updatedAt;
   final int unreadCount;
   final bool isPinned;
@@ -87,6 +100,8 @@ class Conversation {
     MessageStatus? lastMessageStatus,
     bool? lastMessageHasAtMe,
     int? groupMemberCount,
+    List<String>? groupMemberAvatars,
+    List<GroupMemberItem>? groupMemberItems,
     DateTime? updatedAt,
     int? unreadCount,
     bool? isPinned,
@@ -121,6 +136,8 @@ class Conversation {
       lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
       lastMessageHasAtMe: lastMessageHasAtMe ?? this.lastMessageHasAtMe,
       groupMemberCount: groupMemberCount ?? this.groupMemberCount,
+      groupMemberAvatars: groupMemberAvatars ?? this.groupMemberAvatars,
+      groupMemberItems: groupMemberItems ?? this.groupMemberItems,
       updatedAt: updatedAt ?? this.updatedAt,
       unreadCount: unreadCount ?? this.unreadCount,
       isPinned: isPinned ?? this.isPinned,

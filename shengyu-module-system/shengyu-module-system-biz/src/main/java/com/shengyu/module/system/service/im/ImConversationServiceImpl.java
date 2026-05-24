@@ -22,14 +22,17 @@ import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImConversationUserStateDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
+import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import lombok.extern.slf4j.Slf4j;
@@ -111,6 +114,9 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Resource
     private ImGroupMapper groupMapper;
+
+    @Resource
+    private ImGroupUserMapper groupUserMapper;
 
     @Resource
     private AdminUserMapper userMapper;
@@ -837,6 +843,53 @@ public class ImConversationServiceImpl implements ImConversationService {
             }
         }
 
+        // 获取群成员头像列表（最多4个）
+        Map<Long, java.util.List<String>> groupMemberAvatarsMap = new HashMap<>();
+        // 获取群成员完整信息列表（最多4个，用于组合头像）
+        Map<Long, java.util.List<AppImConversationRespVO.GroupMemberItem>> groupMemberItemsMap = new HashMap<>();
+        if (!groupIds.isEmpty()) {
+            for (Long groupId : groupIds) {
+                List<ImGroupUserDO> members = groupUserMapper.selectList(
+                        new LambdaQueryWrapperX<ImGroupUserDO>()
+                                .eq(ImGroupUserDO::getGroupId, groupId)
+                                .orderByAsc(ImGroupUserDO::getJoinTime)
+                                .last("LIMIT 4"));
+                if (members != null && !members.isEmpty()) {
+                    List<Long> memberUserIds = members.stream()
+                            .map(ImGroupUserDO::getUserId)
+                            .collect(Collectors.toList());
+                    List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+                    if (memberUsers != null) {
+                        // 按成员顺序映射用户信息
+                        List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
+                        List<String> avatars = new ArrayList<>();
+                        for (ImGroupUserDO member : members) {
+                            AdminUserDO user = memberUsers.stream()
+                                    .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (user != null) {
+                                AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
+                                item.setUserId(user.getId());
+                                item.setName(user.getNickname());
+                                item.setAvatar(user.getAvatar());
+                                items.add(item);
+                                if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                                    avatars.add(user.getAvatar());
+                                }
+                            }
+                        }
+                        if (!avatars.isEmpty()) {
+                            groupMemberAvatarsMap.put(groupId, avatars);
+                        }
+                        if (!items.isEmpty()) {
+                            groupMemberItemsMap.put(groupId, items);
+                        }
+                    }
+                }
+            }
+        }
+
         Map<Long, AdminUserDO> userMap = new HashMap<>();
         if (!otherUserIds.isEmpty()) {
             List<AdminUserDO> users = userMapper.selectBatchIds(new ArrayList<>(otherUserIds));
@@ -928,6 +981,8 @@ public class ImConversationServiceImpl implements ImConversationService {
                     respVO.setTargetName(group.getName());
                     respVO.setTargetAvatar(group.getAvatar());
                     respVO.setGroupMemberCount(group.getMemberCount());
+                    respVO.setGroupMemberAvatars(groupMemberAvatarsMap.get(group.getId()));
+                    respVO.setGroupMemberItems(groupMemberItemsMap.get(group.getId()));
 
                     // 群聊无消息：使用群创建时间作为会话时间
                     if (respVO.getLastMessageTime() == null
@@ -1019,6 +1074,28 @@ public class ImConversationServiceImpl implements ImConversationService {
                  respVO.setTargetName(group.getName());
                  respVO.setTargetAvatar(group.getAvatar());
                  respVO.setGroupMemberCount(group.getMemberCount());
+                 
+                 // 获取群成员头像列表（最多4个）
+                 List<ImGroupUserDO> members = groupUserMapper.selectList(
+                         new LambdaQueryWrapperX<ImGroupUserDO>()
+                                 .eq(ImGroupUserDO::getGroupId, group.getId())
+                                 .orderByAsc(ImGroupUserDO::getJoinTime)
+                                 .last("LIMIT 4"));
+                 if (members != null && !members.isEmpty()) {
+                     List<Long> memberUserIds = members.stream()
+                             .map(ImGroupUserDO::getUserId)
+                             .collect(Collectors.toList());
+                     List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+                     if (memberUsers != null) {
+                         List<String> avatars = memberUsers.stream()
+                                 .map(u -> u != null ? u.getAvatar() : null)
+                                 .filter(a -> a != null && !a.isEmpty())
+                                 .collect(Collectors.toList());
+                         if (!avatars.isEmpty()) {
+                             respVO.setGroupMemberAvatars(avatars);
+                         }
+                     }
+                 }
 
 				// 群聊无消息：使用群创建时间作为会话时间
 				if (respVO.getLastMessageTime() == null
