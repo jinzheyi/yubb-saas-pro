@@ -27,6 +27,18 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   final ConversationRepository _conversationRepository;
 
   Future<AppError?> load() async {
+    // Skip API call if data already exists - prevents data loss on tab switch
+    // When switching tabs, the page is recreated but the controller persists.
+    // We should NOT call the API again if data already exists, as the
+    // incremental sync may return only changed conversations, not all.
+    if (state.conversations.isNotEmpty) {
+      return null;
+    }
+    // Also skip if already loading to prevent duplicate API calls
+    if (state.status == ConversationListStatus.loading) {
+      return null;
+    }
+
     state = state.copyWith(status: ConversationListStatus.loading, error: null);
 
     try {

@@ -7,7 +7,9 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 
-final conversationRealtimeBindingProvider = Provider.autoDispose<void>((ref) {
+/// 会话实时绑定：在整个应用生命周期中保持活跃，不随Tab切换而销毁
+/// 移除 autoDispose 确保 websocket 订阅在 Tab 切换时保持连接
+final conversationRealtimeBindingProvider = Provider<void>((ref) {
   final StreamSubscription<ImSocketEvent> subscription = ref
       .read(socketMessageDispatcherProvider)
       .stream
