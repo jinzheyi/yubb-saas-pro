@@ -33,7 +33,9 @@ class GroupMemberDto {
       userName: '${json['userName'] ?? json['username'] ?? ''}',
       nickname: '${json['nickname'] ?? json['userNickname'] ?? ''}',
       role: (json['role'] as num?)?.toInt() ?? 0,
-      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar']?.toString(),
+      avatarUrl: json['userAvatar']?.toString() ??
+          json['avatarUrl']?.toString() ??
+          json['avatar']?.toString(),
       deptName: json['deptName']?.toString(),
       joinTime:
           json['joinTime']?.toString() ??
