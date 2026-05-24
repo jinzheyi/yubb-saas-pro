@@ -182,6 +182,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             lastMessageHasAtMe: false,
             groupMemberCount: 0,
             groupMemberAvatars: const [],
+            groupMemberItems: const [],
             updatedAt: updatedAt,
             unreadCount: unreadCount,
             isPinned: false,

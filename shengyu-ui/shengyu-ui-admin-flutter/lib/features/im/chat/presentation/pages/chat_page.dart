@@ -778,9 +778,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           onReeditRecalledMessage: _handleReeditAfterRecall,
                           reeditNowTs: _reeditNowTs,
                           showSenderNamesForIncoming: isGroupChat,
-                          watermarkText: currentUserId.trim().isEmpty
-                              ? '同事A 1234'
-                              : currentUserId.trim(),
+                          watermarkText: _resolveCurrentUserDisplayName(
+                            currentUserId,
+                          ),
                           currentUserAvatarUrl: currentUserAvatarUrl,
                           outgoingFooterLabelBuilder: isGroupChat
                               ? (message) => _buildReadReceiptEntryText(
@@ -2808,6 +2808,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   void _showAttachmentError(BuildContext context, String message) {
     _showLegacyToast(context, message);
+  }
+
+  String _resolveCurrentUserDisplayName(String currentUserId) {
+    final profile = ref.watch(currentUserProfileProvider).valueOrNull;
+    final nickname = profile?.nickname.trim() ?? '';
+    if (nickname.isNotEmpty) {
+      return nickname;
+    }
+    return currentUserId.trim().isEmpty ? '' : currentUserId.trim();
   }
 
   void _showAttachmentSuccess(BuildContext context, String message) {

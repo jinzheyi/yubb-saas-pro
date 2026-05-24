@@ -41,11 +41,13 @@ class ChatPageHeader extends StatelessWidget {
         bottom: BorderSide(color: Color(0xFFE8ECF3), width: 0.5),
       ),
       leadingWidth: 74,
-      leading: InkWell(
+      leading: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => Navigator.of(context).maybePop(),
         child: Padding(
           padding: const EdgeInsets.only(left: 8),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const AppIcon(
                 AppIconKind.chevronLeft,

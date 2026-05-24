@@ -50,7 +50,6 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
 
   @override
   void dispose() {
-    _closeSelection();
     _searchController.dispose();
     super.dispose();
   }

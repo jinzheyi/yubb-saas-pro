@@ -428,7 +428,8 @@ class _ConversationAvatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (conversation.conversationType == ConversationType.group)
+        if (conversation.conversationType == ConversationType.group &&
+            conversation.groupMemberItems.isNotEmpty)
           GroupAvatarWidget.fromMembers(
             members: conversation.groupMemberItems
                 .map((item) => GroupAvatarMember(
