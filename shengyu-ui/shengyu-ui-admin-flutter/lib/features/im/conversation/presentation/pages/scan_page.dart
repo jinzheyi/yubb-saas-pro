@@ -81,16 +81,12 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               child: Row(
                 children: [
-                  TextButton.icon(
+                  IconButton(
                     onPressed: _handleBack,
                     icon: const Icon(
                       Icons.arrow_back_ios_new_rounded,
                       color: Colors.white,
-                      size: 18,
-                    ),
-                    label: const Text(
-                      '返回',
-                      style: TextStyle(color: Colors.white),
+                      size: 20,
                     ),
                   ),
                   const Expanded(
@@ -104,7 +100,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 80),
+                  const SizedBox(width: 48),
                 ],
               ),
             ),

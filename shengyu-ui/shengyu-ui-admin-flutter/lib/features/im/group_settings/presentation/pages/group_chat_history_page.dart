@@ -41,18 +41,9 @@ class _GroupChatHistoryPageState extends ConsumerState<GroupChatHistoryPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
+        leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          label: Text(
-            strings.backAction,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
         title: Text(strings.groupSettingsChatHistory),

@@ -48,22 +48,13 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        leadingWidth: 80,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
+        leading: IconButton(
           icon: const AppIcon(
             AppIconKind.chevronLeft,
             size: 20,
             color: Color(0xFF202531),
           ),
-          label: Text(
-            strings.backAction,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
         title: Text(

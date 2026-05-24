@@ -86,27 +86,15 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
       children: [
         Scaffold(
           appBar: AppBar(
-            leadingWidth: 80,
-            leading: TextButton.icon(
-              onPressed: _submitting
-                  ? null
-                  : () => Navigator.of(context).maybePop(),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF202531),
-                padding: const EdgeInsets.only(left: 8),
-              ),
+            leading: IconButton(
               icon: const AppIcon(
                 AppIconKind.chevronLeft,
                 size: 20,
                 color: Color(0xFF202531),
               ),
-              label: Text(
-                strings.backAction,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              onPressed: _submitting
+                  ? null
+                  : () => Navigator.of(context).maybePop(),
             ),
             titleSpacing: 0,
             centerTitle: true,

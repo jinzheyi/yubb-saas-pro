@@ -63,18 +63,9 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         title: Text(widget.args.isAddMode ? '添加成员' : '发起群聊'),
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: _handleBack,
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF202531),
-            padding: const EdgeInsets.only(left: 8),
-          ),
+        leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          label: const Text(
-            '返回',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
+          onPressed: _handleBack,
         ),
       ),
       body: Column(
@@ -114,7 +105,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                   items: [
                     ContactPickerCategoryAction(
                       icon: AppIconKind.groupsFill,
-                      label: '鎴戠殑缇ょ粍',
+                      label: '我的群组',
                       color: const Color(0xFFFB923C),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyGroups,
@@ -126,7 +117,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.starOutline,
-                      label: '鎴戠殑鍏虫敞',
+                      label: '我的关注',
                       color: const Color(0xFFEAB308),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyFollowing,
@@ -138,7 +129,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.tree,
-                      label: '缁勭粐鏋舵瀯',
+                      label: '组织架构',
                       color: const Color(0xFF84CC16),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsOrg,
@@ -150,7 +141,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.apartment,
-                      label: '鎴戠殑閮ㄩ棬',
+                      label: '我的部门',
                       color: const Color(0xFF06B6D4),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyDepartment,

@@ -55,10 +55,9 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage> {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton.icon(
+                child: IconButton(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.chevron_left_rounded),
-                  label: const Text('返回'),
+                  icon: const Icon(Icons.chevron_left_rounded, color: Colors.white, size: 22),
                 ),
               ),
               const Spacer(),
