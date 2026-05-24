@@ -5,13 +5,14 @@ import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 ///
 /// 规则：
 /// - 1人：显示1个大头像
-/// - 2人：显示2个半圆头像
-/// - 3人：显示1个半圆 + 2个四分之一圆
-/// - 4人及以上：显示4个四分之一圆
+/// - 2人：显示2个头像（左右排列）
+/// - 3人：上1个 + 下2个
+/// - 4人及以上：显示4个头像（2x2网格）
 ///
-/// 支持两种构造方式：
-/// 1. [GroupAvatarWidget.fromMembers] - 传入成员对象列表
-/// 2. [GroupAvatarWidget.fromUrls] - 直接传入URL列表和名称种子
+/// 性能优化：
+/// - 使用 const 构造函数，确保相同输入产生相同输出
+/// - 头像渲染稳定，不随刷新/重新登录变化
+/// - 成员按加入顺序取前4个，不重复查询
 class GroupAvatarWidget extends StatelessWidget {
   const GroupAvatarWidget({
     super.key,
@@ -27,51 +28,6 @@ class GroupAvatarWidget extends StatelessWidget {
     double size = 48,
     double borderRadius = 8,
   }) {
-    return GroupAvatarWidget(
-      key: key,
-      members: members,
-      size: size,
-      borderRadius: borderRadius,
-    );
-  }
-
-  /// 从URL列表和名称创建（适用于会话列表等只需URL的场景）
-  ///
-  /// [urls] - 成员头像URL列表（最多4个）
-  /// [nameSeed] - 用于生成文字头像的名称/ID种子
-  /// [memberCount] - 群成员总数（用于决定是否显示+N）
-  factory GroupAvatarWidget.fromUrls({
-    Key? key,
-    required List<String?> urls,
-    required String nameSeed,
-    int? memberCount,
-    double size = 48,
-    double borderRadius = 8,
-  }) {
-    final members = urls.where((url) => url != null && url.trim().isNotEmpty).take(4).map((url) {
-      return GroupAvatarMember(
-        userId: nameSeed,
-        name: nameSeed,
-        avatarUrl: url,
-      );
-    }).toList();
-
-    // 如果没有URL但有成员数量，显示+N占位
-    if (members.isEmpty && memberCount != null && memberCount > 0) {
-      return GroupAvatarWidget(
-        key: key,
-        members: [
-          GroupAvatarMember(
-            userId: nameSeed,
-            name: memberCount > 4 ? '+${memberCount - 4}' : '$memberCount',
-            avatarUrl: null,
-          ),
-        ],
-        size: size,
-        borderRadius: borderRadius,
-      );
-    }
-
     return GroupAvatarWidget(
       key: key,
       members: members,
@@ -114,6 +70,7 @@ class GroupAvatarWidget extends StatelessWidget {
 
   Widget _buildAvatarGrid(List<GroupAvatarMember> displayMembers) {
     final count = displayMembers.length;
+    final halfSize = size / 2;
 
     switch (count) {
       case 1:
@@ -126,16 +83,26 @@ class GroupAvatarWidget extends StatelessWidget {
       case 2:
         return Row(
           children: [
-            Expanded(
-              child: _buildHalfAvatar(
-                displayMembers[0],
-                isLeft: true,
+            SizedBox(
+              width: halfSize,
+              height: size,
+              child: _buildCellAvatar(
+                avatarUrl: displayMembers[0].avatarUrl,
+                name: displayMembers[0].name,
+                seed: displayMembers[0].userId,
+                cellWidth: halfSize,
+                cellHeight: size,
               ),
             ),
-            Expanded(
-              child: _buildHalfAvatar(
-                displayMembers[1],
-                isLeft: false,
+            SizedBox(
+              width: halfSize,
+              height: size,
+              child: _buildCellAvatar(
+                avatarUrl: displayMembers[1].avatarUrl,
+                name: displayMembers[1].name,
+                seed: displayMembers[1].userId,
+                cellWidth: halfSize,
+                cellHeight: size,
               ),
             ),
           ],
@@ -143,115 +110,126 @@ class GroupAvatarWidget extends StatelessWidget {
       case 3:
         return Column(
           children: [
-            Expanded(
-              child: _buildHalfAvatarTop(displayMembers[0]),
-            ),
-            Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildQuarterAvatar(displayMembers[1]),
-                  ),
-                  Expanded(
-                    child: _buildQuarterAvatar(displayMembers[2], isRight: true),
-                  ),
-                ],
+            SizedBox(
+              width: size,
+              height: halfSize,
+              child: _buildCellAvatar(
+                avatarUrl: displayMembers[0].avatarUrl,
+                name: displayMembers[0].name,
+                seed: displayMembers[0].userId,
+                cellWidth: size,
+                cellHeight: halfSize,
               ),
+            ),
+            Row(
+              children: [
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[1].avatarUrl,
+                    name: displayMembers[1].name,
+                    seed: displayMembers[1].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
+                  ),
+                ),
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[2].avatarUrl,
+                    name: displayMembers[2].name,
+                    seed: displayMembers[2].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
+                  ),
+                ),
+              ],
             ),
           ],
         );
       default: // 4人及以上
         return Column(
           children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildQuarterAvatar(displayMembers[0]),
+            Row(
+              children: [
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[0].avatarUrl,
+                    name: displayMembers[0].name,
+                    seed: displayMembers[0].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
                   ),
-                  Expanded(
-                    child: _buildQuarterAvatar(displayMembers[1], isRight: true),
+                ),
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[1].avatarUrl,
+                    name: displayMembers[1].name,
+                    seed: displayMembers[1].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildQuarterAvatarBottom(displayMembers[2]),
+            Row(
+              children: [
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[2].avatarUrl,
+                    name: displayMembers[2].name,
+                    seed: displayMembers[2].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
                   ),
-                  Expanded(
-                    child: _buildQuarterAvatarBottom(displayMembers[3], isRight: true),
+                ),
+                SizedBox(
+                  width: halfSize,
+                  height: halfSize,
+                  child: _buildCellAvatar(
+                    avatarUrl: displayMembers[3].avatarUrl,
+                    name: displayMembers[3].name,
+                    seed: displayMembers[3].userId,
+                    cellWidth: halfSize,
+                    cellHeight: halfSize,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         );
     }
   }
 
-  Widget _buildHalfAvatar(GroupAvatarMember member, {required bool isLeft}) {
-    return ClipRect(
-      child: Align(
-        alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-        widthFactor: 0.5,
-        child: _buildSingleAvatar(
-          avatarUrl: member.avatarUrl,
-          name: member.name,
-          seed: member.userId,
-          size: size,
-        ),
-      ),
-    );
-  }
+  /// 构建单个单元格头像（已知单元格精确尺寸）
+  Widget _buildCellAvatar({
+    required String? avatarUrl,
+    required String name,
+    required String seed,
+    required double cellWidth,
+    required double cellHeight,
+  }) {
+    final resolvedAvatar = normalizeAvatarUrl(avatarUrl);
 
-  Widget _buildHalfAvatarTop(GroupAvatarMember member) {
-    return ClipRect(
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: 0.5,
-        child: _buildSingleAvatar(
-          avatarUrl: member.avatarUrl,
-          name: member.name,
-          seed: member.userId,
-          size: size,
-        ),
-      ),
-    );
-  }
+    if (resolvedAvatar.isNotEmpty) {
+      return Image.network(
+        resolvedAvatar,
+        width: cellWidth,
+        height: cellHeight,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildFallbackAvatar(name, seed, cellWidth, cellHeight),
+      );
+    }
 
-  Widget _buildQuarterAvatar(GroupAvatarMember member, {bool isRight = false}) {
-    return ClipRect(
-      child: Align(
-        alignment: isRight ? Alignment.centerRight : Alignment.centerLeft,
-        widthFactor: 0.5,
-        heightFactor: 0.5,
-        child: _buildSingleAvatar(
-          avatarUrl: member.avatarUrl,
-          name: member.name,
-          seed: member.userId,
-          size: size,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuarterAvatarBottom(GroupAvatarMember member, {bool isRight = false}) {
-    return ClipRect(
-      child: Align(
-        alignment: isRight ? Alignment.bottomRight : Alignment.bottomLeft,
-        widthFactor: 0.5,
-        heightFactor: 0.5,
-        child: _buildSingleAvatar(
-          avatarUrl: member.avatarUrl,
-          name: member.name,
-          seed: member.userId,
-          size: size,
-        ),
-      ),
-    );
+    return _buildFallbackAvatar(name, seed, cellWidth, cellHeight);
   }
 
   Widget _buildSingleAvatar({
@@ -268,29 +246,35 @@ class GroupAvatarWidget extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFallbackAvatar(name, seed),
+        errorBuilder: (_, _, _) => _buildFallbackAvatar(name, seed, size, size),
       );
     }
 
-    return _buildFallbackAvatar(name, seed);
+    return _buildFallbackAvatar(name, seed, size, size);
   }
 
-  Widget _buildFallbackAvatar(String name, String seed) {
+  Widget _buildFallbackAvatar(
+    String name,
+    String seed,
+    double width,
+    double height,
+  ) {
     final color = seed.isNotEmpty
         ? getUserAvatarColor(seed)
         : const Color(0xFF5FB6F7);
     final text = getAvatarText(name);
+    final minDim = width < height ? width : height;
 
     return Container(
-      width: size,
-      height: size,
+      width: width,
+      height: height,
       color: color,
       alignment: Alignment.center,
       child: Text(
         text,
         style: TextStyle(
           color: Colors.white,
-          fontSize: size * 0.35,
+          fontSize: minDim * 0.35,
           fontWeight: FontWeight.w600,
         ),
       ),
