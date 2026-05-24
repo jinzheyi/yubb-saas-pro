@@ -564,6 +564,12 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         lastMessageStatus: conversation.lastMessageStatus,
         lastMessageHasAtMe: conversation.lastMessageHasAtMe,
         groupMemberCount: conversation.groupMemberCount,
+        groupMemberAvatars: conversation.groupMemberAvatars.isNotEmpty
+            ? conversation.groupMemberAvatars
+            : existing.groupMemberAvatars,
+        groupMemberItems: conversation.groupMemberItems.isNotEmpty
+            ? conversation.groupMemberItems
+            : existing.groupMemberItems,
         updatedAt: conversation.updatedAt,
         unreadCount: conversation.unreadCount,
         isPinned: conversation.isPinned,

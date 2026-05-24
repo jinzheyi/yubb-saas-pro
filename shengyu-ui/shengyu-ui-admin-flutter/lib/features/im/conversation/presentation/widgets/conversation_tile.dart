@@ -428,16 +428,17 @@ class _ConversationAvatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (conversation.conversationType == ConversationType.group &&
-            conversation.groupMemberItems.isNotEmpty)
+        if (conversation.conversationType == ConversationType.group)
           GroupAvatarWidget.fromMembers(
-            members: conversation.groupMemberItems
-                .map((item) => GroupAvatarMember(
-                      userId: item.userId ?? '',
-                      name: item.name ?? '',
-                      avatarUrl: item.avatar,
-                    ))
-                .toList(),
+            members: conversation.groupMemberItems.isEmpty
+                ? _fallbackGroupMembersFromTitle(conversation.title)
+                : conversation.groupMemberItems
+                    .map((item) => GroupAvatarMember(
+                          userId: item.userId ?? '',
+                          name: item.name ?? '',
+                          avatarUrl: item.avatar,
+                        ))
+                    .toList(),
             size: 48,
             borderRadius: 8,
           )
@@ -502,5 +503,16 @@ class _ConversationAvatar extends StatelessWidget {
       title: displayTitle,
       targetId: conversation.targetId,
     );
+  }
+
+  List<GroupAvatarMember> _fallbackGroupMembersFromTitle(String title) {
+    final names = title
+        .split(RegExp(r'[、，, ]+'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    return names
+        .map((name) => GroupAvatarMember(userId: name, name: name))
+        .toList();
   }
 }
