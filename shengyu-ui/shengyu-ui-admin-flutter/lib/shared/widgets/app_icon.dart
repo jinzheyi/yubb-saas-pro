@@ -104,8 +104,24 @@ class AppIcon extends StatelessWidget {
 
 IconData? _resolveLegacyIconData(AppIconKind kind) {
   switch (kind) {
+    case AppIconKind.chatOutline:
+      return ShengyuIconFont.xiaoxi;
+    case AppIconKind.chatFill:
+      return ShengyuIconFont.xiaoxi;
+    case AppIconKind.contactsOutline:
+      return ShengyuIconFont.tongxunlu;
+    case AppIconKind.contactsFill:
+      return ShengyuIconFont.tongxunlu;
+    case AppIconKind.widgetsOutline:
+      return ShengyuIconFont.gongzuotai;
+    case AppIconKind.widgetsFill:
+      return ShengyuIconFont.gongzuotai;
+    case AppIconKind.personOutline:
+      return ShengyuIconFont.wode;
+    case AppIconKind.personFill:
+      return ShengyuIconFont.wode;
     case AppIconKind.groupAdd:
-      return ShengyuIconFont.duihua;
+      return ShengyuIconFont.yonghu1;
     case AppIconKind.more:
       return ShengyuIconFont.shezhi;
     case AppIconKind.chevronLeft:

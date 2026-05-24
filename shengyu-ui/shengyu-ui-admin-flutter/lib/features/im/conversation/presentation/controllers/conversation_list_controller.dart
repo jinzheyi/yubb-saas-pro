@@ -33,9 +33,14 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       final result = await _conversationSyncCoordinator.bootstrap(
         cursorVersion: state.cursorVersion,
       );
+      // When bootstrap returns empty items, it means the cursor is already up-to-date.
+      // Preserve existing conversations instead of replacing them with an empty list.
+      final nextConversations = result.items.isEmpty
+          ? state.conversations
+          : _replaceSyncedConversations(result.items);
       state = state.copyWith(
         status: ConversationListStatus.ready,
-        conversations: _replaceSyncedConversations(result.items),
+        conversations: nextConversations,
         cursorVersion: result.cursorVersion,
       );
       return null;
@@ -54,12 +59,18 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       final result = await _syncConversationsIncrementallyUseCase(
         cursorVersion: state.cursorVersion,
       );
+      // Only update conversations if server returns new data
+      // When cursorVersion is up-to-date, server returns empty items
+      // We should preserve existing conversations instead of clearing them
+      final nextConversations = result.items.isEmpty
+          ? state.conversations
+          : _mergeSyncedConversations(
+              current: state.conversations,
+              incoming: result.items,
+            );
       state = state.copyWith(
         status: ConversationListStatus.ready,
-        conversations: _mergeSyncedConversations(
-          current: state.conversations,
-          incoming: result.items,
-        ),
+        conversations: nextConversations,
         cursorVersion: result.cursorVersion,
       );
       return null;
