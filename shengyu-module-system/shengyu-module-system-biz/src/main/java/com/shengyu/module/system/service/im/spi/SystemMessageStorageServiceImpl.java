@@ -828,13 +828,17 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     }
                 }
             } else {
+                // 单聊：发送者侧添加"我:"前缀，接收者侧保持原样
+                String senderPreview = buildSingleChatPreview(lastMessageContent);
+                String receiverPreview = lastMessageContent;
+
                 ImChatUserDO sender = ensureChatUser(header.getSenderId(), chatId);
                 chatUserMapper.updateLastMessageAndIncrementUnread(
                         sender.getId(),
                         messageDO.getId(),
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
-                        lastMessageContent,
+                        senderPreview,
                         messageDO.getSendTime(),
                         0,
                         Boolean.TRUE.equals(sender.getNoDisturb())
@@ -852,7 +856,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getId(),
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
-                        lastMessageContent,
+                        senderPreview,
                         false,
                         messageDO.getSendTime()
                 );
@@ -872,7 +876,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getId(),
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
-                        lastMessageContent,
+                        receiverPreview,
                         messageDO.getSendTime(),
                         1,
                         Boolean.TRUE.equals(receiver.getNoDisturb())
@@ -890,7 +894,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getId(),
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
-                        lastMessageContent,
+                        receiverPreview,
                         false,
                         messageDO.getSendTime()
                 );
@@ -1100,6 +1104,17 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 ? senderName.trim()
                 : String.valueOf(senderId != null ? senderId : 0L));
         return truncateContent(prefix + ":" + preview);
+    }
+
+    /**
+     * 构建单聊预览文案：发送者侧添加"我:"前缀，接收者侧保持原样
+     */
+    private String buildSingleChatPreview(String basePreview) {
+        String preview = StrUtil.nullToEmpty(basePreview).trim();
+        if (preview.isEmpty()) {
+            return truncateContent(preview);
+        }
+        return truncateContent("我:" + preview);
     }
 
     /**

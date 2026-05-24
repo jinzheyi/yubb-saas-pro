@@ -331,6 +331,12 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
   if (preview.isNotEmpty) {
     return preview.length > 100 ? '${preview.substring(0, 100)}...' : preview;
   }
+  // Don't show fallback for text messages with empty content
+  // This handles both brand-new conversations and local optimistic messages
+  // that haven't been confirmed by the server yet
+  if (conversation.lastMessageType == MessageType.text) {
+    return '';
+  }
   return switch (conversation.lastMessageType) {
     MessageType.image => strings.chatHistoryPreviewImage,
     MessageType.voice => strings.chatHistoryPreviewVoice,

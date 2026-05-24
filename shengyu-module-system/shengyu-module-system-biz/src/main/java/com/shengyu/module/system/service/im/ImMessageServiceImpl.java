@@ -1305,9 +1305,13 @@ public class ImMessageServiceImpl implements ImMessageService {
             // 处理@提及强提醒：被@用户即使群免打扰也收到推送
             handleMentionNotifications(chat, lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO, memberIds);
         } else {
+            // 单聊：发送者侧添加"我:"前缀，接收者侧保持原样
+            String senderPreview = buildSingleChatPreview(lastMessageContent, true, null);
+            String receiverPreview = buildSingleChatPreview(lastMessageContent, false, null);
+
             ImChatUserDO sender = ensureChatUser(senderId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    sender.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
+                    sender.getId(), lastMessageId, lastMessageSequence, dbMessageType, senderPreview, lastMessageTime,
                     0,
                     Boolean.TRUE.equals(sender.getNoDisturb()));
 
@@ -1338,7 +1342,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), senderId, senderCursorVer,
                         0, lastMessageSequence, lastMessageTime,
-                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, false, lastMessageTime);
+                        lastMessageId, lastMessageSequence, dbMessageType, senderPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",
                         chat.getId(), senderId, e.getMessage());
@@ -1346,7 +1350,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
+                    receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, receiverPreview, lastMessageTime,
                     1,
                     Boolean.TRUE.equals(receiver.getNoDisturb()));
 
@@ -1359,7 +1363,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), receiverId, receiverCursorVer,
                         1, null, null,
-                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, false, lastMessageTime);
+                        lastMessageId, lastMessageSequence, dbMessageType, receiverPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊接收者), chatId: {}, receiverId: {}, error: {}",
                         chat.getId(), receiverId, e.getMessage());
@@ -1401,6 +1405,20 @@ public class ImMessageServiceImpl implements ImMessageService {
                 ? senderDisplayName
                 : String.valueOf(senderId != null ? senderId : 0L));
         return prefix + ":" + preview;
+    }
+
+    /**
+     * 构建单聊预览文案：发送者侧添加"我:"前缀，接收者侧保持原样
+     */
+    private String buildSingleChatPreview(String basePreview, boolean isSender, String senderDisplayName) {
+        String preview = StrUtil.nullToEmpty(basePreview).trim();
+        if (preview.isEmpty()) {
+            return preview;
+        }
+        if (isSender) {
+            return "我:" + preview;
+        }
+        return preview;
     }
 
     /**

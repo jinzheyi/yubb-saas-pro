@@ -85,6 +85,11 @@ class MessagePreviewFormatter {
       return summary.isEmpty ? systemLabel : '$systemLabel:$summary';
     }
     if (conversationType != ConversationType.group) {
+      // For single chat, add "我:" prefix for self messages
+      if (isSelf) {
+        final selfPrefix = _isZh ? '我' : 'Me';
+        return summary.isEmpty ? selfPrefix : '$selfPrefix:$summary';
+      }
       return summary;
     }
     final prefix = isSelf
