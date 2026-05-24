@@ -235,6 +235,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
   }
 
   Future<void> _initialize() async {
+    if (!mounted) return;
     ref
         .read(contactSelectionControllerProvider.notifier)
         .start(limit: widget.args.selectionLimit);
@@ -244,9 +245,11 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
   Future<void> _loadContacts() async {
     try {
       final profile = await ref.read(currentUserProfileProvider.future);
+      if (!mounted) return;
       final existingIds = widget.args.isAddMode
           ? await _loadExistingMemberIds(profile)
           : const <String>{};
+      if (!mounted) return;
       final contacts = await ref.read(contactsRepositoryProvider).getContacts();
       final items = <_SelectableContact>[];
 
@@ -264,6 +267,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
             isCurrentUser: true,
           ),
         );
+        if (!mounted) return;
         ref
             .read(contactSelectionControllerProvider.notifier)
             .ensureSelected(
