@@ -37,7 +37,16 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         if (next == null || next.groupId != widget.args.groupId) {
           return;
         }
-        ref.read(groupSettingsControllerProvider(widget.args).notifier).load();
+        final currentCount = ref.read(
+          groupSettingsControllerProvider(widget.args),
+        ).pendingRequestCount;
+        final payload = next.payload;
+        final newCount =
+            int.tryParse(payload['pendingCount']?.toString() ?? '') ??
+            currentCount;
+        if (newCount != currentCount) {
+          ref.read(groupSettingsControllerProvider(widget.args).notifier).load();
+        }
       },
     );
   }

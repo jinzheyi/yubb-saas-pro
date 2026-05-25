@@ -1001,6 +1001,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
         unawaited(groupSettingsNotifier.load());
         unawaited(groupMembersNotifier.load());
+      } else {
+        // 其他成员加入，仅局部刷新成员列表
+        unawaited(groupMembersNotifier.load());
       }
     }
 
@@ -1014,6 +1017,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
         return;
       }
+      // 其他成员移除，仅局部刷新成员列表
+      unawaited(groupMembersNotifier.load());
     }
 
     final tipText = _resolveGroupSystemSignalText(signal);
@@ -1053,13 +1058,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
       } else if (oldOwnerId.isNotEmpty && oldOwnerId == currentUserId) {
         _showAttachmentError(context, strings.chatGroupYouTransferredOwner);
       }
+      // 群主变更需要全量刷新群设置
+      unawaited(
+        ref.read(conversationListControllerProvider.notifier).syncIncrementally(),
+      );
+      unawaited(groupSettingsNotifier.load());
+      unawaited(groupMembersNotifier.load());
     }
-
-    unawaited(
-      ref.read(conversationListControllerProvider.notifier).syncIncrementally(),
-    );
-    unawaited(groupSettingsNotifier.load());
-    unawaited(groupMembersNotifier.load());
   }
 
   String _groupSystemSignalKey(ChatRealtimeSignal signal, String tipText) {
