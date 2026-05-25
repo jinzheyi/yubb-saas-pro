@@ -1379,6 +1379,15 @@ public class ImGroupServiceImpl implements ImGroupService {
                         Boolean.FALSE,
                         now
                 );
+                // 操作者侧：推进已读水位，避免刷新后自己的操作出现未读角标
+                if (Objects.equals(targetUserId, operatorUserId) && sequence != null) {
+                    try {
+                        chatUserMapper.markReadToSequence(targetUserId, chat.getId(), sequence);
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
+                }
+
                 userCursorVersionMap.put(targetUserId, cursorVersion);
             } catch (Exception e) {
                 log.warn("[ImGroupService] 推送群系统提示会话更新失败, groupId: {}, targetUserId: {}, error: {}",

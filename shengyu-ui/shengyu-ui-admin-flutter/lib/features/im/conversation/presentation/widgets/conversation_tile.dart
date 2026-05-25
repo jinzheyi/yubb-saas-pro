@@ -153,7 +153,7 @@ class _ConversationTileState extends State<ConversationTile> {
                                               fontSize: 13,
                                               height: 18 / 13,
                                               color: token.isNotice
-                                                  ? const Color(0xFFF54A45)
+                                                  ? const Color(0xFF99A0AF)
                                                   : const Color(0xFF697386),
                                             ),
                                         emojiSize: 14,
