@@ -250,11 +250,17 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
   }
 
   void applyRealtimeMuteAll(bool muted) {
-    _setStateIfActive(state.copyWith(muteAll: muted));
+    if (_disposed) {
+      return;
+    }
+    state = state.copyWith(muteAll: muted);
   }
 
   void applyRealtimeCurrentUserMute(DateTime? muteEndTime) {
-    _setStateIfActive(state.copyWith(currentUserMuteEndTime: muteEndTime));
+    if (_disposed) {
+      return;
+    }
+    state = state.copyWith(currentUserMuteEndTime: muteEndTime);
   }
 
   int _memberColorValue(String seed) {

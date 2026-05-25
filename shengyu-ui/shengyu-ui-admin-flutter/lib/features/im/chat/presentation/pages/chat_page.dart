@@ -947,8 +947,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final groupMembersNotifier = ref.read(
       groupMembersControllerProvider(args).notifier,
     );
-    ref.invalidate(groupSettingsControllerProvider(args));
-    ref.invalidate(groupMembersFutureProvider(notifyGroupId));
 
     if (signal.action == 'group_mute_all_changed') {
       final muted =

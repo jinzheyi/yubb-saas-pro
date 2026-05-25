@@ -839,7 +839,12 @@ class _SwitchSettingTile extends StatelessWidget {
           color: Color(0xFF202531),
         ),
       ),
-      trailing: Switch(value: value, onChanged: onChanged),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: const Color(0xFF34C759),
+        activeTrackColor: const Color(0xFFB4EABF),
+      ),
     );
   }
 }
