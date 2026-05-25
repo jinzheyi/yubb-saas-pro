@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
@@ -83,15 +82,7 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
     final messageCount = isSendMode ? 1 : widget.args.messageIds.length;
     final showForwardType = !isSendMode && messageCount > 1;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Stack(
+    return Stack(
       children: [
         Scaffold(
           appBar: AppBar(
@@ -103,7 +94,7 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
               ),
               onPressed: _submitting
                   ? null
-                  : () => context.go(RoutePaths.conversations),
+                  : () => Navigator.of(context).maybePop(),
             ),
             titleSpacing: 0,
             centerTitle: true,
@@ -281,7 +272,6 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
           ),
         ],
       ],
-    ),
     );
   }
 

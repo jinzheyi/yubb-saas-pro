@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
@@ -55,25 +54,17 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const AppIcon(
-              AppIconKind.chevronLeft,
-              size: 22,
-              color: Color(0xFF202531),
-            ),
-            onPressed: () => context.go(RoutePaths.conversations),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const AppIcon(
+            AppIconKind.chevronLeft,
+            size: 22,
+            color: Color(0xFF202531),
           ),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         centerTitle: true,
         title: Text(strings.chatHistoryTitle),
       ),
@@ -263,7 +254,6 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           ),
         ],
       ),
-    ),
     );
   }
 

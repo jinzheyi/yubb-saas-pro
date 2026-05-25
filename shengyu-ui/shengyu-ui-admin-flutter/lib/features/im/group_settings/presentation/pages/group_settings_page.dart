@@ -99,18 +99,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       );
     }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: _buildAppBar(context, strings),
-        body: ListView(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: _buildAppBar(context, strings),
+      body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Container(
@@ -491,19 +483,14 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
           ),
         ],
       ),
-    ),
     );
-  }
-
-  void _handleBack(BuildContext context) {
-    context.go(RoutePaths.conversations);
   }
 
   AppBar _buildAppBar(BuildContext context, AppLocalizations strings) {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.chevron_left_rounded, size: 22),
-        onPressed: () => _handleBack(context),
+        onPressed: () => Navigator.of(context).maybePop(),
       ),
       centerTitle: true,
       title: Text(strings.groupSettingsTitle),

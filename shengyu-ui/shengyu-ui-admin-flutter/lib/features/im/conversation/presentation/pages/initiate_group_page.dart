@@ -8,7 +8,6 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_arg
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/initiate_group_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
@@ -59,24 +58,16 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
   Widget build(BuildContext context) {
     final selectionState = ref.watch(contactSelectionControllerProvider);
     final filtered = _filteredContacts();
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: AppBar(
-          title: Text(widget.args.isAddMode ? '添加成员' : '发起群聊'),
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 22),
-            onPressed: _handleBack,
-          ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(
+        title: Text(widget.args.isAddMode ? '添加成员' : '发起群聊'),
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          onPressed: _handleBack,
         ),
-        body: Column(
+      ),
+      body: Column(
         children: [
           Container(
             color: Colors.white,
@@ -239,7 +230,6 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
           ),
         ],
       ),
-    ),
     );
   }
 
@@ -407,7 +397,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
   void _handleBack() {
     _closeSelection();
     if (mounted) {
-      context.go(RoutePaths.conversations);
+      Navigator.of(context).maybePop();
     }
   }
 
@@ -452,7 +442,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('添加成员成功')));
-        context.go(RoutePaths.conversations);
+        Navigator.of(context).maybePop();
       } else {
         final groupName = _trimGroupName(_generateGroupName(selectedMembers));
         final result = await ref

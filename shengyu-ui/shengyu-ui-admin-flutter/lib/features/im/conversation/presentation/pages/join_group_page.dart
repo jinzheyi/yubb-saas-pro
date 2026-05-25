@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_verification_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
@@ -59,24 +58,10 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final verified = _verified;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 22),
-            onPressed: () => context.go(RoutePaths.conversations),
-          ),
-          title: const Text('加入群聊'),
-        ),
-        body: ListView(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(title: const Text('加入群聊')),
+      body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Container(
@@ -173,7 +158,6 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
             ),
         ],
       ),
-    ),
     );
   }
 
@@ -258,7 +242,7 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
           : result.message.trim();
       _showMessage(message);
       if (result.resultType == 2) {
-        context.go(RoutePaths.conversations);
+        context.pop();
         return;
       }
       final chatId = result.chatId.trim().isNotEmpty

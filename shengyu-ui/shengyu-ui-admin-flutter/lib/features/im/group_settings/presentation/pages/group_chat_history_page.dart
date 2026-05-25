@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -39,21 +38,13 @@ class _GroupChatHistoryPageState extends ConsumerState<GroupChatHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 22),
-            onPressed: () => context.go(RoutePaths.conversations),
-          ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         centerTitle: true,
         title: Text(strings.groupSettingsChatHistory),
         actions: [
@@ -190,7 +181,6 @@ class _GroupChatHistoryPageState extends ConsumerState<GroupChatHistoryPage> {
             ),
         ],
       ),
-    ),
     );
   }
 

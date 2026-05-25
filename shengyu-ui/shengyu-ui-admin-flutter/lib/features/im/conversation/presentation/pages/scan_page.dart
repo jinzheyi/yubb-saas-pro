@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -73,17 +72,9 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0B1220),
-        body: SafeArea(
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B1220),
+      body: SafeArea(
         child: Column(
           children: [
             Padding(
@@ -229,7 +220,6 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
           ],
         ),
       ),
-    ),
     );
   }
 
@@ -322,7 +312,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     if (!mounted) {
       return;
     }
-    context.go(RoutePaths.conversations);
+    context.pop();
   }
 
   String _resolveScannerErrorTitle(Object error) {

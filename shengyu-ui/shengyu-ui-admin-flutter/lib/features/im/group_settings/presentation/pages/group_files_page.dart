@@ -7,7 +7,6 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_a
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_file_item.dart';
@@ -46,21 +45,13 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        context.go(RoutePaths.conversations);
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 22),
-            onPressed: () => context.go(RoutePaths.conversations),
-          ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         centerTitle: true,
         title: Text(strings.groupSettingsGroupFiles),
         actions: [
@@ -135,7 +126,6 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
             ),
         ],
       ),
-    ),
     );
   }
 
