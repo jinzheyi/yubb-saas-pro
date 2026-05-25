@@ -23,12 +23,14 @@ class ChatPageHeader extends StatelessWidget {
     this.subtitle,
     required this.onInitiateGroup,
     this.onOpenSettings,
+    required this.onBack,
   });
 
   final String title;
   final String? subtitle;
   final VoidCallback onInitiateGroup;
   final VoidCallback? onOpenSettings;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,7 @@ class ChatPageHeader extends StatelessWidget {
       leadingWidth: 74,
       leading: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(context).maybePop(),
+        onTap: onBack,
         child: Padding(
           padding: const EdgeInsets.only(left: 8),
           child: Row(

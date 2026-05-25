@@ -214,6 +214,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
     super.dispose();
   }
 
+  /// 固定返回到会话列表页面，使用 goNamed 避免路由栈循环跳转
+  void _handleBackToConversations(BuildContext context) {
+    if (context.mounted) {
+      context.goNamed(RouteNames.conversations);
+    }
+  }
+
   Future<void> _initializeChatPage() async {
     await ref.read(chatControllerProvider.notifier).initialize(widget.args);
     await _rehydrateReeditHints();
@@ -812,54 +819,64 @@ class _ChatPageState extends ConsumerState<ChatPage>
               ),
     };
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F5FA),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: _isSelectionMode
-            ? _buildSelectionAppBar(strings)
-            : ChatPageHeader(
-                title: chatTitle,
-                subtitle: isGroupChat
-                    ? _resolveGroupSubtitle(context, memberCount: memberCount)
-                    : _resolveSingleChatSubtitle(
-                        context,
-                        conversation: conversation,
-                      ),
-                onInitiateGroup: () {
-                  context.pushNamed(
-                    RouteNames.initiateGroup,
-                    extra: const InitiateGroupArgs.create(),
-                  );
-                },
-                onOpenSettings: () {
-                  if (isGroupChat) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackToConversations(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F5FA),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: _isSelectionMode
+              ? _buildSelectionAppBar(strings)
+              : ChatPageHeader(
+                  title: chatTitle,
+                  subtitle: isGroupChat
+                      ? _resolveGroupSubtitle(context, memberCount: memberCount)
+                      : _resolveSingleChatSubtitle(
+                          context,
+                          conversation: conversation,
+                        ),
+                  onBack: () => _handleBackToConversations(context),
+                  onInitiateGroup: () {
                     context.pushNamed(
-                      RouteNames.groupSettings,
-                      extra: GroupContextArgs(
-                        groupId: widget.args.targetId ?? widget.args.chatId,
-                        groupName: chatTitle,
+                      RouteNames.initiateGroup,
+                      extra: const InitiateGroupArgs.create(),
+                    );
+                  },
+                  onOpenSettings: () {
+                    if (isGroupChat) {
+                      context.pushNamed(
+                        RouteNames.groupSettings,
+                        extra: GroupContextArgs(
+                          groupId: widget.args.targetId ?? widget.args.chatId,
+                          groupName: chatTitle,
+                        ),
+                      );
+                      return;
+                    }
+                    if (widget.args.targetId == null ||
+                        widget.args.targetId!.isEmpty) {
+                      return;
+                    }
+                    context.pushNamed(
+                      RouteNames.chatSettings,
+                      extra: ChatEntryArgs.latest(
+                        chatId: widget.args.chatId,
+                        conversationType: widget.args.conversationType,
+                        targetId: widget.args.targetId,
+                        title: chatTitle,
                       ),
                     );
-                    return;
-                  }
-                  if (widget.args.targetId == null ||
-                      widget.args.targetId!.isEmpty) {
-                    return;
-                  }
-                  context.pushNamed(
-                    RouteNames.chatSettings,
-                    extra: ChatEntryArgs.latest(
-                      chatId: widget.args.chatId,
-                      conversationType: widget.args.conversationType,
-                      targetId: widget.args.targetId,
-                      title: chatTitle,
-                    ),
-                  );
-                },
-              ),
+                  },
+                ),
+        ),
+        body:
+            Stack(children: [body, if (_isRecording) _buildRecordingOverlay()]),
       ),
-      body: Stack(children: [body, if (_isRecording) _buildRecordingOverlay()]),
     );
   }
 

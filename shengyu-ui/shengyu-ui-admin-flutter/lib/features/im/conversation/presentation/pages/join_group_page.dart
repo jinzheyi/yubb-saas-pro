@@ -260,7 +260,12 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
       if (!mounted) {
         return;
       }
-      context.goNamed(
+      // 先返回上一页，再跳转到聊天页面，避免使用 goNamed 替换整个路由栈
+      Navigator.of(context).pop();
+      if (!mounted) {
+        return;
+      }
+      context.pushNamed(
         RouteNames.chat,
         extra: ChatEntryArgs.latest(
           chatId: chatId,
@@ -303,7 +308,12 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
       if (!mounted) {
         return;
       }
-      context.goNamed(
+      // 先返回上一页，再跳转到聊天页面，避免使用 goNamed 替换整个路由栈
+      Navigator.of(context).pop();
+      if (!mounted) {
+        return;
+      }
+      context.pushNamed(
         RouteNames.chat,
         extra: ChatEntryArgs.latest(
           chatId: chatId,
