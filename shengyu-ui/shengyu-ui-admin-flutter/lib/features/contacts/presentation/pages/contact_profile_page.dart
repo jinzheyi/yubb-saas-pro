@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
@@ -45,17 +46,25 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
     final strings = AppLocalizations.of(context);
     final displayName = _displayName(strings);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const AppIcon(
-            AppIconKind.chevronLeft,
-            size: 20,
-            color: Color(0xFF202531),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const AppIcon(
+              AppIconKind.chevronLeft,
+              size: 20,
+              color: Color(0xFF202531),
+            ),
+            onPressed: () => context.go(RoutePaths.conversations),
           ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
         centerTitle: true,
         title: Text(
           displayName,
@@ -207,6 +216,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                 ),
               ],
             ),
+    ),
     );
   }
 

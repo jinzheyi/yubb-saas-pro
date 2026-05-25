@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_arg
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_media_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
@@ -52,12 +53,20 @@ class _ChatMediaPageState extends ConsumerState<ChatMediaPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leadingWidth: 68,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        appBar: AppBar(
+          leadingWidth: 68,
+          leading: TextButton.icon(
+            onPressed: () => context.go(RoutePaths.conversations),
           style: TextButton.styleFrom(
             foregroundColor: const Color(0xFF202531),
             padding: const EdgeInsets.only(left: 8),
@@ -206,6 +215,7 @@ class _ChatMediaPageState extends ConsumerState<ChatMediaPage> {
           ],
         ),
       ),
+    ),
     );
   }
 

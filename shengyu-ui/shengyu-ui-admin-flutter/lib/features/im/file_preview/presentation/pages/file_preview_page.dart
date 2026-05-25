@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_action.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_status.dart';
@@ -46,18 +47,26 @@ class _FilePreviewPageState extends ConsumerState<FilePreviewPage> {
         : strings.filePreviewTitle;
     final canForward = _canForward(state);
 
-    return Scaffold(
-      appBar: AppBar(
-        leadingWidth: canForward ? 132 : null,
-        leading: canForward
-            ? Row(
-                children: [
-                  IconButton(
-                    onPressed: pending
-                        ? null
-                        : () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                  ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leadingWidth: canForward ? 132 : null,
+          leading: canForward
+              ? Row(
+                  children: [
+                    IconButton(
+                      onPressed: pending
+                          ? null
+                          : () => context.go(RoutePaths.conversations),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    ),
                   TextButton(
                     onPressed: pending ? null : () => _forwardFile(context),
                     child: Text(strings.filePreviewForward),
@@ -97,6 +106,7 @@ class _FilePreviewPageState extends ConsumerState<FilePreviewPage> {
               : () => _downloadFile(context),
         ),
       },
+    ),
     );
   }
 

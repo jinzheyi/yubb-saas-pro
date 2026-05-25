@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/controllers/group_members_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_members_state.dart';
@@ -57,13 +58,21 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         : strings.cancelAction;
     final selectedCount = state.selectedMemberIds.length;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, size: 22),
+            onPressed: () => context.go(RoutePaths.conversations),
+          ),
         centerTitle: true,
         title: Text(headerTitle),
         actions: [
@@ -160,6 +169,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
           ),
         ],
       ),
+    ),
     );
   }
 

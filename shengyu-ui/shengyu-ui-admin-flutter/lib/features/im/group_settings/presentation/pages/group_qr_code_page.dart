@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -34,13 +36,21 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
     final strings = AppLocalizations.of(context);
     final inviteCode = _inviteInfo?.inviteCode.trim() ?? '';
     final qrCodeUrl = _resolveQrCodeUrl(_inviteInfo);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, size: 22),
+            onPressed: () => context.go(RoutePaths.conversations),
+          ),
         centerTitle: true,
         title: Text(strings.groupSettingsGroupQrCode),
       ),
@@ -215,6 +225,7 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
           ),
         ],
       ),
+    ),
     );
   }
 

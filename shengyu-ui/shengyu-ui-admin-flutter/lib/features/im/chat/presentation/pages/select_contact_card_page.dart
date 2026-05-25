@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/controllers/contact_selection_controller.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
@@ -62,25 +64,33 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
     final selectedEntry = selectionState.entries.isEmpty
         ? null
         : selectionState.entries.values.first;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const AppIcon(
-                      AppIconKind.chevronLeft,
-                      size: 20,
-                      color: Color(0xFF202531),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => context.go(RoutePaths.conversations),
+                      icon: const AppIcon(
+                        AppIconKind.chevronLeft,
+                        size: 20,
+                        color: Color(0xFF202531),
+                      ),
                     ),
-                  ),
                   Expanded(
                     child: Text(
                       strings.chatSelectContactCardTitle,
@@ -148,6 +158,7 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
           ],
         ),
       ),
+    ),
     );
   }
 

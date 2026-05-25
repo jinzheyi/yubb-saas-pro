@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
@@ -74,13 +75,21 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
         ? getGroupAvatarColor(targetId ?? '')
         : getUserAvatarColor(targetId ?? '');
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        context.go(RoutePaths.conversations);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FB),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, size: 22),
+            onPressed: () => context.go(RoutePaths.conversations),
+          ),
         centerTitle: true,
         title: Text(strings.chatSettingsTitle),
       ),
@@ -190,6 +199,7 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
           ),
         ],
       ),
+    ),
     );
   }
 
