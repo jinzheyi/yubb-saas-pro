@@ -141,19 +141,6 @@ class _ConversationTileState extends State<ConversationTile> {
                                   ),
                                 ),
                               ),
-                            if (conversation.lastMessageType == MessageType.system)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Text(
-                                  '系统',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFFB0B8C8),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
                             Expanded(
                               child: Text.rich(
                                 TextSpan(
@@ -302,11 +289,6 @@ bool _isNoticePreview(String preview) {
 }
 
 bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
-  // 系统消息：按消息类型判断，不依赖文本内容（避免用户昵称包含"系统信息"造成混淆）
-  if (conversation.lastMessageType == MessageType.system) {
-    return true;
-  }
-  // 群公告更新等特殊通知
   if (_isNoticePreview(tokenText)) {
     return true;
   }
