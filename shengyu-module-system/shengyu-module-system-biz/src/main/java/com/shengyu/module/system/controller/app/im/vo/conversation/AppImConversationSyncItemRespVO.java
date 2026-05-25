@@ -73,4 +73,18 @@ public class AppImConversationSyncItemRespVO {
 
     @Schema(description = "群成员数量(群聊时有值)", example = "10")
     private Integer groupMemberCount;
+
+    @Schema(description = "群成员信息列表(群聊时返回,最多4个,用于组合头像)", example = "[{\"userId\":1,\"name\":\"张三\",\"avatar\":\"url1\"}]")
+    private java.util.List<AppImConversationSyncGroupMemberItem> groupMemberItems;
+
+    @Data
+    @Schema(description = "群成员信息项(用于组合头像)")
+    public static class AppImConversationSyncGroupMemberItem {
+        @Schema(description = "用户ID")
+        private Long userId;
+        @Schema(description = "用户名称")
+        private String name;
+        @Schema(description = "用户头像")
+        private String avatar;
+    }
 }

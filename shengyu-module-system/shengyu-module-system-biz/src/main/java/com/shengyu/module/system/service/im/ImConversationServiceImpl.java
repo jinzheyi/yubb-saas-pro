@@ -280,73 +280,119 @@ public class ImConversationServiceImpl implements ImConversationService {
                         }
                     }
                 }
-            }
-        }
 
-        if (states != null) {
-            for (ImConversationUserStateDO state : states) {
-                if (state == null) {
-                    continue;
-                }
-                AppImConversationSyncItemRespVO item = new AppImConversationSyncItemRespVO();
-                item.setChatId(state.getChatId());
-                item.setCursorVersion(state.getCursorVersion() != null ? state.getCursorVersion() : 0L);
-                item.setConversationVersion(state.getConversationVersion() != null ? state.getConversationVersion() : 0L);
-                item.setUnreadCount(state.getUnreadCount() != null ? Math.max(state.getUnreadCount(), 0) : 0);
-                item.setLastMessageSequence(state.getLastMessageSequence() != null ? state.getLastMessageSequence() : 0L);
-                item.setLastReadSequence(state.getLastReadSequence() != null ? state.getLastReadSequence() : 0L);
-                Integer lastMessageType = state.getLastMessageType();
-                ImChatMessageDO lastMessage = state.getLastMessageId() != null ? lastMessageMap.get(state.getLastMessageId()) : null;
-                if (lastMessageType == null && lastMessage != null) {
-                    lastMessageType = lastMessage.getMessageType();
-                }
-                item.setLastMessageType(lastMessageType);
-                item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
-                        lastMessage != null ? lastMessage.getExtra() : null));
-                item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
-                item.setLastMessageTime(state.getLastMessageTime());
-                item.setIsPinned(state.getIsPinned());
-                item.setNoDisturb(state.getNoDisturb());
-                item.setDraft(state.getDraft());
-                item.setDeletedByUser(state.getDeletedByUser());
-
-                ImChatDO chat = state.getChatId() != null ? chatMap.get(state.getChatId()) : null;
-                if (chat != null) {
-                    item.setConversationType(chat.getChatType());
-                    if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
-                        item.setTargetId(chat.getGroupId());
-                        ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
-                        if (group != null) {
-                            item.setTargetName(group.getName());
-                            item.setTargetAvatar(group.getAvatar());
-                            item.setGroupMemberCount(group.getMemberCount());
-                            if (item.getLastMessageTime() == null
-                                    && state.getLastMessageId() == null
-                                    && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
-                                item.setLastMessageTime(group.getCreateTime());
+                // 获取群成员完整信息列表（最多4个，用于组合头像）
+                Map<Long, List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem>> syncGroupMemberItemsMap = new HashMap<>();
+                if (!groupIds.isEmpty()) {
+                    for (Long groupId : groupIds) {
+                        List<ImGroupUserDO> members = groupUserMapper.selectList(
+                                new LambdaQueryWrapperX<ImGroupUserDO>()
+                                        .eq(ImGroupUserDO::getGroupId, groupId)
+                                        .orderByAsc(ImGroupUserDO::getJoinTime)
+                                        .last("LIMIT 4"));
+                        if (members != null && !members.isEmpty()) {
+                            List<Long> memberUserIds = members.stream()
+                                    .map(ImGroupUserDO::getUserId)
+                                    .collect(Collectors.toList());
+                            List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+                            if (memberUsers != null) {
+                                List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> syncItems = new ArrayList<>();
+                                for (ImGroupUserDO member : members) {
+                                    AdminUserDO user = memberUsers.stream()
+                                            .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                                            .findFirst()
+                                            .orElse(null);
+                                    if (user != null) {
+                                        AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem syncItem =
+                                                new AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem();
+                                        syncItem.setUserId(user.getId());
+                                        syncItem.setName(user.getNickname());
+                                        syncItem.setAvatar(user.getAvatar());
+                                        syncItems.add(syncItem);
+                                    }
+                                }
+                                if (!syncItems.isEmpty()) {
+                                    syncGroupMemberItemsMap.put(groupId, syncItems);
+                                }
                             }
-                        }
-                    } else {
-                        Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
-                        item.setTargetId(otherUserId);
-                        AdminUserDO targetUser = otherUserId != null ? userMap.get(otherUserId) : null;
-                        if (targetUser != null) {
-                            item.setTargetName(targetUser.getNickname());
-                            item.setTargetAvatar(targetUser.getAvatar());
                         }
                     }
                 }
 
-                if (!shouldKeepConversationItem(item.getConversationType(), item.getTargetId(), item.getTargetName())) {
-                    logInvalidConversationItem(userId, "sync", item.getChatId(),
-                            item.getConversationType(), item.getTargetId(), item.getTargetName());
-                    cleanupInvalidConversationState(tenantId, userId, item.getChatId(), "sync");
-                    continue;
-                }
+                if (states != null) {
+                    for (ImConversationUserStateDO state : states) {
+                        if (state == null) {
+                            continue;
+                        }
+                        AppImConversationSyncItemRespVO item = new AppImConversationSyncItemRespVO();
+                        item.setChatId(state.getChatId());
+                        item.setCursorVersion(state.getCursorVersion() != null ? state.getCursorVersion() : 0L);
+                        item.setConversationVersion(state.getConversationVersion() != null ? state.getConversationVersion() : 0L);
+                        item.setUnreadCount(state.getUnreadCount() != null ? Math.max(state.getUnreadCount(), 0) : 0);
+                        item.setLastMessageSequence(state.getLastMessageSequence() != null ? state.getLastMessageSequence() : 0L);
+                        item.setLastReadSequence(state.getLastReadSequence() != null ? state.getLastReadSequence() : 0L);
+                        Integer lastMessageType = state.getLastMessageType();
+                        ImChatMessageDO lastMessage = state.getLastMessageId() != null ? lastMessageMap.get(state.getLastMessageId()) : null;
+                        if (lastMessageType == null && lastMessage != null) {
+                            lastMessageType = lastMessage.getMessageType();
+                        }
+                        item.setLastMessageType(lastMessageType);
+                        item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
+                                lastMessage != null ? lastMessage.getExtra() : null));
+                        item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
+                        item.setLastMessageTime(state.getLastMessageTime());
+                        item.setIsPinned(state.getIsPinned());
+                        item.setNoDisturb(state.getNoDisturb());
+                        item.setDraft(state.getDraft());
+                        item.setDeletedByUser(state.getDeletedByUser());
 
-                items.add(item);
-                if (item.getCursorVersion() != null && item.getCursorVersion() > next) {
-                    next = item.getCursorVersion();
+                        ImChatDO chat = state.getChatId() != null ? chatMap.get(state.getChatId()) : null;
+                        if (chat != null) {
+                            item.setConversationType(chat.getChatType());
+                            if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+                                item.setTargetId(chat.getGroupId());
+                                ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
+                                if (group != null) {
+                                    item.setTargetName(group.getName());
+                                    item.setTargetAvatar(group.getAvatar());
+                                    item.setGroupMemberCount(group.getMemberCount());
+                                    // 填充群成员信息列表（用于组合头像）
+                                    if (group.getId() != null) {
+                                        List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> groupMemberItems =
+                                                syncGroupMemberItemsMap.get(group.getId());
+                                        if (groupMemberItems != null && !groupMemberItems.isEmpty()) {
+                                            item.setGroupMemberItems(groupMemberItems);
+                                        }
+                                    }
+                                    if (item.getLastMessageTime() == null
+                                            && state.getLastMessageId() == null
+                                            && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
+                                        item.setLastMessageTime(group.getCreateTime());
+                                    }
+                                }
+                            } else {
+                                Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
+                                item.setTargetId(otherUserId);
+                                AdminUserDO targetUser = otherUserId != null ? userMap.get(otherUserId) : null;
+                                if (targetUser != null) {
+                                    item.setTargetName(targetUser.getNickname());
+                                    item.setTargetAvatar(targetUser.getAvatar());
+                                }
+                            }
+                        }
+
+                        if (!shouldKeepConversationItem(item.getConversationType(), item.getTargetId(), item.getTargetName())) {
+                            logInvalidConversationItem(userId, "sync", item.getChatId(),
+                                    item.getConversationType(), item.getTargetId(), item.getTargetName());
+                            cleanupInvalidConversationState(tenantId, userId, item.getChatId(), "sync");
+                            continue;
+                        }
+
+                        items.add(item);
+                        if (item.getCursorVersion() != null && item.getCursorVersion() > next) {
+                            next = item.getCursorVersion();
+                        }
+                    }
                 }
             }
         }
@@ -1093,6 +1139,25 @@ public class ImConversationServiceImpl implements ImConversationService {
                                  .collect(Collectors.toList());
                          if (!avatars.isEmpty()) {
                              respVO.setGroupMemberAvatars(avatars);
+                         }
+
+                         // 获取群成员完整信息列表（用于组合头像）
+                         List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
+                         for (ImGroupUserDO member : members) {
+                             AdminUserDO user = memberUsers.stream()
+                                     .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                                     .findFirst()
+                                     .orElse(null);
+                             if (user != null) {
+                                 AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
+                                 item.setUserId(user.getId());
+                                 item.setName(user.getNickname());
+                                 item.setAvatar(user.getAvatar());
+                                 items.add(item);
+                             }
+                         }
+                         if (!items.isEmpty()) {
+                             respVO.setGroupMemberItems(items);
                          }
                      }
                  }
