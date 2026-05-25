@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_me
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_more_panel_action.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -99,8 +100,8 @@ class ChatPageHeader extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           splashRadius: 17,
           onPressed: onInitiateGroup,
-          icon: const AppIcon(
-            AppIconKind.groupAdd,
+          icon: const Icon(
+            ShengyuIconFont.duihua,
             size: 21,
             color: Color(0xFF202531),
           ),

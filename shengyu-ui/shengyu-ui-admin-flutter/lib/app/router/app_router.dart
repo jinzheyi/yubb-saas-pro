@@ -299,19 +299,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
-            path: RoutePaths.initiateGroup,
-            name: RouteNames.initiateGroup,
-            pageBuilder: (context, state) {
-              final args = state.extra is InitiateGroupArgs
-                  ? state.extra! as InitiateGroupArgs
-                  : const InitiateGroupArgs.create();
-              return _buildRoutePage(
-                state: state,
-                child: InitiateGroupPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
             path: RoutePaths.workbench,
             name: RouteNames.workbench,
             pageBuilder: (context, state) =>
@@ -347,12 +334,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // favorites 路由放在 ShellRoute 外部，与 chat 平级，避免从 chat 页面导航时出现 key 冲突
+      // favorites / initiateGroup 路由放在 ShellRoute 外部，与 chat 平级，避免从 chat 页面导航时出现 key 冲突
       GoRoute(
         path: RoutePaths.favorites,
         name: RouteNames.favorites,
         pageBuilder: (context, state) =>
             _buildRoutePage(state: state, child: const FavoritesPage()),
+      ),
+      GoRoute(
+        path: RoutePaths.initiateGroup,
+        name: RouteNames.initiateGroup,
+        pageBuilder: (context, state) {
+          final args = state.extra is InitiateGroupArgs
+              ? state.extra! as InitiateGroupArgs
+              : const InitiateGroupArgs.create();
+          return _buildRoutePage(
+            state: state,
+            child: InitiateGroupPage(args: args),
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.favoriteDetail,
