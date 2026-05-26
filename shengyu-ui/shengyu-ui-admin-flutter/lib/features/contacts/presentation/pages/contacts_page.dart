@@ -5,6 +5,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/states/contacts_page_state.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -41,13 +42,17 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
     final strings = AppLocalizations.of(context);
     final state = ref.watch(contactsPageControllerProvider);
     final myGroupsAsync = ref.watch(myGroupsProvider);
-    final sections = _buildSections(state);
-    final hasPendingGroupRequest =
-        myGroupsAsync.valueOrNull?.any(
+    // 红点数据源：优先使用 BadgeService 后端推送数据（实时、全局），
+    // 兼容本地 myGroups 数据（无网络或首次加载时）
+    final badgeState = ref.watch(badgeServiceProvider);
+    final backendPending = badgeState.menuBadges[BadgeMenuIds.contactsGroupJoinRequest] ?? 0;
+    final localPending = myGroupsAsync.valueOrNull?.any(
           (item) => item.pendingJoinRequestCount > 0,
         ) ??
         false;
+    final hasPendingGroupRequest = backendPending > 0 || localPending;
 
+    final sections = _buildSections(state);
     _syncKeyword(state.keyword);
 
     return Scaffold(

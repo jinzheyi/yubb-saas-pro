@@ -15,9 +15,9 @@ import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 // badge 相关 WebSocket 推送，不受页面导航影响。
 // ============================================================
 
-final globalBadgeSocketBindingProvider = Provider.autoDispose<
-  StreamSubscription<ImSocketEvent>
->((ref) {
+// 注意：此处不使用 autoDispose，确保应用全生命周期内始终监听 badge 推送。
+// 即使导航到聊天页等非 Tab 页面，角标更新也不会中断。
+final globalBadgeSocketBindingProvider = Provider<StreamSubscription<ImSocketEvent>>((ref) {
   final subscription = ref
       .read(socketMessageDispatcherProvider)
       .stream

@@ -11,11 +11,13 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/contact
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/badge_widgets.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class MyGroupsPage extends ConsumerStatefulWidget {

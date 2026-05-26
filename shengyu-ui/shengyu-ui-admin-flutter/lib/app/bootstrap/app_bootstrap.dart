@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
+import 'package:shengyu_ui_admin_im/app/shell/global_badge_socket_binding.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_mode_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
@@ -16,6 +17,9 @@ class AppBootstrap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(appBootstrapProvider);
+    // 全局角标 Socket 绑定：在根 widget 级别 watch，
+    // 确保整个应用生命周期内始终监听 badge 推送，不受 FutureProvider 完成状态影响。
+    ref.watch(globalBadgeSocketBindingProvider);
     final router = ref.watch(appRouterProvider);
     final locale = ref.watch(appLocaleObjectProvider);
     final themeMode = ref.watch(appThemeModeProvider);

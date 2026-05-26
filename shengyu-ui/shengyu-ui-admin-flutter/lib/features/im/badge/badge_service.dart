@@ -27,6 +27,21 @@ class MenuBadgeItem {
 }
 
 // ============================================================
+// 菜单角标 ID 常量（与后端 MenuBadge.menuId 一致）
+// ============================================================
+
+class BadgeMenuIds {
+  /// 通讯录 → 群组加入申请（Tab 栏 + 列表项共用）
+  static const contactsGroupJoinRequest = 'contactsGroupJoinRequest';
+
+  /// 工作台 → 待办事项（预留）
+  static const workbenchTodo = 'workbenchTodo';
+
+  /// 设置 → 版本更新（预留）
+  static const settingsVersionUpdate = 'settingsVersionUpdate';
+}
+
+// ============================================================
 // BadgeState — 不可变状态快照
 // ============================================================
 

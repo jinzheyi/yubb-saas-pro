@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
-import 'package:shengyu_ui_admin_im/app/shell/global_badge_socket_binding.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -53,8 +52,6 @@ class _AppBottomNavigationBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 全局角标 Socket 绑定：确保跨页面也能接收 badgeUpdated 推送
-    ref.watch(globalBadgeSocketBindingProvider);
     final badgeState = ref.watch(badgeServiceProvider);
 
     final items = <_ShellNavItem>[
