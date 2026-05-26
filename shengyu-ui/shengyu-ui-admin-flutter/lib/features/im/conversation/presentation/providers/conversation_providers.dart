@@ -52,3 +52,17 @@ final conversationListControllerProvider =
         ref.read(conversationRepositoryProvider),
       );
     });
+
+/// 所有会话的未读消息总数
+final totalUnreadCountProvider = Provider<int>((ref) {
+  final conversations = ref.watch(conversationListControllerProvider).conversations;
+  return conversations.fold<int>(0, (sum, c) => sum + c.unreadCount);
+});
+
+/// 仅免打扰会话的未读消息总数
+final totalMutedUnreadCountProvider = Provider<int>((ref) {
+  final conversations = ref.watch(conversationListControllerProvider).conversations;
+  return conversations
+      .where((c) => c.isMuted)
+      .fold<int>(0, (sum, c) => sum + c.unreadCount);
+});

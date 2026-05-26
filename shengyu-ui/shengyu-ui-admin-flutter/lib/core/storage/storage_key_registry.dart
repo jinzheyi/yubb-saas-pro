@@ -14,4 +14,5 @@ abstract final class StorageKeyRegistry {
   static const groupRemovalNotice = 'im.group_removal_notice';
   static const voicePlayedPrefix = 'im.voice_played';
   static const reeditHintPrefix = 'im.reedit_hint';
+  static const imBadgeSnapshot = 'im.badge_snapshot';
 }

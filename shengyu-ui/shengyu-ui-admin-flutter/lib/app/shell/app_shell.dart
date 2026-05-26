@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
+import 'package:shengyu_ui_admin_im/app/shell/global_badge_socket_binding.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -39,7 +42,7 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _AppBottomNavigationBar extends StatelessWidget {
+class _AppBottomNavigationBar extends ConsumerWidget {
   const _AppBottomNavigationBar({
     required this.currentLocation,
     required this.strings,
@@ -49,7 +52,11 @@ class _AppBottomNavigationBar extends StatelessWidget {
   final AppLocalizations strings;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 全局角标 Socket 绑定：确保跨页面也能接收 badgeUpdated 推送
+    ref.watch(globalBadgeSocketBindingProvider);
+    final badgeState = ref.watch(badgeServiceProvider);
+
     final items = <_ShellNavItem>[
       _ShellNavItem(
         location: RoutePaths.conversations,
@@ -57,6 +64,7 @@ class _AppBottomNavigationBar extends StatelessWidget {
         icon: AppIconKind.chatOutline,
         activeIcon: AppIconKind.chatFill,
         label: strings.tabConversations,
+        badgeCount: badgeState.conversationsTabBadge,
       ),
       _ShellNavItem(
         location: RoutePaths.contacts,
@@ -64,6 +72,7 @@ class _AppBottomNavigationBar extends StatelessWidget {
         icon: AppIconKind.contactsOutline,
         activeIcon: AppIconKind.contactsFill,
         label: strings.tabContacts,
+        badgeCount: badgeState.contactsTabBadge,
       ),
       _ShellNavItem(
         location: RoutePaths.workbench,
@@ -71,6 +80,7 @@ class _AppBottomNavigationBar extends StatelessWidget {
         icon: AppIconKind.widgetsOutline,
         activeIcon: AppIconKind.widgetsFill,
         label: strings.tabWorkbench,
+        badgeCount: badgeState.workbenchTabBadge,
       ),
       _ShellNavItem(
         location: RoutePaths.profile,
@@ -78,6 +88,7 @@ class _AppBottomNavigationBar extends StatelessWidget {
         icon: AppIconKind.personOutline,
         activeIcon: AppIconKind.personFill,
         label: strings.tabProfile,
+        badgeCount: 0,
       ),
     ];
 
@@ -124,10 +135,22 @@ class _BottomNavButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIcon(
-            selected ? item.activeIcon : item.icon,
-            size: 24,
-            color: color,
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              AppIcon(
+                selected ? item.activeIcon : item.icon,
+                size: 24,
+                color: color,
+              ),
+              if (item.badgeCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -10,
+                  child: _Badge(count: item.badgeCount),
+                ),
+            ],
           ),
           const SizedBox(height: 3),
           Text(
@@ -146,6 +169,38 @@ class _BottomNavButton extends StatelessWidget {
   }
 }
 
+/// Tab 角标组件，参考微信样式
+class _Badge extends StatelessWidget {
+  const _Badge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText = count > 99 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16),
+      height: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF54A45),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        displayText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          height: 1.0,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
 class _ShellNavItem {
   const _ShellNavItem({
     required this.location,
@@ -153,6 +208,7 @@ class _ShellNavItem {
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.badgeCount = 0,
   });
 
   final String location;
@@ -160,4 +216,5 @@ class _ShellNavItem {
   final AppIconKind icon;
   final AppIconKind activeIcon;
   final String label;
+  final int badgeCount;
 }

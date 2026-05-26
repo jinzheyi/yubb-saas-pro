@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 
@@ -23,8 +25,12 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
     case SocketEventTypes.conversationUpdated:
     case SocketEventTypes.conversationDeleted:
     case SocketEventTypes.reconnecting:
-    case SocketEventTypes.authSucceeded:
       ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      break;
+    case SocketEventTypes.authSucceeded:
+      // 认证成功：同步会话列表 + 初始化角标（从后端 HTTP API）
+      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      _initBadgeFromServer(ref);
       break;
     case SocketEventTypes.badgeUpdated:
       _handleBadgeUpdated(ref, event);
@@ -37,8 +43,19 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
   }
 }
 
+/// 认证成功时通过 HTTP API 初始化角标数据
+Future<void> _initBadgeFromServer(Ref ref) async {
+  final dio = ref.read(dioProvider);
+  await ref.read(badgeServiceProvider.notifier).initBadgeData(dio);
+}
+
 void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
   final payload = event.payload;
+
+  // 1. 同步到全局角标服务（驱动 Tab 栏角标）
+  ref.read(badgeServiceProvider.notifier).applyWebSocketPayload(payload);
+
+  // 2. 同步到会话列表控制器（驱动会话列表中的角标）
   final rawBadges = payload['conversationBadges'];
   if (rawBadges is! List) {
     ref.read(conversationListControllerProvider.notifier).syncIncrementally();
@@ -49,7 +66,8 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
     if (item is! Map) {
       continue;
     }
-    final chatId = item['chatId']?.toString().trim() ?? '';
+    // 兼容 HTTP (chatId) 和 WebSocket (conversationId) 两种字段名
+    final chatId = (item['chatId'] ?? item['conversationId'])?.toString().trim() ?? '';
     if (chatId.isEmpty || chatId == '0') {
       continue;
     }
