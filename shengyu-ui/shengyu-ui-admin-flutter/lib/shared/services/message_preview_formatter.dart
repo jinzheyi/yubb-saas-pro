@@ -81,8 +81,7 @@ class MessagePreviewFormatter {
       systemEventKey: systemEventKey,
     );
     if (type == MessageType.system) {
-      final systemLabel = _isZh ? '系统信息' : 'System';
-      return summary.isEmpty ? systemLabel : '$systemLabel:$summary';
+      return summary;
     }
     if (conversationType != ConversationType.group) {
       // For single chat, add "我:" prefix for self messages

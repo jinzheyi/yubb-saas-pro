@@ -283,13 +283,15 @@ List<_PreviewToken> _buildPreviewTokens(
 bool _isNoticePreview(String preview) {
   final normalized = preview.trim();
   return normalized == '[群公告更新]' ||
-      normalized == '[Notice Updated]' ||
-      normalized.startsWith('系统信息:') ||
-      normalized.startsWith('System:');
+      normalized == '[Notice Updated]';
 }
 
 bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
   if (_isNoticePreview(tokenText)) {
+    return true;
+  }
+  // System messages (e.g., group mute announcements) should be highlighted
+  if (conversation.lastMessageType == MessageType.system) {
     return true;
   }
   final normalizedPreview = conversation.lastMessagePreview.trimLeft();
