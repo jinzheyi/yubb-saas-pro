@@ -4239,20 +4239,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   void _handleInitialViewport() {
-    final timelineState = ref.read(chatTimelineControllerProvider);
-    final viewport = timelineState.viewportState;
     final entryMode = widget.args.entryMode;
     final isAnchorEntry =
         entryMode == ChatEntryMode.anchor || entryMode == ChatEntryMode.restore;
     if (!isAnchorEntry) {
-      _ensureInitialBottomVisibility();
-      return;
-    }
-    if (viewport?.anchorFound == false) {
-      _showAttachmentError(
-        context,
-        ref.read(appStringsProvider).chatAnchorFallback,
-      );
       _ensureInitialBottomVisibility();
       return;
     }
@@ -4267,7 +4257,31 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (!mounted) {
         return;
       }
-      await _scrollToMessageKey(targetId);
+      final alreadyFound = await _tryScrollToMessageKey(targetId);
+      if (alreadyFound) return;
+      // 消息不在当前窗口，尝试以锚点重新加载窗口
+      await _reloadWithAnchor(targetId);
+      if (!mounted) return;
+      final stillFound = await _tryScrollToMessageKey(targetId);
+      if (stillFound) return;
+      // 仍找不到，渐进式加载历史消息
+      final loadedAndFound = await _loadUntilMessageFound(
+        messageId: targetId,
+        maxRounds: 15,
+      );
+      if (!loadedAndFound && mounted) {
+        // 最终降级：检查后端是否返回了锚点
+        final currentViewport = ref
+            .read(chatTimelineControllerProvider)
+            .viewportState;
+        if (currentViewport?.anchorFound == false) {
+          _showAttachmentError(
+            context,
+            ref.read(appStringsProvider).chatAnchorFallback,
+          );
+        }
+        _ensureInitialBottomVisibility();
+      }
     });
   }
 
@@ -4341,11 +4355,19 @@ class _ChatPageState extends ConsumerState<ChatPage>
         _scrollTimelineToBottom();
         return;
       }
-      _showAttachmentError(
-        context,
-        ref.read(appStringsProvider).chatQuoteMessageMissing,
+      // 锚点已找到但消息不在当前窗口，渐进式加载
+      final loadedAndFound = await _loadUntilMessageFound(
+        messageId: targetId,
+        maxRounds: 8,
       );
-      return;
+      if (!loadedAndFound) {
+        if (!mounted) return;
+        _showAttachmentError(
+          context,
+          ref.read(appStringsProvider).chatQuoteMessageMissing,
+        );
+        return;
+      }
     }
     setState(() {
       _activeHighlightedMessageId = targetId;
@@ -4354,15 +4376,45 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _scheduleHighlightClear();
   }
 
+  /// 尝试在当前已渲染的消息中查找并滚动到目标消息
+  /// 返回 true 表示找到并滚动，false 表示未找到
+  Future<bool> _tryScrollToMessageKey(String messageId) async {
+    final key = _resolveMessageItemKey(messageId);
+    if (key?.currentContext != null) {
+      await _doScrollToContext(key!.currentContext!);
+      return true;
+    }
+    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final index = messages.indexWhere(
+      (item) =>
+          item.messageId == messageId || item.clientMessageId == messageId,
+    );
+    if (index < 0) {
+      return false;
+    }
+    await _scrollToMessageByIndex(index);
+    return true;
+  }
+
+  /// 以指定消息为锚点重新加载消息窗口
+  Future<void> _reloadWithAnchor(String messageId) async {
+    final pageState = ref.read(chatControllerProvider);
+    await ref.read(chatTimelineControllerProvider.notifier).reloadLatest(
+          command: OpenChatCommand(
+            chatId: widget.args.chatId,
+            conversationType: pageState.entryArgs.conversationType,
+            entryMode: ChatEntryMode.anchor,
+            title: pageState.chatTitle ?? pageState.entryArgs.title,
+            anchorMessageId: messageId,
+          ),
+        );
+    await _rehydrateReeditHints();
+  }
+
   Future<void> _scrollToMessageKey(String messageId) async {
     final key = _resolveMessageItemKey(messageId);
     if (key?.currentContext != null) {
-      await Scrollable.ensureVisible(
-        key!.currentContext!,
-        alignment: 0.4,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-      );
+      await _doScrollToContext(key!.currentContext!);
       return;
     }
     final messages = ref.read(chatTimelineControllerProvider).messages;
@@ -4373,19 +4425,151 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (index < 0) {
       return;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final retryKey = _resolveMessageItemKey(messageId);
-      final context = retryKey?.currentContext;
-      if (!mounted || context == null) {
-        return;
+    await _scrollToMessageByIndex(index);
+  }
+
+  Future<void> _doScrollToContext(BuildContext context) async {
+    await Scrollable.ensureVisible(
+      context,
+      alignment: 0.4,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
+  /// 通过精确计算像素偏移量滚动到目标消息位置
+  /// 使用两阶段策略：快速接近 → 精确测量 → 最终对齐
+  Future<void> _scrollToMessageByIndex(int messageIndex) async {
+    if (!_timelineScrollController.hasClients) return;
+    final position = _timelineScrollController.position;
+    // 第一阶段：使用保守估算快速接近目标位置
+    const conservativeEstimate = 80.0;
+    // +1 是因为 ListView 的第一个 item 是 _LoadOlderBar
+    final roughOffset = 16 + 48 + (messageIndex + 1) * conservativeEstimate;
+    final roughTarget = roughOffset.clamp(0.0, position.maxScrollExtent);
+    await position.animateTo(
+      roughTarget,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+    // 第二阶段：等待 ListView 渲染可视区域内的消息
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await WidgetsBinding.instance.endOfFrame;
+    // 第三阶段：使用已渲染消息的 RenderBox 精确计算偏移量
+    final preciseOffset = _calculateExactPixelOffset(messageIndex);
+    if (preciseOffset != null) {
+      final finalTarget = preciseOffset.clamp(0.0, position.maxScrollExtent);
+      final delta = (finalTarget - position.pixels).abs();
+      // 只有当精确计算的偏移量与当前位置有显著差异时才二次滚动
+      if (delta > 10) {
+        await position.animateTo(
+          finalTarget,
+          duration: Duration(milliseconds: delta < 200 ? 150 : 250),
+          curve: Curves.easeOut,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        await WidgetsBinding.instance.endOfFrame;
       }
-      Scrollable.ensureVisible(
-        context,
-        alignment: 0.4,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
+    }
+    // 第四阶段：通过 GlobalKey 精确对齐目标消息
+    await _fineTuneAfterRender(messageIndex);
+  }
+
+  /// 精确计算从列表顶部到目标消息的像素偏移量
+  /// 通过累加已渲染消息的真实高度 + 未渲染消息的估算高度
+  double? _calculateExactPixelOffset(int targetIndex) {
+    final messages = ref.read(chatTimelineControllerProvider).messages;
+    if (targetIndex < 0 || targetIndex >= messages.length) return null;
+    // ListView padding top = 16
+    double totalOffset = 16;
+    // +1 是因为 ListView 的第一个 item 是 _LoadOlderBar
+    // _LoadOlderBar 的高度估算
+    const loadOlderBarHeight = 48.0;
+    totalOffset += loadOlderBarHeight;
+    // 遍历从 0 到 targetIndex-1 的所有消息，累加它们的高度
+    for (var i = 0; i < targetIndex; i++) {
+      final item = messages[i];
+      final renderKey = _messageRenderKey(item, i);
+      final globalKey = _messageItemKeys[renderKey];
+      if (globalKey?.currentContext != null) {
+        // 消息已渲染，使用 RenderBox 精确测量高度
+        final renderObject = globalKey!.currentContext!.findRenderObject();
+        if (renderObject is RenderBox && renderObject.hasSize) {
+          totalOffset += renderObject.size.height;
+        } else {
+          totalOffset += 80; // 降级估算（含 padding 和可能的 time divider）
+        }
+      } else {
+        // 消息未渲染（虚拟化），使用保守估算（含 padding 和可能的 time divider）
+        totalOffset += 80;
+      }
+    }
+    return totalOffset;
+  }
+
+  /// 滚动后尝试精确定位到目标消息
+  Future<void> _fineTuneAfterRender(int messageIndex) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await WidgetsBinding.instance.endOfFrame;
+    final key = _resolveMessageItemKeyByIndex(messageIndex);
+    if (key?.currentContext != null) {
+      await _doScrollToContext(key!.currentContext!);
+    }
+  }
+
+  GlobalKey? _resolveMessageItemKeyByIndex(int messageIndex) {
+    final messages = ref.read(chatTimelineControllerProvider).messages;
+    if (messageIndex < 0 || messageIndex >= messages.length) return null;
+    final item = messages[messageIndex];
+    final renderKey = _messageRenderKey(item, messageIndex);
+    return _messageItemKeys[renderKey];
+  }
+
+  /// 渐进式加载历史消息直到找到目标消息，然后滚动到目标位置
+  /// 用于解决大量消息场景下搜索跳转无法定位的问题
+  Future<bool> _loadUntilMessageFound({
+    required String messageId,
+    int maxRounds = 15,
+    Duration interval = const Duration(milliseconds: 300),
+  }) async {
+    for (var round = 0; round < maxRounds; round++) {
+      if (!mounted) return false;
+      // 等待当前帧渲染完成，确保 _messageItemKeys 已更新
+      await WidgetsBinding.instance.endOfFrame;
+      // 先尝试通过已渲染的 key 找到
+      final key = _resolveMessageItemKey(messageId);
+      if (key?.currentContext != null) {
+        await _doScrollToContext(key!.currentContext!);
+        return true;
+      }
+      // 在消息数据列表中查找目标索引
+      final messages = ref.read(chatTimelineControllerProvider).messages;
+      final index = messages.indexWhere(
+        (item) =>
+            item.messageId == messageId || item.clientMessageId == messageId,
       );
-    });
+      if (index >= 0) {
+        // 消息已加载到列表中，使用精确滚动
+        await _scrollToMessageByIndex(index);
+        return true;
+      }
+      // 消息还未加载，检查是否还有更早的历史消息
+      final viewport = ref.read(chatTimelineControllerProvider).viewportState;
+      if (viewport?.hasMoreBefore != true) {
+        return false;
+      }
+      try {
+        await ref.read(chatTimelineControllerProvider.notifier).loadOlder(
+              chatId: widget.args.chatId,
+            );
+      } catch (_) {
+        return false;
+      }
+      if (round < maxRounds - 1) {
+        await Future<void>.delayed(interval);
+      }
+    }
+    return false;
   }
 
   GlobalKey? _resolveMessageItemKey(String messageId) {
@@ -4412,17 +4596,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final messageId = message.messageId.trim();
     final clientMessageId = message.clientMessageId?.trim() ?? '';
     final sequence = message.sequence?.trim() ?? '';
+    // 使用稳定标识符，不依赖索引，避免加载历史消息后 key 失效
     if (sequence.isNotEmpty) {
-      return 'seq:$sequence#$index';
+      return 'seq:$sequence';
     }
     if (messageId.isNotEmpty && clientMessageId.isNotEmpty) {
-      return 'mid:$messageId|cid:$clientMessageId#$index';
+      return 'mid:$messageId|cid:$clientMessageId';
     }
     if (messageId.isNotEmpty) {
-      return 'mid:$messageId#$index';
+      return 'mid:$messageId';
     }
     if (clientMessageId.isNotEmpty) {
-      return 'cid:$clientMessageId#$index';
+      return 'cid:$clientMessageId';
     }
     return 'idx:$index@${message.sentAt.microsecondsSinceEpoch}';
   }

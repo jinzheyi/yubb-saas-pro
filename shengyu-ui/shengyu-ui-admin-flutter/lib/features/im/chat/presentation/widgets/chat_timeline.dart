@@ -648,17 +648,18 @@ String _messageRenderKey(Message message, int index) {
   final messageId = message.messageId.trim();
   final clientMessageId = message.clientMessageId?.trim() ?? '';
   final sequence = message.sequence?.trim() ?? '';
+  // 使用稳定标识符，不依赖索引，避免加载历史消息后 key 失效
   if (sequence.isNotEmpty) {
-    return 'seq:$sequence#$index';
+    return 'seq:$sequence';
   }
   if (messageId.isNotEmpty && clientMessageId.isNotEmpty) {
-    return 'mid:$messageId|cid:$clientMessageId#$index';
+    return 'mid:$messageId|cid:$clientMessageId';
   }
   if (messageId.isNotEmpty) {
-    return 'mid:$messageId#$index';
+    return 'mid:$messageId';
   }
   if (clientMessageId.isNotEmpty) {
-    return 'cid:$clientMessageId#$index';
+    return 'cid:$clientMessageId';
   }
   return 'idx:$index@${message.sentAt.microsecondsSinceEpoch}';
 }
