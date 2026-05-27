@@ -214,9 +214,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
     super.dispose();
   }
 
-  /// 固定返回到会话列表页面，使用 goNamed 避免路由栈循环跳转
+  /// 智能返回：优先使用 pop 回到来源页（搜索结果页/会话列表等），
+  /// 无法 pop 时降级到会话列表，避免路由栈循环跳转
   void _handleBackToConversations(BuildContext context) {
-    if (context.mounted) {
+    if (!context.mounted) return;
+    // 优先尝试 pop，能回到来源页（search / conversations）
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      // 无法 pop 时（如直接从外部 deep link 进入），降级到会话列表
       context.goNamed(RouteNames.conversations);
     }
   }
