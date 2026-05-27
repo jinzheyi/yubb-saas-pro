@@ -186,7 +186,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       unawaited(_restoreVoicePlayedCompensationOnce());
       unawaited(_loadRecallConfig());
     });
-    _scheduleHighlightClear();
+    // 高亮计时移至定位成功后启动
     _startVoicePlayedCompensation();
     _startReeditTicker();
     _startTypingCleanupTimer();
@@ -4258,18 +4258,29 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return;
       }
       final alreadyFound = await _tryScrollToMessageKey(targetId);
-      if (alreadyFound) return;
+      if (alreadyFound) {
+        _scheduleHighlightClear();
+        return;
+      }
       // 消息不在当前窗口，尝试以锚点重新加载窗口
       await _reloadWithAnchor(targetId);
       if (!mounted) return;
       final stillFound = await _tryScrollToMessageKey(targetId);
-      if (stillFound) return;
+      if (stillFound) {
+        _scheduleHighlightClear();
+        return;
+      }
       // 仍找不到，渐进式加载历史消息
       final loadedAndFound = await _loadUntilMessageFound(
         messageId: targetId,
         maxRounds: 15,
       );
-      if (!loadedAndFound && mounted) {
+      if (loadedAndFound && mounted) {
+        // 定位成功，从此刻开始计时高亮
+        _scheduleHighlightClear();
+        return;
+      }
+      if (mounted) {
         // 最终降级：检查后端是否返回了锚点
         final currentViewport = ref
             .read(chatTimelineControllerProvider)
