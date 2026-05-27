@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/states/contac
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -325,16 +326,16 @@ class _ContactsSearchBar extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F3F8),
-        borderRadius: BorderRadius.circular(6),
+        color: const Color(0xFFF3F4F8),
+        borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
           GestureDetector(
             onTap: onSearch,
-            child: const AppIcon(
-              AppIconKind.search,
+            child: const Icon(
+              ShengyuIconFont.chaxun,
               size: 16,
               color: Color(0xFF98A1B2),
             ),
@@ -348,10 +349,14 @@ class _ContactsSearchBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hintText,
                 border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
                 isCollapsed: true,
+                contentPadding: EdgeInsets.zero,
                 hintStyle: const TextStyle(
                   fontSize: 14,
-                  color: Color(0xFFA7AFB9),
+                  color: Color(0xFF98A1B2),
                 ),
               ),
               style: const TextStyle(fontSize: 14, color: Color(0xFF202531)),
@@ -367,8 +372,8 @@ class _ContactsSearchBar extends StatelessWidget {
                 onTap: onClear,
                 child: const Padding(
                   padding: EdgeInsets.only(left: 8),
-                  child: AppIcon(
-                    AppIconKind.close,
+                  child: Icon(
+                    ShengyuIconFont.fasong,
                     size: 16,
                     color: Color(0xFF98A1B2),
                   ),

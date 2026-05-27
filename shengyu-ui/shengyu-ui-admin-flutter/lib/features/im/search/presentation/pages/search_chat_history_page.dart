@@ -65,17 +65,17 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
               children: [
                 Expanded(
                   child: Container(
-                    height: 40,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFFF3F4F8),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.search_rounded,
-                          size: 19,
+                          size: 16,
                           color: Color(0xFF98A1B2),
                         ),
                         const SizedBox(width: 8),
@@ -88,7 +88,19 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
                             decoration: InputDecoration(
                               hintText: strings.globalChatSearchPlaceholder,
                               border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
                               isCollapsed: true,
+                              contentPadding: EdgeInsets.zero,
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF98A1B2),
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF202531),
                             ),
                           ),
                         ),
@@ -100,10 +112,13 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
                 FilledButton(
                   onPressed: () => _search(reset: true),
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size(72, 40),
+                    minimumSize: const Size(60, 36),
                     backgroundColor: const Color(0xFF246BFD),
                   ),
-                  child: Text(strings.searchAction),
+                  child: Text(
+                    strings.searchAction,
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ),
               ],
             ),

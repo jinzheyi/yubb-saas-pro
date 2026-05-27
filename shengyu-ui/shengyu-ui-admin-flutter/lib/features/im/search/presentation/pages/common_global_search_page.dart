@@ -104,7 +104,7 @@ class _CommonGlobalSearchPageState
                       height: 38,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F8),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
@@ -128,7 +128,11 @@ class _CommonGlobalSearchPageState
                               decoration: const InputDecoration(
                                 hintText: '搜索',
                                 border: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
                                 isCollapsed: true,
+                                contentPadding: EdgeInsets.zero,
                               ),
                               onChanged: (_) {
                                 setState(() {});

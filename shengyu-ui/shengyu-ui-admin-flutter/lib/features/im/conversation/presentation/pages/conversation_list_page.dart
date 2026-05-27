@@ -195,7 +195,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                         height: 36,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F4F8),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Row(
@@ -221,11 +221,15 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                                 decoration: InputDecoration(
                                   hintText: strings.searchHint,
                                   border: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
                                   isCollapsed: true,
                                   hintStyle: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF98A1B2),
                                   ),
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                                 onChanged: (_) => setState(() {}),
                                 onSubmitted: (_) => _handleSearch(),
