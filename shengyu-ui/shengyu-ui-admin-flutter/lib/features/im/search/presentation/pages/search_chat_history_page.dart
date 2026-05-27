@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/search/domain/entities/message_search_item.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 
 class SearchChatHistoryPage extends ConsumerStatefulWidget {
@@ -202,7 +203,7 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
                                               color: Color(0xFF4E5666),
                                               height: 1.35,
                                             ),
-                                            children: _highlightContent(
+                                            children: _buildEmojiHighlightedSpans(
                                               _displayContent(strings, item),
                                               _searchController.text.trim(),
                                             ),
@@ -298,30 +299,80 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
     }
   }
 
-  List<TextSpan> _highlightContent(String content, String keyword) {
-    if (keyword.isEmpty || content.isEmpty) {
-      return [TextSpan(text: content)];
+  /// 构建包含 emoji 图片和关键字高亮的 InlineSpan 列表
+  /// 逻辑与 conversation_tile.dart 一致：先按 emoji token 分割文本，
+  /// 再对每段文本做关键字高亮，emoji token 调用 buildEmojiInlineSpans 渲染为图片
+  List<InlineSpan> _buildEmojiHighlightedSpans(String content, String keyword) {
+    if (content.isEmpty) {
+      return const <InlineSpan>[];
     }
-    final lowerContent = content.toLowerCase();
+    final baseStyle = const TextStyle(
+      fontSize: 14,
+      color: Color(0xFF4E5666),
+      height: 1.35,
+    );
+    final highlightStyle = const TextStyle(
+      fontSize: 14,
+      color: Color(0xFF246BFD),
+      fontWeight: FontWeight.w700,
+      height: 1.35,
+    );
+    final tokenRegExp = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
+    final matches = tokenRegExp.allMatches(content);
+    if (matches.isEmpty) {
+      return _highlightTextSpans(content, keyword, baseStyle, highlightStyle);
+    }
+    final result = <InlineSpan>[];
+    var cursor = 0;
+    for (final match in matches) {
+      if (match.start > cursor) {
+        final segment = content.substring(cursor, match.start);
+        result.addAll(_highlightTextSpans(segment, keyword, baseStyle, highlightStyle));
+      }
+      final emojiToken = match.group(0) ?? '';
+      result.addAll(
+        buildEmojiInlineSpans(
+          text: emojiToken,
+          textStyle: baseStyle,
+          emojiSize: 18,
+        ),
+      );
+      cursor = match.end;
+    }
+    if (cursor < content.length) {
+      final segment = content.substring(cursor);
+      result.addAll(_highlightTextSpans(segment, keyword, baseStyle, highlightStyle));
+    }
+    return result;
+  }
+
+  /// 对普通文本进行关键字高亮
+  List<TextSpan> _highlightTextSpans(
+    String text,
+    String keyword,
+    TextStyle normalStyle,
+    TextStyle highlightStyle,
+  ) {
+    if (keyword.isEmpty || text.isEmpty) {
+      return [TextSpan(text: text, style: normalStyle)];
+    }
+    final lowerText = text.toLowerCase();
     final lowerKeyword = keyword.toLowerCase();
     final spans = <TextSpan>[];
     var start = 0;
     while (true) {
-      final index = lowerContent.indexOf(lowerKeyword, start);
+      final index = lowerText.indexOf(lowerKeyword, start);
       if (index < 0) {
-        spans.add(TextSpan(text: content.substring(start)));
+        spans.add(TextSpan(text: text.substring(start), style: normalStyle));
         break;
       }
       if (index > start) {
-        spans.add(TextSpan(text: content.substring(start, index)));
+        spans.add(TextSpan(text: text.substring(start, index), style: normalStyle));
       }
       spans.add(
         TextSpan(
-          text: content.substring(index, index + keyword.length),
-          style: const TextStyle(
-            color: Color(0xFF246BFD),
-            fontWeight: FontWeight.w700,
-          ),
+          text: text.substring(index, index + keyword.length),
+          style: highlightStyle,
         ),
       );
       start = index + keyword.length;

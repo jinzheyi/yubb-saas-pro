@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
@@ -1250,12 +1251,78 @@ class _HighlightText extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       );
     }
-    final lower = text.toLowerCase();
-    final query = keyword.toLowerCase();
-    final spans = <InlineSpan>[];
+    final spans = _buildEmojiHighlightedSpans(text, keyword.toLowerCase(), style);
+    return Text.rich(
+      TextSpan(children: spans),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  /// 构建包含 emoji 图片和关键字高亮的 InlineSpan 列表
+  /// 逻辑与 conversation_tile.dart 一致：先按 emoji token 分割文本，
+  /// 再对每段文本做关键字高亮，emoji token 调用 buildEmojiInlineSpans 渲染为图片
+  List<InlineSpan> _buildEmojiHighlightedSpans(
+    String content,
+    String lowerKeyword,
+    TextStyle baseStyle,
+  ) {
+    if (content.isEmpty) {
+      return const <InlineSpan>[];
+    }
+    // 先按 emoji token 分割内容
+    final tokenRegExp = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
+    final matches = tokenRegExp.allMatches(content);
+    if (matches.isEmpty) {
+      // 无 emoji，直接对全文做高亮
+      return _highlightTextSpans(content, lowerKeyword, baseStyle);
+    }
+    // 有 emoji，按 token 分割后逐段处理
+    final result = <InlineSpan>[];
+    var cursor = 0;
+    for (final match in matches) {
+      // emoji 前的普通文本
+      if (match.start > cursor) {
+        final textSegment = content.substring(cursor, match.start);
+        result.addAll(
+          _highlightTextSpans(textSegment, lowerKeyword, baseStyle),
+        );
+      }
+      // emoji token 本身，调用 buildEmojiInlineSpans 渲染为图片
+      final emojiToken = match.group(0) ?? '';
+      result.addAll(
+        buildEmojiInlineSpans(
+          text: emojiToken,
+          textStyle: baseStyle,
+          emojiSize: (baseStyle.fontSize ?? 14.0).ceilToDouble(),
+        ),
+      );
+      cursor = match.end;
+    }
+    // 剩余的普通文本
+    if (cursor < content.length) {
+      final textSegment = content.substring(cursor);
+      result.addAll(
+        _highlightTextSpans(textSegment, lowerKeyword, baseStyle),
+      );
+    }
+    return result;
+  }
+
+  /// 对普通文本进行关键字高亮，返回 TextSpan 列表
+  List<TextSpan> _highlightTextSpans(
+    String text,
+    String lowerKeyword,
+    TextStyle style,
+  ) {
+    if (lowerKeyword.isEmpty || text.isEmpty) {
+      return [TextSpan(text: text, style: style)];
+    }
+    final lowerText = text.toLowerCase();
+    final spans = <TextSpan>[];
     var start = 0;
     while (true) {
-      final index = lower.indexOf(query, start);
+      final index = lowerText.indexOf(lowerKeyword, start);
       if (index < 0) {
         spans.add(TextSpan(text: text.substring(start), style: style));
         break;
@@ -1265,20 +1332,16 @@ class _HighlightText extends StatelessWidget {
       }
       spans.add(
         TextSpan(
-          text: text.substring(index, index + keyword.length),
+          text: text.substring(index, index + lowerKeyword.length),
           style: style.copyWith(color: const Color(0xFF246BFD)),
         ),
       );
-      start = index + keyword.length;
+      start = index + lowerKeyword.length;
       if (start >= text.length) {
         break;
       }
     }
-    return Text.rich(
-      TextSpan(children: spans),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
+    return spans;
   }
 }
 
