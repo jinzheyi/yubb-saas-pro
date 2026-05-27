@@ -237,7 +237,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                             ),
                             if (_searchController.text.trim().isNotEmpty)
                               InkWell(
-                                onTap: _clearConversationFilter,
+                                onTap: _handleSearch,
                                 child: const Icon(
                                   ShengyuIconFont.fasong,
                                   size: 16,
@@ -580,11 +580,6 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
         _markConversationSynced();
       }
     }());
-  }
-
-  void _clearConversationFilter() {
-    _searchController.clear();
-    setState(() {});
   }
 
   void _handleSearch() {

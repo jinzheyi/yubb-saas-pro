@@ -203,12 +203,15 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
             if (sections.isNotEmpty)
               Positioned(
                 right: 6,
-                top: MediaQuery.of(context).padding.top + 176,
-                child: _IndexRail(
-                  labels: sections
-                      .map((section) => section.indexLabel)
-                      .toList(),
-                  onTap: _scrollToSection,
+                top: 100,
+                bottom: 0,
+                child: Center(
+                  child: _IndexRail(
+                    labels: sections
+                        .map((section) => section.indexLabel)
+                        .toList(),
+                    onTap: _scrollToSection,
+                  ),
                 ),
               ),
           ],
@@ -369,7 +372,7 @@ class _ContactsSearchBar extends StatelessWidget {
                 return const SizedBox.shrink();
               }
               return GestureDetector(
-                onTap: onClear,
+                onTap: onSearch,
                 child: const Padding(
                   padding: EdgeInsets.only(left: 8),
                   child: Icon(
