@@ -157,13 +157,6 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
           ContactsSectionCard(
             children: [
               _ActionTile(
-                title: strings.chatSettingsChatFilesSingle,
-                onTap: () {
-                  context.pushNamed(RouteNames.chatMedia, extra: widget.args);
-                },
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              _ActionTile(
                 title: strings.chatHistoryTitle,
                 onTap: () {
                   context.pushNamed(RouteNames.chatHistory, extra: widget.args);

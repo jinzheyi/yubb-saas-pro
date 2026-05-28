@@ -2149,6 +2149,12 @@ abstract class AppLocalizations {
   /// **'All'**
   String get groupHistoryFilterAll;
 
+  /// No description provided for @groupHistoryFilterText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get groupHistoryFilterText;
+
   /// No description provided for @groupHistoryFilterFile.
   ///
   /// In en, this message translates to:
@@ -2160,6 +2166,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Images'**
   String get groupHistoryFilterImage;
+
+  /// No description provided for @groupHistoryFilterVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get groupHistoryFilterVideo;
 
   /// No description provided for @groupHistoryFilterLink.
   ///

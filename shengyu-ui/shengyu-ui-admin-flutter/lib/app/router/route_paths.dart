@@ -38,7 +38,6 @@ abstract final class RoutePaths {
   static const groupMembers = '/chat/group-members';
   static const groupQrCode = '/chat/group-qr-code';
   static const groupAnnouncement = '/chat/group-announcement';
-  static const groupFiles = '/chat/group-files';
   static const groupChatHistory = '/chat/group-chat-history';
   static const groupJoinRequests = '/chat/group-join-requests';
   static const groupMemberDetail = '/chat/group-member-detail';

@@ -38,7 +38,6 @@ abstract final class RouteNames {
   static const groupMembers = 'groupMembers';
   static const groupQrCode = 'groupQrCode';
   static const groupAnnouncement = 'groupAnnouncement';
-  static const groupFiles = 'groupFiles';
   static const groupChatHistory = 'groupChatHistory';
   static const groupJoinRequests = 'groupJoinRequests';
   static const groupMemberDetail = 'groupMemberDetail';

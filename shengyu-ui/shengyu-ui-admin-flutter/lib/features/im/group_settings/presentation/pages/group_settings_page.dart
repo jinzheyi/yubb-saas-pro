@@ -328,15 +328,6 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 ),
               ),
               _NavSettingTile(
-                title: strings.groupSettingsGroupFiles,
-                onTap: () => _openDetailPage(
-                  context,
-                  routeName: RouteNames.groupFiles,
-                  groupId: widget.args.groupId,
-                  groupName: title,
-                ),
-              ),
-              _NavSettingTile(
                 title: strings.groupSettingsChatHistory,
                 onTap: () => _openDetailPage(
                   context,

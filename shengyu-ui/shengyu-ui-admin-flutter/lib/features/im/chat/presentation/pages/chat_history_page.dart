@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
@@ -46,6 +50,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   DateTime? _startTime;
   DateTime? _endTime;
   String? _chatId;
+  _HistoryFilter _filter = _HistoryFilter.all;
 
   @override
   void initState() {
@@ -82,6 +87,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       body: Column(
         children: [
           _buildSearchBar(),
+          _buildFilterBar(),
           _buildDateFilter(),
           Expanded(child: _buildContent(strings)),
         ],
@@ -150,6 +156,25 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      color: const Color(0xFFF5F7FB),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final filter in _HistoryFilter.values)
+            _FilterChip(
+              label: filter.label(AppLocalizations.of(context)),
+              selected: _filter == filter,
+              onTap: () => _changeFilter(filter),
+            ),
         ],
       ),
     );
@@ -237,6 +262,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           ),
           child: InkWell(
             onTap: () => _openChatAnchor(item),
+            onLongPress: () => _showItemMenu(item),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -277,6 +303,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                         ],
                       ),
                     ),
+                    _buildMessageIcon(item),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -295,6 +322,41 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     );
   }
 
+  Widget _buildMessageIcon(ChatHistoryItem item) {
+    final iconData = _messageTypeIcon(item.messageType);
+    if (iconData == null) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F8),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        iconData,
+        size: 16,
+        color: const Color(0xFF98A1B2),
+      ),
+    );
+  }
+
+  IconData? _messageTypeIcon(MessageType type) {
+    return switch (type) {
+      MessageType.image => Icons.image_outlined,
+      MessageType.video => Icons.videocam_outlined,
+      MessageType.file => Icons.attach_file_outlined,
+      MessageType.voice => Icons.mic_outlined,
+      MessageType.location => Icons.location_on_outlined,
+      MessageType.emoji => Icons.emoji_emotions_outlined,
+      MessageType.sticker => Icons.sticky_note_2_outlined,
+      MessageType.contactCard => Icons.person_outlined,
+      _ => null,
+    };
+  }
+
   void _handleScroll() {
     if (!_scrollController.hasClients || _loading || !_hasMore || !_searched) {
       return;
@@ -305,9 +367,26 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     }
   }
 
+  Future<void> _changeFilter(_HistoryFilter filter) async {
+    if (_filter == filter) {
+      return;
+    }
+    setState(() {
+      _filter = filter;
+      _records = const [];
+      _pageNo = 1;
+      _hasMore = true;
+    });
+    if (_searched) {
+      await _search(reset: true);
+    }
+  }
+
   Future<void> _search({required bool reset}) async {
     final keyword = _searchController.text.trim();
-    if (keyword.isEmpty) {
+    final hasActiveFilter = _filter != _HistoryFilter.all;
+    final shouldSearch = keyword.isNotEmpty || hasActiveFilter;
+    if (!shouldSearch) {
       if (reset) {
         setState(() {
           _records = const [];
@@ -334,6 +413,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       final records = await ref.read(messageRepositoryProvider).searchChatHistory(
             chatId: effectiveChatId,
             keyword: keyword,
+            category: _filter.apiValue,
             startTime: _startTime == null
                 ? null
                 : '${DateFormat('yyyy-MM-dd').format(_startTime!)} 00:00:00',
@@ -424,6 +504,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     setState(() {
       _startTime = null;
       _endTime = null;
+      _filter = _HistoryFilter.all;
       _records = const [];
       _pageNo = 1;
       _hasMore = true;
@@ -438,6 +519,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   }
 
   void _openChatAnchor(ChatHistoryItem item) {
+    if (item.messageType == MessageType.file ||
+        item.messageType == MessageType.image ||
+        item.messageType == MessageType.video) {
+      _openMediaAnchor(item);
+      return;
+    }
     if (item.messageId.trim().isEmpty || item.messageId.trim() == '0') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -467,6 +554,210 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         anchorSequence: item.sequence.trim().isNotEmpty ? item.sequence : null,
         anchorMessageId: item.messageId,
         highlightedMessageId: item.messageId,
+      ),
+    );
+  }
+
+  void _openMediaAnchor(ChatHistoryItem item) {
+    final strings = AppLocalizations.of(context);
+    final messageId = item.messageId.trim();
+    if (messageId.isEmpty || messageId == '0') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.groupFilesForwardUnsupported)),
+      );
+      return;
+    }
+    final contentData = _parseContentData(item);
+    final fileId = contentData['fileId'] ?? '';
+    final fileUrl = contentData['fileUrl'] ?? '';
+    final fileName = contentData['fileName'] ?? '';
+    final mimeType = contentData['mimeType'] ?? '';
+    final fileSize = int.tryParse(contentData['fileSize'] ?? '0') ?? 0;
+
+    if (item.messageType == MessageType.image) {
+      _previewImageFile(fileId, fileUrl, fileName);
+      return;
+    }
+    if (item.messageType == MessageType.video) {
+      context.pushNamed(
+        RouteNames.chatVideoPlayer,
+        extra: VideoPlayerRouteArgs(
+          url: fileUrl,
+          fileId: fileId,
+          title: fileName,
+        ),
+      );
+      return;
+    }
+    if (item.messageType == MessageType.file) {
+      context.pushNamed(
+        RouteNames.filePreview,
+        extra: FilePreviewRouteArgs(
+          fileId: fileId.isNotEmpty ? fileId : messageId,
+          fileName: fileName,
+          mimeType: mimeType.isNotEmpty ? mimeType : 'application/octet-stream',
+          fileSize: fileSize,
+          messageId: messageId,
+          chatId: _chatId,
+          sourceType: 'file',
+        ),
+      );
+      return;
+    }
+  }
+
+  Map<String, String> _parseContentData(ChatHistoryItem item) {
+    final content = item.content.trim();
+    if (content.isEmpty) {
+      return {};
+    }
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = <String, String>{};
+        final pairs = content
+            .substring(1, content.length - 1)
+            .split(',')
+            .where((s) => s.contains(':'));
+        for (final pair in pairs) {
+          final parts = pair.split(':');
+          if (parts.length >= 2) {
+            final key = parts[0].trim().replaceAll(RegExp(r'''["']'''), '');
+            final value = parts.sublist(1).join(':').trim().replaceAll(RegExp(r'''["']'''), '');
+            map[key] = value;
+          }
+        }
+        return map;
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  Future<void> _previewImageFile(String fileId, String fileUrl, String fileName) async {
+    try {
+      final url = fileId.isNotEmpty
+          ? (await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId)).toString()
+          : fileUrl;
+      if (!mounted || url.isEmpty) {
+        return;
+      }
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'history-image-preview',
+        barrierColor: Colors.black,
+        pageBuilder: (dialogContext, animation, secondaryAnimation) {
+          return Material(
+            color: Colors.black,
+            child: GestureDetector(
+              onTap: () => Navigator.of(dialogContext).pop(),
+              child: Center(
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SelectableText(
+                        url,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _showItemMenu(ChatHistoryItem item) async {
+    if (item.messageType != MessageType.file &&
+        item.messageType != MessageType.image &&
+        item.messageType != MessageType.video &&
+        item.messageType != MessageType.voice) {
+      return;
+    }
+    final strings = AppLocalizations.of(context);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.download_rounded),
+                title: Text(strings.groupFilesActionDownload),
+                onTap: () => Navigator.of(dialogContext).pop('download'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.forward_rounded),
+                title: Text(strings.groupFilesActionForward),
+                onTap: () => Navigator.of(dialogContext).pop('forward'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted || action == null) {
+      return;
+    }
+    switch (action) {
+      case 'download':
+        await _downloadItem(item);
+        break;
+      case 'forward':
+        _forwardItem(item);
+        break;
+    }
+  }
+
+  Future<void> _downloadItem(ChatHistoryItem item) async {
+    final strings = AppLocalizations.of(context);
+    try {
+      final contentData = _parseContentData(item);
+      final fileId = contentData['fileId'] ?? item.messageId;
+      final fileName = contentData['fileName'] ?? _contentText(strings, item);
+      if (fileId.isEmpty) {
+        throw StateError('missing file id');
+      }
+      final uri = await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId);
+      await ref.read(fileDownloadServiceProvider).download(uri, suggestedFileName: fileName);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.groupFilesDownloadStarted)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.groupFilesDownloadFailed)));
+    }
+  }
+
+  void _forwardItem(ChatHistoryItem item) {
+    final strings = AppLocalizations.of(context);
+    final messageId = item.messageId.trim();
+    if (messageId.isEmpty || messageId == '0') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.groupFilesForwardUnsupported)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.chatForwardTarget,
+      extra: ForwardTargetRouteArgs(
+        messageIds: <String>[messageId],
+        initialForwardType: 1,
       ),
     );
   }
@@ -502,6 +793,13 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   String _contentText(AppLocalizations strings, ChatHistoryItem item) {
     if (item.content.isNotEmpty) {
+      final contentData = _parseContentData(item);
+      if (contentData.containsKey('fileName')) {
+        return contentData['fileName']!;
+      }
+      if (contentData.containsKey('text')) {
+        return contentData['text']!;
+      }
       return item.content;
     }
     switch (item.systemEventKey) {
@@ -750,4 +1048,67 @@ class _EmojiSegment {
   final String? emojiToken;
 
   _EmojiSegment({required this.text, required this.isEmoji, this.emojiToken});
+}
+
+enum _HistoryFilter {
+  all(null),
+  text('text'),
+  image('image'),
+  video('video'),
+  file('file'),
+  link('link');
+
+  const _HistoryFilter(this.apiValue);
+
+  final String? apiValue;
+
+  String label(AppLocalizations strings) {
+    return switch (this) {
+      _HistoryFilter.all => strings.groupHistoryFilterAll,
+      _HistoryFilter.text => strings.groupHistoryFilterText,
+      _HistoryFilter.image => strings.groupHistoryFilterImage,
+      _HistoryFilter.video => strings.groupHistoryFilterVideo,
+      _HistoryFilter.file => strings.groupHistoryFilterFile,
+      _HistoryFilter.link => strings.groupHistoryFilterLink,
+    };
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF246BFD) : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected ? Colors.white : const Color(0xFF6B7280),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

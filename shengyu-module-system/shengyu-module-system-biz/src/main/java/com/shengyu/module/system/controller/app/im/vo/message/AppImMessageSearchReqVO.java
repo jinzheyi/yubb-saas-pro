@@ -22,15 +22,14 @@ public class AppImMessageSearchReqVO extends PageParam {
     @Schema(description = "ChatID(会话内搜索时传，会话全局搜索可不传)", example = "1")
     private Long chatId;
 
-    @Schema(description = "搜索关键词", requiredMode = Schema.RequiredMode.REQUIRED, example = "会议")
-    @NotBlank(message = "{validation.im.search_keyword.required}")
-    @Size(min = 1, max = 64, message = "{validation.im.search_keyword.length}")
+    @Schema(description = "搜索关键词（与category二选一）", example = "会议")
+    @Size(max = 64, message = "{validation.im.search_keyword.length}")
     private String keyword;
 
     @Schema(description = "消息类型(可选)", example = "8")
     private Integer messageType;
 
-    @Schema(description = "消息分类过滤(all|media)，media 代表图片/视频/文件", example = "media")
+    @Schema(description = "消息分类过滤(all|text|image|video|file|link|media)，media 代表图片/视频/文件，其余为单类型", example = "text")
     private String category;
 
     @Schema(description = "开始时间", example = "2024-01-01 00:00:00")

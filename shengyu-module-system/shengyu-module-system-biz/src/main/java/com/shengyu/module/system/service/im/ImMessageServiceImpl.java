@@ -1444,6 +1444,10 @@ public class ImMessageServiceImpl implements ImMessageService {
                 return 6;
             case 106:
                 return ImMessageTypeEnum.CUSTOM.getType();
+            case 107:
+                return ImMessageTypeEnum.EMOJI.getType();
+            case 108:
+                return ImMessageTypeEnum.STICKER.getType();
             case 205:
                 // 引用回复本质上仍然是文本（前端用 quote 渲染），DB 侧按文本存储
                 return 1;
@@ -1658,16 +1662,14 @@ public class ImMessageServiceImpl implements ImMessageService {
                             .build();
                     headerExtra = locationObj.toString();
                     break;
-                case 9: // 自定义消息
-                    messageType = MessageType.CUSTOM;
-                    JSONObject customPayload = validateAndNormalizeCustomPayload(sendReqVO);
+                case 7: // 表情包消息
+                    messageType = MessageType.EMOJI;
                     messageBody = TextMessage.newBuilder()
-                            .setContent(customPayload.toString())
+                            .setContent(sendReqVO.getContent())
                             .build();
-                    headerExtra = customPayload.toString();
                     break;
-                case 8: // 自定义贴纸
-                    messageType = MessageType.CUSTOM;
+                case 8: // 自定义贴纸消息
+                    messageType = MessageType.STICKER;
                     JSONObject stickerPayload = StrUtil.isNotBlank(sendReqVO.getExtra()) ? JSONUtil.parseObj(sendReqVO.getExtra()) : JSONUtil.createObj();
                     stickerPayload.set("type", "STICKER");
                     if (StrUtil.isBlank(stickerPayload.getStr("url", ""))) {
@@ -1677,6 +1679,14 @@ public class ImMessageServiceImpl implements ImMessageService {
                             .setContent(stickerPayload.toString())
                             .build();
                     headerExtra = stickerPayload.toString();
+                    break;
+                case 9: // 自定义消息
+                    messageType = MessageType.CUSTOM;
+                    JSONObject customPayload = validateAndNormalizeCustomPayload(sendReqVO);
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(customPayload.toString())
+                            .build();
+                    headerExtra = customPayload.toString();
                     break;
                 default:
                     // 默认使用系统通知类型
@@ -2770,8 +2780,10 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (searchReqVO == null) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
-        String keyword = StrUtil.trimToEmpty(searchReqVO.getKeyword());
-        if (StrUtil.isBlank(keyword)) {
+        String keyword = StrUtil.trimToNull(searchReqVO.getKeyword());
+        String category = StrUtil.trimToNull(searchReqVO.getCategory());
+        // keyword 和 category 至少传一个
+        if (StrUtil.isBlank(keyword) && StrUtil.isBlank(category)) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
         Long tenantId = TenantContextHolder.getTenantId();
@@ -2862,13 +2874,26 @@ public class ImMessageServiceImpl implements ImMessageService {
             return null;
         }
         String category = StrUtil.trimToEmpty(searchReqVO.getCategory()).toLowerCase();
-        if ("media".equals(category)) {
-            return Arrays.asList(
-                    ImMessageTypeEnum.IMAGE.getType(),
-                    ImMessageTypeEnum.VIDEO.getType(),
-                    ImMessageTypeEnum.FILE.getType());
+        switch (category) {
+            case "media":
+                return Arrays.asList(
+                        ImMessageTypeEnum.IMAGE.getType(),
+                        ImMessageTypeEnum.VIDEO.getType(),
+                        ImMessageTypeEnum.FILE.getType());
+            case "text":
+                return Collections.singletonList(ImMessageTypeEnum.TEXT.getType());
+            case "image":
+                return Collections.singletonList(ImMessageTypeEnum.IMAGE.getType());
+            case "video":
+                return Collections.singletonList(ImMessageTypeEnum.VIDEO.getType());
+            case "file":
+                return Collections.singletonList(ImMessageTypeEnum.FILE.getType());
+            case "link":
+                // 链接本质上是文本消息，搜索文本类型中携带URL的内容
+                return Collections.singletonList(ImMessageTypeEnum.TEXT.getType());
+            default:
+                return null;
         }
-        return null;
     }
 
     private List<Integer> resolveMediaMessageTypeList(String fileType) {

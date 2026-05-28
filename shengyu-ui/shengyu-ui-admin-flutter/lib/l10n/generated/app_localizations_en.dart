@@ -1110,10 +1110,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupHistoryFilterAll => 'All';
 
   @override
+  String get groupHistoryFilterText => 'Text';
+
+  @override
   String get groupHistoryFilterFile => 'Files';
 
   @override
   String get groupHistoryFilterImage => 'Images';
+
+  @override
+  String get groupHistoryFilterVideo => 'Videos';
 
   @override
   String get groupHistoryFilterLink => 'Links';

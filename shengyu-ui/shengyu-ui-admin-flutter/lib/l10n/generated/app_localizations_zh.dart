@@ -1092,10 +1092,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupHistoryFilterAll => '全部';
 
   @override
+  String get groupHistoryFilterText => '文字';
+
+  @override
   String get groupHistoryFilterFile => '文件';
 
   @override
   String get groupHistoryFilterImage => '图片';
+
+  @override
+  String get groupHistoryFilterVideo => '视频';
 
   @override
   String get groupHistoryFilterLink => '链接';

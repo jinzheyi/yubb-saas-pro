@@ -136,6 +136,22 @@ public enum MessageType
   CUSTOM(106),
   /**
    * <pre>
+   * 表情包消息
+   * </pre>
+   *
+   * <code>EMOJI = 107;</code>
+   */
+  EMOJI(107),
+  /**
+   * <pre>
+   * 自定义贴纸消息
+   * </pre>
+   *
+   * <code>STICKER = 108;</code>
+   */
+  STICKER(108),
+  /**
+   * <pre>
    * ========== 通知消息 ==========
    * 系统通知
    * </pre>
@@ -334,6 +350,22 @@ public enum MessageType
   public static final int CUSTOM_VALUE = 106;
   /**
    * <pre>
+   * 表情包消息
+   * </pre>
+   *
+   * <code>EMOJI = 107;</code>
+   */
+  public static final int EMOJI_VALUE = 107;
+  /**
+   * <pre>
+   * 自定义贴纸消息
+   * </pre>
+   *
+   * <code>STICKER = 108;</code>
+   */
+  public static final int STICKER_VALUE = 108;
+  /**
+   * <pre>
    * ========== 通知消息 ==========
    * 系统通知
    * </pre>
@@ -446,6 +478,8 @@ public enum MessageType
       case 104: return FILE;
       case 105: return LOCATION;
       case 106: return CUSTOM;
+      case 107: return EMOJI;
+      case 108: return STICKER;
       case 200: return SYSTEM_NOTIFY;
       case 201: return READ_RECEIPT;
       case 202: return RECALL;

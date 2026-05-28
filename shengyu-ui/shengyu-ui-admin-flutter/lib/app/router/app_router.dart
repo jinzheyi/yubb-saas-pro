@@ -54,7 +54,6 @@ import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favo
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/pages/file_preview_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_announcement_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_files_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_join_requests_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_member_detail_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_members_page.dart';
@@ -595,19 +594,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _buildRoutePage(
             state: state,
             child: GroupAnnouncementPage(args: args),
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.groupFiles,
-        name: RouteNames.groupFiles,
-        pageBuilder: (context, state) {
-          final args = state.extra is GroupSettingDetailArgs
-              ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
-          return _buildRoutePage(
-            state: state,
-            child: GroupFilesPage(args: args),
           );
         },
       ),
