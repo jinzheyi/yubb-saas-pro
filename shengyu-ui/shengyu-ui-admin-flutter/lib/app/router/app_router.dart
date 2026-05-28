@@ -54,7 +54,6 @@ import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favo
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/pages/file_preview_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_announcement_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_chat_history_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_files_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_join_requests_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_member_detail_page.dart';
@@ -458,7 +457,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : const ChatEntryArgs.empty();
           return _buildRoutePage(
             state: state,
-            child: ChatHistoryPage(args: args),
+            child: ChatHistoryPage(chatArgs: args),
           );
         },
       ),
@@ -621,7 +620,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
           return _buildRoutePage(
             state: state,
-            child: GroupChatHistoryPage(args: args),
+            child: ChatHistoryPage(groupArgs: args),
           );
         },
       ),

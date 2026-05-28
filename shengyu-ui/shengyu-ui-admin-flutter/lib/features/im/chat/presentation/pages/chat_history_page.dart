@@ -3,22 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ChatHistoryPage extends ConsumerStatefulWidget {
-  const ChatHistoryPage({super.key, required this.args});
+  const ChatHistoryPage({
+    super.key,
+    this.chatArgs,
+    this.groupArgs,
+  })  : assert(chatArgs != null || groupArgs != null, 'chatArgs or groupArgs must be provided'),
+        assert(!(chatArgs != null && groupArgs != null), 'only one of chatArgs or groupArgs can be provided');
 
-  final ChatEntryArgs args;
+  final ChatEntryArgs? chatArgs;
+  final GroupSettingDetailArgs? groupArgs;
 
   @override
   ConsumerState<ChatHistoryPage> createState() => _ChatHistoryPageState();
@@ -36,6 +45,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   int _pageNo = 1;
   DateTime? _startTime;
   DateTime? _endTime;
+  String? _chatId;
 
   @override
   void initState() {
@@ -71,207 +81,217 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       ),
       body: Column(
         children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F8),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          ShengyuIconFont.chaxun,
-                          size: 16,
+          _buildSearchBar(),
+          _buildDateFilter(),
+          Expanded(child: _buildContent(strings)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final strings = AppLocalizations.of(context);
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F8),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  const Icon(
+                    ShengyuIconFont.chaxun,
+                    size: 16,
+                    color: Color(0xFF98A1B2),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      textInputAction: TextInputAction.search,
+                      onChanged: (_) => setState(() {}),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF202531),
+                      ),
+                      onSubmitted: (_) => _search(reset: true),
+                      decoration: InputDecoration(
+                        hintText: strings.chatHistorySearchPlaceholder,
+                        border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        isCollapsed: true,
+                        hintStyle: const TextStyle(
+                          fontSize: 14,
                           color: Color(0xFF98A1B2),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            textInputAction: TextInputAction.search,
-                            onChanged: (_) => setState(() {}),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF202531),
-                            ),
-                            onSubmitted: (_) => _search(reset: true),
-                            decoration: InputDecoration(
-                              hintText: strings.chatHistorySearchPlaceholder,
-                              border: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              disabledBorder: InputBorder.none,
-                              isCollapsed: true,
-                              hintStyle: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF98A1B2),
-                              ),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        if (_searchController.text.trim().isNotEmpty)
-                          InkWell(
-                            onTap: () => _search(reset: true),
-                            child: const Icon(
-                              ShengyuIconFont.fasong,
-                              size: 16,
-                              color: Color(0xFF98A1B2),
-                            ),
-                          ),
-                      ],
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  if (_searchController.text.trim().isNotEmpty)
+                    InkWell(
+                      onTap: () => _search(reset: true),
+                      child: const Icon(
+                        ShengyuIconFont.fasong,
+                        size: 16,
+                        color: Color(0xFF98A1B2),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _DateFilterButton(
-                    label: strings.chatHistoryStartTime,
-                    value: _formatFilterDate(_startTime),
-                    onTap: () => _pickDate(isStart: true),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _DateFilterButton(
-                    label: strings.chatHistoryEndTime,
-                    value: _formatFilterDate(_endTime),
-                    onTap: () => _pickDate(isStart: false),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: _resetFilters,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 11,
-                    ),
-                    side: BorderSide.none,
-                    backgroundColor: const Color(0xFFF5F7FB),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: Text(strings.resetAction),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _loading && _records.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : _records.isEmpty
-                ? _HistoryEmptyState(
-                    message: _searched
-                        ? strings.chatHistoryEmptySearched
-                        : strings.chatHistoryEmptyIdle,
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: _records.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _records.length) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Center(
-                            child: Text(
-                              _loading
-                                  ? strings.chatHistoryLoading
-                                  : (_hasMore ? '' : strings.chatHistoryNoMore),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF98A1B2),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-                      final item = _records[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: InkWell(
-                          onTap: () => _openChatAnchor(item),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  ContactsInitialAvatar(
-                                    name: item.senderName,
-                                    color: _avatarColorFor(item.senderId),
-                                    avatarUrl: item.senderAvatar,
-                                    size: 40,
-                                    borderRadius: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.messageType == MessageType.system
-                                              ? strings.chatGroupSystemSender
-                                              : (item.senderName.trim().isEmpty
-                                                    ? strings.chatHistoryUnknownUser
-                                                    : item.senderName.trim()),
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF202531),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _formatTime(strings, item.sentAt),
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF98A1B2),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 52),
-                                child: _HighlightedContent(
-                                  text: _contentText(strings, item),
-                                  keyword: _searchController.text.trim(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDateFilter() {
+    final strings = AppLocalizations.of(context);
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: _DateFilterButton(
+              label: strings.chatHistoryStartTime,
+              value: _formatFilterDate(_startTime),
+              onTap: () => _pickDate(isStart: true),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _DateFilterButton(
+              label: strings.chatHistoryEndTime,
+              value: _formatFilterDate(_endTime),
+              onTap: () => _pickDate(isStart: false),
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: _resetFilters,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              side: BorderSide.none,
+              backgroundColor: const Color(0xFFF5F7FB),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: Text(strings.resetAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(AppLocalizations strings) {
+    if (_loading && _records.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_records.isEmpty) {
+      return _HistoryEmptyState(
+        message: _searched
+            ? strings.chatHistoryEmptySearched
+            : strings.chatHistoryEmptyIdle,
+      );
+    }
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: _records.length + 1,
+      itemBuilder: (context, index) {
+        if (index == _records.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Center(
+              child: Text(
+                _loading
+                    ? strings.chatHistoryLoading
+                    : (_hasMore ? '' : strings.chatHistoryNoMore),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF98A1B2),
+                ),
+              ),
+            ),
+          );
+        }
+        final item = _records[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: () => _openChatAnchor(item),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ContactsInitialAvatar(
+                      name: item.senderName,
+                      color: _avatarColorFor(item.senderId),
+                      avatarUrl: item.senderAvatar,
+                      size: 40,
+                      borderRadius: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.messageType == MessageType.system
+                                ? strings.chatGroupSystemSender
+                                : (item.senderName.trim().isEmpty
+                                    ? strings.chatHistoryUnknownUser
+                                    : item.senderName.trim()),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF202531),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatTime(strings, item.sentAt),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF98A1B2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(left: 52),
+                  child: _HighlightedContent(
+                    text: _contentText(strings, item),
+                    keyword: _searchController.text.trim(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -310,10 +330,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       }
     });
     try {
-      final records = await ref
-          .read(messageRepositoryProvider)
-          .searchChatHistory(
-            chatId: widget.args.chatId,
+      final effectiveChatId = await _resolveChatId();
+      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+            chatId: effectiveChatId,
             keyword: keyword,
             startTime: _startTime == null
                 ? null
@@ -344,6 +363,20 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         context,
       ).showSnackBar(SnackBar(content: Text(strings.chatHistorySearchFailed)));
     }
+  }
+
+  Future<String> _resolveChatId() async {
+    if (_chatId != null && _chatId!.isNotEmpty) {
+      return _chatId!;
+    }
+    if (widget.groupArgs != null) {
+      final resolvedChatId = await ref
+          .read(groupSettingsRepositoryProvider)
+          .ensureGroupChatId(widget.groupArgs!.groupId);
+      _chatId = resolvedChatId;
+      return resolvedChatId;
+    }
+    return widget.chatArgs!.chatId;
   }
 
   Future<void> _pickDate({required bool isStart}) async {
@@ -413,13 +446,23 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       );
       return;
     }
+    final conversationType = widget.groupArgs != null
+        ? ConversationType.group
+        : widget.chatArgs!.conversationType;
+    final targetId = widget.groupArgs != null
+        ? widget.groupArgs!.groupId
+        : widget.chatArgs!.targetId;
+    final title = widget.groupArgs != null
+        ? widget.groupArgs!.groupName
+        : widget.chatArgs!.title;
+
     context.pushNamed(
       RouteNames.chat,
       extra: ChatEntryArgs(
-        chatId: widget.args.chatId,
-        conversationType: widget.args.conversationType,
-        targetId: widget.args.targetId,
-        title: widget.args.title,
+        chatId: _chatId ?? widget.chatArgs?.chatId ?? '',
+        conversationType: conversationType,
+        targetId: targetId,
+        title: title,
         entryMode: ChatEntryMode.anchor,
         anchorSequence: item.sequence.trim().isNotEmpty ? item.sequence : null,
         anchorMessageId: item.messageId,
@@ -589,7 +632,6 @@ class _HighlightedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 无搜索关键词时，使用 emoji 渲染
     if (keyword.isEmpty || text.isEmpty) {
       return RichText(
         text: TextSpan(
@@ -604,7 +646,6 @@ class _HighlightedContent extends StatelessWidget {
         ),
       );
     }
-    // 有搜索关键词时，同时处理 emoji 渲染和高亮
     return RichText(
       text: TextSpan(
         children: _buildHighlightedEmojiSpans(),
@@ -617,7 +658,6 @@ class _HighlightedContent extends StatelessWidget {
     final spans = <InlineSpan>[];
     final lowerKeyword = keyword.toLowerCase();
 
-    // 先按 emoji token 分割文本，保留 token 位置信息
     final segments = <_EmojiSegment>[];
     var lastEnd = 0;
     for (final match in ChatEmojiCatalog.tokenRegExp.allMatches(normalized)) {
@@ -641,11 +681,10 @@ class _HighlightedContent extends StatelessWidget {
       ));
     }
 
-    // 对每个文本片段进行关键词高亮处理
     for (final segment in segments) {
       if (segment.isEmoji) {
-        // emoji 片段直接添加
-        final assets = ChatEmojiCatalog.candidateAssetsFor(segment.emojiToken ?? segment.text);
+        final assets = ChatEmojiCatalog.candidateAssetsFor(
+            segment.emojiToken ?? segment.text);
         if (assets.isNotEmpty) {
           spans.add(WidgetSpan(
             alignment: PlaceholderAlignment.middle,
@@ -655,34 +694,39 @@ class _HighlightedContent extends StatelessWidget {
             ),
           ));
         } else {
-          spans.add(TextSpan(text: segment.text, style: const TextStyle(
-            fontSize: 14,
-            height: 1.6,
-            color: Color(0xFF4E5666),
-          )));
+          spans.add(TextSpan(
+              text: segment.text,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: Color(0xFF4E5666),
+              )));
         }
       } else {
-        // 文本片段进行关键词高亮
         final lowerSource = segment.text.toLowerCase();
         var searchStart = 0;
         while (true) {
           final idx = lowerSource.indexOf(lowerKeyword, searchStart);
           if (idx < 0) {
             if (searchStart < segment.text.length) {
-              spans.add(TextSpan(text: segment.text.substring(searchStart), style: const TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: Color(0xFF4E5666),
-              )));
+              spans.add(TextSpan(
+                  text: segment.text.substring(searchStart),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF4E5666),
+                  )));
             }
             break;
           }
           if (idx > searchStart) {
-            spans.add(TextSpan(text: segment.text.substring(searchStart, idx), style: const TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: Color(0xFF4E5666),
-            )));
+            spans.add(TextSpan(
+                text: segment.text.substring(searchStart, idx),
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Color(0xFF4E5666),
+                )));
           }
           spans.add(TextSpan(
             text: segment.text.substring(idx, idx + keyword.length),
