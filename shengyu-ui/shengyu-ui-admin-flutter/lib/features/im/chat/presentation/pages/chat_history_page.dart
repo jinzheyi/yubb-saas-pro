@@ -58,11 +58,13 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   DateTime? _endTime;
   String? _chatId;
   _HistoryFilter _filter = _HistoryFilter.all;
+  String _currentKeyword = '';
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    _loadInitialData();
   }
 
   @override
@@ -489,9 +491,25 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   }
 
   Widget _buildMessageBubble(Message message, ChatHistoryItem item) {
+    final keyword = _getSearchKeyword();
+    final isTextWithKeyword = message.type == MessageType.text && keyword.isNotEmpty;
+    
+    if (isTextWithKeyword) {
+      return GestureDetector(
+        onTap: () => _handleMessageTap(item),
+        onLongPress: () => _showItemMenu(item),
+        behavior: HitTestBehavior.translucent,
+        child: _CustomTextMessageBubble(
+          message: message,
+          keyword: keyword,
+        ),
+      );
+    }
+    
     return GestureDetector(
       onTap: () => _handleMessageTap(item),
       onLongPress: () => _showItemMenu(item),
+      behavior: HitTestBehavior.translucent,
       child: MessageBubbleFactory.build(
         message,
         onRetryMessage: (_) {},
@@ -582,13 +600,64 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     );
   }
 
+  String _getSearchKeyword() {
+    return _searched ? _currentKeyword : _searchController.text.trim();
+  }
+
   void _handleScroll() {
-    if (!_scrollController.hasClients || _loading || !_hasMore || !_searched) {
+    if (!_scrollController.hasClients || _loading || !_hasMore) {
       return;
     }
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 160) {
-      _search(reset: false);
+      final keyword = _searchController.text.trim();
+      if (keyword.isNotEmpty || _searched) {
+        _search(reset: false);
+      } else {
+        _loadMoreInitial();
+      }
+    }
+  }
+
+  Future<void> _loadMoreInitial() async {
+    if (_loading) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+    });
+    try {
+      final effectiveChatId = await _resolveChatId();
+      final nextPage = _pageNo + 1;
+      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+            chatId: effectiveChatId,
+            keyword: '',
+            category: _filter.apiValue,
+            startTime: _startTime == null
+                ? null
+                : '${DateFormat('yyyy-MM-dd').format(_startTime!)} 00:00:00',
+            endTime: _endTime == null
+                ? null
+                : '${DateFormat('yyyy-MM-dd').format(_endTime!)} 23:59:59',
+            pageNo: nextPage,
+            pageSize: _pageSize,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _records = <ChatHistoryItem>[..._records, ...records];
+        _pageNo = nextPage;
+        _hasMore = records.length >= _pageSize;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
@@ -602,8 +671,11 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       _pageNo = 1;
       _hasMore = true;
     });
-    if (_searched) {
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty) {
       await _search(reset: true);
+    } else {
+      await _loadInitialData();
     }
   }
 
@@ -616,9 +688,11 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         setState(() {
           _records = const [];
           _searched = false;
+          _currentKeyword = '';
           _pageNo = 1;
           _hasMore = true;
         });
+        await _loadInitialData();
       }
       return;
     }
@@ -631,6 +705,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       _loading = true;
       if (reset) {
         _searched = true;
+        _currentKeyword = keyword;
       }
     });
     try {
@@ -720,8 +795,11 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         _endTime = picked;
       });
     }
-    if (_searched) {
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty || _searched) {
       await _search(reset: true);
+    } else {
+      await _loadInitialData();
     }
   }
 
@@ -740,16 +818,59 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       setState(() {
         _searched = false;
       });
+      _loadInitialData();
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty || _searched) {
+      return;
+    }
+    if (_loading) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _pageNo = 1;
+      _hasMore = true;
+    });
+    try {
+      final effectiveChatId = await _resolveChatId();
+      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+            chatId: effectiveChatId,
+            keyword: '',
+            category: _filter.apiValue,
+            startTime: _startTime == null
+                ? null
+                : '${DateFormat('yyyy-MM-dd').format(_startTime!)} 00:00:00',
+            endTime: _endTime == null
+                ? null
+                : '${DateFormat('yyyy-MM-dd').format(_endTime!)} 23:59:59',
+            pageNo: 1,
+            pageSize: _pageSize,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _records = records;
+        _pageNo = 1;
+        _hasMore = records.length >= _pageSize;
+        _loading = false;
+        _searched = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
   void _openChatAnchor(ChatHistoryItem item) {
-    if (item.messageType == MessageType.file ||
-        item.messageType == MessageType.image ||
-        item.messageType == MessageType.video) {
-      _openMediaAnchor(item);
-      return;
-    }
     if (item.messageId.trim().isEmpty || item.messageId.trim() == '0') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -920,7 +1041,10 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         ListTile(
           leading: const Icon(Icons.download_rounded),
           title: Text(strings.groupFilesActionDownload),
-          onTap: () => Navigator.of(context).pop('download'),
+          onTap: () {
+            Navigator.of(context).pop('download');
+            _downloadItem(item);
+          },
         ),
       );
     }
@@ -929,7 +1053,10 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         ListTile(
           leading: const Icon(Icons.forward_rounded),
           title: Text(strings.groupFilesActionForward),
-          onTap: () => Navigator.of(context).pop('forward'),
+          onTap: () {
+            Navigator.of(context).pop('forward');
+            _forwardItem(item);
+          },
         ),
       );
     }
@@ -937,7 +1064,10 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       ListTile(
         leading: const Icon(Icons.arrow_back_rounded),
         title: const Text('定位到聊天位置'),
-        onTap: () => Navigator.of(context).pop('locate'),
+        onTap: () {
+          Navigator.of(context).pop('locate');
+          _openChatAnchor(item);
+        },
       ),
     );
 
@@ -945,7 +1075,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       return;
     }
 
-    final action = await showModalBottomSheet<String>(
+    await showModalBottomSheet<String>(
       context: context,
       builder: (dialogContext) {
         return SafeArea(
@@ -956,20 +1086,6 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         );
       },
     );
-    if (!mounted || action == null) {
-      return;
-    }
-    switch (action) {
-      case 'download':
-        await _downloadItem(item);
-        break;
-      case 'forward':
-        _forwardItem(item);
-        break;
-      case 'locate':
-        _openChatAnchor(item);
-        break;
-    }
   }
 
   bool _canDownloadMessageType(MessageType type) {
@@ -1318,6 +1434,42 @@ class _HighlightedContent extends StatelessWidget {
       }
     }
     return spans;
+  }
+}
+
+class _CustomTextMessageBubble extends StatelessWidget {
+  const _CustomTextMessageBubble({
+    required this.message,
+    required this.keyword,
+  });
+
+  final Message message;
+  final String keyword;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOutgoing = message.isOutgoing;
+    final alignment =
+        isOutgoing ? Alignment.centerRight : Alignment.centerLeft;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Align(
+        alignment: alignment,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isOutgoing ? const Color(0xFF246BFD) : const Color(0xFFF3F5F9),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: _HighlightedContent(
+            text: message.content,
+            keyword: keyword,
+          ),
+        ),
+      ),
+    );
   }
 }
 
