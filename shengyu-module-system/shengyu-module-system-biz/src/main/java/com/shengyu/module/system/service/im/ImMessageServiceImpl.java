@@ -1572,9 +1572,49 @@ public class ImMessageServiceImpl implements ImMessageService {
                     break;
                 case 2: // 图片消息
                     messageType = MessageType.IMAGE;
-                    messageBody = ImageMessage.newBuilder()
-                            .setUrl(sendReqVO.getContent())
-                            .build();
+                    String imageUrl = sendReqVO.getContent();
+                    String imageThumbnailUrl = "";
+                    String imageFileName = "";
+                    int imageWidth = 0;
+                    int imageHeight = 0;
+                    long imageSize = 0L;
+                    if (StrUtil.isNotBlank(sendReqVO.getExtra())) {
+                        try {
+                            JSONObject obj = JSONUtil.parseObj(sendReqVO.getExtra());
+                            if (StrUtil.isBlank(imageUrl)) {
+                                imageUrl = obj.getStr("url", "");
+                            }
+                            imageThumbnailUrl = obj.getStr("thumbnailUrl", "");
+                            imageFileName = obj.getStr("fileName", "");
+                            imageWidth = obj.getInt("width", 0);
+                            imageHeight = obj.getInt("height", 0);
+                            imageSize = obj.getLong("size", 0L);
+                        } catch (Exception ignore) {
+                            // ignore
+                        }
+                    }
+                    if (StrUtil.isBlank(imageFileName) && StrUtil.isNotBlank(imageUrl)) {
+                        int idx = imageUrl.lastIndexOf('/');
+                        imageFileName = idx >= 0 ? imageUrl.substring(idx + 1) : imageUrl;
+                    }
+                    ImageMessage.Builder imageBuilder = ImageMessage.newBuilder()
+                            .setUrl(imageUrl == null ? "" : imageUrl)
+                            .setThumbnailUrl(imageThumbnailUrl == null ? "" : imageThumbnailUrl)
+                            .setFileName(imageFileName == null ? "" : imageFileName)
+                            .setWidth(imageWidth)
+                            .setHeight(imageHeight)
+                            .setSize(imageSize);
+                    messageBody = imageBuilder.build();
+                    if (StrUtil.isBlank(headerExtra)) {
+                        JSONObject obj = JSONUtil.createObj();
+                        obj.set("url", imageUrl);
+                        obj.set("thumbnailUrl", imageThumbnailUrl);
+                        obj.set("fileName", imageFileName);
+                        obj.set("width", imageWidth);
+                        obj.set("height", imageHeight);
+                        obj.set("size", imageSize);
+                        headerExtra = obj.toString();
+                    }
                     break;
                 case 3: // 语音消息
                     messageType = MessageType.VOICE;

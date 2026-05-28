@@ -23,6 +23,7 @@ class SendUploadedMessageUseCase {
       height: height,
       size: upload.file.size,
       clientMessageId: clientMessageId,
+      fileName: upload.file.name,
       receiverId: upload.scope.kind == UploadScopeKind.directChat
           ? upload.scope.requireTargetUserId()
           : null,

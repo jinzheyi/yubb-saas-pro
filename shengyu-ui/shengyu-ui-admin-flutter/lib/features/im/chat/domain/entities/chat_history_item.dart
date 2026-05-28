@@ -12,6 +12,7 @@ class ChatHistoryItem {
     required this.messageType,
     required this.sentAt,
     this.systemEventKey,
+    this.extra,
   });
 
   final String messageId;
@@ -24,4 +25,5 @@ class ChatHistoryItem {
   final MessageType messageType;
   final DateTime? sentAt;
   final String? systemEventKey;
+  final String? extra;
 }

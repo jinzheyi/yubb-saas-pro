@@ -17,6 +17,7 @@ class ChatHistoryItemDto {
     required this.messageType,
     required this.sentAt,
     this.systemEventKey,
+    this.extraRaw,
   });
 
   final String messageId;
@@ -29,6 +30,7 @@ class ChatHistoryItemDto {
   final MessageType messageType;
   final DateTime? sentAt;
   final String? systemEventKey;
+  final String? extraRaw;
 
   factory ChatHistoryItemDto.fromJson(Map<String, dynamic> json) {
     final rawType = json['type']?.toString() ?? json['messageType']?.toString();
@@ -38,6 +40,15 @@ class ChatHistoryItemDto {
     final resolvedType = isSystemTip
         ? MessageType.system
         : _parseMessageType(rawType);
+    
+    String extraString = '';
+    final rawExtra = json['extra'];
+    if (rawExtra is String) {
+      extraString = rawExtra;
+    } else if (rawExtra != null) {
+      extraString = jsonEncode(rawExtra);
+    }
+    
     return ChatHistoryItemDto(
       messageId: '${json['messageId'] ?? json['id'] ?? ''}',
       chatId: '${json['chatId'] ?? json['conversationId'] ?? ''}',
@@ -64,6 +75,7 @@ class ChatHistoryItemDto {
           _millisToDateTime(json['timestamp']) ??
           _millisToDateTime(json['createTime']),
       systemEventKey: systemEventKey,
+      extraRaw: extraString,
     );
   }
 

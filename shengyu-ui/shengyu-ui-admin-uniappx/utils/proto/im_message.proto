@@ -175,6 +175,7 @@ message ImageMessage {
   int32 height = 4;
   // 文件大小（字节）
   int64 size = 5;
+  string fileName = 6;
 }
 
 // 语音消息

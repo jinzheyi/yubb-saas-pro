@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
@@ -10,13 +12,18 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_arg
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
@@ -253,6 +260,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           );
         }
         final item = _records[index];
+        final message = _toMessage(item);
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(16),
@@ -260,62 +268,68 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: InkWell(
-            onTap: () => _openChatAnchor(item),
-            onLongPress: () => _showItemMenu(item),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    ContactsInitialAvatar(
-                      name: item.senderName,
-                      color: _avatarColorFor(item.senderId),
-                      avatarUrl: item.senderAvatar,
-                      size: 40,
-                      borderRadius: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.messageType == MessageType.system
-                                ? strings.chatGroupSystemSender
-                                : (item.senderName.trim().isEmpty
-                                    ? strings.chatHistoryUnknownUser
-                                    : item.senderName.trim()),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF202531),
-                            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ContactsInitialAvatar(
+                    name: item.senderName,
+                    color: _avatarColorFor(item.senderId),
+                    avatarUrl: item.senderAvatar,
+                    size: 40,
+                    borderRadius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.messageType == MessageType.system
+                              ? strings.chatGroupSystemSender
+                              : (item.senderName.trim().isEmpty
+                                  ? strings.chatHistoryUnknownUser
+                                  : item.senderName.trim()),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF202531),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatTime(strings, item.sentAt),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF98A1B2),
-                            ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatTime(strings, item.sentAt),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF98A1B2),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    _buildMessageIcon(item),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 52),
+                child: _buildMessageBubble(message, item),
+              ),
+              if ((item.messageType == MessageType.image || item.messageType == MessageType.video) &&
+                  message.extra.fileName?.trim().isNotEmpty == true)
                 Padding(
-                  padding: const EdgeInsets.only(left: 52),
-                  child: _HighlightedContent(
-                    text: _contentText(strings, item),
-                    keyword: _searchController.text.trim(),
+                  padding: const EdgeInsets.only(left: 52, top: 8),
+                  child: Text(
+                    message.extra.fileName!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         );
       },
@@ -355,6 +369,217 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       MessageType.contactCard => Icons.person_outlined,
       _ => null,
     };
+  }
+
+  Message _toMessage(ChatHistoryItem item) {
+    final extra = _parseMessageExtra(item);
+    return Message(
+      messageId: item.messageId,
+      chatId: item.chatId,
+      senderId: item.senderId,
+      senderName: item.senderName,
+      senderAvatar: item.senderAvatar,
+      type: item.messageType,
+      status: MessageStatus.delivered,
+      content: item.content,
+      sentAt: item.sentAt ?? DateTime.now(),
+      isOutgoing: false,
+      sequence: item.sequence,
+      extra: extra,
+    );
+  }
+
+  MessageExtra _parseMessageExtra(ChatHistoryItem item) {
+    final extraData = _parseExtraFromItem(item);
+    if (extraData.isNotEmpty) {
+      return MessageExtra(
+        fileId: extraData['fileId'],
+        fileUrl: extraData['url']?.isNotEmpty == true ? extraData['url'] : extraData['fileUrl'],
+        fileName: extraData['fileName'],
+        mimeType: extraData['fileType']?.isNotEmpty == true ? extraData['fileType'] : extraData['mimeType'],
+        fileType: extraData['fileType'],
+        fileSize: int.tryParse(extraData['size'] ?? extraData['fileSize'] ?? ''),
+        thumbnailUrl: extraData['thumbnailUrl'],
+        thumbFileId: extraData['thumbFileId'],
+        width: int.tryParse(extraData['width'] ?? ''),
+        height: int.tryParse(extraData['height'] ?? ''),
+        duration: int.tryParse(extraData['duration'] ?? ''),
+        durationMs: int.tryParse(extraData['durationMs'] ?? ''),
+        stickerId: extraData['stickerId'],
+        contactUserId: extraData['contactUserId'],
+        contactDisplayName: extraData['contactDisplayName'],
+        contactAvatar: extraData['contactAvatar'],
+        locationName: extraData['locationName'],
+        locationAddress: extraData['locationAddress'],
+        locationLatitude: double.tryParse(extraData['locationLatitude'] ?? ''),
+        locationLongitude: double.tryParse(extraData['locationLongitude'] ?? ''),
+        customType: extraData['customType'],
+      );
+    }
+
+    final content = item.content.trim();
+    if (content.isEmpty || !content.startsWith('{') || !content.endsWith('}')) {
+      return MessageExtra(
+        fileName: _extractPlainText(item),
+      );
+    }
+    try {
+      final map = jsonDecode(content) as Map<String, dynamic>;
+      return MessageExtra(
+        fileId: map['fileId']?.toString(),
+        fileUrl: map['fileUrl']?.toString(),
+        fileName: map['fileName']?.toString(),
+        mimeType: map['mimeType']?.toString(),
+        fileType: map['fileType']?.toString(),
+        fileSize: int.tryParse(map['fileSize']?.toString() ?? ''),
+        thumbnailUrl: map['thumbnailUrl']?.toString(),
+        thumbFileId: map['thumbFileId']?.toString(),
+        width: int.tryParse(map['width']?.toString() ?? ''),
+        height: int.tryParse(map['height']?.toString() ?? ''),
+        duration: int.tryParse(map['duration']?.toString() ?? ''),
+        durationMs: int.tryParse(map['durationMs']?.toString() ?? ''),
+        stickerId: map['stickerId']?.toString(),
+        contactUserId: map['contactUserId']?.toString(),
+        contactDisplayName: map['contactDisplayName']?.toString(),
+        contactAvatar: map['contactAvatar']?.toString(),
+        locationName: map['locationName']?.toString(),
+        locationAddress: map['locationAddress']?.toString(),
+        locationLatitude: double.tryParse(map['locationLatitude']?.toString() ?? ''),
+        locationLongitude: double.tryParse(map['locationLongitude']?.toString() ?? ''),
+        customType: map['customType']?.toString(),
+      );
+    } catch (_) {
+      return MessageExtra(
+        fileName: _extractPlainText(item),
+      );
+    }
+  }
+
+  Map<String, String> _parseExtraFromItem(ChatHistoryItem item) {
+    final extra = item.extra?.trim() ?? '';
+    if (extra.isEmpty || !extra.startsWith('{') || !extra.endsWith('}')) {
+      return {};
+    }
+    try {
+      final map = jsonDecode(extra) as Map<String, dynamic>;
+      final result = <String, String>{};
+      for (final entry in map.entries) {
+        result[entry.key] = entry.value?.toString() ?? '';
+      }
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  String _extractPlainText(ChatHistoryItem item) {
+    final content = item.content.trim();
+    if (content.isEmpty) {
+      return '';
+    }
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        return map['fileName']?.toString() ?? map['text']?.toString() ?? '';
+      } catch (_) {
+        return '';
+      }
+    }
+    return content;
+  }
+
+  Widget _buildMessageBubble(Message message, ChatHistoryItem item) {
+    return GestureDetector(
+      onTap: () => _handleMessageTap(item),
+      onLongPress: () => _showItemMenu(item),
+      child: MessageBubbleFactory.build(
+        message,
+        onRetryMessage: (_) {},
+        onOpenMessage: (_) => _handleMessageTap(item),
+        onLongPressMessage: (_, __) => _showItemMenu(item),
+        showOutgoingStatusFooter: false,
+      ),
+    );
+  }
+
+  void _handleMessageTap(ChatHistoryItem item) {
+    if (item.messageType == MessageType.file ||
+        item.messageType == MessageType.image ||
+        item.messageType == MessageType.video) {
+      _openMediaAnchor(item);
+      return;
+    }
+    final message = _toMessage(item);
+    if (_isLinkMessage(message)) {
+      _openLinkMessage(message);
+      return;
+    }
+  }
+
+  bool _isLinkMessage(Message message) {
+    if (message.type == MessageType.custom) {
+      final customType = message.extra.customType?.trim().toUpperCase() ?? '';
+      if (customType == 'LINK' ||
+          customType == 'URL' ||
+          customType == 'WEB_LINK') {
+        return true;
+      }
+    }
+    final content = message.content.trim();
+    if (content.isNotEmpty) {
+      final directUrl = RegExp(r'^https?:\/\/\S+$', caseSensitive: false);
+      final wwwUrl = RegExp(r'^www\.\S+$', caseSensitive: false);
+      if (directUrl.hasMatch(content) || wwwUrl.hasMatch(content)) {
+        return true;
+      }
+      if (content.startsWith('{') && content.endsWith('}')) {
+        try {
+          final map = jsonDecode(content) as Map<String, dynamic>;
+          final url = map['url']?.toString().trim() ?? '';
+          if (url.isNotEmpty) {
+            return true;
+          }
+        } catch (_) {}
+      }
+    }
+    return false;
+  }
+
+  void _openLinkMessage(Message message) {
+    final strings = AppLocalizations.of(context);
+    String rawUrl = '';
+    final content = message.content.trim();
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        rawUrl = map['url']?.toString().trim() ?? '';
+      } catch (_) {}
+    }
+    if (rawUrl.isEmpty && !content.startsWith('{')) {
+      rawUrl = content;
+    }
+    if (rawUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.chatOpenFailed)),
+      );
+      return;
+    }
+    final normalized = rawUrl.startsWith('www.') ? 'https://$rawUrl' : rawUrl;
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.chatOpenFailed)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.browser,
+      extra: BrowserPageArgs(
+        url: uri.toString(),
+        title: strings.chatMessageDetailTitle,
+        source: 'message',
+      ),
+    );
   }
 
   void _handleScroll() {
@@ -569,10 +794,14 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     }
     final contentData = _parseContentData(item);
     final fileId = contentData['fileId'] ?? '';
-    final fileUrl = contentData['fileUrl'] ?? '';
+    final fileUrl = contentData['fileUrl']?.isNotEmpty == true
+        ? contentData['fileUrl']!
+        : (contentData['url'] ?? '');
     final fileName = contentData['fileName'] ?? '';
-    final mimeType = contentData['mimeType'] ?? '';
-    final fileSize = int.tryParse(contentData['fileSize'] ?? '0') ?? 0;
+    final mimeType = contentData['mimeType']?.isNotEmpty == true
+        ? contentData['mimeType']!
+        : (contentData['fileType'] ?? '');
+    final fileSize = int.tryParse(contentData['fileSize'] ?? contentData['size'] ?? '0') ?? 0;
 
     if (item.messageType == MessageType.image) {
       _previewImageFile(fileId, fileUrl, fileName);
@@ -608,6 +837,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   Map<String, String> _parseContentData(ChatHistoryItem item) {
     final content = item.content.trim();
+    
+    final extraData = _parseExtraFromItem(item);
+    if (extraData.isNotEmpty) {
+      return extraData;
+    }
+    
     if (content.isEmpty) {
       return {};
     }
@@ -675,31 +910,48 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   }
 
   Future<void> _showItemMenu(ChatHistoryItem item) async {
-    if (item.messageType != MessageType.file &&
-        item.messageType != MessageType.image &&
-        item.messageType != MessageType.video &&
-        item.messageType != MessageType.voice) {
+    final strings = AppLocalizations.of(context);
+    final canDownload = _canDownloadMessageType(item.messageType);
+    final canForward = _canForwardMessageType(item.messageType);
+
+    final menuItems = <Widget>[];
+    if (canDownload) {
+      menuItems.add(
+        ListTile(
+          leading: const Icon(Icons.download_rounded),
+          title: Text(strings.groupFilesActionDownload),
+          onTap: () => Navigator.of(context).pop('download'),
+        ),
+      );
+    }
+    if (canForward) {
+      menuItems.add(
+        ListTile(
+          leading: const Icon(Icons.forward_rounded),
+          title: Text(strings.groupFilesActionForward),
+          onTap: () => Navigator.of(context).pop('forward'),
+        ),
+      );
+    }
+    menuItems.add(
+      ListTile(
+        leading: const Icon(Icons.arrow_back_rounded),
+        title: const Text('定位到聊天位置'),
+        onTap: () => Navigator.of(context).pop('locate'),
+      ),
+    );
+
+    if (menuItems.isEmpty) {
       return;
     }
-    final strings = AppLocalizations.of(context);
+
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (dialogContext) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.download_rounded),
-                title: Text(strings.groupFilesActionDownload),
-                onTap: () => Navigator.of(dialogContext).pop('download'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.forward_rounded),
-                title: Text(strings.groupFilesActionForward),
-                onTap: () => Navigator.of(dialogContext).pop('forward'),
-              ),
-            ],
+            children: menuItems,
           ),
         );
       },
@@ -714,19 +966,46 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       case 'forward':
         _forwardItem(item);
         break;
+      case 'locate':
+        _openChatAnchor(item);
+        break;
     }
+  }
+
+  bool _canDownloadMessageType(MessageType type) {
+    return type == MessageType.file ||
+        type == MessageType.image ||
+        type == MessageType.video ||
+        type == MessageType.voice;
+  }
+
+  bool _canForwardMessageType(MessageType type) {
+    return type != MessageType.voice &&
+        type != MessageType.location &&
+        type != MessageType.system;
   }
 
   Future<void> _downloadItem(ChatHistoryItem item) async {
     final strings = AppLocalizations.of(context);
     try {
       final contentData = _parseContentData(item);
-      final fileId = contentData['fileId'] ?? item.messageId;
+      String fileId = contentData['fileId'] ?? '';
       final fileName = contentData['fileName'] ?? _contentText(strings, item);
-      if (fileId.isEmpty) {
-        throw StateError('missing file id');
+      
+      Uri uri;
+      if (fileId.isNotEmpty) {
+        uri = await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId);
+      } else {
+        final directUrl = contentData['url']?.isNotEmpty == true
+            ? contentData['url']!
+            : item.content.trim();
+        if (directUrl.isEmpty) {
+          throw StateError('missing file id and url');
+        }
+        fileId = item.messageId;
+        uri = Uri.parse(directUrl);
       }
-      final uri = await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId);
+      
       await ref.read(fileDownloadServiceProvider).download(uri, suggestedFileName: fileName);
       if (!mounted) {
         return;

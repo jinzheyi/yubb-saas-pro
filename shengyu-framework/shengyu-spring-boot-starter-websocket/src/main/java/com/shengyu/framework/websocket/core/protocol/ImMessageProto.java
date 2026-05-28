@@ -273,7 +273,7 @@ public final class ImMessageProto {
     internal_static_ImageMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ImageMessage_descriptor,
-        new java.lang.String[] { "Url", "ThumbnailUrl", "Width", "Height", "Size", });
+        new java.lang.String[] { "Url", "ThumbnailUrl", "Width", "Height", "Size", "FileName", });
     internal_static_VoiceMessage_descriptor =
       getDescriptor().getMessageTypes().get(9);
     internal_static_VoiceMessage_fieldAccessorTable = new

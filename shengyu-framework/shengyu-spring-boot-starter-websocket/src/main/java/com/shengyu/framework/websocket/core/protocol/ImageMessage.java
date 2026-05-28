@@ -22,6 +22,7 @@ private static final long serialVersionUID = 0L;
   private ImageMessage() {
     url_ = "";
     thumbnailUrl_ = "";
+    fileName_ = "";
   }
 
   @java.lang.Override
@@ -186,6 +187,52 @@ private static final long serialVersionUID = 0L;
     return size_;
   }
 
+  public static final int FILENAME_FIELD_NUMBER = 6;
+  private volatile java.lang.Object fileName_;
+  /**
+   * <pre>
+   * 文件名
+   * </pre>
+   *
+   * <code>string fileName = 6;</code>
+   * @return The fileName.
+   */
+  @java.lang.Override
+  public java.lang.String getFileName() {
+    java.lang.Object ref = fileName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      fileName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * 文件名
+   * </pre>
+   *
+   * <code>string fileName = 6;</code>
+   * @return The bytes for fileName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFileNameBytes() {
+    java.lang.Object ref = fileName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      fileName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -215,6 +262,9 @@ private static final long serialVersionUID = 0L;
     if (size_ != 0L) {
       output.writeInt64(5, size_);
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(fileName_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 6, fileName_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -242,6 +292,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(5, size_);
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(fileName_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, fileName_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -267,7 +320,9 @@ private static final long serialVersionUID = 0L;
         != other.getHeight()) return false;
     if (getSize()
         != other.getSize()) return false;
-    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+    if (!getFileName()
+        .equals(other.getFileName())) return false;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return true;
     return true;
   }
 
@@ -289,6 +344,8 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SIZE_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getSize());
+    hash = (37 * hash) + FILENAME_FIELD_NUMBER;
+    hash = (53 * hash) + getFileName().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -431,6 +488,8 @@ private static final long serialVersionUID = 0L;
 
       size_ = 0L;
 
+      fileName_ = "";
+
       return this;
     }
 
@@ -462,6 +521,7 @@ private static final long serialVersionUID = 0L;
       result.width_ = width_;
       result.height_ = height_;
       result.size_ = size_;
+      result.fileName_ = fileName_;
       onBuilt();
       return result;
     }
@@ -527,6 +587,10 @@ private static final long serialVersionUID = 0L;
       if (other.getSize() != 0L) {
         setSize(other.getSize());
       }
+      if (!other.getFileName().isEmpty()) {
+        fileName_ = other.fileName_;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -578,6 +642,11 @@ private static final long serialVersionUID = 0L;
 
               break;
             } // case 40
+            case 50: {
+              fileName_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -914,6 +983,105 @@ private static final long serialVersionUID = 0L;
       onChanged();
       return this;
     }
+
+    private java.lang.Object fileName_ = "";
+    /**
+     * <pre>
+     * 文件名
+     * </pre>
+     *
+     * <code>string fileName = 6;</code>
+     * @return The fileName.
+     */
+    @java.lang.Override
+    public java.lang.String getFileName() {
+      java.lang.Object ref = fileName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        fileName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 文件名
+     * </pre>
+     *
+     * <code>string fileName = 6;</code>
+     * @return The bytes for fileName.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getFileNameBytes() {
+      java.lang.Object ref = fileName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        fileName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 文件名
+     * </pre>
+     *
+     * <code>string fileName = 6;</code>
+     * @param value The fileName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFileName(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      fileName_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 文件名
+     * </pre>
+     *
+     * <code>string fileName = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFileName() {
+      
+      fileName_ = getDefaultInstance().getFileName();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 文件名
+     * </pre>
+     *
+     * <code>string fileName = 6;</code>
+     * @param value The bytes for fileName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFileNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      fileName_ = value;
+      onChanged();
+      return this;
+    }
+
     @java.lang.Override
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {

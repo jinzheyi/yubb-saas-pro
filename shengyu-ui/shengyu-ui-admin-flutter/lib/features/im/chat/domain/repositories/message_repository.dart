@@ -47,6 +47,7 @@ abstract class MessageRepository {
     required String clientMessageId,
     String? receiverId,
     String? groupId,
+    String? fileName,
   });
 
   Future<SendMessageResult> sendVideoMessage({

@@ -236,6 +236,7 @@ class MessageRepositoryImpl implements MessageRepository {
             messageType: item.messageType,
             sentAt: item.sentAt,
             systemEventKey: item.systemEventKey,
+            extra: item.extraRaw,
           ),
         )
         .toList();
@@ -387,6 +388,7 @@ class MessageRepositoryImpl implements MessageRepository {
     required String clientMessageId,
     String? receiverId,
     String? groupId,
+    String? fileName,
   }) async {
     final dto = await _remoteDataSource.sendImageMessage(
       chatId: chatId,
@@ -399,6 +401,7 @@ class MessageRepositoryImpl implements MessageRepository {
       clientMessageId: clientMessageId,
       receiverId: receiverId,
       groupId: groupId,
+      fileName: fileName,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }

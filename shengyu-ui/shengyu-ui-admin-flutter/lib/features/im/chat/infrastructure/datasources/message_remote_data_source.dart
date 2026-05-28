@@ -253,6 +253,7 @@ class MessageRemoteDataSource {
     required String clientMessageId,
     String? receiverId,
     String? groupId,
+    String? fileName,
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
@@ -261,6 +262,7 @@ class MessageRemoteDataSource {
       'width': width,
       'height': height,
       'size': size,
+      if (fileName != null && fileName.isNotEmpty) 'fileName': fileName,
     });
     final response = await dio.post(
       '/system/im/message/send',

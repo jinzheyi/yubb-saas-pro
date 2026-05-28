@@ -334,6 +334,19 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             if (message.getHeader().getMessageType() == MessageType.VOICE) {
                 return extra;
             }
+            if (message.getHeader().getMessageType() == MessageType.IMAGE) {
+                ImageMessage imageMsg = ImageMessage.parseFrom(message.getBody());
+                JSONObject obj = JSONUtil.createObj();
+                obj.set("url", imageMsg.getUrl());
+                obj.set("thumbnailUrl", imageMsg.getThumbnailUrl());
+                obj.set("width", imageMsg.getWidth());
+                obj.set("height", imageMsg.getHeight());
+                obj.set("size", imageMsg.getSize());
+                if (StrUtil.isNotBlank(imageMsg.getFileName())) {
+                    obj.set("fileName", imageMsg.getFileName());
+                }
+                return obj.toString();
+            }
             if (message.getHeader().getMessageType() == MessageType.FILE) {
                 FileMessage fileMsg = FileMessage.parseFrom(message.getBody());
                 JSONObject obj = JSONUtil.createObj();
