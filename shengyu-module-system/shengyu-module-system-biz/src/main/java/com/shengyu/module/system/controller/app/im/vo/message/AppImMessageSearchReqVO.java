@@ -24,7 +24,7 @@ public class AppImMessageSearchReqVO extends PageParam {
 
     @Schema(description = "搜索关键词", requiredMode = Schema.RequiredMode.REQUIRED, example = "会议")
     @NotBlank(message = "{validation.im.search_keyword.required}")
-    @Size(min = 2, max = 64, message = "{validation.im.search_keyword.length}")
+    @Size(min = 1, max = 64, message = "{validation.im.search_keyword.length}")
     private String keyword;
 
     @Schema(description = "消息类型(可选)", example = "8")

@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -78,23 +79,52 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F7FB),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFF3F4F8),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: TextField(
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _search(reset: true),
-                      decoration: InputDecoration(
-                        icon: const AppIcon(
-                          AppIconKind.search,
-                          size: 18,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          ShengyuIconFont.chaxun,
+                          size: 16,
                           color: Color(0xFF98A1B2),
                         ),
-                        hintText: strings.chatHistorySearchPlaceholder,
-                        border: InputBorder.none,
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            textInputAction: TextInputAction.search,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF202531),
+                            ),
+                            onSubmitted: (_) => _search(reset: true),
+                            decoration: InputDecoration(
+                              hintText: strings.chatHistorySearchPlaceholder,
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              isCollapsed: true,
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF98A1B2),
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (_searchController.text.trim().isNotEmpty)
+                          InkWell(
+                            onTap: () => _search(reset: true),
+                            child: const Icon(
+                              ShengyuIconFont.fasong,
+                              size: 16,
+                              color: Color(0xFF98A1B2),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -268,18 +298,23 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   }
 
   Future<void> _search({required bool reset}) async {
-    final strings = AppLocalizations.of(context);
     final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.chatHistoryEnterKeyword)));
+      if (reset) {
+        setState(() {
+          _records = const [];
+          _searched = false;
+          _pageNo = 1;
+          _hasMore = true;
+        });
+      }
       return;
     }
     if (_loading) {
       return;
     }
     final nextPage = reset ? 1 : _pageNo + 1;
+    final strings = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       if (reset) {
