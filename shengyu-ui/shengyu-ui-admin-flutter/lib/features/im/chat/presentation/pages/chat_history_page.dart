@@ -78,6 +78,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
               children: [
                 Expanded(
                   child: Container(
+                    height: 36,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3F4F8),
                       borderRadius: BorderRadius.circular(18),
@@ -95,6 +96,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                           child: TextField(
                             controller: _searchController,
                             textInputAction: TextInputAction.search,
+                            onChanged: (_) => setState(() {}),
                             style: const TextStyle(
                               fontSize: 14,
                               color: Color(0xFF202531),
@@ -127,20 +129,6 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: () => _search(reset: true),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: Text(strings.searchAction),
                 ),
               ],
             ),
