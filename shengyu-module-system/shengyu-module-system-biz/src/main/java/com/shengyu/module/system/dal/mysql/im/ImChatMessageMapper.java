@@ -301,6 +301,11 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "<if test='endTime != null'>",
             "  AND m.send_time &lt;= #{endTime}",
             "</if>",
+            "<if test='onlyLink != null and onlyLink == true'>",
+            "  AND (",
+            "    (m.content LIKE '%http://%') OR (m.content LIKE '%https://%') OR (m.content LIKE '%www.%')",
+            "  )",
+            "</if>",
             "</script>"})
     Long countSearchPageByUser(@Param("tenantId") Long tenantId,
                                @Param("userId") Long userId,
@@ -309,7 +314,8 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
                                @Param("messageType") Integer messageType,
                                @Param("messageTypeList") List<Integer> messageTypeList,
                                @Param("startTime") java.time.LocalDateTime startTime,
-                               @Param("endTime") java.time.LocalDateTime endTime);
+                               @Param("endTime") java.time.LocalDateTime endTime,
+                               @Param("onlyLink") Boolean onlyLink);
 
     @Select({"<script>",
             "SELECT m.*",
@@ -354,6 +360,11 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "<if test='endTime != null'>",
             "  AND m.send_time &lt;= #{endTime}",
             "</if>",
+            "<if test='onlyLink != null and onlyLink == true'>",
+            "  AND (",
+            "    (m.content LIKE '%http://%') OR (m.content LIKE '%https://%') OR (m.content LIKE '%www.%')",
+            "  )",
+            "</if>",
             "ORDER BY m.send_time DESC, m.id DESC",
             "LIMIT #{limit} OFFSET #{offset}",
             "</script>"})
@@ -366,6 +377,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
                                                   @Param("startTime") java.time.LocalDateTime startTime,
                                                   @Param("endTime") java.time.LocalDateTime endTime,
                                                   @Param("offset") Long offset,
-                                                 @Param("limit") Long limit);
+                                                 @Param("limit") Long limit,
+                                                 @Param("onlyLink") Boolean onlyLink);
 
 }

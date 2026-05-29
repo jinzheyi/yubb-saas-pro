@@ -2924,14 +2924,15 @@ public class ImMessageServiceImpl implements ImMessageService {
             pageSize = 50;
         }
         List<Integer> messageTypeList = resolveSearchMessageTypeList(searchReqVO);
+        boolean onlyLink = "link".equalsIgnoreCase(category);
         long offset = (long) (pageNo - 1) * pageSize;
         Long total = chatMessageMapper.countSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
-                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime());
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), onlyLink);
         if (total == null || total <= 0) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
         List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
-                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize);
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize, onlyLink);
         List<AppImMessageRespVO> respVOList = messages.stream()
                 .filter(Objects::nonNull)
                 .map(message -> {
@@ -2973,12 +2974,12 @@ public class ImMessageServiceImpl implements ImMessageService {
         List<Integer> messageTypeList = resolveMediaMessageTypeList(pageReqVO.getFileType());
         long offset = (long) (pageNo - 1) * pageSize;
         Long total = chatMessageMapper.countSearchPageByUser(
-                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null);
+                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null, false);
         if (total == null || total <= 0) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
         List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByUser(
-                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null, offset, (long) pageSize);
+                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null, offset, (long) pageSize, false);
         List<AppImChatMediaRespVO> list = messages.stream()
                 .filter(Objects::nonNull)
                 .map(this::buildChatMediaRespVO)
