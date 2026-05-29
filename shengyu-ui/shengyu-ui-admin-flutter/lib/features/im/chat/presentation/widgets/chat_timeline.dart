@@ -23,6 +23,7 @@ class ChatTimeline extends StatelessWidget {
     this.onReplayVoiceMessage,
     this.onOpenMentionUser,
     this.onOpenQuotedMessage,
+    this.onOpenLink,
     this.onReeditRecalledMessage,
     required this.reeditNowTs,
     this.onOpenReadReceipt,
@@ -53,6 +54,7 @@ class ChatTimeline extends StatelessWidget {
   final ValueChanged<Message>? onReplayVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
+  final ValueChanged<String>? onOpenLink;
   final ValueChanged<Message>? onReeditRecalledMessage;
   final int reeditNowTs;
   final ValueChanged<Message>? onOpenReadReceipt;
@@ -146,6 +148,7 @@ class ChatTimeline extends StatelessWidget {
                       onReplayVoiceMessage: onReplayVoiceMessage,
                       onOpenMentionUser: onOpenMentionUser,
                       onOpenQuotedMessage: onOpenQuotedMessage,
+                      onOpenLink: onOpenLink,
                       onReeditRecalledMessage: onReeditRecalledMessage,
                       reeditNowTs: reeditNowTs,
                       onOpenReadReceipt: onOpenReadReceipt,
@@ -208,6 +211,7 @@ class _MessageRow extends StatelessWidget {
     required this.onReplayVoiceMessage,
     required this.onOpenMentionUser,
     required this.onOpenQuotedMessage,
+    this.onOpenLink,
     required this.onReeditRecalledMessage,
     required this.reeditNowTs,
     required this.onOpenReadReceipt,
@@ -235,6 +239,7 @@ class _MessageRow extends StatelessWidget {
   final ValueChanged<Message>? onReplayVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
+  final ValueChanged<String>? onOpenLink;
   final ValueChanged<Message>? onReeditRecalledMessage;
   final int reeditNowTs;
   final ValueChanged<Message>? onOpenReadReceipt;
@@ -287,6 +292,7 @@ class _MessageRow extends StatelessWidget {
           onReplayMessage: onReplayVoiceMessage,
           onOpenMentionUser: onOpenMentionUser,
           onOpenQuotedMessage: onOpenQuotedMessage,
+          onOpenLink: onOpenLink,
           quotePreviewChain: quotePreviewChain,
           voiceIsPlaying:
               activePlayingVoiceMessageId != null &&

@@ -34,6 +34,7 @@ class TextMessageBubble extends ConsumerWidget {
     this.onOpenReadReceipt,
     this.onOpenMentionUser,
     this.onOpenQuotedMessage,
+    this.onOpenLink,
     this.enableReadReceiptEntry = false,
     this.showOutgoingStatusFooter = true,
     this.outgoingFooterLabel,
@@ -47,6 +48,7 @@ class TextMessageBubble extends ConsumerWidget {
   final ValueChanged<Message>? onOpenReadReceipt;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
+  final ValueChanged<String>? onOpenLink;
   final bool enableReadReceiptEntry;
   final bool showOutgoingStatusFooter;
   final String? outgoingFooterLabel;
@@ -199,6 +201,7 @@ class TextMessageBubble extends ConsumerWidget {
     if (content.isEmpty) {
       return const <InlineSpan>[TextSpan(text: '')];
     }
+    final linkRanges = _extractLinkRanges(content);
     final mentionRanges = message.extra.mentions.isNotEmpty
         ? message.extra.mentions
               .where(
@@ -216,45 +219,70 @@ class TextMessageBubble extends ConsumerWidget {
               )
               .toList(growable: false)
         : _parseMentions(content);
-    if (mentionRanges.isEmpty) {
+    if (mentionRanges.isEmpty && linkRanges.isEmpty) {
       return buildEmojiInlineSpans(
         text: content,
         textStyle: TextStyle(color: defaultColor),
       );
     }
+    final combinedRanges = <_TextRange>[];
+    combinedRanges.addAll(mentionRanges);
+    combinedRanges.addAll(linkRanges);
+    combinedRanges.sort((a, b) => a.startIndex.compareTo(b.startIndex));
     var cursor = 0;
-    for (final item in mentionRanges) {
-      if (item.startIndex > cursor) {
+    for (final range in combinedRanges) {
+      if (range.startIndex > cursor) {
+        final textBefore = content.substring(cursor, range.startIndex);
         spans.addAll(
           buildEmojiInlineSpans(
-            text: content.substring(cursor, item.startIndex),
+            text: textBefore,
             textStyle: TextStyle(color: defaultColor),
           ),
         );
+        cursor = range.startIndex;
       }
-      spans.add(
-        TextSpan(
-          text: content.substring(item.startIndex, item.endIndex),
-          style: TextStyle(
-            color: message.isOutgoing
-                ? const Color(0xFFE4EDFF)
-                : const Color(0xFF246BFD),
-            fontWeight: FontWeight.w600,
+      if (range is _MentionRange) {
+        final mentionText = content.substring(range.startIndex, range.endIndex);
+        spans.add(
+          TextSpan(
+            text: mentionText,
+            style: TextStyle(
+              color: message.isOutgoing
+                  ? const Color(0xFFE4EDFF)
+                  : const Color(0xFF246BFD),
+              fontWeight: FontWeight.w600,
+            ),
+            recognizer:
+                range.userId == null ||
+                    range.userId!.isEmpty ||
+                    range.userId == '0' ||
+                    onOpenMentionUser == null
+                ? null
+                : (TapGestureRecognizer()
+                    ..onTap = () => onOpenMentionUser!(
+                      range.userId!,
+                      content.substring(range.startIndex + 1, range.endIndex),
+                    )),
           ),
-          recognizer:
-              item.userId == null ||
-                  item.userId!.isEmpty ||
-                  item.userId == '0' ||
-                  onOpenMentionUser == null
-              ? null
-              : (TapGestureRecognizer()
-                  ..onTap = () => onOpenMentionUser!(
-                    item.userId!,
-                    content.substring(item.startIndex + 1, item.endIndex),
-                  )),
-        ),
-      );
-      cursor = item.endIndex;
+        );
+        cursor = range.endIndex;
+      } else if (range is _LinkRange) {
+        final linkText = content.substring(range.startIndex, range.endIndex);
+        spans.add(
+          TextSpan(
+            text: linkText,
+            style: TextStyle(
+              color: const Color(0xFF1677FF),
+              decoration: TextDecoration.underline,
+              decorationColor: const Color(0xFF1677FF),
+              fontWeight: FontWeight.w500,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => _handleLinkTap(range.url),
+          ),
+        );
+        cursor = range.endIndex;
+      }
     }
     if (cursor < content.length) {
       spans.addAll(
@@ -273,6 +301,51 @@ class TextMessageBubble extends ConsumerWidget {
       );
     }
     return spans;
+  }
+
+  List<_LinkRange> _extractLinkRanges(String text) {
+    final ranges = <_LinkRange>[];
+    final patterns = [
+      RegExp(r'''https?://[^\s<>"']+''', caseSensitive: false),
+      RegExp(r'''www\.[^\s<>"']+''', caseSensitive: false),
+    ];
+    for (final pattern in patterns) {
+      for (final match in pattern.allMatches(text)) {
+        var url = match.group(0)!;
+        if (url.endsWith('.') ||
+            url.endsWith(',') ||
+            url.endsWith(';') ||
+            url.endsWith(':')) {
+          url = url.substring(0, url.length - 1);
+        }
+        final normalizedUrl = url.startsWith('www.') ? 'https://$url' : url;
+        ranges.add(_LinkRange(
+          startIndex: match.start,
+          endIndex: match.start + url.length,
+          url: normalizedUrl,
+        ));
+      }
+    }
+    ranges.sort((a, b) => a.startIndex.compareTo(b.startIndex));
+    final merged = <_LinkRange>[];
+    for (final range in ranges) {
+      if (merged.isEmpty || merged.last.endIndex <= range.startIndex) {
+        merged.add(range);
+      } else if (range.endIndex > merged.last.endIndex) {
+        merged.last = _LinkRange(
+          startIndex: merged.last.startIndex,
+          endIndex: range.endIndex,
+          url: range.url,
+        );
+      }
+    }
+    return merged;
+  }
+
+  void _handleLinkTap(String url) {
+    if (onOpenLink != null) {
+      onOpenLink!(url);
+    }
   }
 
   List<_MentionRange> _parseMentions(String text) {
@@ -315,16 +388,34 @@ class TextMessageBubble extends ConsumerWidget {
       value == ' ' || value == '\t' || value == '\n' || value == '\r';
 }
 
-class _MentionRange {
+class _MentionRange extends _TextRange {
   const _MentionRange({
+    required super.startIndex,
+    required super.endIndex,
+    this.userId,
+  });
+
+  final String? userId;
+}
+
+class _LinkRange extends _TextRange {
+  const _LinkRange({
+    required super.startIndex,
+    required super.endIndex,
+    required this.url,
+  });
+
+  final String url;
+}
+
+abstract class _TextRange {
+  const _TextRange({
     required this.startIndex,
     required this.endIndex,
-    this.userId,
   });
 
   final int startIndex;
   final int endIndex;
-  final String? userId;
 }
 
 class _QuotePreviewCard extends StatelessWidget {

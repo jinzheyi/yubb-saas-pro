@@ -504,6 +504,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         showOutgoingStatusFooter: false,
         highlightKeyword: keyword.isNotEmpty ? keyword : null,
         showFileName: true,
+        onOpenLink: _handleLinkTap,
       ),
     );
   }
@@ -520,6 +521,27 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       _openLinkMessage(message);
       return;
     }
+  }
+
+  void _handleLinkTap(String url) {
+    if (!mounted) {
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).chatOpenFailed)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.browser,
+      extra: BrowserPageArgs(
+        url: uri.toString(),
+        title: AppLocalizations.of(context).chatMessageDetailTitle,
+        source: 'message',
+      ),
+    );
   }
 
   bool _isLinkMessage(Message message) {

@@ -788,6 +788,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           onToggleSelection: _toggleSelection,
                           onOpenMentionUser: _openMentionUserProfile,
                           onOpenQuotedMessage: _openQuotedMessage,
+                          onOpenLink: _handleTextLinkTap,
                           onReeditRecalledMessage: _handleReeditAfterRecall,
                           reeditNowTs: _reeditNowTs,
                           showSenderNamesForIncoming: isGroupChat,
@@ -3677,6 +3678,26 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     if (!mounted) {
+      return;
+    }
+    context.pushNamed(
+      RouteNames.browser,
+      extra: BrowserPageArgs(
+        url: uri.toString(),
+        title: strings.chatMessageDetailTitle,
+        source: 'message',
+      ),
+    );
+  }
+
+  void _handleTextLinkTap(String url) {
+    if (!mounted) {
+      return;
+    }
+    final strings = ref.read(appStringsProvider);
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      _showAttachmentError(context, strings.chatOpenFailed);
       return;
     }
     context.pushNamed(
