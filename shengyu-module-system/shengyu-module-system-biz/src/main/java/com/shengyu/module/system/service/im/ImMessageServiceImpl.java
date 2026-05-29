@@ -423,6 +423,10 @@ public class ImMessageServiceImpl implements ImMessageService {
             String extraJson = buildImageExtra(sendReqVO);
             message.setContent(sendReqVO.getContent());
             message.setExtra(extraJson);
+        } else if (dbMessageType == 4) {
+            String extraJson = buildVideoExtra(sendReqVO);
+            message.setContent(sendReqVO.getContent());
+            message.setExtra(extraJson);
         } else {
             message.setContent(sendReqVO.getContent());
             message.setExtra(sendReqVO.getExtra());
@@ -1491,6 +1495,47 @@ public class ImMessageServiceImpl implements ImMessageService {
             result.set("width", width);
             result.set("height", height);
             result.set("size", size);
+            return result.toString();
+        } catch (Exception e) {
+            return extra;
+        }
+    }
+
+    private String buildVideoExtra(AppImMessageSendReqVO sendReqVO) {
+        String extra = sendReqVO.getExtra();
+        if (StrUtil.isBlank(extra)) {
+            JSONObject obj = JSONUtil.createObj();
+            obj.set("url", sendReqVO.getContent() != null ? sendReqVO.getContent() : "");
+            obj.set("thumbnailUrl", "");
+            obj.set("fileName", "");
+            obj.set("width", 0);
+            obj.set("height", 0);
+            obj.set("size", 0);
+            obj.set("duration", 0);
+            return obj.toString();
+        }
+        try {
+            JSONObject obj = JSONUtil.parseObj(extra);
+            String url = obj.getStr("url", sendReqVO.getContent());
+            String thumbnailUrl = obj.getStr("thumbnailUrl", "");
+            String fileName = obj.getStr("fileName", "");
+            int width = obj.getInt("width", 0);
+            int height = obj.getInt("height", 0);
+            long size = obj.getLong("size", 0L);
+            int duration = obj.getInt("duration", 0);
+            if (StrUtil.isBlank(fileName) && StrUtil.isNotBlank(url)) {
+                int idx = url.lastIndexOf('/');
+                fileName = idx >= 0 ? url.substring(idx + 1) : url;
+            }
+            JSONObject result = JSONUtil.createObj();
+            result.set("fileId", obj.get("fileId"));
+            result.set("url", url);
+            result.set("thumbnailUrl", thumbnailUrl);
+            result.set("fileName", fileName);
+            result.set("width", width);
+            result.set("height", height);
+            result.set("size", size);
+            result.set("duration", duration);
             return result.toString();
         } catch (Exception e) {
             return extra;
