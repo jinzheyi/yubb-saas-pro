@@ -139,17 +139,18 @@ class _BrowserPageState extends State<BrowserPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  _addressText.isNotEmpty
-                      ? _addressText
-                      : strings.browserUnknownSafeLink,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8F96A3),
+                if (!_isFileSource)
+                  Text(
+                    _addressText.isNotEmpty
+                        ? _addressText
+                        : strings.browserUnknownSafeLink,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF8F96A3),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
