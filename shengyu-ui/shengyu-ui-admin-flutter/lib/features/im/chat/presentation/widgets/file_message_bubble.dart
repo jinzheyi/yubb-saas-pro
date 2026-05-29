@@ -19,6 +19,7 @@ class FileMessageBubble extends ConsumerWidget {
     this.enableReadReceiptEntry = false,
     this.showOutgoingStatusFooter = true,
     this.outgoingFooterLabel,
+    this.highlightKeyword,
   });
 
   final Message message;
@@ -29,6 +30,7 @@ class FileMessageBubble extends ConsumerWidget {
   final bool enableReadReceiptEntry;
   final bool showOutgoingStatusFooter;
   final String? outgoingFooterLabel;
+  final String? highlightKeyword;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,17 +89,10 @@ class FileMessageBubble extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          displayName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: message.isOutgoing
-                                ? Colors.white
-                                : const Color(0xFF202531),
-                          ),
+                        _buildFileNameText(
+                          displayName: displayName,
+                          isOutgoing: message.isOutgoing,
+                          keyword: highlightKeyword,
                         ),
                         if (message.extra.fileSize != null) ...[
                           const SizedBox(height: 4),
@@ -190,6 +185,88 @@ class FileMessageBubble extends ConsumerWidget {
       return '${(bytes / 1024).toStringAsFixed(1)} KB';
     }
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Widget _buildFileNameText({
+    required String displayName,
+    required bool isOutgoing,
+    required String? keyword,
+  }) {
+    if (keyword == null || keyword.isEmpty) {
+      return Text(
+        displayName,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: isOutgoing ? Colors.white : const Color(0xFF202531),
+        ),
+      );
+    }
+    final spans = _buildHighlightedSpans(
+      text: displayName,
+      keyword: keyword,
+      defaultColor: isOutgoing ? Colors.white : const Color(0xFF202531),
+      isOutgoing: isOutgoing,
+    );
+    return RichText(
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        children: spans,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  List<InlineSpan> _buildHighlightedSpans({
+    required String text,
+    required String keyword,
+    required Color defaultColor,
+    required bool isOutgoing,
+  }) {
+    final spans = <InlineSpan>[];
+    final lowerText = text.toLowerCase();
+    final lowerKeyword = keyword.toLowerCase();
+    var lastEnd = 0;
+    var startIndex = lowerText.indexOf(lowerKeyword);
+
+    while (startIndex >= 0) {
+      if (startIndex > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, startIndex),
+            style: TextStyle(color: defaultColor),
+          ),
+        );
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(startIndex, startIndex + keyword.length),
+          style: TextStyle(
+            color: isOutgoing ? const Color(0xFFFFD700) : const Color(0xFF246BFD),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+      lastEnd = startIndex + keyword.length;
+      startIndex = lowerText.indexOf(lowerKeyword, lastEnd);
+    }
+
+    if (lastEnd < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastEnd),
+          style: TextStyle(color: defaultColor),
+        ),
+      );
+    }
+
+    if (spans.isEmpty) {
+      spans.add(TextSpan(text: text, style: TextStyle(color: defaultColor)));
+    }
+    return spans;
   }
 
   String _displayName(AppLocalizations strings) {

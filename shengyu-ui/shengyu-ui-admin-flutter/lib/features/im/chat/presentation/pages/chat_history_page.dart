@@ -317,20 +317,6 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                 padding: const EdgeInsets.only(left: 52),
                 child: _buildMessageBubble(message, item),
               ),
-              if ((item.messageType == MessageType.image || item.messageType == MessageType.video) &&
-                  message.extra.fileName?.trim().isNotEmpty == true)
-                Padding(
-                  padding: const EdgeInsets.only(left: 52, top: 8),
-                  child: Text(
-                    message.extra.fileName!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ),
             ],
           ),
         );
@@ -516,6 +502,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         onOpenMessage: (_) => _handleMessageTap(item),
         onLongPressMessage: (_, __) => _showItemMenu(item),
         showOutgoingStatusFooter: false,
+        highlightKeyword: keyword.isNotEmpty ? keyword : null,
+        showFileName: true,
       ),
     );
   }

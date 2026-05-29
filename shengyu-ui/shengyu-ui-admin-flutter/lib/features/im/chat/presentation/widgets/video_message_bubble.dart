@@ -19,6 +19,8 @@ class VideoMessageBubble extends ConsumerWidget {
     this.enableReadReceiptEntry = false,
     this.showOutgoingStatusFooter = true,
     this.outgoingFooterLabel,
+    this.highlightKeyword,
+    this.showFileName = false,
   });
 
   final Message message;
@@ -29,12 +31,15 @@ class VideoMessageBubble extends ConsumerWidget {
   final bool enableReadReceiptEntry;
   final bool showOutgoingStatusFooter;
   final String? outgoingFooterLabel;
+  final String? highlightKeyword;
+  final bool showFileName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
     final imageProvider = _resolveVideoPreviewImageProvider();
+    final fileName = message.extra.fileName?.trim() ?? '';
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -97,6 +102,14 @@ class VideoMessageBubble extends ConsumerWidget {
             ),
           ),
         ),
+        if (fileName.isNotEmpty && showFileName)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: _buildFileNameText(
+              fileName: fileName,
+              keyword: highlightKeyword,
+            ),
+          ),
         if (message.isOutgoing && showOutgoingStatusFooter)
           const SizedBox(height: 4),
         if (message.isOutgoing && showOutgoingStatusFooter)
@@ -117,6 +130,81 @@ class VideoMessageBubble extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  Widget _buildFileNameText({
+    required String fileName,
+    required String? keyword,
+  }) {
+    if (keyword == null || keyword.isEmpty) {
+      return Text(
+        fileName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF6B7280),
+        ),
+      );
+    }
+    final spans = _buildHighlightedSpans(text: fileName, keyword: keyword);
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        children: spans,
+        style: const TextStyle(fontSize: 12),
+      ),
+    );
+  }
+
+  List<InlineSpan> _buildHighlightedSpans({
+    required String text,
+    required String keyword,
+  }) {
+    final spans = <InlineSpan>[];
+    final lowerText = text.toLowerCase();
+    final lowerKeyword = keyword.toLowerCase();
+    var lastEnd = 0;
+    var startIndex = lowerText.indexOf(lowerKeyword);
+    const defaultColor = Color(0xFF6B7280);
+    const highlightColor = Color(0xFF246BFD);
+
+    while (startIndex >= 0) {
+      if (startIndex > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, startIndex),
+            style: const TextStyle(color: defaultColor),
+          ),
+        );
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(startIndex, startIndex + keyword.length),
+          style: const TextStyle(
+            color: highlightColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+      lastEnd = startIndex + keyword.length;
+      startIndex = lowerText.indexOf(lowerKeyword, lastEnd);
+    }
+
+    if (lastEnd < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastEnd),
+          style: const TextStyle(color: defaultColor),
+        ),
+      );
+    }
+
+    if (spans.isEmpty) {
+      spans.add(const TextSpan(text: '', style: TextStyle(color: defaultColor)));
+    }
+    return spans;
   }
 
   String _statusLabel(AppLocalizations strings) {

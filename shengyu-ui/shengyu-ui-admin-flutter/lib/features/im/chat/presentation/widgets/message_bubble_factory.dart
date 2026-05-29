@@ -32,6 +32,8 @@ abstract final class MessageBubbleFactory {
     bool enableReadReceiptEntry = false,
     bool showOutgoingStatusFooter = true,
     String? outgoingFooterLabel,
+    String? highlightKeyword,
+    bool showFileName = false,
   }) {
     final normalizedMessage = MessageSemanticsNormalizer.normalize(message);
     switch (normalizedMessage.type) {
@@ -59,6 +61,8 @@ abstract final class MessageBubbleFactory {
           enableReadReceiptEntry: enableReadReceiptEntry,
           showOutgoingStatusFooter: showOutgoingStatusFooter,
           outgoingFooterLabel: outgoingFooterLabel,
+          highlightKeyword: highlightKeyword,
+          showFileName: showFileName,
         );
       case MessageType.voice:
         return VoiceMessageBubble(
@@ -88,6 +92,8 @@ abstract final class MessageBubbleFactory {
           enableReadReceiptEntry: enableReadReceiptEntry,
           showOutgoingStatusFooter: showOutgoingStatusFooter,
           outgoingFooterLabel: outgoingFooterLabel,
+          highlightKeyword: highlightKeyword,
+          showFileName: showFileName,
         );
       case MessageType.file:
         return FileMessageBubble(
@@ -99,6 +105,7 @@ abstract final class MessageBubbleFactory {
           enableReadReceiptEntry: enableReadReceiptEntry,
           showOutgoingStatusFooter: showOutgoingStatusFooter,
           outgoingFooterLabel: outgoingFooterLabel,
+          highlightKeyword: highlightKeyword,
         );
       case MessageType.location:
         return LocationMessageBubble(

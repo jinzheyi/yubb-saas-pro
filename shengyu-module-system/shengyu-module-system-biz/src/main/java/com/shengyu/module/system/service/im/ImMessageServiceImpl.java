@@ -419,6 +419,10 @@ public class ImMessageServiceImpl implements ImMessageService {
             String normalized = validatedCustomPayload.toString();
             message.setContent(normalized);
             message.setExtra(normalized);
+        } else if (dbMessageType == 2) {
+            String extraJson = buildImageExtra(sendReqVO);
+            message.setContent(sendReqVO.getContent());
+            message.setExtra(extraJson);
         } else {
             message.setContent(sendReqVO.getContent());
             message.setExtra(sendReqVO.getExtra());
@@ -1453,6 +1457,43 @@ public class ImMessageServiceImpl implements ImMessageService {
                 return 1;
             default:
                 return messageType;
+        }
+    }
+
+    private String buildImageExtra(AppImMessageSendReqVO sendReqVO) {
+        String extra = sendReqVO.getExtra();
+        if (StrUtil.isBlank(extra)) {
+            JSONObject obj = JSONUtil.createObj();
+            obj.set("url", sendReqVO.getContent() != null ? sendReqVO.getContent() : "");
+            obj.set("thumbnailUrl", sendReqVO.getContent() != null ? sendReqVO.getContent() : "");
+            obj.set("width", 0);
+            obj.set("height", 0);
+            obj.set("size", 0);
+            return obj.toString();
+        }
+        try {
+            JSONObject obj = JSONUtil.parseObj(extra);
+            String url = obj.getStr("url", sendReqVO.getContent());
+            String thumbnailUrl = obj.getStr("thumbnailUrl", url);
+            String fileName = obj.getStr("fileName", "");
+            int width = obj.getInt("width", 0);
+            int height = obj.getInt("height", 0);
+            long size = obj.getLong("size", 0L);
+            if (StrUtil.isBlank(fileName) && StrUtil.isNotBlank(url)) {
+                int idx = url.lastIndexOf('/');
+                fileName = idx >= 0 ? url.substring(idx + 1) : url;
+            }
+            JSONObject result = JSONUtil.createObj();
+            result.set("fileId", obj.get("fileId"));
+            result.set("url", url);
+            result.set("thumbnailUrl", thumbnailUrl);
+            result.set("fileName", fileName);
+            result.set("width", width);
+            result.set("height", height);
+            result.set("size", size);
+            return result.toString();
+        } catch (Exception e) {
+            return extra;
         }
     }
 
@@ -2822,10 +2863,6 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         String keyword = StrUtil.trimToNull(searchReqVO.getKeyword());
         String category = StrUtil.trimToNull(searchReqVO.getCategory());
-        // keyword 和 category 至少传一个
-        if (StrUtil.isBlank(keyword) && StrUtil.isBlank(category)) {
-            return new PageResult<>(Collections.emptyList(), 0L);
-        }
         Long tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
             tenantId = 0L;
