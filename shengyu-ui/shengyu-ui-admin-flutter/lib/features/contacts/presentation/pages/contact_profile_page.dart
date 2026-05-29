@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
@@ -44,6 +45,9 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final displayName = _displayName(strings);
+    final session = ref.watch(authSessionProvider);
+    final isCurrentUser = widget.userId.trim().isNotEmpty &&
+        widget.userId.trim() == session.userId.trim();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -176,35 +180,36 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                     ],
                   ),
                 ),
-                SafeArea(
-                  top: false,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(32, 12, 32, 12),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      border: Border(
-                        top: BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
+                if (!isCurrentUser)
+                  SafeArea(
+                    top: false,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(32, 12, 32, 12),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _FooterAction(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            label: strings.contactsDetailMessage,
+                            onTap: _openChat,
+                          ),
+                          _FooterAction(
+                            icon: Icons.phone_outlined,
+                            label: strings.contactsDetailCall,
+                            onTap: () => _showMessage(
+                              strings.contactsDetailCallInDevelopment,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _FooterAction(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          label: strings.contactsDetailMessage,
-                          onTap: _openChat,
-                        ),
-                        _FooterAction(
-                          icon: Icons.phone_outlined,
-                          label: strings.contactsDetailCall,
-                          onTap: () => _showMessage(
-                            strings.contactsDetailCallInDevelopment,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ),
               ],
             ),
     );
