@@ -136,26 +136,51 @@ class ChatHistoryItemDto {
       case 'image':
       case 'IMAGE':
       case '2':
+      case '101':
         return MessageType.image;
+      case 'voice':
+      case 'VOICE':
+      case '3':
+      case '102':
+        return MessageType.voice;
+      case 'video':
+      case 'VIDEO':
+      case '4':
+      case '103':
+        return MessageType.video;
       case 'file':
       case 'FILE':
-      case '4':
       case '5':
+      case '104':
         return MessageType.file;
       case 'location':
       case 'LOCATION':
       case '6':
       case '105':
         return MessageType.location;
+      case 'emoji':
+      case 'EMOJI':
+      case '7':
+        return MessageType.emoji;
+      case 'sticker':
+      case 'STICKER':
+      case '8':
+        return MessageType.sticker;
       case 'custom':
       case 'CUSTOM':
+      case '9':
+      case '106':
+        return MessageType.custom;
       case 'contact_card':
       case 'CONTACT_CARD':
-      case '9':
         return MessageType.contactCard;
       case 'system':
       case 'SYSTEM':
         return MessageType.system;
+      case 'quoteReply':
+      case 'QUOTE_REPLY':
+      case '205':
+        return MessageType.text;
       default:
         return MessageType.text;
     }
