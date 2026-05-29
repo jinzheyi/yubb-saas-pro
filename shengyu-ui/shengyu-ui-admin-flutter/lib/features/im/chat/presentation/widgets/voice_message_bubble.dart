@@ -371,12 +371,12 @@ class VoiceMessageBubble extends ConsumerWidget {
   Color _bubbleBackground() {
     if (isPlaying) {
       return message.isOutgoing
-          ? const Color(0xFFC3D9FF)
+          ? const Color(0xFFC8DCF8)
           : const Color(0xFFEDF4FF);
     }
     if (isPaused) {
       return message.isOutgoing
-          ? const Color(0xFFC8DCF8)
+          ? const Color(0xFFD2E3FC)
           : const Color(0xFFF4F6FA);
     }
     return message.isOutgoing ? const Color(0xFFD2E3FC) : Colors.white;

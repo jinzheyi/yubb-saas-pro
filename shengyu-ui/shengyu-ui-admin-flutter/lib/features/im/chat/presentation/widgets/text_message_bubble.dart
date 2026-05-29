@@ -56,10 +56,10 @@ class TextMessageBubble extends ConsumerWidget {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
     final bubbleColor = message.isOutgoing
-        ? const Color(0xFF2F6BFF)
+        ? const Color(0xFFD2E3FC)
         : Colors.white;
     final textColor = message.isOutgoing
-        ? Colors.white
+        ? const Color(0xFF1F2329)
         : const Color(0xFF202531);
 
     return Column(

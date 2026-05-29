@@ -48,11 +48,11 @@ class ContactCardMessageBubble extends ConsumerWidget {
 
     // 气泡颜色
     final cardBgColor = isOutgoing
-        ? const Color(0xFF246BFD)
+        ? const Color(0xFFD2E3FC)
         : Colors.white;
-    final cardTextColor = isOutgoing ? Colors.white : const Color(0xFF202531);
+    final cardTextColor = isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531);
     final cardSubtitleColor = isOutgoing
-        ? const Color(0xFFD7E3FF)
+        ? const Color(0xFF6B7380)
         : const Color(0xFF8F96A3);
 
     return Column(

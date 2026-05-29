@@ -57,7 +57,7 @@ class CustomMessageBubble extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: message.isOutgoing
-                    ? const Color(0xFF2F6BFF)
+                    ? const Color(0xFFD2E3FC)
                     : Colors.white,
                 border: message.isOutgoing
                     ? null
@@ -83,7 +83,7 @@ class CustomMessageBubble extends ConsumerWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: message.isOutgoing
-                            ? Colors.white
+                            ? const Color(0xFF1F2329)
                             : const Color(0xFF202531),
                       ),
                     ),

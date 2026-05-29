@@ -37,7 +37,7 @@ class FileMessageBubble extends ConsumerWidget {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
     final bubbleColor = message.isOutgoing
-        ? const Color(0xFF2F6BFF)
+        ? const Color(0xFFD2E3FC)
         : Colors.white;
     final displayName = _displayName(strings);
     final fileIconSpec = _resolveFileIconSpec();
@@ -101,7 +101,7 @@ class FileMessageBubble extends ConsumerWidget {
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontSize: 12,
                               color: message.isOutgoing
-                                  ? const Color(0xFFDDE6FF)
+                                  ? const Color(0xFF6B7380)
                                   : const Color(0xFF98A1B2),
                             ),
                           ),
@@ -200,14 +200,14 @@ class FileMessageBubble extends ConsumerWidget {
         style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: isOutgoing ? Colors.white : const Color(0xFF202531),
+          color: isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531),
         ),
       );
     }
     final spans = _buildHighlightedSpans(
       text: displayName,
       keyword: keyword,
-      defaultColor: isOutgoing ? Colors.white : const Color(0xFF202531),
+      defaultColor: isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531),
       isOutgoing: isOutgoing,
     );
     return RichText(
@@ -245,7 +245,7 @@ class FileMessageBubble extends ConsumerWidget {
         TextSpan(
           text: text.substring(startIndex, startIndex + keyword.length),
           style: TextStyle(
-            color: isOutgoing ? const Color(0xFFFFD700) : const Color(0xFF246BFD),
+            color: isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF246BFD),
             fontWeight: FontWeight.bold,
           ),
         ),
