@@ -889,7 +889,7 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                                   crossAxisCount: 4,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: 1,
+                                  childAspectRatio: 0.85,
                                 ),
                             itemCount: allStickers.length + 2,
                             itemBuilder: (context, index) {
