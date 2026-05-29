@@ -442,7 +442,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('添加成员成功')));
-        Navigator.of(context).maybePop();
+        context.pop(true);
       } else {
         final groupName = _trimGroupName(_generateGroupName(selectedMembers));
         final result = await ref
@@ -466,7 +466,6 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         if (!mounted) {
           return;
         }
-        // 先返回上一页，再跳转到聊天页面，避免使用 goNamed 替换整个路由栈
         Navigator.of(context).pop();
         if (!mounted) {
           return;
@@ -482,7 +481,16 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         );
       }
     } catch (error) {
-      _showMessage(error.toString());
+      final errorMsg = error.toString();
+      if (errorMsg.contains('GROUP_MEMBER_ALREADY_EXISTS') ||
+          errorMsg.contains('已经是群成员')) {
+        _showMessage('该成员已在群聊中');
+      } else if (errorMsg.contains('GROUP_MEMBER_FULL') ||
+          errorMsg.contains('群人数已达上限')) {
+        _showMessage('群人数已达上限');
+      } else {
+        _showMessage(errorMsg);
+      }
     } finally {
       if (mounted) {
         setState(() {

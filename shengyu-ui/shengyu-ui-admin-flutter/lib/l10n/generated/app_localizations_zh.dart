@@ -680,6 +680,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupMembersActionSuccess => '操作成功';
 
   @override
+  String get groupMemberAlreadyExists => '该成员已在群聊中';
+
+  @override
+  String get groupMemberFull => '群人数已达上限';
+
+  @override
+  String get groupMemberNotExists => '该成员已不在群聊中';
+
+  @override
   String get groupMembersMute24h => '禁言 24 小时';
 
   @override

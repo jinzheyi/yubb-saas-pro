@@ -263,6 +263,58 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
     state = state.copyWith(currentUserMuteEndTime: muteEndTime);
   }
 
+  Future<void> reloadMembersOnly() async {
+    if (_disposed || state.status != GroupSettingsStatus.ready) {
+      return;
+    }
+    try {
+      _setStateIfActive(state.copyWith(status: GroupSettingsStatus.loading));
+      final members = await _repository.getGroupMembers(_args.groupId);
+      final previewItems = members.take(8).map((member) {
+        return GroupMemberPreviewItem(
+          id: member.userId,
+          name: member.nickname.isNotEmpty
+              ? member.nickname
+              : member.userName,
+          roleCode: member.role,
+          colorValue: _memberColorValue(member.userId),
+          avatarUrl: member.avatarUrl,
+          deptName: member.deptName,
+          joinTime: member.joinTime,
+          muteEndTime: member.muteEndTime,
+          isMuted: member.isMuted,
+        );
+      }).toList();
+      _setStateIfActive(state.copyWith(
+        status: GroupSettingsStatus.ready,
+        members: previewItems,
+        memberCount: members.length,
+      ));
+    } catch (error, stackTrace) {
+      _setStateIfActive(state.copyWith(
+        status: GroupSettingsStatus.failed,
+        error: AppErrorMapper.map(error, stackTrace),
+      ));
+    }
+  }
+
+  void applyRealtimeMembers(List<GroupMemberPreviewItem> members) {
+    if (_disposed) {
+      return;
+    }
+    state = state.copyWith(
+      members: members.take(8).toList(growable: false),
+      memberCount: members.length,
+    );
+  }
+
+  void applyRealtimeMemberCount(int count) {
+    if (_disposed) {
+      return;
+    }
+    state = state.copyWith(memberCount: count);
+  }
+
   int _memberColorValue(String seed) {
     return getUserAvatarColor(seed).toARGB32();
   }

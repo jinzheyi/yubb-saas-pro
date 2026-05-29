@@ -288,6 +288,9 @@
   },
   "groupMembersTransferFailed": "转让群主失败",
   "groupMembersActionSuccess": "操作成功",
+  "groupMemberAlreadyExists": "该成员已在群聊中",
+  "groupMemberFull": "群人数已达上限",
+  "groupMemberNotExists": "该成员已不在群聊中",
   "groupMembersMute24h": "禁言 24 小时",
   "groupMembersMutedUntil": "禁言至 {month}-{day} {hour}:{minute}",
   "@groupMembersMutedUntil": {

@@ -1382,6 +1382,24 @@ abstract class AppLocalizations {
   /// **'Action completed'**
   String get groupMembersActionSuccess;
 
+  /// No description provided for @groupMemberAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This member is already in the group'**
+  String get groupMemberAlreadyExists;
+
+  /// No description provided for @groupMemberFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Group member limit reached'**
+  String get groupMemberFull;
+
+  /// No description provided for @groupMemberNotExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This member is no longer in the group'**
+  String get groupMemberNotExists;
+
   /// No description provided for @groupMembersMute24h.
   ///
   /// In en, this message translates to:

@@ -288,6 +288,9 @@
   },
   "groupMembersTransferFailed": "Failed to transfer group owner",
   "groupMembersActionSuccess": "Action completed",
+  "groupMemberAlreadyExists": "This member is already in the group",
+  "groupMemberFull": "Group member limit reached",
+  "groupMemberNotExists": "This member is no longer in the group",
   "groupMembersMute24h": "Mute for 24 hours",
   "groupMembersMutedUntil": "Muted until {month}-{day} {hour}:{minute}",
   "@groupMembersMutedUntil": {

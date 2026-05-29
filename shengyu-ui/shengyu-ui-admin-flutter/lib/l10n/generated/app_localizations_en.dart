@@ -690,6 +690,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupMembersActionSuccess => 'Action completed';
 
   @override
+  String get groupMemberAlreadyExists => 'This member is already in the group';
+
+  @override
+  String get groupMemberFull => 'Group member limit reached';
+
+  @override
+  String get groupMemberNotExists => 'This member is no longer in the group';
+
+  @override
   String get groupMembersMute24h => 'Mute for 24 hours';
 
   @override

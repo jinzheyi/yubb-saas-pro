@@ -364,7 +364,13 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       if (!context.mounted) {
         return;
       }
-      _showSnackBar(context, error.toString());
+      final errorMsg = error.toString();
+      if (errorMsg.contains('GROUP_MEMBER_NOT_EXISTS') ||
+          errorMsg.contains('群成员不存在')) {
+        _showSnackBar(context, strings.groupMemberNotExists);
+      } else {
+        _showSnackBar(context, errorMsg);
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/controllers/group_settings_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
@@ -27,6 +30,8 @@ class GroupSettingsPage extends ConsumerStatefulWidget {
 
 class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
   ProviderSubscription<GroupJoinRequestSignal?>? _joinRequestSignalSubscription;
+  ProviderSubscription<GroupMemberRealtimeSignal?>? _groupMemberSignalSubscription;
+  bool _pendingRefreshOnResume = false;
 
   @override
   void initState() {
@@ -49,16 +54,48 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         }
       },
     );
+
+    _groupMemberSignalSubscription = ref.listenManual<GroupMemberRealtimeSignal?>(
+      groupMemberRealtimeSignalProvider,
+      (previous, next) {
+        if (next == null || next.groupId != widget.args.groupId) {
+          return;
+        }
+        if (next.action == 'group_member_added' ||
+            next.action == 'group_member_removed') {
+          _pendingRefreshOnResume = false;
+          _triggerMemberRefresh();
+        }
+      },
+    );
+  }
+
+  void _triggerMemberRefresh() {
+    final controller = ref.read(
+      groupSettingsControllerProvider(widget.args).notifier,
+    );
+    unawaited(controller.reloadMembersOnly());
   }
 
   @override
   void dispose() {
     _joinRequestSignalSubscription?.close();
+    _groupMemberSignalSubscription?.close();
     super.dispose();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_pendingRefreshOnResume) {
+      _pendingRefreshOnResume = false;
+      _triggerMemberRefresh();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.watch(groupSettingsRealtimeBindingProvider(widget.args.groupId));
     final strings = AppLocalizations.of(context);
     final state = ref.watch(groupSettingsControllerProvider(widget.args));
     final controller = ref.read(
@@ -219,7 +256,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                             ),
                           );
                           if (changed == true) {
-                            controller.load();
+                            _pendingRefreshOnResume = true;
                           }
                         },
                       ),
@@ -237,7 +274,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                             ),
                           );
                           if (changed == true) {
-                            controller.load();
+                            _pendingRefreshOnResume = true;
                           }
                         },
                       ),
@@ -246,7 +283,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 const SizedBox(height: 12),
                 InkWell(
                   onTap: () async {
-                    final changed = await context.pushNamed<bool>(
+                    await context.pushNamed(
                       RouteNames.groupMembers,
                       extra: GroupContextArgs(
                         groupId: widget.args.groupId,
@@ -254,9 +291,6 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         mode: GroupMembersPageMode.view,
                       ),
                     );
-                    if (changed == true) {
-                      controller.load();
-                    }
                   },
                   child: Container(
                     height: 44,
@@ -413,16 +447,13 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                       ? const Color(0xFFF54A45)
                       : const Color(0xFF8F96A3),
                   onTap: () async {
-                    final changed = await context.pushNamed<bool>(
+                    await context.pushNamed(
                       RouteNames.groupJoinRequests,
                       extra: GroupContextArgs(
                         groupId: widget.args.groupId,
                         groupName: title,
                       ),
                     );
-                    if (changed == true) {
-                      controller.load();
-                    }
                   },
                 ),
               _NavSettingTile(
@@ -454,7 +485,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 _DangerActionTile(
                   title: strings.groupSettingsTransferOwner,
                   onTap: () async {
-                    final changed = await context.pushNamed<bool>(
+                    await context.pushNamed(
                       RouteNames.groupMembers,
                       extra: GroupContextArgs(
                         groupId: widget.args.groupId,
@@ -462,9 +493,6 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         mode: GroupMembersPageMode.transfer,
                       ),
                     );
-                    if (changed == true) {
-                      controller.load();
-                    }
                   },
                 ),
               _DangerActionTile(

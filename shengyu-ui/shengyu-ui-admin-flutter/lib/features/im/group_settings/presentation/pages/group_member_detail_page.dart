@@ -306,9 +306,17 @@ class GroupMemberDetailPage extends ConsumerWidget {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      final errorMsg = error.toString();
+      if (errorMsg.contains('GROUP_MEMBER_NOT_EXISTS') ||
+          errorMsg.contains('群成员不存在')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.groupMemberNotExists)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
+      }
     }
   }
 
