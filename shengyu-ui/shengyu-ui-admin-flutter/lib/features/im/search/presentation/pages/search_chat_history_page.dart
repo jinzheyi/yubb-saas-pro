@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/features/im/search/domain/entities/message_s
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
 class SearchChatHistoryPage extends ConsumerStatefulWidget {
   const SearchChatHistoryPage({super.key, this.initialKeyword = ''});
@@ -22,6 +23,7 @@ class SearchChatHistoryPage extends ConsumerStatefulWidget {
 
 class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
   List<MessageSearchItem> _items = const [];
   bool _searched = false;
   bool _loading = false;
@@ -33,6 +35,7 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.initialKeyword);
+    _searchFocusNode = FocusNode();
     if (widget.initialKeyword.trim().isNotEmpty) {
       Future.microtask(() => _search(reset: true));
     }
@@ -41,6 +44,7 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -59,8 +63,9 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(
               children: [
                 Expanded(
@@ -73,18 +78,25 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.search_rounded,
-                          size: 16,
-                          color: Color(0xFF98A1B2),
+                        InkWell(
+                          onTap: () => _search(reset: true),
+                          child: const Icon(
+                            ShengyuIconFont.chaxun,
+                            size: 16,
+                            color: Color(0xFF98A1B2),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
+                            focusNode: _searchFocusNode,
                             autofocus: widget.initialKeyword.trim().isEmpty,
                             textInputAction: TextInputAction.search,
-                            onSubmitted: (_) => _search(reset: true),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF202531),
+                            ),
                             decoration: InputDecoration(
                               hintText: strings.globalChatSearchPlaceholder,
                               border: InputBorder.none,
@@ -92,38 +104,32 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
                               enabledBorder: InputBorder.none,
                               disabledBorder: InputBorder.none,
                               isCollapsed: true,
-                              contentPadding: EdgeInsets.zero,
                               hintStyle: const TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF98A1B2),
                               ),
+                              contentPadding: EdgeInsets.zero,
                             ),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF202531),
-                            ),
+                            onChanged: (_) => setState(() {}),
+                            onSubmitted: (_) => _search(reset: true),
                           ),
                         ),
+                        if (_searchController.text.trim().isNotEmpty)
+                          InkWell(
+                            onTap: () => _search(reset: true),
+                            child: const Icon(
+                              ShengyuIconFont.fasong,
+                              size: 16,
+                              color: Color(0xFF98A1B2),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                FilledButton(
-                  onPressed: () => _search(reset: true),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(60, 36),
-                    backgroundColor: const Color(0xFF246BFD),
-                  ),
-                  child: Text(
-                    strings.searchAction,
-                    style: const TextStyle(fontSize: 14),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
           Expanded(
             child: _items.isEmpty && !_loading
                 ? Center(
