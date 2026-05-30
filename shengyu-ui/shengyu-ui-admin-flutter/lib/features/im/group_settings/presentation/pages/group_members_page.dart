@@ -97,17 +97,17 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  height: 38,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0F3F8),
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFF3F4F8),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.search_rounded,
-                        size: 19,
+                        size: 16,
                         color: Color(0xFF98A1B2),
                       ),
                       const SizedBox(width: 8),
@@ -115,14 +115,23 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                         child: TextField(
                           controller: _searchController,
                           onChanged: controller.updateKeyword,
+                          textInputAction: TextInputAction.search,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF202531),
+                          ),
                           decoration: InputDecoration(
                             hintText: strings.groupSettingsSearchMembers,
-                            isCollapsed: true,
-                            fillColor: Colors.transparent,
                             border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            isCollapsed: true,
                             hintStyle: const TextStyle(
+                              fontSize: 14,
                               color: Color(0xFF98A1B2),
                             ),
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),

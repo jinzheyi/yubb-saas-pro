@@ -13,8 +13,8 @@ public class AppImGroupInviteGenerateReqVO {
     @NotNull(message = "{validation.im.group_id.required}")
     private Long groupId;
 
-    @Schema(description = "有效期(小时)", example = "24")
-    private Integer expireHours = 24; // 默认24小时
+    @Schema(description = "有效期(小时),0或不传表示永久有效", example = "0")
+    private Integer expireHours = 0; // 默认永久有效
 
     @Schema(description = "最大使用次数(0表示不限制)", example = "0")
     private Integer maxUseCount = 0; // 默认不限制

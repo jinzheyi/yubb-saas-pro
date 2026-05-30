@@ -235,6 +235,8 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_INVITE_CODE_EXPIRED = new ErrorCode(1_002_030_217, "邀请码已过期");
     ErrorCode GROUP_INVITE_CODE_USAGE_LIMIT_REACHED = new ErrorCode(1_002_030_218, "邀请码使用次数已达上限");
     ErrorCode GROUP_INVITE_CODE_TENANT_MISMATCH = new ErrorCode(1_002_030_219, "当前邀请码不属于本租户");
+    ErrorCode GROUP_INVITE_CODE_RATE_LIMIT_EXCEEDED = new ErrorCode(1_002_030_220, "操作过于频繁，请稍后再试");
+    ErrorCode GROUP_JOIN_REQUEST_RATE_LIMIT_EXCEEDED = new ErrorCode(1_002_030_221, "入群申请提交过于频繁，请稍后再试");
     
     // 群文件相关 1-002-030-250
     ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");

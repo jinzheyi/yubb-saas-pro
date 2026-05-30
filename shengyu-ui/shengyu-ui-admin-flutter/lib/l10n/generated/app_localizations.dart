@@ -1729,6 +1729,18 @@ abstract class AppLocalizations {
   /// **'{count} pending'**
   String groupSettingsPendingCount(Object count);
 
+  /// No description provided for @groupJoinRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Requests'**
+  String get groupJoinRequestsTitle;
+
+  /// No description provided for @groupJoinRequestsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending requests'**
+  String get groupJoinRequestsEmpty;
+
   /// No description provided for @groupJoinRequestsTabPending.
   ///
   /// In en, this message translates to:
@@ -1951,6 +1963,18 @@ abstract class AppLocalizations {
   /// **'Approval required'**
   String get groupQrCodeNeedApproval;
 
+  /// No description provided for @groupQrCodeNeedApprovalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite code requires admin approval before joining the group'**
+  String get groupQrCodeNeedApprovalHint;
+
+  /// No description provided for @groupQrCodePermanent.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanent'**
+  String get groupQrCodePermanent;
+
   /// No description provided for @groupQrCodeCopySuccess.
   ///
   /// In en, this message translates to:
@@ -1962,6 +1986,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite code is unavailable'**
   String get groupQrCodeUnavailable;
+
+  /// No description provided for @groupQrCodeRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh QR Code'**
+  String get groupQrCodeRefresh;
+
+  /// No description provided for @groupQrCodeRefreshing.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshing...'**
+  String get groupQrCodeRefreshing;
+
+  /// No description provided for @groupQrCodeRefreshSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshed successfully'**
+  String get groupQrCodeRefreshSuccess;
+
+  /// No description provided for @groupQrCodeRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh failed'**
+  String get groupQrCodeRefreshFailed;
+
+  /// No description provided for @groupQrCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get groupQrCodeExpired;
+
+  /// No description provided for @groupQrCodeLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading QR code...'**
+  String get groupQrCodeLoading;
+
+  /// No description provided for @groupJoinApplySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Join request submitted'**
+  String get groupJoinApplySubmitted;
+
+  /// No description provided for @groupJoinWaitingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for admin approval'**
+  String get groupJoinWaitingApproval;
+
+  /// No description provided for @groupJoinApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Join request approved'**
+  String get groupJoinApproved;
+
+  /// No description provided for @groupJoinRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Join request rejected'**
+  String get groupJoinRejected;
+
+  /// No description provided for @groupJoinWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'Join request withdrawn'**
+  String get groupJoinWithdrawn;
+
+  /// No description provided for @groupJoinWithdrawFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to withdraw request'**
+  String get groupJoinWithdrawFailed;
+
+  /// No description provided for @groupInviteCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid invite code'**
+  String get groupInviteCodeInvalid;
+
+  /// No description provided for @groupInviteCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code expired'**
+  String get groupInviteCodeExpired;
+
+  /// No description provided for @groupInviteCodeUsageLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code usage limit reached'**
+  String get groupInviteCodeUsageLimitReached;
+
+  /// No description provided for @groupDissolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Group dissolved'**
+  String get groupDissolved;
+
+  /// No description provided for @groupInviteCodeTenantMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite code does not belong to the current organization'**
+  String get groupInviteCodeTenantMismatch;
+
+  /// No description provided for @groupJoinRequestRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests are too frequent, please try again later'**
+  String get groupJoinRequestRateLimited;
 
   /// No description provided for @groupAnnouncementEdit.
   ///

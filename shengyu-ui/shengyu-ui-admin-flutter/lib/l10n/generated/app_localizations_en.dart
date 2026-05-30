@@ -880,6 +880,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get groupJoinRequestsTitle => 'Join Requests';
+
+  @override
+  String get groupJoinRequestsEmpty => 'No pending requests';
+
+  @override
   String get groupJoinRequestsTabPending => 'Pending';
 
   @override
@@ -1004,10 +1010,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupQrCodeNeedApproval => 'Approval required';
 
   @override
+  String get groupQrCodeNeedApprovalHint =>
+      'This invite code requires admin approval before joining the group';
+
+  @override
+  String get groupQrCodePermanent => 'Permanent';
+
+  @override
   String get groupQrCodeCopySuccess => 'Invite code copied';
 
   @override
   String get groupQrCodeUnavailable => 'Invite code is unavailable';
+
+  @override
+  String get groupQrCodeRefresh => 'Refresh QR Code';
+
+  @override
+  String get groupQrCodeRefreshing => 'Refreshing...';
+
+  @override
+  String get groupQrCodeRefreshSuccess => 'Refreshed successfully';
+
+  @override
+  String get groupQrCodeRefreshFailed => 'Refresh failed';
+
+  @override
+  String get groupQrCodeExpired => 'Expired';
+
+  @override
+  String get groupQrCodeLoading => 'Loading QR code...';
+
+  @override
+  String get groupJoinApplySubmitted => 'Join request submitted';
+
+  @override
+  String get groupJoinWaitingApproval => 'Waiting for admin approval';
+
+  @override
+  String get groupJoinApproved => 'Join request approved';
+
+  @override
+  String get groupJoinRejected => 'Join request rejected';
+
+  @override
+  String get groupJoinWithdrawn => 'Join request withdrawn';
+
+  @override
+  String get groupJoinWithdrawFailed => 'Failed to withdraw request';
+
+  @override
+  String get groupInviteCodeInvalid => 'Invalid invite code';
+
+  @override
+  String get groupInviteCodeExpired => 'Invite code expired';
+
+  @override
+  String get groupInviteCodeUsageLimitReached =>
+      'Invite code usage limit reached';
+
+  @override
+  String get groupDissolved => 'Group dissolved';
+
+  @override
+  String get groupInviteCodeTenantMismatch =>
+      'This invite code does not belong to the current organization';
+
+  @override
+  String get groupJoinRequestRateLimited =>
+      'Requests are too frequent, please try again later';
 
   @override
   String get groupAnnouncementEdit => 'Edit';

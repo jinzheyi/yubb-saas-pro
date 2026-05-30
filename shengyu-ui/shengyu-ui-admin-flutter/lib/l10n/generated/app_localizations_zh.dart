@@ -870,6 +870,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get groupJoinRequestsTitle => '入群审批';
+
+  @override
+  String get groupJoinRequestsEmpty => '暂无待审批申请';
+
+  @override
   String get groupJoinRequestsTabPending => '待处理';
 
   @override
@@ -993,10 +999,70 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupQrCodeNeedApproval => '需审批入群';
 
   @override
+  String get groupQrCodeNeedApprovalHint => '此邀请码需管理员审批后方可入群';
+
+  @override
+  String get groupQrCodePermanent => '永久有效';
+
+  @override
   String get groupQrCodeCopySuccess => '已复制邀请码';
 
   @override
   String get groupQrCodeUnavailable => '邀请码暂不可用';
+
+  @override
+  String get groupQrCodeRefresh => '刷新二维码';
+
+  @override
+  String get groupQrCodeRefreshing => '刷新中...';
+
+  @override
+  String get groupQrCodeRefreshSuccess => '刷新成功';
+
+  @override
+  String get groupQrCodeRefreshFailed => '刷新失败';
+
+  @override
+  String get groupQrCodeExpired => '已过期';
+
+  @override
+  String get groupQrCodeLoading => '二维码加载中...';
+
+  @override
+  String get groupJoinApplySubmitted => '已提交入群申请';
+
+  @override
+  String get groupJoinWaitingApproval => '等待管理员审批';
+
+  @override
+  String get groupJoinApproved => '入群申请已通过';
+
+  @override
+  String get groupJoinRejected => '入群申请已被拒绝';
+
+  @override
+  String get groupJoinWithdrawn => '已撤回入群申请';
+
+  @override
+  String get groupJoinWithdrawFailed => '撤回申请失败';
+
+  @override
+  String get groupInviteCodeInvalid => '邀请码无效';
+
+  @override
+  String get groupInviteCodeExpired => '邀请码已过期';
+
+  @override
+  String get groupInviteCodeUsageLimitReached => '邀请码使用次数已达上限';
+
+  @override
+  String get groupDissolved => '群已解散';
+
+  @override
+  String get groupInviteCodeTenantMismatch => '该邀请码不属于当前企业';
+
+  @override
+  String get groupJoinRequestRateLimited => '申请提交过于频繁，请稍后再试';
 
   @override
   String get groupAnnouncementEdit => '编辑';

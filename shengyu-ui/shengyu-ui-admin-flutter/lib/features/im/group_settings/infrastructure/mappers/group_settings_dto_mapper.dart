@@ -56,6 +56,7 @@ abstract final class GroupSettingsDtoMapper {
       expireAt: dto.expireAt,
       needApproval: dto.needApproval,
       qrCodeUrl: dto.qrCodeUrl,
+      qrCodeContent: dto.qrCodeContent,
     );
   }
 

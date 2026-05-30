@@ -5,6 +5,7 @@ class GroupInviteInfoDto {
     this.expireAt,
     this.needApproval = false,
     this.qrCodeUrl,
+    this.qrCodeContent,
   });
 
   final String groupId;
@@ -12,6 +13,7 @@ class GroupInviteInfoDto {
   final DateTime? expireAt;
   final bool needApproval;
   final String? qrCodeUrl;
+  final String? qrCodeContent;
 
   factory GroupInviteInfoDto.fromJson(Map<String, dynamic> json) {
     final expireAt =
@@ -25,6 +27,9 @@ class GroupInviteInfoDto {
           json['qrCodeUrl']?.toString() ??
           json['qrUrl']?.toString() ??
           json['qrImageUrl']?.toString(),
+      qrCodeContent:
+          json['qrCodeContent']?.toString() ??
+          json['qrContent']?.toString(),
     );
   }
 

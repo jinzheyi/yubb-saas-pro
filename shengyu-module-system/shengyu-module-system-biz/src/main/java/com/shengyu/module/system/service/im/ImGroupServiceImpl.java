@@ -39,6 +39,7 @@ import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -63,6 +64,37 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 public class ImGroupServiceImpl implements ImGroupService {
 
     private static final DateTimeFormatter GROUP_MUTE_TIP_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    private static final LocalDateTime PERMANENT_EXPIRE_TIME = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
+
+    /** 入群申请限流: 同一用户5分钟内最多3次 */
+    private static final int JOIN_GROUP_RATE_LIMIT = 3;
+    private static final long JOIN_GROUP_RATE_WINDOW_MS = 5 * 60 * 1000;
+    /** 邀请码验证限流: 同一用户1分钟内最多10次 */
+    private static final int VERIFY_INVITE_RATE_LIMIT = 10;
+    private static final long VERIFY_INVITE_RATE_WINDOW_MS = 60 * 1000;
+
+    /** 入群申请限流器: key=userId, value=请求时间戳列表 */
+    private final java.util.concurrent.ConcurrentMap<String, java.util.List<Long>> joinGroupRateLimiter =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /** 邀请码验证限流器: key=userId, value=请求时间戳列表 */
+    private final java.util.concurrent.ConcurrentMap<String, java.util.List<Long>> verifyInviteRateLimiter =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean tryAcquireRateLimit(java.util.concurrent.ConcurrentMap<String, java.util.List<Long>> limiter,
+                                        String key, int maxRequests, long windowMs) {
+        long now = System.currentTimeMillis();
+        java.util.List<Long> timestamps = limiter.computeIfAbsent(key, k ->
+                java.util.Collections.synchronizedList(new java.util.ArrayList<>()));
+        synchronized (timestamps) {
+            timestamps.removeIf(ts -> now - ts > windowMs);
+            if (timestamps.size() >= maxRequests) {
+                return false;
+            }
+            timestamps.add(now);
+            return true;
+        }
+    }
 
     @Resource
     private ImGroupMapper groupMapper;
@@ -457,6 +489,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         log.info("[ImGroupService] 添加群成员成功, groupId: {}, addedCount: {}", addReqVO.getGroupId(), addedCount);
+        log.info("[ImGroupService][批量拉人审计] 操作人: {}, 群ID: {}, 群名: {}, 拉入成员数: {}, 成员ID列表: {}, 操作时间: {}",
+                userId, addReqVO.getGroupId(), group.getName(), addedCount, addedMemberIds, LocalDateTime.now());
     }
 
     @Override
@@ -947,7 +981,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         // 4. 生成新邀请码
         String inviteCode = generateUniqueInviteCode();
-        LocalDateTime expireTime = LocalDateTime.now().plusHours(reqVO.getExpireHours());
+        LocalDateTime expireTime = reqVO.getExpireHours() != null && reqVO.getExpireHours() > 0
+                ? LocalDateTime.now().plusHours(reqVO.getExpireHours())
+                : PERMANENT_EXPIRE_TIME;
 
         ImGroupInviteDO invite = ImGroupInviteDO.builder()
                 .groupId(groupId)
@@ -963,36 +999,48 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         log.info("[ImGroupService] 生成群邀请码成功, groupId: {}, inviteCode: {}, expireTime: {}", 
                 groupId, inviteCode, expireTime);
+        log.info("[ImGroupService][邀请码生成审计] 操作人: {}, 群ID: {}, 群名: {}, 邀请码: {}, 过期时间: {}, 最大使用次数: {}, 生成时间: {}",
+                userId, groupId, group.getName(), inviteCode, expireTime, reqVO.getMaxUseCount(), LocalDateTime.now());
 
         return buildInviteRespVO(invite, groupId);
     }
 
     @Override
     public AppImGroupInviteVerifyRespVO verifyInviteCode(String inviteCode) {
+        Long userId = null;
+        try {
+            userId = com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId();
+        } catch (Exception ignored) {
+        }
+
+        if (userId != null) {
+            if (!tryAcquireRateLimit(verifyInviteRateLimiter, String.valueOf(userId), VERIFY_INVITE_RATE_LIMIT, VERIFY_INVITE_RATE_WINDOW_MS)) {
+                log.warn("[ImGroupService] 邀请码验证触发限流, userId: {}, inviteCode: {}", userId, inviteCode);
+                AppImGroupInviteVerifyRespVO respVO = new AppImGroupInviteVerifyRespVO();
+                return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_RATE_LIMIT_EXCEEDED);
+            }
+        }
+
         AppImGroupInviteVerifyRespVO respVO = new AppImGroupInviteVerifyRespVO();
 
-        // 1. 查询邀请码
         ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
         if (invite == null) {
             return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_NOT_EXISTS);
         }
 
-        // 2. 验证状态
         if (!ImGroupInviteStatusEnum.isValid(invite.getStatus())) {
             return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_DISABLED);
         }
 
-        // 3. 验证过期时间
-        if (invite.getExpireTime().isBefore(LocalDateTime.now())) {
+        if (!PERMANENT_EXPIRE_TIME.equals(invite.getExpireTime()) 
+                && invite.getExpireTime().isBefore(LocalDateTime.now())) {
             return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_EXPIRED);
         }
 
-        // 4. 验证使用次数
         if (invite.getMaxUseCount() > 0 && invite.getUsedCount() >= invite.getMaxUseCount()) {
             return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_USAGE_LIMIT_REACHED);
         }
 
-        // 5. 查询群组信息
         ImGroupDO group = groupMapper.selectById(invite.getGroupId());
         if (group == null) {
             return buildInviteVerifyFailure(respVO, GROUP_NOT_EXISTS);
@@ -1007,7 +1055,6 @@ public class ImGroupServiceImpl implements ImGroupService {
             return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_TENANT_MISMATCH);
         }
 
-        // 6. 返回验证成功信息
         respVO.setValid(true);
         respVO.setGroupId(group.getId());
         respVO.setGroupName(group.getName());
@@ -1022,7 +1069,11 @@ public class ImGroupServiceImpl implements ImGroupService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AppImGroupInviteJoinRespVO joinGroupByInviteCode(Long userId, String inviteCode) {
-        // 1. 验证邀请码
+        if (!tryAcquireRateLimit(joinGroupRateLimiter, String.valueOf(userId), JOIN_GROUP_RATE_LIMIT, JOIN_GROUP_RATE_WINDOW_MS)) {
+            log.warn("[ImGroupService] 入群申请触发限流, userId: {}, inviteCode: {}", userId, inviteCode);
+            throw exception(GROUP_JOIN_REQUEST_RATE_LIMIT_EXCEEDED);
+        }
+
         AppImGroupInviteVerifyRespVO verifyResult = verifyInviteCode(inviteCode);
         if (!verifyResult.getValid()) {
             throwInviteVerifyFailure(verifyResult);
@@ -1030,13 +1081,22 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         Long groupId = verifyResult.getGroupId();
 
-        // 2. 检查是否已是群成员
+        Long currentTenantId = resolveTenantId();
+        ImGroupDO groupForTenantCheck = groupMapper.selectById(groupId);
+        if (groupForTenantCheck != null) {
+            Long groupTenantId = groupForTenantCheck.getTenantId() != null ? groupForTenantCheck.getTenantId() : 0L;
+            if (!Objects.equals(currentTenantId, groupTenantId)) {
+                log.warn("[ImGroupService] 租户隔离校验失败, userId: {}, userTenantId: {}, groupId: {}, groupTenantId: {}",
+                        userId, currentTenantId, groupId, groupTenantId);
+                throw exception(GROUP_INVITE_CODE_TENANT_MISMATCH);
+            }
+        }
+
         ImGroupUserDO existingMember = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
         if (existingMember != null) {
             throw exception(GROUP_MEMBER_ALREADY_EXISTS);
         }
 
-        // 3. 检查群人数是否已满
         ImGroupDO group = groupMapper.selectById(groupId);
         if (group.getMemberCount() >= group.getMaxMemberCount()) {
             throw exception(GROUP_MEMBER_FULL);
@@ -1045,7 +1105,6 @@ public class ImGroupServiceImpl implements ImGroupService {
         AppImGroupInviteJoinRespVO respVO = new AppImGroupInviteJoinRespVO();
         respVO.setGroupId(groupId);
 
-        // 4. 如果需要审批，创建加群申请
         if (verifyResult.getNeedApproval()) {
             ImGroupJoinRequestDO pendingRequest = groupJoinRequestMapper.selectPendingByGroupIdAndApplicantUserId(groupId, userId);
             if (pendingRequest == null) {
@@ -1067,10 +1126,8 @@ public class ImGroupServiceImpl implements ImGroupService {
             return respVO;
         }
 
-        // 5. 直接加入群
         addApprovedMemberToGroup(group, userId, userId);
 
-        // 6. 更新邀请码使用次数
         ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
         invite.setUsedCount(invite.getUsedCount() + 1);
         groupInviteMapper.updateById(invite);
@@ -1147,7 +1204,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             
             // 生成邀请码
             String inviteCode = generateUniqueInviteCode();
-            LocalDateTime expireTime = LocalDateTime.now().plusHours(24); // 默认24小时
+            LocalDateTime expireTime = PERMANENT_EXPIRE_TIME;
             
             invite = ImGroupInviteDO.builder()
                     .id(cn.hutool.core.util.IdUtil.getSnowflakeNextId())
@@ -1771,7 +1828,15 @@ public class ImGroupServiceImpl implements ImGroupService {
         if (request == null) {
             throw exception(GROUP_JOIN_REQUEST_NOT_EXISTS);
         }
+
+        log.info("[ImGroupService][审批权限校验] 开始校验审批人权限, operatorUserId: {}, groupId: {}, requestId: {}",
+                userId, request.getGroupId(), requestId);
+
         assertCanManageJoinRequests(userId, request.getGroupId());
+
+        log.info("[ImGroupService][审批权限校验] 审批人权限校验通过, operatorUserId: {}, groupId: {}, applicantUserId: {}",
+                userId, request.getGroupId(), request.getApplicantUserId());
+
         if (!ImGroupJoinRequestStatusEnum.isPending(request.getStatus())) {
             throw exception(GROUP_JOIN_REQUEST_STATUS_INVALID);
         }
@@ -1789,11 +1854,16 @@ public class ImGroupServiceImpl implements ImGroupService {
             addApprovedMemberToGroup(group, request.getApplicantUserId(), userId);
         }
 
+        LocalDateTime approveTime = LocalDateTime.now();
         request.setStatus(ImGroupJoinRequestStatusEnum.APPROVED.getStatus());
         request.setHandledBy(userId);
-        request.setHandledTime(LocalDateTime.now());
+        request.setHandledTime(approveTime);
         request.setRejectReason(null);
         groupJoinRequestMapper.updateById(request);
+
+        log.info("[ImGroupService][审批审计] 审批通过, operatorUserId: {}, operatorRole: {}, applicantUserId: {}, groupId: {}, approveTime: {}",
+                userId, getMemberRoleName(request.getGroupId(), userId),
+                request.getApplicantUserId(), request.getGroupId(), approveTime);
 
         ImGroupJoinRequestDO finalRequest = request;
         runAfterCommit(() -> {
@@ -1809,15 +1879,30 @@ public class ImGroupServiceImpl implements ImGroupService {
         if (request == null) {
             throw exception(GROUP_JOIN_REQUEST_NOT_EXISTS);
         }
+
+        log.info("[ImGroupService][审批权限校验] 开始校验审批人权限, operatorUserId: {}, groupId: {}, requestId: {}",
+                userId, request.getGroupId(), requestId);
+
         assertCanManageJoinRequests(userId, request.getGroupId());
+
+        log.info("[ImGroupService][审批权限校验] 审批人权限校验通过, operatorUserId: {}, groupId: {}, applicantUserId: {}",
+                userId, request.getGroupId(), request.getApplicantUserId());
+
         if (!ImGroupJoinRequestStatusEnum.isPending(request.getStatus())) {
             throw exception(GROUP_JOIN_REQUEST_STATUS_INVALID);
         }
+
+        LocalDateTime rejectTime = LocalDateTime.now();
+        String finalRejectReason = rejectReason != null && !rejectReason.trim().isEmpty() ? rejectReason.trim() : "管理员已拒绝";
         request.setStatus(ImGroupJoinRequestStatusEnum.REJECTED.getStatus());
         request.setHandledBy(userId);
-        request.setHandledTime(LocalDateTime.now());
-        request.setRejectReason(rejectReason != null && !rejectReason.trim().isEmpty() ? rejectReason.trim() : "管理员已拒绝");
+        request.setHandledTime(rejectTime);
+        request.setRejectReason(finalRejectReason);
         groupJoinRequestMapper.updateById(request);
+
+        log.info("[ImGroupService][审批审计] 审批拒绝, operatorUserId: {}, operatorRole: {}, applicantUserId: {}, groupId: {}, rejectTime: {}, reason: {}",
+                userId, getMemberRoleName(request.getGroupId(), userId),
+                request.getApplicantUserId(), request.getGroupId(), rejectTime, finalRejectReason);
 
         ImGroupDO group = groupMapper.selectById(request.getGroupId());
         if (group != null) {
@@ -2026,6 +2111,20 @@ public class ImGroupServiceImpl implements ImGroupService {
         return tenantId != null ? tenantId : 0L;
     }
 
+    private String getMemberRoleName(Long groupId, Long userId) {
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null) {
+            return "未知";
+        }
+        if (ImGroupMemberRoleEnum.isOwner(groupUser.getRole())) {
+            return "群主";
+        }
+        if (ImGroupMemberRoleEnum.isAdmin(groupUser.getRole())) {
+            return "管理员";
+        }
+        return "成员";
+    }
+
     private void upsertGroupMember(Long groupId, Long memberUserId, Integer role) {
         ImGroupUserDO deletedMember = groupUserMapper.selectDeletedByGroupIdAndUserId(groupId, memberUserId);
         if (deletedMember != null) {
@@ -2067,6 +2166,27 @@ public class ImGroupServiceImpl implements ImGroupService {
             return null;
         }
         return groupUser.getRole();
+    }
+
+    @Scheduled(cron = "0 */10 * * * ?")
+    public void cleanExpiredRateLimitRecords() {
+        try {
+            joinGroupRateLimiter.values().forEach(list -> {
+                long now = System.currentTimeMillis();
+                list.removeIf(ts -> now - ts > JOIN_GROUP_RATE_WINDOW_MS);
+            });
+            joinGroupRateLimiter.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+
+            verifyInviteRateLimiter.values().forEach(list -> {
+                long now = System.currentTimeMillis();
+                list.removeIf(ts -> now - ts > VERIFY_INVITE_RATE_WINDOW_MS);
+            });
+            verifyInviteRateLimiter.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+
+            log.debug("[ImGroupService] 清理限流器过期数据完成");
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 清理限流器过期数据失败, error: {}", e.getMessage());
+        }
     }
 
 }

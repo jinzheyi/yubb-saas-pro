@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_info.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
-import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
 class GroupQrCodePage extends ConsumerStatefulWidget {
   const GroupQrCodePage({super.key, required this.args});
@@ -20,6 +20,7 @@ class GroupQrCodePage extends ConsumerStatefulWidget {
 
 class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
   GroupInviteInfo? _inviteInfo;
+  List<GroupMember> _members = [];
   bool _loading = true;
   String? _errorMessage;
 
@@ -27,13 +28,15 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
   void initState() {
     super.initState();
     Future.microtask(_loadInviteInfo);
+    Future.microtask(_loadMembers);
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final inviteCode = _inviteInfo?.inviteCode.trim() ?? '';
-    final qrCodeUrl = _resolveQrCodeUrl(_inviteInfo);
+    final qrCodeContent = _inviteInfo?.effectiveQrCodeContent ?? '';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
@@ -55,18 +58,17 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
             ),
             child: Column(
               children: [
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    color: getGroupAvatarColor(widget.args.groupId),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.groups_2_outlined,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+                GroupAvatarWidget.fromMembers(
+                  members: _members
+                      .take(4)
+                      .map((m) => GroupAvatarMember(
+                            userId: m.userId,
+                            name: m.nickname.isNotEmpty ? m.nickname : m.userName,
+                            avatarUrl: m.avatarUrl,
+                          ))
+                      .toList(),
+                  size: 62,
+                  borderRadius: 14,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -112,46 +114,27 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            if (qrCodeUrl.isNotEmpty)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: 168,
-                                  height: 168,
+                            if (qrCodeContent.isNotEmpty)
+                              Container(
+                                width: 168,
+                                height: 168,
+                                decoration: BoxDecoration(
                                   color: Colors.white,
-                                  child: Image.network(
-                                    qrCodeUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            _InviteCodeFallback(
-                                              inviteCode: inviteCode,
-                                            ),
-                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: QrImageView(
+                                  data: qrCodeContent,
+                                  version: QrVersions.auto,
+                                  size: 168.0,
+                                  padding: EdgeInsets.zero,
+                                  backgroundColor: Colors.white,
                                 ),
                               )
                             else
                               _InviteCodeFallback(inviteCode: inviteCode),
                             if (_inviteInfo?.needApproval == true) ...[
                               const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF4E8),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  strings.groupQrCodeNeedApproval,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFFFF8A00),
-                                  ),
-                                ),
-                              ),
+                              _ApprovalHintWidget(),
                             ],
                             const SizedBox(height: 12),
                             SelectableText(
@@ -164,15 +147,6 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF202531),
                                 letterSpacing: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _formatExpireAt(_inviteInfo?.expireAt),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF8F96A3),
                               ),
                             ),
                           ],
@@ -189,26 +163,12 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: inviteCode.isEmpty
-                            ? null
-                            : () => _copyInviteCode(context, inviteCode),
-                        icon: const Icon(Icons.copy_rounded),
-                        label: Text(strings.chatActionCopy),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _loadInviteInfo,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: Text(strings.retry),
-                      ),
-                    ),
-                  ],
+                OutlinedButton.icon(
+                  onPressed: inviteCode.isEmpty
+                      ? null
+                      : () => _copyInviteCode(context, inviteCode),
+                  icon: const Icon(Icons.copy_rounded),
+                  label: Text(strings.chatActionCopy),
                 ),
               ],
             ),
@@ -245,29 +205,22 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
     }
   }
 
-  String _formatExpireAt(DateTime? value) {
-    if (value == null) {
-      return AppLocalizations.of(context).groupQrCodeUnavailable;
+  Future<void> _loadMembers() async {
+    try {
+      final members = await ref
+          .read(groupSettingsRepositoryProvider)
+          .getGroupMembers(widget.args.groupId);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _members = members;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
     }
-    return DateFormat('yyyy-MM-dd HH:mm').format(value.toLocal());
-  }
-
-  String _resolveQrCodeUrl(GroupInviteInfo? inviteInfo) {
-    final raw = inviteInfo?.qrCodeUrl?.trim() ?? '';
-    if (raw.isEmpty) {
-      return '';
-    }
-    final uri = Uri.tryParse(raw);
-    if (uri != null && uri.hasScheme) {
-      return uri.toString();
-    }
-    final apiUri = Uri.parse(AppConfig.apiBaseUrl);
-    final origin = Uri(
-      scheme: apiUri.scheme,
-      host: apiUri.host,
-      port: apiUri.hasPort ? apiUri.port : null,
-    );
-    return origin.resolve(raw).toString();
   }
 
   Future<void> _copyInviteCode(BuildContext context, String inviteCode) async {
@@ -302,6 +255,57 @@ class _InviteCodeFallback extends StatelessWidget {
           letterSpacing: 1.2,
         ),
       ),
+    );
+  }
+}
+
+class _ApprovalHintWidget extends StatelessWidget {
+  const _ApprovalHintWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4E8),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                size: 14,
+                color: Color(0xFFFF8A00),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                strings.groupQrCodeNeedApproval,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFFF8A00),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          strings.groupQrCodeNeedApprovalHint,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFFB8860B),
+          ),
+        ),
+      ],
     );
   }
 }
