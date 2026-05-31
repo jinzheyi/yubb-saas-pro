@@ -32,6 +32,7 @@ abstract final class GroupSettingsDtoMapper {
       needApproval: group.needApproval,
       myNickname: group.myNickname,
       pendingJoinRequestCount: pendingJoinRequestCount,
+      groupMemberStatus: group.groupMemberStatus,
     );
   }
 

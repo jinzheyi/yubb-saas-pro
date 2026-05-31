@@ -1059,6 +1059,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupDissolved => '群已解散';
 
   @override
+  String get groupLeftStatus => '已退出';
+
+  @override
+  String get groupKickedStatus => '已被踢';
+
+  @override
+  String get groupDisbandedStatus => '已解散';
+
+  @override
+  String get groupLeftCannotSend => '你已退出该群聊，无法发送消息';
+
+  @override
+  String get groupKickedCannotSend => '你已被移出群聊，无法发送消息';
+
+  @override
+  String get groupDisbandedCannotSend => '该群已解散，无法发送消息';
+
+  @override
+  String get groupSettingsLeftPageTitle => '已退出群聊';
+
+  @override
+  String get groupSettingsKickedPageTitle => '已被移出群聊';
+
+  @override
+  String get groupSettingsDisbandedPageTitle => '群聊已解散';
+
+  @override
+  String get groupSettingsLeftHint => '你已退出该群聊，无法查看群设置';
+
+  @override
+  String get groupSettingsKickedHint => '你已被管理员移出群聊，无法查看群设置';
+
+  @override
+  String get groupSettingsDisbandedHint => '群主已解散该群聊，无法查看群设置';
+
+  @override
+  String get groupSettingsBackToConversations => '返回会话列表';
+
+  @override
+  String get groupSettingsCannotViewQrCode => '你无法查看该群二维码';
+
+  @override
+  String get groupSettingsCannotViewQrCodeHint => '你已不在该群内，无法获取群二维码';
+
+  @override
+  String get groupSettingsReadOnlyMembersHint => '你已不在该群内，仅可查看成员列表';
+
+  @override
   String get groupInviteCodeTenantMismatch => '该邀请码不属于当前企业';
 
   @override

@@ -371,6 +371,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final groupRestrictionHint = _resolveGroupSendRestrictionHint(
       groupSettingsState: groupSettingsState,
       currentUserId: currentUserId,
+      conversation: conversation,
     );
     final canMentionAll = _resolveCanMentionAll(
       members: groupMembers,
@@ -900,6 +901,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       case 'group_member_added':
       case 'group_member_removed':
       case 'group_owner_transferred':
+      case 'group_disbanded':
         _handleGroupSystemSignal(signal);
         return;
       default:
@@ -1026,6 +1028,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       // 其他成员移除，仅局部刷新成员列表
       unawaited(groupMembersNotifier.load());
+    }
+
+    if (signal.action == 'group_disbanded') {
+      _redirectAfterRemovedFromGroup(context, ref.read(appStringsProvider).groupDissolved);
+      return;
     }
 
     final tipText = _resolveGroupSystemSignalText(signal);
@@ -1365,12 +1372,26 @@ class _ChatPageState extends ConsumerState<ChatPage>
   String? _resolveGroupSendRestrictionHint({
     required GroupSettingsState? groupSettingsState,
     required String currentUserId,
+    required Conversation? conversation,
   }) {
-    if (widget.args.conversationType != ConversationType.group ||
-        groupSettingsState == null) {
+    if (widget.args.conversationType != ConversationType.group) {
       return null;
     }
     final strings = ref.read(appStringsProvider);
+    if (conversation != null) {
+      if (conversation.isGroupLeft) {
+        return strings.groupLeftCannotSend;
+      }
+      if (conversation.isGroupKicked) {
+        return strings.groupKickedCannotSend;
+      }
+      if (conversation.isGroupDisbanded) {
+        return strings.groupDisbandedCannotSend;
+      }
+    }
+    if (groupSettingsState == null) {
+      return null;
+    }
     if (groupSettingsState.membershipBlocked) {
       return strings.chatGroupRemovedCannotSend;
     }
@@ -4164,6 +4185,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
       _showAttachmentError(context, _resolveReadOnlyHint());
       return false;
     }
+    final conversationState = ref.read(conversationListControllerProvider);
+    final conversation = _resolveConversation(conversationState.conversations);
     final groupId = _resolveGroupId(
       widget.args.conversationType == ConversationType.group,
     );
@@ -4182,6 +4205,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final groupRestrictionHint = _resolveGroupSendRestrictionHint(
       groupSettingsState: groupSettingsState,
       currentUserId: ref.read(authSessionProvider).userId,
+      conversation: conversation,
     );
     if (groupRestrictionHint != null) {
       _showAttachmentError(context, groupRestrictionHint);

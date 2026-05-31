@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dar
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/controllers/group_members_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_members_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -32,6 +35,8 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(groupSettingsRealtimeBindingProvider(widget.args.groupId));
+    _listenGroupMemberRealtimeSignal(ref, context);
     final strings = AppLocalizations.of(context);
     final state = ref.watch(groupMembersControllerProvider(widget.args));
     final controller = ref.read(
@@ -56,6 +61,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         ? strings.backAction
         : strings.cancelAction;
     final selectedCount = state.selectedMemberIds.length;
+    final isReadOnly = widget.args.isViewMode && state.currentUserRoleCode == 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -67,7 +73,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         centerTitle: true,
         title: Text(headerTitle),
         actions: [
-          if (widget.args.isRemoveMode && selectedCount > 0)
+          if (widget.args.isRemoveMode && selectedCount > 0 && !isReadOnly)
             TextButton(
               onPressed: () =>
                   _confirmRemove(context, strings, state, controller),
@@ -80,6 +86,31 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       ),
       body: Column(
         children: [
+          if (isReadOnly)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: const Color(0xFFFFF4E8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: Color(0xFFFF8A00),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      strings.groupSettingsReadOnlyMembersHint,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFB8860B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -114,7 +145,8 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          onChanged: controller.updateKeyword,
+                          onChanged: isReadOnly ? null : controller.updateKeyword,
+                          enabled: !isReadOnly,
                           textInputAction: TextInputAction.search,
                           style: const TextStyle(
                             fontSize: 14,
@@ -151,6 +183,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                   state: state,
                   controller: controller,
                   groupedMembers: groupedMembers,
+                  isReadOnly: isReadOnly,
                 ),
                 if (letters.isNotEmpty &&
                     state.status == GroupMembersStatus.ready &&
@@ -178,6 +211,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
     required GroupMembersState state,
     required GroupMembersController controller,
     required List<_GroupedMembers> groupedMembers,
+    required bool isReadOnly,
   }) {
     switch (state.status) {
       case GroupMembersStatus.initial:
@@ -246,14 +280,16 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                           ),
                           currentUserId: state.currentUserId,
                           currentUserRoleCode: state.currentUserRoleCode,
+                          isReadOnly: isReadOnly,
                           onTap: () => _handleMemberTap(
                             context,
                             strings,
                             state,
                             controller,
                             group.members[memberIndex],
+                            isReadOnly,
                           ),
-                          onManageTap: widget.args.isViewMode
+                          onManageTap: (widget.args.isViewMode && !isReadOnly)
                               ? () => _openManageSheet(
                                   context,
                                   strings,
@@ -287,7 +323,22 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
     GroupMembersState state,
     GroupMembersController controller,
     GroupMemberPreviewItem member,
+    bool isReadOnly,
   ) async {
+    if (isReadOnly) {
+      final displayName = member.name.trim().isNotEmpty
+          ? member.name.trim()
+          : strings.profileUnknownUser;
+      context.pushNamed(
+        RouteNames.contactsProfile,
+        pathParameters: <String, String>{'userId': member.id},
+        extra: {
+          'name': displayName,
+          'departmentName': member.deptName?.trim() ?? '',
+        },
+      );
+      return;
+    }
     if (widget.args.isTransferMode) {
       await _confirmTransfer(context, strings, controller, state, member);
       return;
@@ -569,6 +620,36 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _listenGroupMemberRealtimeSignal(
+    WidgetRef ref,
+    BuildContext context,
+  ) {
+    final signal = ref.watch(groupMemberRealtimeSignalProvider);
+    if (signal == null || !context.mounted) {
+      return;
+    }
+    final strings = AppLocalizations.of(context);
+    final controller = ref.read(
+      groupMembersControllerProvider(widget.args).notifier,
+    );
+
+    switch (signal.action) {
+      case 'group_member_added':
+      case 'group_member_removed':
+      case 'group_owner_transferred':
+        unawaited(controller.load());
+        break;
+      case 'group_disbanded':
+        _showSnackBar(context, strings.groupDissolved);
+        Navigator.of(context).pop(true);
+        break;
+      case 'group_member_mute_changed':
+      case 'group_mute_all_changed':
+        unawaited(controller.load());
+        break;
+    }
+  }
+
   List<_GroupedMembers> _groupMembers(List<GroupMemberPreviewItem> members) {
     final groups = <String, List<GroupMemberPreviewItem>>{};
     for (final member in members) {
@@ -614,6 +695,7 @@ class _MemberTile extends StatelessWidget {
     required this.currentUserRoleCode,
     required this.onTap,
     this.onManageTap,
+    this.isReadOnly = false,
   });
 
   final GroupMemberPreviewItem member;
@@ -623,6 +705,7 @@ class _MemberTile extends StatelessWidget {
   final int currentUserRoleCode;
   final VoidCallback onTap;
   final VoidCallback? onManageTap;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -636,6 +719,7 @@ class _MemberTile extends StatelessWidget {
               ? member.deptName!.trim()
               : '');
     final canManage =
+        !isReadOnly &&
         args.isViewMode &&
         currentUserRoleCode > 0 &&
         member.roleCode != 2 &&
@@ -650,7 +734,7 @@ class _MemberTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              if (args.isRemoveMode) ...[
+              if (args.isRemoveMode && !isReadOnly) ...[
                 _SelectionBox(
                   selected: selected,
                   disabled: member.roleCode == 2 || member.id == currentUserId,

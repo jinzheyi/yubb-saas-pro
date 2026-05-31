@@ -1072,6 +1072,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupDissolved => 'Group dissolved';
 
   @override
+  String get groupLeftStatus => 'Left';
+
+  @override
+  String get groupKickedStatus => 'Removed';
+
+  @override
+  String get groupDisbandedStatus => 'Dissolved';
+
+  @override
+  String get groupLeftCannotSend =>
+      'You have left this group and cannot send messages';
+
+  @override
+  String get groupKickedCannotSend =>
+      'You have been removed from the group and cannot send messages';
+
+  @override
+  String get groupDisbandedCannotSend =>
+      'This group has been dissolved and cannot send messages';
+
+  @override
+  String get groupSettingsLeftPageTitle => 'Left Group';
+
+  @override
+  String get groupSettingsKickedPageTitle => 'Removed from Group';
+
+  @override
+  String get groupSettingsDisbandedPageTitle => 'Group Dissolved';
+
+  @override
+  String get groupSettingsLeftHint =>
+      'You have left this group and cannot view group settings';
+
+  @override
+  String get groupSettingsKickedHint =>
+      'You have been removed from the group by an admin and cannot view group settings';
+
+  @override
+  String get groupSettingsDisbandedHint =>
+      'The group owner has dissolved this group and cannot view group settings';
+
+  @override
+  String get groupSettingsBackToConversations => 'Back to Conversations';
+
+  @override
+  String get groupSettingsCannotViewQrCode =>
+      'You cannot view this group QR code';
+
+  @override
+  String get groupSettingsCannotViewQrCodeHint =>
+      'You are no longer in this group and cannot retrieve the group QR code';
+
+  @override
+  String get groupSettingsReadOnlyMembersHint =>
+      'You are no longer in this group and can only view the member list';
+
+  @override
   String get groupInviteCodeTenantMismatch =>
       'This invite code does not belong to the current organization';
 

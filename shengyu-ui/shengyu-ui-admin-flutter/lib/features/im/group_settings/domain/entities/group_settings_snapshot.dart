@@ -15,6 +15,7 @@ class GroupSettingsSnapshot {
     required this.needApproval,
     required this.myNickname,
     required this.pendingJoinRequestCount,
+    this.groupMemberStatus,
   });
 
   final String groupId;
@@ -32,4 +33,5 @@ class GroupSettingsSnapshot {
   final bool needApproval;
   final String myNickname;
   final int pendingJoinRequestCount;
+  final int? groupMemberStatus;
 }

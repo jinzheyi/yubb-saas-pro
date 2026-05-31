@@ -109,7 +109,7 @@ public class ImStickerServiceImpl implements ImStickerService {
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, message.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, message.getChatId());
         if (chatUser == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }

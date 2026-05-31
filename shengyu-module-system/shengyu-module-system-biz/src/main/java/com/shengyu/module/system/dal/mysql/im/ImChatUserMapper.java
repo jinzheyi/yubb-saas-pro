@@ -212,4 +212,31 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
             "WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0")
     int markReadToSequence(@Param("userId") Long userId, @Param("chatId") Long chatId, @Param("readSequence") Long readSequence);
 
+    /**
+     * 更新群组成员状态
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param groupMemberStatus 群组成员状态：0=正常, 1=已退出, 2=已被踢, 3=群已解散
+     * @return 更新行数
+     */
+    default int updateGroupMemberStatus(Long userId, Long chatId, Integer groupMemberStatus) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getGroupMemberStatus, groupMemberStatus));
+    }
+
+    /**
+     * 批量更新群组成员状态（用于群解散场景）
+     * @param chatId 会话ID
+     * @param groupMemberStatus 群组成员状态：3=群已解散
+     * @return 更新行数
+     */
+    default int batchUpdateGroupMemberStatusByChatId(Long chatId, Integer groupMemberStatus) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getChatId, chatId)
+                .eq(ImChatUserDO::getDeletedByUser, false)
+                .set(ImChatUserDO::getGroupMemberStatus, groupMemberStatus));
+    }
+
 }

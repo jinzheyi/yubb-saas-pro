@@ -57,6 +57,10 @@ class _ConversationTileState extends State<ConversationTile> {
     final showGroupCount =
         conversation.conversationType == ConversationType.group &&
         conversation.groupMemberCount > 0;
+    final showGroupStatus =
+        conversation.conversationType == ConversationType.group &&
+        conversation.groupMemberStatus != null &&
+        conversation.groupMemberStatus != 0;
 
     return Material(
       color: widget.highlightPinned ? const Color(0xFFF7F8FB) : Colors.white,
@@ -112,6 +116,12 @@ class _ConversationTileState extends State<ConversationTile> {
                                             fontSize: 13,
                                             color: const Color(0xFFB1B7C5),
                                           ),
+                                    ),
+                                  ],
+                                  if (showGroupStatus) ...[
+                                    const SizedBox(width: 4),
+                                    _GroupStatusBadge(
+                                      status: conversation.groupMemberStatus!,
                                     ),
                                   ],
                                 ],
@@ -516,5 +526,40 @@ class _ConversationAvatar extends StatelessWidget {
     return names
         .map((name) => GroupAvatarMember(userId: name, name: name))
         .toList();
+  }
+}
+
+class _GroupStatusBadge extends StatelessWidget {
+  const _GroupStatusBadge({required this.status});
+
+  final int status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      1 => ('已退出', const Color(0xFF9AA2AF)),
+      2 => ('已被踢', const Color(0xFFFF9500)),
+      3 => ('已解散', const Color(0xFFFF3B30)),
+      _ => ('', Colors.transparent),
+    };
+    if (label.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
   }
 }

@@ -661,7 +661,7 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markConversationReadBySequence(Long userId, Long chatId, Long readSequence) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -805,7 +805,7 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Override
     public AppImConversationRespVO getConversationDetail(Long userId, Long conversationId) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, conversationId);
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, conversationId);
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -1400,7 +1400,7 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Override
     public String getDraft(Long userId, Long conversationId) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, conversationId);
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, conversationId);
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }

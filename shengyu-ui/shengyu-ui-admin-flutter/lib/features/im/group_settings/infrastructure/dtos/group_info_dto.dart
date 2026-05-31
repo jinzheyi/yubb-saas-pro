@@ -14,6 +14,7 @@ class GroupInfoDto {
     required this.allowMemberInvite,
     required this.needApproval,
     required this.myNickname,
+    this.groupMemberStatus,
   });
 
   final String groupId;
@@ -30,6 +31,7 @@ class GroupInfoDto {
   final bool allowMemberInvite;
   final bool needApproval;
   final String myNickname;
+  final int? groupMemberStatus;
 
   factory GroupInfoDto.fromJson(Map<String, dynamic> json) {
     return GroupInfoDto(
@@ -50,7 +52,14 @@ class GroupInfoDto {
       allowMemberInvite: json['allowMemberInvite'] != false,
       needApproval: json['needApproval'] == true,
       myNickname: '${json['myNickname'] ?? json['nickname'] ?? ''}',
+      groupMemberStatus: _parseInt(json['groupMemberStatus'] ?? json['memberStatus']),
     );
+  }
+
+  static int? _parseInt(Object? value) {
+    if (value == null) return null;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   static DateTime? _parseDateTime(Object? value) {

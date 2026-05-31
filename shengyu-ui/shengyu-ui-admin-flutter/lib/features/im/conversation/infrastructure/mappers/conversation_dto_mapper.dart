@@ -49,6 +49,7 @@ abstract final class ConversationDtoMapper {
       online: dto.online,
       onlineDeviceTypes: dto.onlineDeviceTypes,
       lastActiveTime: dto.lastActiveTime > 0 ? dto.lastActiveTime : null,
+      groupMemberStatus: dto.groupMemberStatus,
     );
   }
 }

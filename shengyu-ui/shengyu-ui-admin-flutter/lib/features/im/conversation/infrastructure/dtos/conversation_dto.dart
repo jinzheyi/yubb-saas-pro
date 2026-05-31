@@ -36,6 +36,7 @@ class ConversationDto {
     required this.online,
     required this.onlineDeviceTypes,
     required this.lastActiveTime,
+    required this.groupMemberStatus,
   });
 
   final String chatId;
@@ -69,6 +70,7 @@ class ConversationDto {
   final bool online;
   final List<int> onlineDeviceTypes;
   final int lastActiveTime;
+  final int? groupMemberStatus;
 
   factory ConversationDto.fromJson(Map<String, dynamic> json) {
     return ConversationDto(
@@ -184,6 +186,7 @@ class ConversationDto {
       online: _parseBool(json['online']),
       onlineDeviceTypes: _parseIntList(json['onlineDeviceTypes']),
       lastActiveTime: _parseInt(json['lastActiveTime']) ?? 0,
+      groupMemberStatus: _parseInt(json['groupMemberStatus']),
     );
   }
 

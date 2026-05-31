@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
@@ -8,6 +9,20 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+
+final groupMemberRemovedSignalProvider =
+    StateProvider<GroupMemberRemovedSignal?>((ref) => null);
+
+class GroupMemberRemovedSignal {
+  const GroupMemberRemovedSignal({
+    required this.groupId,
+    required this.reason,
+    required this.token,
+  });
+  final String groupId;
+  final String reason;
+  final int token;
+}
 
 /// 会话实时绑定：在整个应用生命周期中保持活跃，不随Tab切换而销毁
 /// 移除 autoDispose 确保 websocket 订阅在 Tab 切换时保持连接
@@ -82,6 +97,10 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
 void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
   final payload = event.payload;
   final action = payload['action']?.toString().trim() ?? '';
+  if (_isGroupLifecycleAction(action)) {
+    _handleGroupLifecycleAction(ref, action, payload);
+    return;
+  }
   if (_isJoinRequestAction(action)) {
     final groupId = payload['groupId']?.toString().trim() ?? '';
     if (groupId.isNotEmpty && groupId != '0') {
@@ -125,8 +144,75 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
       content == 'BADGE_UPDATE' ||
       content == 'MESSAGE_SEND_DENIED' ||
       content == 'GROUP_MEMBER_MUTE_CHANGED' ||
-      content == 'GROUP_MUTE_ALL_CHANGED') {
+      content == 'GROUP_MUTE_ALL_CHANGED' ||
+      content == 'GROUP_MEMBER_ADDED' ||
+      content == 'GROUP_MEMBER_REMOVED' ||
+      content == 'GROUP_OWNER_TRANSFERRED' ||
+      content == 'GROUP_DISBANDED') {
     ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+  }
+}
+
+void _handleGroupLifecycleAction(
+  Ref ref,
+  String action,
+  Map<String, Object?> payload,
+) {
+  final groupId = payload['groupId']?.toString().trim() ?? '';
+  if (groupId.isEmpty || groupId == '0') {
+    return;
+  }
+
+  if (action == 'group_disbanded') {
+    ref.read(groupMemberRemovedSignalProvider.notifier).state =
+        GroupMemberRemovedSignal(
+      groupId: groupId,
+      reason: 'group_disbanded',
+      token: DateTime.now().microsecondsSinceEpoch,
+    );
+    ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    return;
+  }
+
+  if (action == 'group_member_removed') {
+    final removedUserId =
+        payload['userId']?.toString() ??
+        payload['memberId']?.toString() ??
+        payload['removedUserId']?.toString() ??
+        '';
+    final currentUserId = ref.read(authSessionProvider).userId;
+    if (removedUserId.isNotEmpty && removedUserId == currentUserId) {
+      ref.read(groupMemberRemovedSignalProvider.notifier).state =
+          GroupMemberRemovedSignal(
+        groupId: groupId,
+        reason: 'kicked_from_group',
+        token: DateTime.now().microsecondsSinceEpoch,
+      );
+      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    }
+    return;
+  }
+
+  if (action == 'group_member_added') {
+    ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    return;
+  }
+
+  if (action == 'group_owner_transferred') {
+    ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    return;
+  }
+}
+
+bool _isGroupLifecycleAction(String action) {
+  switch (action) {
+    case 'group_disbanded':
+    case 'group_member_removed':
+    case 'group_member_added':
+    case 'group_owner_transferred':
+      return true;
+    default:
+      return false;
   }
 }
 

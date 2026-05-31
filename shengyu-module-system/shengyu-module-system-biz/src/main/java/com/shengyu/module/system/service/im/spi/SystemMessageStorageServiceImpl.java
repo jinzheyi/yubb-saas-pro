@@ -256,7 +256,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             if (m == null || m.getId() == null || m.getChatId() == null) {
                 continue;
             }
-            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, m.getChatId());
+            ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, m.getChatId());
             if (chatUser == null) {
                 continue;
             }

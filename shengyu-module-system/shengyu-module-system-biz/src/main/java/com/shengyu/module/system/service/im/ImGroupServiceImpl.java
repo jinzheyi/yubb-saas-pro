@@ -203,6 +203,35 @@ public class ImGroupServiceImpl implements ImGroupService {
         return group.getId();
     }
 
+    /**
+     * 校验用户是否为群成员，非群成员抛出友好错误提示
+     * 
+     * @param userId 用户ID
+     * @param groupId 群组ID
+     * @throws com.shengyu.framework.common.exception.ServiceException 如果不是群成员
+     */
+    private void assertIsGroupMember(Long userId, Long groupId) {
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser != null) {
+            return;
+        }
+        
+        // 用户不是群成员，检查历史记录判断是被踢还是退群
+        ImGroupUserDO deletedMember = groupUserMapper.selectDeletedByGroupIdAndUserId(groupId, userId);
+        if (deletedMember != null) {
+            // 被踢出群
+            throw exception(GROUP_MEMBER_KICKED_OUT);
+        }
+        
+        // 从未加入过群（或硬删除）
+        throw exception(GROUP_MEMBER_ALREADY_REMOVED);
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateGroup(Long userId, AppImGroupUpdateReqVO updateReqVO) {
@@ -258,6 +287,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_PERMISSION_DENIED);
         }
 
+        // 获取群成员（在删除前获取）
+        List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
+        List<Long> memberIds = members.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
+
         // 获取群会话（在删除群前查询，确保 im_chat 记录仍在）
         ImChatDO groupChat = chatMapper.selectGroupChat(groupId, 2);
         Long chatId = groupChat != null ? groupChat.getId() : null;
@@ -266,10 +299,13 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupMapper.deleteById(groupId);
 
         // 删除所有群成员
-        List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
-        List<Long> memberIds = members.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
         for (ImGroupUserDO member : members) {
             deleteGroupMemberRelation(groupId, member.getUserId(), member.getId());
+        }
+
+        // 批量更新所有群成员的群成员状态为3（群已解散）
+        if (chatId != null) {
+            chatUserMapper.batchUpdateGroupMemberStatusByChatId(chatId, 3);
         }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
@@ -280,6 +316,14 @@ public class ImGroupServiceImpl implements ImGroupService {
         refreshMessage.setMemberIds(memberIds);
         refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
+
+        // 推送群解散WebSocket通知给所有群成员
+        String tipContent = "群「" + group.getName() + "」已被群主解散";
+        String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_DISBANDED, null);
+        runAfterCommit(() -> {
+            pushGroupDisbandedNotify(groupId, memberIds, userId, tipContent, tipExtra);
+        });
 
         log.info("[ImGroupService] 解散群组成功, groupId: {}, ownerId: {}", groupId, userId);
     }
@@ -322,26 +366,36 @@ public class ImGroupServiceImpl implements ImGroupService {
         refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
+        // 推送成员退出WebSocket通知给剩余群成员
+        String tipContent = userId + " 已退出群聊";
+        String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED, null);
+        runAfterCommit(() -> {
+            pushGroupQuitNotify(groupId, userId, tipContent, tipExtra);
+        });
+
         log.info("[ImGroupService] 退出群组成功, groupId: {}, userId: {}", groupId, userId);
     }
 
     @Override
     public AppImGroupRespVO getGroup(Long userId, Long groupId) {
-        // 查询群组
         ImGroupDO group = groupMapper.selectById(groupId);
         if (group == null) {
             throw exception(GROUP_NOT_EXISTS);
         }
 
-        // 检查是否是群成员
         ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        boolean inGroup = groupUser != null;
+
+        AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
+        respVO.setInGroup(inGroup);
+
+        if (inGroup) {
+            respVO.setMyRole(groupUser.getRole());
+        } else {
+            respVO.setMyRole(null);
         }
 
-        // 转换为VO
-        AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
-        respVO.setMyRole(groupUser.getRole());
         return respVO;
     }
 
@@ -429,11 +483,11 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
+        // 检查操作者是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, addReqVO.getGroupId());
+        
         // 检查权限(群主、管理员或允许成员邀请)
         ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(addReqVO.getGroupId(), userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
 
         boolean isOwnerOrAdmin = ImGroupMemberRoleEnum.isOwner(groupUser.getRole()) || 
                                  ImGroupMemberRoleEnum.isAdmin(groupUser.getRole());
@@ -502,6 +556,9 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
+        // 检查操作者是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
+        
         // 检查权限(只有群主和管理员可以移除成员)
         ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
         if (groupUser == null || 
@@ -558,12 +615,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
-        // 检查是否是群成员
-        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
-
+        // 查看类方法：不强制要求当前用户是群成员，允许被踢/退群用户查看群成员列表（只读）
         // 查询所有群成员
         List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
         
@@ -607,6 +659,9 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
+        // 检查操作者是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
+        
         // 检查权限(只有群主可以设置角色)
         if (!group.getOwnerId().equals(userId)) {
             throw exception(GROUP_PERMISSION_DENIED);
@@ -687,6 +742,9 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
+        // 检查操作者是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
+        
         // 检查权限(只有群主和管理员可以禁言)
         ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
         if (groupUser == null || 
@@ -966,11 +1024,8 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
-        // 2. 验证用户是群成员
-        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
+        // 2. 验证用户是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
 
         // 3. 查询是否已有有效邀请码
         ImGroupInviteDO existingInvite = groupInviteMapper.selectValidByGroupId(groupId);
@@ -1189,11 +1244,8 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
 
-        // 2. 验证用户是群成员
-        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
+        // 2. 验证用户是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
 
         // 3. 查询有效邀请码
         ImGroupInviteDO invite = groupInviteMapper.selectValidByGroupId(groupId);
@@ -1682,6 +1734,67 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
+    private void pushGroupDisbandedNotify(Long groupId, List<Long> memberIds, Long operatorUserId,
+                                          String tipContent, String tipExtra) {
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_disbanded")
+                .set("groupId", String.valueOf(groupId))
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
+                .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_DISBANDED").build();
+        for (Long targetUserId : memberIds) {
+            if (operatorUserId != null && operatorUserId.equals(targetUserId)) {
+                continue;
+            }
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群解散状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void pushGroupQuitNotify(Long groupId, Long quitUserId, String tipContent, String tipExtra) {
+        List<Long> memberIds = new ArrayList<>(getGroupMemberIds(groupId));
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_member_removed")
+                .set("groupId", String.valueOf(groupId))
+                .set("userId", String.valueOf(quitUserId))
+                .set("quitType", "self_quit")
+                .set("tipContent", tipContent != null ? tipContent : "")
+                .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_REMOVED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送成员退群状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
     private void runAfterCommit(Runnable task) {
         if (task == null) {
             return;
@@ -1745,11 +1858,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
         
-        // 2. 检查是否是群成员
-        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (groupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
+        // 2. 查看类方法：不强制要求当前用户是群成员，允许被踢/退群用户查看群公告（只读）
         
         // 3. 返回群公告
         return group.getNotice();
@@ -1770,11 +1879,11 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_NOT_EXISTS);
         }
         
-        // 2. 查询操作者在群中的角色
+        // 2. 检查操作者是群成员（操作类方法：严格校验）
+        assertIsGroupMember(userId, groupId);
+        
+        // 3. 查询操作者在群中的角色
         ImGroupUserDO operatorGroupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
-        if (operatorGroupUser == null) {
-            throw exception(GROUP_MEMBER_NOT_EXISTS);
-        }
         
         // 3. 查询目标成员
         ImGroupUserDO targetGroupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, targetUserId);
@@ -2157,6 +2266,14 @@ public class ImGroupServiceImpl implements ImGroupService {
         refreshMessage.setMemberIds(java.util.Collections.singletonList(memberUserId));
         refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
+
+        // 推送新成员加入WebSocket通知给所有群成员
+        String tipContent = "新成员已加入群聊「" + group.getName() + "」";
+        String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE, null);
+        runAfterCommit(() -> {
+            pushGroupMemberAddedNotify(group.getId(), java.util.Collections.singletonList(memberUserId), operatorUserId, tipContent, tipExtra);
+        });
     }
 
     @Override

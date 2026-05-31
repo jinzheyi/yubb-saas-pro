@@ -44,6 +44,7 @@ class Conversation {
     this.online = false,
     this.onlineDeviceTypes = const <int>[],
     this.lastActiveTime,
+    this.groupMemberStatus,
   });
 
   final String chatId;
@@ -77,6 +78,24 @@ class Conversation {
   final bool online;
   final List<int> onlineDeviceTypes;
   final int? lastActiveTime;
+  final int? groupMemberStatus;
+
+  bool get isGroupLeft => groupMemberStatus == 1;
+  bool get isGroupKicked => groupMemberStatus == 2;
+  bool get isGroupDisbanded => groupMemberStatus == 3;
+  bool get canSendMessageToGroup => groupMemberStatus == null || groupMemberStatus == 0;
+  String get groupStatusText {
+    switch (groupMemberStatus) {
+      case 1:
+        return '已退出';
+      case 2:
+        return '已被踢';
+      case 3:
+        return '已解散';
+      default:
+        return '';
+    }
+  }
 
   Conversation copyWith({
     String? chatId,
@@ -110,6 +129,7 @@ class Conversation {
     bool? online,
     List<int>? onlineDeviceTypes,
     int? lastActiveTime,
+    int? groupMemberStatus,
   }) {
     return Conversation(
       chatId: chatId ?? this.chatId,
@@ -146,6 +166,7 @@ class Conversation {
       online: online ?? this.online,
       onlineDeviceTypes: onlineDeviceTypes ?? this.onlineDeviceTypes,
       lastActiveTime: lastActiveTime ?? this.lastActiveTime,
+      groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
     );
   }
 }

@@ -48,6 +48,7 @@ class GroupSettingsState {
     this.currentUserRoleCode = 0,
     this.currentUserMuteEndTime,
     this.pendingRequestCount = 0,
+    this.groupMemberStatus,
     this.error,
   });
 
@@ -71,7 +72,13 @@ class GroupSettingsState {
   final int currentUserRoleCode;
   final DateTime? currentUserMuteEndTime;
   final int pendingRequestCount;
+  final int? groupMemberStatus;
   final AppError? error;
+
+  bool get isGroupLeft => groupMemberStatus == 1;
+  bool get isGroupKicked => groupMemberStatus == 2;
+  bool get isGroupDisbanded => groupMemberStatus == 3;
+  bool get hasLeftGroup => isGroupLeft || isGroupKicked || isGroupDisbanded;
 
   GroupSettingsState copyWith({
     GroupSettingsStatus? status,
@@ -94,6 +101,7 @@ class GroupSettingsState {
     int? currentUserRoleCode,
     DateTime? currentUserMuteEndTime,
     int? pendingRequestCount,
+    int? groupMemberStatus,
     AppError? error,
   }) {
     return GroupSettingsState(
@@ -118,6 +126,7 @@ class GroupSettingsState {
       currentUserMuteEndTime:
           currentUserMuteEndTime ?? this.currentUserMuteEndTime,
       pendingRequestCount: pendingRequestCount ?? this.pendingRequestCount,
+      groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
       error: error,
     );
   }

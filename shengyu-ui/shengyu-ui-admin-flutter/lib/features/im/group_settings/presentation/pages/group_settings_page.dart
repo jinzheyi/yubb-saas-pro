@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_a
 import 'package:shengyu_ui_admin_im/app/router/route_args/initiate_group_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/controllers/group_settings_controller.dart';
@@ -61,10 +62,33 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         if (next == null || next.groupId != widget.args.groupId) {
           return;
         }
+        if (next.action == 'group_member_removed') {
+          final memberUserId = next.payload['memberUserId']?.toString();
+          final currentUserId = ref.read(authSessionProvider).userId;
+          if (memberUserId == currentUserId) {
+            _pendingRefreshOnResume = false;
+            final controller = ref.read(
+              groupSettingsControllerProvider(widget.args).notifier,
+            );
+            unawaited(controller.reloadAll());
+            return;
+          }
+        }
         if (next.action == 'group_member_added' ||
-            next.action == 'group_member_removed') {
+            next.action == 'group_member_removed' ||
+            next.action == 'group_owner_transferred') {
           _pendingRefreshOnResume = false;
           _triggerMemberRefresh();
+        }
+        if (next.action == 'group_disbanded') {
+          if (!context.mounted) {
+            return;
+          }
+          final strings = AppLocalizations.of(context);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(strings.groupDissolved)));
+          Navigator.of(context).pop();
         }
       },
     );
@@ -106,11 +130,14 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         : (widget.args.groupName?.trim().isNotEmpty == true
               ? widget.args.groupName!.trim()
               : strings.groupSettingsTitle);
-    final isOwner = state.currentUserRoleCode == 2;
+    final isMembershipBlocked = state.membershipBlocked;
+    final isOwner = !isMembershipBlocked && state.currentUserRoleCode == 2;
     final canManageJoinRequests =
-        state.currentUserRoleCode == 1 || state.currentUserRoleCode == 2;
+        !isMembershipBlocked &&
+        (state.currentUserRoleCode == 1 || state.currentUserRoleCode == 2);
     final canManageGroupMute = canManageJoinRequests;
-    final canAddMembers = canManageJoinRequests || state.allowMemberInvite;
+    final canAddMembers =
+        !isMembershipBlocked && (canManageJoinRequests || state.allowMemberInvite);
     final canRemoveMembers = canManageJoinRequests;
     final visibleMembers = state.members.take(8).toList(growable: false);
 
@@ -123,6 +150,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     }
 
     if (state.status == GroupSettingsStatus.failed) {
+      final errorMessage = state.error?.message ?? strings.unknownError;
       return Scaffold(
         backgroundColor: const Color(0xFFF5F7FB),
         appBar: _buildAppBar(context, strings),
@@ -131,7 +159,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                state.error?.message ?? strings.unknownError,
+                errorMessage,
                 style: const TextStyle(color: Color(0xFF8F96A3)),
               ),
               const SizedBox(height: 12),
@@ -329,6 +357,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               _NavSettingTile(
                 title: strings.groupSettingsGroupName,
                 value: title,
+                enabled: !state.membershipBlocked,
                 onTap: () => _showEditDialog(
                   context: context,
                   title: strings.groupSettingsEditGroupName,
@@ -344,6 +373,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
             children: [
               _NavSettingTile(
                 title: strings.groupSettingsGroupQrCode,
+                enabled: !state.membershipBlocked,
                 onTap: () => _openDetailPage(
                   context,
                   routeName: RouteNames.groupQrCode,
@@ -459,6 +489,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               _NavSettingTile(
                 title: strings.groupSettingsNickname,
                 value: state.myNickname,
+                enabled: !state.membershipBlocked,
                 onTap: () => _showEditDialog(
                   context: context,
                   title: strings.groupSettingsEditNickname,
@@ -759,6 +790,72 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       extra: GroupSettingDetailArgs(groupId: groupId, groupName: groupName),
     );
   }
+
+  Widget _buildGroupLeftPage(
+    BuildContext context,
+    AppLocalizations strings,
+    String hintMessage,
+  ) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF2F4F7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.group_off_rounded,
+                    size: 40,
+                    color: Color(0xFF8F96A3),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  hintMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF4E5666),
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      strings.groupSettingsBackToConversations,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 String _noticePreview(AppLocalizations strings, String notice) {
@@ -789,17 +886,19 @@ class _NavSettingTile extends StatelessWidget {
     this.value,
     this.valueColor,
     this.onTap,
+    this.enabled = true,
   });
 
   final String title;
   final String? value;
   final Color? valueColor;
   final VoidCallback? onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       title: Text(
         title,
         style: const TextStyle(
@@ -824,8 +923,10 @@ class _NavSettingTile extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xFFB8C0CC)),
+          if (enabled) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB8C0CC)),
+          ],
         ],
       ),
     );

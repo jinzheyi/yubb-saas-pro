@@ -2083,6 +2083,102 @@ abstract class AppLocalizations {
   /// **'Group dissolved'**
   String get groupDissolved;
 
+  /// No description provided for @groupLeftStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get groupLeftStatus;
+
+  /// No description provided for @groupKickedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed'**
+  String get groupKickedStatus;
+
+  /// No description provided for @groupDisbandedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Dissolved'**
+  String get groupDisbandedStatus;
+
+  /// No description provided for @groupLeftCannotSend.
+  ///
+  /// In en, this message translates to:
+  /// **'You have left this group and cannot send messages'**
+  String get groupLeftCannotSend;
+
+  /// No description provided for @groupKickedCannotSend.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been removed from the group and cannot send messages'**
+  String get groupKickedCannotSend;
+
+  /// No description provided for @groupDisbandedCannotSend.
+  ///
+  /// In en, this message translates to:
+  /// **'This group has been dissolved and cannot send messages'**
+  String get groupDisbandedCannotSend;
+
+  /// No description provided for @groupSettingsLeftPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Left Group'**
+  String get groupSettingsLeftPageTitle;
+
+  /// No description provided for @groupSettingsKickedPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from Group'**
+  String get groupSettingsKickedPageTitle;
+
+  /// No description provided for @groupSettingsDisbandedPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group Dissolved'**
+  String get groupSettingsDisbandedPageTitle;
+
+  /// No description provided for @groupSettingsLeftHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You have left this group and cannot view group settings'**
+  String get groupSettingsLeftHint;
+
+  /// No description provided for @groupSettingsKickedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been removed from the group by an admin and cannot view group settings'**
+  String get groupSettingsKickedHint;
+
+  /// No description provided for @groupSettingsDisbandedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The group owner has dissolved this group and cannot view group settings'**
+  String get groupSettingsDisbandedHint;
+
+  /// No description provided for @groupSettingsBackToConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Conversations'**
+  String get groupSettingsBackToConversations;
+
+  /// No description provided for @groupSettingsCannotViewQrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot view this group QR code'**
+  String get groupSettingsCannotViewQrCode;
+
+  /// No description provided for @groupSettingsCannotViewQrCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You are no longer in this group and cannot retrieve the group QR code'**
+  String get groupSettingsCannotViewQrCodeHint;
+
+  /// No description provided for @groupSettingsReadOnlyMembersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You are no longer in this group and can only view the member list'**
+  String get groupSettingsReadOnlyMembersHint;
+
   /// No description provided for @groupInviteCodeTenantMismatch.
   ///
   /// In en, this message translates to:

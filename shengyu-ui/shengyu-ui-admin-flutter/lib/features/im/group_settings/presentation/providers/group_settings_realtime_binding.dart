@@ -47,7 +47,8 @@ void _handleGroupSocketEvent(
       action != 'group_member_removed' &&
       action != 'group_member_mute_changed' &&
       action != 'group_mute_all_changed' &&
-      action != 'group_owner_transferred') {
+      action != 'group_owner_transferred' &&
+      action != 'group_disbanded') {
     return;
   }
   final eventGroupId =

@@ -25,6 +25,7 @@ import java.util.Map;
 public class ImSystemMessageI18nSupport {
 
     public static final String EVENT_GROUP_OWNER_TRANSFERRED = "im.system.group_owner_transferred";
+    public static final String EVENT_GROUP_DISBANDED = "im.system.group_disbanded";
     public static final String EVENT_GROUP_MEMBER_ROLE_SET_ADMIN = "im.system.group_member_role_set_admin";
     public static final String EVENT_GROUP_MEMBER_ROLE_SET_MEMBER = "im.system.group_member_role_set_member";
     public static final String EVENT_GROUP_MEMBER_ADDED_ONE = "im.system.group_member_added_one";

@@ -136,6 +136,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   @override
   Widget build(BuildContext context) {
     ref.watch(conversationRealtimeBindingProvider);
+    _listenGroupMemberRemovedSignal(ref, context);
     final strings = AppLocalizations.of(context);
     final state = ref.watch(conversationListControllerProvider);
     final filteredConversations = _applyFilter(state.conversations);
@@ -537,6 +538,31 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       final preview = conversation.lastMessagePreview.trim().toLowerCase();
       return title.contains(keyword) || preview.contains(keyword);
     }).toList();
+  }
+
+  void _listenGroupMemberRemovedSignal(
+    WidgetRef ref,
+    BuildContext context,
+  ) {
+    final signal = ref.watch(groupMemberRemovedSignalProvider);
+    if (signal == null || !context.mounted) {
+      return;
+    }
+    final strings = AppLocalizations.of(context);
+    String reasonText;
+    switch (signal.reason) {
+      case 'group_disbanded':
+        reasonText = strings.groupDissolved;
+        break;
+      case 'kicked_from_group':
+        reasonText = strings.chatGroupRemovedCannotSend;
+        break;
+      default:
+        return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(reasonText)));
   }
 
   Future<void> _handleRefresh() async {

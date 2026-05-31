@@ -448,7 +448,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Override
     public List<AppImMessageRespVO> pullMessages(Long userId, AppImMessagePullReqVO pullReqVO) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pullReqVO.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, pullReqVO.getChatId());
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -517,7 +517,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Override
     public PageResult<AppImMessageRespVO> getMessagePage(Long userId, AppImMessagePageReqVO pageReqVO) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pageReqVO.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, pageReqVO.getChatId());
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -576,7 +576,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Override
     public AppImMessageWindowRespVO getMessageWindow(Long userId, AppImMessageWindowReqVO windowReqVO) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, windowReqVO.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, windowReqVO.getChatId());
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -593,7 +593,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Override
     public AppImMessageHistoryRespVO getMessageHistory(Long userId, AppImMessageHistoryReqVO historyReqVO) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, historyReqVO.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, historyReqVO.getChatId());
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
@@ -634,7 +634,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, message.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, message.getChatId());
         if (chatUser == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
@@ -1134,7 +1134,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (candidateIds.isEmpty()) {
             return Collections.emptyList();
         }
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
         if (chatUser == null) {
             return Collections.emptyList();
         }
@@ -2913,7 +2913,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             tenantId = 0L;
         }
         if (searchReqVO.getChatId() != null) {
-            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, searchReqVO.getChatId());
+            ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, searchReqVO.getChatId());
             if (chatUser == null) {
                 return new PageResult<>(Collections.emptyList(), 0L);
             }
@@ -2958,7 +2958,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (pageReqVO == null || pageReqVO.getChatId() == null) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pageReqVO.getChatId());
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, pageReqVO.getChatId());
         if (chatUser == null) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }

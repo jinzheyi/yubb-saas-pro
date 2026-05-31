@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_conversation_settings.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/repositories/group_settings_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
@@ -43,8 +44,6 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
     try {
       final snapshot = await _repository.getGroupSettings(_args.groupId);
       final members = await _repository.getGroupMembers(_args.groupId);
-      final conversationSettings = await _repository
-          .getGroupConversationSettings(_args.groupId);
       GroupMember? currentMember;
       for (final member in members) {
         if (member.userId == _currentUserId) {
@@ -62,6 +61,17 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
       if (currentUserRoleCode == 1 || currentUserRoleCode == 2) {
         pendingRequestCount = await _repository.getPendingJoinRequestCount(
           _args.groupId,
+        );
+      }
+      GroupConversationSettings conversationSettings;
+      try {
+        conversationSettings = await _repository
+            .getGroupConversationSettings(_args.groupId);
+      } catch (_) {
+        conversationSettings = GroupConversationSettings(
+          chatId: state.chatId.isEmpty ? '' : state.chatId,
+          pinned: state.pinned,
+          noDisturb: state.noDisturb,
         );
       }
       _setStateIfActive(state.copyWith(
@@ -99,6 +109,7 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
         currentUserRoleCode: currentUserRoleCode,
         currentUserMuteEndTime: currentMember?.muteEndTime,
         pendingRequestCount: pendingRequestCount,
+        groupMemberStatus: snapshot.groupMemberStatus,
       ));
     } catch (error, stackTrace) {
       _setStateIfActive(state.copyWith(
@@ -285,10 +296,25 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
           isMuted: member.isMuted,
         );
       }).toList();
+      GroupMember? currentMember;
+      for (final member in members) {
+        if (member.userId == _currentUserId) {
+          currentMember = member;
+          break;
+        }
+      }
+      final hasMembers = members.isNotEmpty;
+      final membershipBlocked =
+          hasMembers &&
+          _currentUserId.trim().isNotEmpty &&
+          currentMember == null;
+      final currentUserRoleCode = currentMember?.role ?? 0;
       _setStateIfActive(state.copyWith(
         status: GroupSettingsStatus.ready,
         members: previewItems,
         memberCount: members.length,
+        membershipBlocked: membershipBlocked,
+        currentUserRoleCode: currentUserRoleCode,
       ));
     } catch (error, stackTrace) {
       _setStateIfActive(state.copyWith(
@@ -296,6 +322,13 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
         error: AppErrorMapper.map(error, stackTrace),
       ));
     }
+  }
+
+  Future<void> reloadAll() async {
+    if (_disposed) {
+      return;
+    }
+    await load();
   }
 
   void applyRealtimeMembers(List<GroupMemberPreviewItem> members) {

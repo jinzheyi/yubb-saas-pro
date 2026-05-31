@@ -322,7 +322,7 @@ private static final long serialVersionUID = 0L;
         != other.getSize()) return false;
     if (!getFileName()
         .equals(other.getFileName())) return false;
-    if (!getUnknownFields().equals(other.getUnknownFields())) return true;
+    if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
 
@@ -993,7 +993,6 @@ private static final long serialVersionUID = 0L;
      * <code>string fileName = 6;</code>
      * @return The fileName.
      */
-    @java.lang.Override
     public java.lang.String getFileName() {
       java.lang.Object ref = fileName_;
       if (!(ref instanceof java.lang.String)) {
@@ -1014,7 +1013,6 @@ private static final long serialVersionUID = 0L;
      * <code>string fileName = 6;</code>
      * @return The bytes for fileName.
      */
-    @java.lang.Override
     public com.google.protobuf.ByteString
         getFileNameBytes() {
       java.lang.Object ref = fileName_;
@@ -1081,7 +1079,6 @@ private static final long serialVersionUID = 0L;
       onChanged();
       return this;
     }
-
     @java.lang.Override
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {

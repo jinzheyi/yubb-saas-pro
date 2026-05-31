@@ -414,7 +414,8 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
       action == 'group_mute_all_changed' ||
       action == 'group_member_added' ||
       action == 'group_member_removed' ||
-      action == 'group_owner_transferred') {
+      action == 'group_owner_transferred' ||
+      action == 'group_disbanded') {
     ref.read(chatRealtimeSignalProvider.notifier).state = ChatRealtimeSignal(
       chatId: chatId,
       action: action,
@@ -457,12 +458,18 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
         messageId: resolvedMessageId,
         status: MessageStatus.failed,
       );
+
+  final redirectCodes = <String>[
+    'NOT_GROUP_MEMBER',
+    'GROUP_MEMBER_NOT_EXISTS',
+    'GROUP_NOT_EXISTS',
+    'GROUP_DISBANDED',
+  ];
   ref.read(chatRuntimeNoticeProvider.notifier).state = ChatRuntimeNotice(
     chatId: chatId,
     message: denyMessage,
     code: denyCode.isEmpty ? null : denyCode,
-    redirectToConversations:
-        denyCode == 'NOT_GROUP_MEMBER' || denyCode == 'GROUP_MEMBER_NOT_EXISTS',
+    redirectToConversations: redirectCodes.contains(denyCode),
     token: DateTime.now().microsecondsSinceEpoch,
   );
 }

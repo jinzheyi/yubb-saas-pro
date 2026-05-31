@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
@@ -23,17 +24,45 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
   List<GroupMember> _members = [];
   bool _loading = true;
   String? _errorMessage;
+  bool _memberBlocked = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadInviteInfo);
+    Future.microtask(_checkMembershipAndLoad);
     Future.microtask(_loadMembers);
+  }
+
+  Future<void> _checkMembershipAndLoad() async {
+    try {
+      final members = await ref
+          .read(groupSettingsRepositoryProvider)
+          .getGroupMembers(widget.args.groupId);
+      if (!mounted) return;
+      final currentUserId = ref.read(authSessionProvider).userId;
+      final isMember = members.any((m) => m.userId == currentUserId);
+      if (!isMember && members.isNotEmpty) {
+        setState(() {
+          _memberBlocked = true;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _memberBlocked = true;
+      });
+    }
+    _loadInviteInfo();
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+
+    if (_memberBlocked) {
+      return _buildBlockedPage(context, strings);
+    }
+
     final inviteCode = _inviteInfo?.inviteCode.trim() ?? '';
     final qrCodeContent = _inviteInfo?.effectiveQrCodeContent ?? '';
 
@@ -174,6 +203,78 @@ class _GroupQrCodePageState extends ConsumerState<GroupQrCodePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBlockedPage(BuildContext context, AppLocalizations strings) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF2F4F7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.qr_code_scanner_rounded,
+                    size: 40,
+                    color: Color(0xFF8F96A3),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  strings.groupSettingsCannotViewQrCode,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF202531),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  strings.groupSettingsCannotViewQrCodeHint,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF4E5666),
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      strings.groupSettingsBackToConversations,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
