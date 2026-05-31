@@ -223,8 +223,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                               color: Color(0xFF8F96A3),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          _RoleChip(roleCode: state.currentUserRoleCode),
+                          if (!isMembershipBlocked) ...[
+                            const SizedBox(width: 8),
+                            _RoleChip(roleCode: state.currentUserRoleCode),
+                          ],
                         ],
                       ),
                     ],
@@ -512,7 +514,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                   state: state,
                 ),
               ),
-              if (isOwner)
+              if (!isMembershipBlocked && isOwner)
                 _DangerActionTile(
                   title: strings.groupSettingsTransferOwner,
                   onTap: () async {
@@ -526,18 +528,19 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                     );
                   },
                 ),
-              _DangerActionTile(
-                title: isOwner
-                    ? strings.groupSettingsDissolve
-                    : strings.groupSettingsQuitGroup,
-                onTap: () => _exitGroup(
-                  context: context,
-                  ref: ref,
-                  controller: controller,
-                  state: state,
-                  isOwner: isOwner,
+              if (!isMembershipBlocked)
+                _DangerActionTile(
+                  title: isOwner
+                      ? strings.groupSettingsDissolve
+                      : strings.groupSettingsQuitGroup,
+                  onTap: () => _exitGroup(
+                    context: context,
+                    ref: ref,
+                    controller: controller,
+                    state: state,
+                    isOwner: isOwner,
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -855,6 +858,16 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         ),
       ),
     );
+  }
+
+  bool _isGroupMemberBlockedError(String errorText) {
+    final upper = errorText.toUpperCase();
+    return upper.contains('NOT_GROUP_MEMBER') ||
+        upper.contains('GROUP_MEMBER_NOT_EXISTS') ||
+        upper.contains('GROUP_MEMBER_KICKED_OUT') ||
+        upper.contains('GROUP_MEMBER_ALREADY_REMOVED') ||
+        errorText.contains('移出群聊') ||
+        errorText.contains('不是群成员');
   }
 }
 
