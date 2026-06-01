@@ -15,6 +15,7 @@ class GroupInfoDto {
     required this.needApproval,
     required this.myNickname,
     this.groupMemberStatus,
+    this.leftAt,
   });
 
   final String groupId;
@@ -32,6 +33,7 @@ class GroupInfoDto {
   final bool needApproval;
   final String myNickname;
   final int? groupMemberStatus;
+  final DateTime? leftAt;
 
   factory GroupInfoDto.fromJson(Map<String, dynamic> json) {
     return GroupInfoDto(
@@ -53,6 +55,7 @@ class GroupInfoDto {
       needApproval: json['needApproval'] == true,
       myNickname: '${json['myNickname'] ?? json['nickname'] ?? ''}',
       groupMemberStatus: _parseInt(json['groupMemberStatus'] ?? json['memberStatus']),
+      leftAt: _parseDateTime(json['leftAt']),
     );
   }
 

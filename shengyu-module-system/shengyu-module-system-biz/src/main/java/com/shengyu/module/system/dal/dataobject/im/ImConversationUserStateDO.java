@@ -60,4 +60,18 @@ public class ImConversationUserStateDO extends TenantBaseDO {
     private String draft;
 
     private Boolean deletedByUser;
+
+    /**
+     * 群组成员状态：
+     * 0 = 正常（在群内）
+     * 1 = 已退出（主动退群）
+     * 2 = 已被踢（被群主/管理员踢出）
+     * 3 = 群已解散
+     */
+    private Integer groupMemberStatus;
+
+    /**
+     * 离群时间（被踢/退群时间，用于限制只能查询离群前的消息）
+     */
+    private LocalDateTime leftAt;
 }

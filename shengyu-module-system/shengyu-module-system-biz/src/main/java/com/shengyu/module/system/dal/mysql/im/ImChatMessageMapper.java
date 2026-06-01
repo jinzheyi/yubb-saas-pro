@@ -60,6 +60,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "ORDER BY m.sequence DESC",
             "LIMIT #{limit}",
             "</script>"})
@@ -90,6 +91,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND m.sequence &lt; #{beforeSequence}",
             "ORDER BY m.sequence DESC",
             "LIMIT #{limit}",
@@ -122,6 +124,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND m.sequence &gt;= #{anchorSequence}",
             "ORDER BY m.sequence ASC",
             "LIMIT #{limit}",
@@ -155,6 +158,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "LIMIT 1",
             "</script>"})
     Long selectVisibleSequenceByMessageId(@Param("tenantId") Long tenantId,
@@ -185,6 +189,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "LIMIT 1",
             "</script>"})
     Long selectVisibleSequenceBySequence(@Param("tenantId") Long tenantId,
@@ -214,6 +219,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND m.sequence &lt; #{sequence}",
             "</script>"})
     Long countVisibleOlderThanSequence(@Param("tenantId") Long tenantId,
@@ -243,6 +249,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND m.sequence &gt; #{sequence}",
             "</script>"})
     Long countVisibleNewerThanSequence(@Param("tenantId") Long tenantId,
@@ -279,6 +286,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND (m.status IS NULL OR m.status != 6)",
             "<if test='chatId != null'>",
             "  AND m.chat_id = #{chatId}",
@@ -338,6 +346,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "  AND m.deleted = 0",
             "  AND t.id IS NULL",
             "  AND (cw.clear_sequence IS NULL OR m.sequence &gt; cw.clear_sequence)",
+            "  AND m.send_time &lt;= IFNULL(cu.left_at, '9999-12-31 23:59:59')",
             "  AND (m.status IS NULL OR m.status != 6)",
             "<if test='chatId != null'>",
             "  AND m.chat_id = #{chatId}",

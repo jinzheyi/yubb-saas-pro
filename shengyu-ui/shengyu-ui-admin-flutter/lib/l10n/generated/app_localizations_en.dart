@@ -1117,6 +1117,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupSettingsBackToConversations => 'Back to Conversations';
 
   @override
+  String get groupSettingsReadOnlyBannerKicked =>
+      'You have been removed from the group chat and can only view historical information';
+
+  @override
+  String get groupSettingsReadOnlyBannerLeft =>
+      'You have left the group chat and can only view historical information';
+
+  @override
+  String get groupSettingsReadOnlyBannerDisbanded =>
+      'This group chat has been dissolved';
+
+  @override
+  String get groupSettingsReadOnlyBannerDefault =>
+      'You are no longer in the group';
+
+  @override
+  String get groupSettingsSnapshotTimeLabel => 'Snapshot Time';
+
+  @override
+  String get groupSettingsLeftTimeLabel => 'Left Time';
+
+  @override
+  String get chatPageReadOnlyBannerKicked =>
+      'You have been removed from the group chat and cannot send or receive messages';
+
+  @override
+  String get chatPageReadOnlyBannerLeft =>
+      'You have left the group chat and cannot send or receive messages';
+
+  @override
+  String get chatPageReadOnlyBannerDisbanded =>
+      'This group chat has been dissolved and cannot send or receive messages';
+
+  @override
+  String get chatPageBackToConversations => 'Back to Conversations';
+
+  @override
   String get groupSettingsCannotViewQrCode =>
       'You cannot view this group QR code';
 

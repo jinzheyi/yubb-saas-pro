@@ -204,4 +204,44 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                          @Param("userId") Long userId,
                          @Param("cursorVersion") Long cursorVersion,
                          @Param("deletedByUser") Boolean deletedByUser);
+
+    /**
+     * 更新群组成员状态和离群时间（被踢/退群时调用）
+     * @param tenantId 租户ID
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param groupMemberStatus 群组成员状态：1=已退出, 2=已被踢
+     * @param leftAt 离群时间
+     * @param cursorVersion 游标版本号
+     * @return 更新行数
+     */
+    default int updateGroupMemberStatus(Long tenantId, Long userId, Long chatId, Integer groupMemberStatus, java.time.LocalDateTime leftAt, Long cursorVersion) {
+        return update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ImConversationUserStateDO>()
+                .eq(ImConversationUserStateDO::getTenantId, tenantId)
+                .eq(ImConversationUserStateDO::getUserId, userId)
+                .eq(ImConversationUserStateDO::getChatId, chatId)
+                .eq(ImConversationUserStateDO::getDeleted, false)
+                .set(ImConversationUserStateDO::getGroupMemberStatus, groupMemberStatus)
+                .set(ImConversationUserStateDO::getLeftAt, leftAt)
+                .set(cursorVersion != null, ImConversationUserStateDO::getCursorVersion, cursorVersion));
+    }
+
+    /**
+     * 恢复群成员状态（重新入群时调用）
+     * @param tenantId 租户ID
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param cursorVersion 游标版本号
+     * @return 更新行数
+     */
+    default int restoreGroupMemberStatus(Long tenantId, Long userId, Long chatId, Long cursorVersion) {
+        return update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ImConversationUserStateDO>()
+                .eq(ImConversationUserStateDO::getTenantId, tenantId)
+                .eq(ImConversationUserStateDO::getUserId, userId)
+                .eq(ImConversationUserStateDO::getChatId, chatId)
+                .eq(ImConversationUserStateDO::getDeleted, false)
+                .set(ImConversationUserStateDO::getGroupMemberStatus, 0)
+                .set(ImConversationUserStateDO::getLeftAt, null)
+                .set(cursorVersion != null, ImConversationUserStateDO::getCursorVersion, cursorVersion));
+    }
 }

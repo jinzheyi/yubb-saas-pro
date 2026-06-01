@@ -77,6 +77,12 @@ public class AppImConversationSyncItemRespVO {
     @Schema(description = "群成员信息列表(群聊时返回,最多4个,用于组合头像)", example = "[{\"userId\":1,\"name\":\"张三\",\"avatar\":\"url1\"}]")
     private java.util.List<AppImConversationSyncGroupMemberItem> groupMemberItems;
 
+    @Schema(description = "群组成员状态（群聊时有值）：0=正常(在群内), 1=已退出(主动退群), 2=已被踢(被群主/管理员踢出), 3=群已解散", example = "0")
+    private Integer groupMemberStatus;
+
+    @Schema(description = "离群时间（群聊且已离群时有值）", example = "2026-06-01 10:30:00")
+    private LocalDateTime leftAt;
+
     @Data
     @Schema(description = "群成员信息项(用于组合头像)")
     public static class AppImConversationSyncGroupMemberItem {

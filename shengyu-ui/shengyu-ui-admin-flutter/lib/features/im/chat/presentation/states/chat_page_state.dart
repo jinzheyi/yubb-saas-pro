@@ -14,6 +14,8 @@ class ChatPageState {
     this.isMultiSelectMode = false,
     this.highlightedMessageId,
     this.pendingAction = ChatPendingAction.none,
+    this.groupMemberStatus,
+    this.leftAt,
     this.error,
   });
 
@@ -24,7 +26,14 @@ class ChatPageState {
   final bool isMultiSelectMode;
   final String? highlightedMessageId;
   final ChatPendingAction pendingAction;
+  final int? groupMemberStatus;
+  final DateTime? leftAt;
   final AppError? error;
+
+  bool get isGroupKicked => groupMemberStatus == 2;
+  bool get isGroupLeft => groupMemberStatus == 1;
+  bool get isGroupDisbanded => groupMemberStatus == 3;
+  bool get hasLeftGroup => isGroupKicked || isGroupLeft || isGroupDisbanded;
 
   ChatPageState copyWith({
     ChatEntryArgs? entryArgs,
@@ -34,6 +43,8 @@ class ChatPageState {
     bool? isMultiSelectMode,
     String? highlightedMessageId,
     ChatPendingAction? pendingAction,
+    int? groupMemberStatus,
+    DateTime? leftAt,
     AppError? error,
   }) {
     return ChatPageState(
@@ -44,6 +55,8 @@ class ChatPageState {
       isMultiSelectMode: isMultiSelectMode ?? this.isMultiSelectMode,
       highlightedMessageId: highlightedMessageId ?? this.highlightedMessageId,
       pendingAction: pendingAction ?? this.pendingAction,
+      groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
+      leftAt: leftAt ?? this.leftAt,
       error: error,
     );
   }

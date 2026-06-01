@@ -239,4 +239,47 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .set(ImChatUserDO::getGroupMemberStatus, groupMemberStatus));
     }
 
+    /**
+     * 更新群组成员状态并设置离群时间
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param groupMemberStatus 群组成员状态：1=已退出, 2=已被踢
+     * @param leftAt 离群时间
+     * @return 更新行数
+     */
+    default int updateGroupMemberStatusAndLeftAt(Long userId, Long chatId, Integer groupMemberStatus, LocalDateTime leftAt) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getGroupMemberStatus, groupMemberStatus)
+                .set(ImChatUserDO::getLeftAt, leftAt));
+    }
+
+    /**
+     * 恢复群成员状态（重新入群时调用）
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @return 更新行数
+     */
+    default int restoreGroupMemberStatus(Long userId, Long chatId) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getGroupMemberStatus, 0)
+                .set(ImChatUserDO::getLeftAt, null));
+    }
+
+    /**
+     * 查询用户的离群时间
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @return 离群时间，未离群返回null
+     */
+    default LocalDateTime selectLeftAt(Long userId, Long chatId) {
+        ImChatUserDO chatUser = selectOne(new LambdaQueryWrapperX<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId));
+        return chatUser != null ? chatUser.getLeftAt() : null;
+    }
+
 }

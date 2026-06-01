@@ -2161,6 +2161,66 @@ abstract class AppLocalizations {
   /// **'Back to Conversations'**
   String get groupSettingsBackToConversations;
 
+  /// No description provided for @groupSettingsReadOnlyBannerKicked.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been removed from the group chat and can only view historical information'**
+  String get groupSettingsReadOnlyBannerKicked;
+
+  /// No description provided for @groupSettingsReadOnlyBannerLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'You have left the group chat and can only view historical information'**
+  String get groupSettingsReadOnlyBannerLeft;
+
+  /// No description provided for @groupSettingsReadOnlyBannerDisbanded.
+  ///
+  /// In en, this message translates to:
+  /// **'This group chat has been dissolved'**
+  String get groupSettingsReadOnlyBannerDisbanded;
+
+  /// No description provided for @groupSettingsReadOnlyBannerDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'You are no longer in the group'**
+  String get groupSettingsReadOnlyBannerDefault;
+
+  /// No description provided for @groupSettingsSnapshotTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot Time'**
+  String get groupSettingsSnapshotTimeLabel;
+
+  /// No description provided for @groupSettingsLeftTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Left Time'**
+  String get groupSettingsLeftTimeLabel;
+
+  /// No description provided for @chatPageReadOnlyBannerKicked.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been removed from the group chat and cannot send or receive messages'**
+  String get chatPageReadOnlyBannerKicked;
+
+  /// No description provided for @chatPageReadOnlyBannerLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'You have left the group chat and cannot send or receive messages'**
+  String get chatPageReadOnlyBannerLeft;
+
+  /// No description provided for @chatPageReadOnlyBannerDisbanded.
+  ///
+  /// In en, this message translates to:
+  /// **'This group chat has been dissolved and cannot send or receive messages'**
+  String get chatPageReadOnlyBannerDisbanded;
+
+  /// No description provided for @chatPageBackToConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Conversations'**
+  String get chatPageBackToConversations;
+
   /// No description provided for @groupSettingsCannotViewQrCode.
   ///
   /// In en, this message translates to:

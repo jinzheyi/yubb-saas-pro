@@ -61,4 +61,8 @@ public class ImChatUserDO extends TenantBaseDO {
      */
     private Integer groupMemberStatus;
 
+    /**
+     * 离群时间（被踢/退群时间，用于限制只能查询离群前的消息）
+     */
+    private LocalDateTime leftAt;
 }

@@ -364,6 +364,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                                             item.setGroupMemberItems(groupMemberItems);
                                         }
                                     }
+                                    // 填充群组成员状态和离群时间
+                                    item.setGroupMemberStatus(state.getGroupMemberStatus());
+                                    item.setLeftAt(state.getLeftAt());
                                     if (item.getLastMessageTime() == null
                                             && state.getLastMessageId() == null
                                             && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
@@ -1030,6 +1033,10 @@ public class ImConversationServiceImpl implements ImConversationService {
                     respVO.setGroupMemberAvatars(groupMemberAvatarsMap.get(group.getId()));
                     respVO.setGroupMemberItems(groupMemberItemsMap.get(group.getId()));
 
+                    // 填充群组成员状态和离群时间
+                    respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
+                    respVO.setLeftAt(chatUser.getLeftAt());
+
                     // 群聊无消息：使用群创建时间作为会话时间
                     if (respVO.getLastMessageTime() == null
                             && chatUser.getLastMessageId() == null
@@ -1161,6 +1168,10 @@ public class ImConversationServiceImpl implements ImConversationService {
                          }
                      }
                  }
+
+				// 填充群组成员状态和离群时间
+				respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
+				respVO.setLeftAt(chatUser.getLeftAt());
 
 				// 群聊无消息：使用群创建时间作为会话时间
 				if (respVO.getLastMessageTime() == null

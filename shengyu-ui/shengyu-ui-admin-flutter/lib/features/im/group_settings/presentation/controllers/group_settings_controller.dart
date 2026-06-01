@@ -110,6 +110,8 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
         currentUserMuteEndTime: currentMember?.muteEndTime,
         pendingRequestCount: pendingRequestCount,
         groupMemberStatus: snapshot.groupMemberStatus,
+        leftAt: snapshot.leftAt,
+        readOnly: membershipBlocked,
       ));
     } catch (error, stackTrace) {
       _setStateIfActive(state.copyWith(

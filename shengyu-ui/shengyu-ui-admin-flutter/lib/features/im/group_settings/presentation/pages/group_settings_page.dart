@@ -140,6 +140,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         !isMembershipBlocked && (canManageJoinRequests || state.allowMemberInvite);
     final canRemoveMembers = canManageJoinRequests;
     final visibleMembers = state.members.take(8).toList(growable: false);
+    final isReadOnly = state.readOnly || state.hasLeftGroup;
 
     if (state.status == GroupSettingsStatus.loading ||
         state.status == GroupSettingsStatus.initial) {
@@ -175,10 +176,13 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: _buildAppBar(context, strings),
+      appBar: _buildAppBar(context, strings, isReadOnly: isReadOnly),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          // 只读模式顶部提示条
+          if (isReadOnly) _buildReadOnlyBanner(context, state),
+
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
@@ -229,6 +233,16 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                           ],
                         ],
                       ),
+                      if (isReadOnly && state.leftAt != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '离群时间：${_formatDateTime(state.leftAt!)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFB8C0CC),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -359,14 +373,16 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               _NavSettingTile(
                 title: strings.groupSettingsGroupName,
                 value: title,
-                enabled: !state.membershipBlocked,
-                onTap: () => _showEditDialog(
-                  context: context,
-                  title: strings.groupSettingsEditGroupName,
-                  initialValue: title,
-                  maxLength: 30,
-                  onConfirm: controller.updateGroupName,
-                ),
+                enabled: !isReadOnly,
+                onTap: isReadOnly
+                    ? null
+                    : () => _showEditDialog(
+                        context: context,
+                        title: strings.groupSettingsEditGroupName,
+                        initialValue: title,
+                        maxLength: 30,
+                        onConfirm: controller.updateGroupName,
+                      ),
               ),
             ],
           ),
@@ -375,13 +391,15 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
             children: [
               _NavSettingTile(
                 title: strings.groupSettingsGroupQrCode,
-                enabled: !state.membershipBlocked,
-                onTap: () => _openDetailPage(
-                  context,
-                  routeName: RouteNames.groupQrCode,
-                  groupId: widget.args.groupId,
-                  groupName: title,
-                ),
+                enabled: !isReadOnly,
+                onTap: isReadOnly
+                    ? null
+                    : () => _openDetailPage(
+                        context,
+                        routeName: RouteNames.groupQrCode,
+                        groupId: widget.args.groupId,
+                        groupName: title,
+                      ),
               ),
               _NavSettingTile(
                 title: strings.groupSettingsGroupNotice,
@@ -410,125 +428,132 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               _SwitchSettingTile(
                 title: strings.groupSettingsMute,
                 value: state.noDisturb,
-                onChanged: (value) => _handleAsyncAction(
-                  context,
-                  successMessage: value
-                      ? strings.chatSettingsNotifyDisabled
-                      : strings.chatSettingsNotifyEnabled,
-                  action: () => controller.updateNoDisturb(value),
-                ),
+                onChanged: isReadOnly
+                    ? null
+                    : (value) => _handleAsyncAction(
+                        context,
+                        successMessage: value
+                            ? strings.chatSettingsNotifyDisabled
+                            : strings.chatSettingsNotifyEnabled,
+                        action: () => controller.updateNoDisturb(value),
+                      ),
               ),
               _SwitchSettingTile(
                 title: strings.groupSettingsPin,
                 value: state.pinned,
-                onChanged: (value) => _handleAsyncAction(
-                  context,
-                  successMessage: value
-                      ? strings.chatSettingsPinned
-                      : strings.chatSettingsUnpinned,
-                  action: () => controller.updatePinned(value),
-                ),
+                onChanged: isReadOnly
+                    ? null
+                    : (value) => _handleAsyncAction(
+                        context,
+                        successMessage: value
+                            ? strings.chatSettingsPinned
+                            : strings.chatSettingsUnpinned,
+                        action: () => controller.updatePinned(value),
+                      ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          _SettingsGroup(
-            children: [
-              if (canManageGroupMute)
-                _SwitchSettingTile(
-                  title: strings.groupSettingsMuteAll,
-                  value: state.muteAll,
-                  onChanged: (value) => _handleAsyncAction(
-                    context,
-                    successMessage: strings.confirmAction,
-                    action: () => controller.updateMuteAll(value),
-                    showSuccess: false,
+          if (!isReadOnly)
+            _SettingsGroup(
+              children: [
+                if (canManageGroupMute)
+                  _SwitchSettingTile(
+                    title: strings.groupSettingsMuteAll,
+                    value: state.muteAll,
+                    onChanged: (value) => _handleAsyncAction(
+                      context,
+                      successMessage: strings.confirmAction,
+                      action: () => controller.updateMuteAll(value),
+                      showSuccess: false,
+                    ),
                   ),
-                ),
-              if (canManageJoinRequests)
-                _SwitchSettingTile(
-                  title: strings.groupSettingsAllowInvite,
-                  value: state.allowMemberInvite,
-                  onChanged: (value) => _handleAsyncAction(
-                    context,
-                    successMessage: strings.confirmAction,
-                    action: () => controller.updateAllowMemberInvite(value),
-                    showSuccess: false,
+                if (canManageJoinRequests)
+                  _SwitchSettingTile(
+                    title: strings.groupSettingsAllowInvite,
+                    value: state.allowMemberInvite,
+                    onChanged: (value) => _handleAsyncAction(
+                      context,
+                      successMessage: strings.confirmAction,
+                      action: () => controller.updateAllowMemberInvite(value),
+                      showSuccess: false,
+                    ),
                   ),
-                ),
-              if (canManageJoinRequests)
-                _SwitchSettingTile(
-                  title: strings.groupSettingsInviteConfirm,
-                  value: state.needApproval,
-                  onChanged: (value) => _handleAsyncAction(
-                    context,
-                    successMessage: strings.confirmAction,
-                    action: () => controller.updateNeedApproval(value),
-                    showSuccess: false,
+                if (canManageJoinRequests)
+                  _SwitchSettingTile(
+                    title: strings.groupSettingsInviteConfirm,
+                    value: state.needApproval,
+                    onChanged: (value) => _handleAsyncAction(
+                      context,
+                      successMessage: strings.confirmAction,
+                      action: () => controller.updateNeedApproval(value),
+                      showSuccess: false,
+                    ),
                   ),
-                ),
-              if (canManageJoinRequests)
+                if (canManageJoinRequests)
+                  _NavSettingTile(
+                    title: strings.groupSettingsJoinRequests,
+                    value: state.pendingRequestCount > 0
+                        ? strings.groupSettingsPendingCount(
+                            state.pendingRequestCount,
+                          )
+                        : strings.groupSettingsPendingEmpty,
+                    valueColor: state.pendingRequestCount > 0
+                        ? const Color(0xFFF54A45)
+                        : const Color(0xFF8F96A3),
+                    onTap: () async {
+                      await context.pushNamed(
+                        RouteNames.groupJoinRequests,
+                        extra: GroupContextArgs(
+                          groupId: widget.args.groupId,
+                          groupName: title,
+                        ),
+                      );
+                    },
+                  ),
                 _NavSettingTile(
-                  title: strings.groupSettingsJoinRequests,
-                  value: state.pendingRequestCount > 0
-                      ? strings.groupSettingsPendingCount(
-                          state.pendingRequestCount,
-                        )
-                      : strings.groupSettingsPendingEmpty,
-                  valueColor: state.pendingRequestCount > 0
-                      ? const Color(0xFFF54A45)
-                      : const Color(0xFF8F96A3),
-                  onTap: () async {
-                    await context.pushNamed(
-                      RouteNames.groupJoinRequests,
-                      extra: GroupContextArgs(
-                        groupId: widget.args.groupId,
-                        groupName: title,
-                      ),
-                    );
-                  },
+                  title: strings.groupSettingsNickname,
+                  value: state.myNickname,
+                  enabled: !isReadOnly,
+                  onTap: isReadOnly
+                      ? null
+                      : () => _showEditDialog(
+                          context: context,
+                          title: strings.groupSettingsEditNickname,
+                          initialValue: state.myNickname,
+                          maxLength: 15,
+                          onConfirm: controller.updateMyNickname,
+                        ),
                 ),
-              _NavSettingTile(
-                title: strings.groupSettingsNickname,
-                value: state.myNickname,
-                enabled: !state.membershipBlocked,
-                onTap: () => _showEditDialog(
-                  context: context,
-                  title: strings.groupSettingsEditNickname,
-                  initialValue: state.myNickname,
-                  maxLength: 15,
-                  onConfirm: controller.updateMyNickname,
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 10),
-          _SettingsGroup(
-            children: [
-              _DangerActionTile(
-                title: strings.groupSettingsClearHistory,
-                onTap: () => _clearChatHistory(
-                  context: context,
-                  ref: ref,
-                  controller: controller,
-                  state: state,
-                ),
-              ),
-              if (!isMembershipBlocked && isOwner)
+          if (!isReadOnly)
+            _SettingsGroup(
+              children: [
                 _DangerActionTile(
-                  title: strings.groupSettingsTransferOwner,
-                  onTap: () async {
-                    await context.pushNamed(
-                      RouteNames.groupMembers,
-                      extra: GroupContextArgs(
-                        groupId: widget.args.groupId,
-                        groupName: title,
-                        mode: GroupMembersPageMode.transfer,
-                      ),
-                    );
-                  },
+                  title: strings.groupSettingsClearHistory,
+                  onTap: () => _clearChatHistory(
+                    context: context,
+                    ref: ref,
+                    controller: controller,
+                    state: state,
+                  ),
                 ),
-              if (!isMembershipBlocked)
+                if (isOwner)
+                  _DangerActionTile(
+                    title: strings.groupSettingsTransferOwner,
+                    onTap: () async {
+                      await context.pushNamed(
+                        RouteNames.groupMembers,
+                        extra: GroupContextArgs(
+                          groupId: widget.args.groupId,
+                          groupName: title,
+                          mode: GroupMembersPageMode.transfer,
+                        ),
+                      );
+                    },
+                  ),
                 _DangerActionTile(
                   title: isOwner
                       ? strings.groupSettingsDissolve
@@ -541,21 +566,73 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                     isOwner: isOwner,
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  AppBar _buildAppBar(BuildContext context, AppLocalizations strings) {
+  AppBar _buildAppBar(
+    BuildContext context,
+    AppLocalizations strings, {
+    bool isReadOnly = false,
+  }) {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.chevron_left_rounded, size: 22),
         onPressed: () => Navigator.of(context).maybePop(),
       ),
       centerTitle: true,
-      title: Text(strings.groupSettingsTitle),
+      title: Text(
+        isReadOnly ? '群设置（只读）' : strings.groupSettingsTitle,
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyBanner(
+    BuildContext context,
+    GroupSettingsState state,
+  ) {
+    final strings = AppLocalizations.of(context);
+
+    String hint;
+    Color bgColor;
+    Color textColor;
+
+    if (state.isGroupKicked) {
+      hint = '你已被移出群聊，当前仅可查看历史信息';
+      bgColor = Colors.orange[50]!;
+      textColor = Colors.orange[800]!;
+    } else if (state.isGroupLeft) {
+      hint = '你已退出群聊，当前仅可查看历史信息';
+      bgColor = Colors.blue[50]!;
+      textColor = Colors.blue[800]!;
+    } else if (state.isGroupDisbanded) {
+      hint = '该群已解散';
+      bgColor = Colors.red[50]!;
+      textColor = Colors.red[800]!;
+    } else {
+      hint = '你已不在群内';
+      bgColor = Colors.grey[100]!;
+      textColor = Colors.grey[800]!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: bgColor,
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 18, color: textColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              hint,
+              style: TextStyle(color: textColor, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -871,13 +948,22 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
   }
 }
 
-String _noticePreview(AppLocalizations strings, String notice) {
-  final trimmed = notice.trim();
-  if (trimmed.isEmpty) {
-    return strings.groupAnnouncementEmpty;
+  String _noticePreview(AppLocalizations strings, String notice) {
+    final trimmed = notice.trim();
+    if (trimmed.isEmpty) {
+      return strings.groupAnnouncementEmpty;
+    }
+    return trimmed.replaceAll('\n', ' ');
   }
-  return trimmed.replaceAll('\n', ' ');
-}
+
+  String _formatDateTime(DateTime dateTime) {
+    final year = dateTime.year;
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$year-$month-$day $hour:$minute';
+  }
 
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.children});
@@ -950,12 +1036,12 @@ class _SwitchSettingTile extends StatelessWidget {
   const _SwitchSettingTile({
     required this.title,
     required this.value,
-    required this.onChanged,
+    this.onChanged,
   });
 
   final String title;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -970,7 +1056,7 @@ class _SwitchSettingTile extends StatelessWidget {
       ),
       trailing: Switch(
         value: value,
-        onChanged: onChanged,
+        onChanged: onChanged != null ? (v) => onChanged!(v) : null,
         activeThumbColor: const Color(0xFF34C759),
         activeTrackColor: const Color(0xFFB4EABF),
       ),

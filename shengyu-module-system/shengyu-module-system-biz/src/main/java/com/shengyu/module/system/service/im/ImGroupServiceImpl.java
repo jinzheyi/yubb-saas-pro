@@ -309,7 +309,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
-        refreshMessage.setAction("DELETE");
+        // 群解散：保留会话，显示"群已解散"状态（微信风格）
+        refreshMessage.setAction("UPDATE");
         refreshMessage.setOperatorUserId(userId);
         refreshMessage.setGroupId(groupId);
         refreshMessage.setChatId(chatId);
@@ -348,6 +349,21 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_MEMBER_NOT_EXISTS);
         }
 
+        // 获取会话ID（在删除前）
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = chat != null ? chat.getId() : null;
+
+        // 先标记群成员状态为1（已退出）并设置离群时间
+        if (chatId != null) {
+            LocalDateTime now = LocalDateTime.now();
+            Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            chatUserMapper.updateGroupMemberStatusAndLeftAt(userId, chatId, 1, now);
+            conversationUserStateMapper.updateGroupMemberStatus(tenantId, userId, chatId, 1, now, null);
+        }
+
         // 删除群成员
         deleteGroupMemberRelation(groupId, userId, groupUser.getId());
 
@@ -355,8 +371,6 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMemberCount(group.getMemberCount() - 1);
         groupMapper.updateById(group);
 
-        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
-        Long chatId = chat != null ? chat.getId() : null;
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
         refreshMessage.setAction("DELETE");
         refreshMessage.setOperatorUserId(userId);
@@ -387,13 +401,62 @@ public class ImGroupServiceImpl implements ImGroupService {
         ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
         boolean inGroup = groupUser != null;
 
+        // 获取会话ID和群成员状态
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = chat != null ? chat.getId() : null;
+
+        Integer groupMemberStatus = 0;
+        java.time.LocalDateTime leftAt = null;
+        if (chatId != null) {
+            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+            if (chatUser != null) {
+                groupMemberStatus = chatUser.getGroupMemberStatus();
+                leftAt = chatUser.getLeftAt();
+            }
+        }
+
         AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
         respVO.setInGroup(inGroup);
+        respVO.setChatId(chatId);
+        respVO.setGroupMemberStatus(groupMemberStatus);
+        respVO.setLeftAt(leftAt);
 
         if (inGroup) {
             respVO.setMyRole(groupUser.getRole());
         } else {
             respVO.setMyRole(null);
+        }
+
+        // 获取群成员信息列表（最多4个，用于组合头像）
+        List<ImGroupUserDO> members = groupUserMapper.selectList(
+                new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImGroupUserDO>()
+                        .eq(ImGroupUserDO::getGroupId, groupId)
+                        .orderByAsc(ImGroupUserDO::getJoinTime)
+                        .last("LIMIT 4"));
+        if (members != null && !members.isEmpty()) {
+            List<Long> memberUserIds = members.stream()
+                    .map(ImGroupUserDO::getUserId)
+                    .collect(Collectors.toList());
+            List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+            if (memberUsers != null) {
+                List<AppImGroupRespVO.GroupMemberItem> items = new ArrayList<>();
+                for (ImGroupUserDO member : members) {
+                    AdminUserDO user = memberUsers.stream()
+                            .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (user != null) {
+                        AppImGroupRespVO.GroupMemberItem item = new AppImGroupRespVO.GroupMemberItem();
+                        item.setUserId(user.getId());
+                        item.setName(user.getNickname());
+                        item.setAvatar(user.getAvatar());
+                        items.add(item);
+                    }
+                }
+                if (!items.isEmpty()) {
+                    respVO.setGroupMemberItems(items);
+                }
+            }
         }
 
         return respVO;
@@ -578,6 +641,21 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_MEMBER_NOT_EXISTS);
         }
 
+        // 获取会话ID（在删除前）
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = chat != null ? chat.getId() : null;
+
+        // 先标记群成员状态为2（已被踢）并设置离群时间
+        if (chatId != null) {
+            LocalDateTime now = LocalDateTime.now();
+            Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            chatUserMapper.updateGroupMemberStatusAndLeftAt(memberUserId, chatId, 2, now);
+            conversationUserStateMapper.updateGroupMemberStatus(tenantId, memberUserId, chatId, 2, now, null);
+        }
+
         // 删除群成员
         deleteGroupMemberRelation(groupId, memberUserId, memberToRemove.getId());
 
@@ -585,10 +663,9 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMemberCount(group.getMemberCount() - 1);
         groupMapper.updateById(group);
 
-        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
-        Long chatId = chat != null ? chat.getId() : null;
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
-        refreshMessage.setAction("DELETE");
+        // 被踢出群：保留会话，仅更新状态（微信风格）
+        refreshMessage.setAction("UPDATE");
         refreshMessage.setOperatorUserId(userId);
         refreshMessage.setGroupId(groupId);
         refreshMessage.setChatId(chatId);
@@ -2238,6 +2315,17 @@ public class ImGroupServiceImpl implements ImGroupService {
         ImGroupUserDO deletedMember = groupUserMapper.selectDeletedByGroupIdAndUserId(groupId, memberUserId);
         if (deletedMember != null) {
             groupUserMapper.reviveSoftDeleted(deletedMember.getId(), role, deletedMember.getNickname(), LocalDateTime.now(), null);
+            
+            // 恢复群成员状态为0（正常）并清除离群时间
+            ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+            if (chat != null) {
+                Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
+                if (tenantId == null) {
+                    tenantId = 0L;
+                }
+                chatUserMapper.restoreGroupMemberStatus(memberUserId, chat.getId());
+                conversationUserStateMapper.restoreGroupMemberStatus(tenantId, memberUserId, chat.getId(), null);
+            }
             return;
         }
         ImGroupUserDO groupUser = new ImGroupUserDO();

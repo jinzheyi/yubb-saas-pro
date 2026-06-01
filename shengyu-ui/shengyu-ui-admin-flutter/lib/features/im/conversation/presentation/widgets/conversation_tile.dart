@@ -61,6 +61,11 @@ class _ConversationTileState extends State<ConversationTile> {
         conversation.conversationType == ConversationType.group &&
         conversation.groupMemberStatus != null &&
         conversation.groupMemberStatus != 0;
+    final isLeftGroup =
+        conversation.conversationType == ConversationType.group &&
+        (conversation.isGroupKicked ||
+            conversation.isGroupLeft ||
+            conversation.isGroupDisbanded);
 
     return Material(
       color: widget.highlightPinned ? const Color(0xFFF7F8FB) : Colors.white,
@@ -69,130 +74,139 @@ class _ConversationTileState extends State<ConversationTile> {
         onPointerUp: (_) => _cancelMouseLongPress(),
         onPointerCancel: (_) => _cancelMouseLongPress(),
         child: GestureDetector(
-          onLongPress: widget.onLongPress,
-          onLongPressStart: widget.onLongPressStart,
-          onSecondaryTapDown: widget.onSecondaryTapDown,
+          onLongPress: isLeftGroup ? null : widget.onLongPress,
+          onLongPressStart: isLeftGroup ? null : widget.onLongPressStart,
+          onSecondaryTapDown: isLeftGroup ? null : widget.onSecondaryTapDown,
           child: InkWell(
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _ConversationAvatar(
-                    conversation: conversation,
-                    displayTitle: displayTitle,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      displayTitle,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: const Color(0xFF202531),
-                                          ),
-                                    ),
-                                  ),
-                                  if (showGroupCount) ...[
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '(${conversation.groupMemberCount})',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            fontSize: 13,
-                                            color: const Color(0xFFB1B7C5),
-                                          ),
-                                    ),
-                                  ],
-                                  if (showGroupStatus) ...[
-                                    const SizedBox(width: 4),
-                                    _GroupStatusBadge(
-                                      status: conversation.groupMemberStatus!,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _formatUpdatedAt(context, conversation.updatedAt),
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: const Color(0xFF9AA2AF),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (conversation.lastMessageHasAtMe)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Text(
-                                  '[@我]',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFFF97316),
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Text.rich(
-                                TextSpan(
+            onTap: isLeftGroup ? null : widget.onTap,
+            child: Opacity(
+              opacity: isLeftGroup ? 0.5 : 1.0,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _ConversationAvatar(
+                      conversation: conversation,
+                      displayTitle: displayTitle,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Row(
                                   children: [
-                                    for (final token in previewTokens)
-                                      ...buildEmojiInlineSpans(
-                                        text: token.text,
-                                        textStyle: theme.textTheme.bodyMedium!
-                                            .copyWith(
-                                              fontSize: 13,
-                                              height: 18 / 13,
-                                              color: token.isNotice
-                                                  ? const Color(0xFF99A0AF)
-                                                  : const Color(0xFF697386),
-                                            ),
-                                        emojiSize: 14,
-                                        emojiPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 1,
+                                    Flexible(
+                                      child: Text(
+                                        displayTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                              color: isLeftGroup
+                                                  ? const Color(0xFFB1B7C5)
+                                                  : const Color(0xFF202531),
                                             ),
                                       ),
+                                    ),
+                                    if (showGroupCount) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '(${conversation.groupMemberCount})',
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontSize: 13,
+                                              color: const Color(0xFFB1B7C5),
+                                            ),
+                                      ),
+                                    ],
+                                    if (showGroupStatus) ...[
+                                      const SizedBox(width: 4),
+                                      _GroupStatusBadge(
+                                        status: conversation.groupMemberStatus!,
+                                      ),
+                                    ],
                                   ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            if (conversation.isMuted)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 8),
-                                child: AppIcon(
-                                  AppIconKind.muteOff,
-                                  size: 14,
-                                  color: Color(0xFFC1C4C9),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatUpdatedAt(context, conversation.updatedAt),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: isLeftGroup
+                                      ? const Color(0xFFC1C4C9)
+                                      : const Color(0xFF9AA2AF),
                                 ),
                               ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              if (conversation.lastMessageHasAtMe)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 6),
+                                  child: Text(
+                                    '[@我]',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFFF97316),
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      for (final token in previewTokens)
+                                        ...buildEmojiInlineSpans(
+                                          text: token.text,
+                                          textStyle: theme.textTheme.bodyMedium!
+                                              .copyWith(
+                                                fontSize: 13,
+                                                height: 18 / 13,
+                                                color: token.isNotice
+                                                    ? const Color(0xFF99A0AF)
+                                                    : isLeftGroup
+                                                        ? const Color(0xFF9AA2AF)
+                                                        : const Color(0xFF697386),
+                                              ),
+                                          emojiSize: 14,
+                                          emojiPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 1,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (conversation.isMuted)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 8),
+                                  child: AppIcon(
+                                    AppIconKind.muteOff,
+                                    size: 14,
+                                    color: Color(0xFFC1C4C9),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

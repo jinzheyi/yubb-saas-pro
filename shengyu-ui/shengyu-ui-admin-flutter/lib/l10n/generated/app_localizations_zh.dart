@@ -1098,6 +1098,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupSettingsBackToConversations => '返回会话列表';
 
   @override
+  String get groupSettingsReadOnlyBannerKicked => '你已被移出群聊，当前仅可查看历史信息';
+
+  @override
+  String get groupSettingsReadOnlyBannerLeft => '你已退出群聊，当前仅可查看历史信息';
+
+  @override
+  String get groupSettingsReadOnlyBannerDisbanded => '该群已解散';
+
+  @override
+  String get groupSettingsReadOnlyBannerDefault => '你已不在群内';
+
+  @override
+  String get groupSettingsSnapshotTimeLabel => '快照时间';
+
+  @override
+  String get groupSettingsLeftTimeLabel => '离群时间';
+
+  @override
+  String get chatPageReadOnlyBannerKicked => '你已被移出群聊，无法发送和接收消息';
+
+  @override
+  String get chatPageReadOnlyBannerLeft => '你已退出群聊，无法发送和接收消息';
+
+  @override
+  String get chatPageReadOnlyBannerDisbanded => '该群已解散，无法发送和接收消息';
+
+  @override
+  String get chatPageBackToConversations => '返回会话列表';
+
+  @override
   String get groupSettingsCannotViewQrCode => '你无法查看该群二维码';
 
   @override

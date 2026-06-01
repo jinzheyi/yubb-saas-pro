@@ -49,6 +49,10 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       if (!_belongsToCurrentConversation(ref, chatId, raw)) {
         return;
       }
+      // 被踢/退群/群解散后忽略新消息
+      if (_isGroupLeftStatus(ref)) {
+        return;
+      }
       final currentUserId = ref.read(authSessionProvider).userId;
       final senderId = raw['senderId']?.toString() ?? '';
       final isSelf = currentUserId.isNotEmpty && senderId == currentUserId;
@@ -353,6 +357,12 @@ int? _tryParseInt(Object? value) {
     return value.toInt();
   }
   return int.tryParse(value?.toString() ?? '');
+}
+
+bool _isGroupLeftStatus(Ref ref) {
+  final pageState = ref.read(chatControllerProvider);
+  final groupMemberStatus = pageState.groupMemberStatus;
+  return groupMemberStatus == 1 || groupMemberStatus == 2 || groupMemberStatus == 3;
 }
 
 bool _belongsToCurrentConversation(

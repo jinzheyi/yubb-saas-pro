@@ -49,6 +49,9 @@ class GroupSettingsState {
     this.currentUserMuteEndTime,
     this.pendingRequestCount = 0,
     this.groupMemberStatus,
+    this.leftAt,
+    this.readOnly = false,
+    this.snapshotTime,
     this.error,
   });
 
@@ -73,6 +76,9 @@ class GroupSettingsState {
   final DateTime? currentUserMuteEndTime;
   final int pendingRequestCount;
   final int? groupMemberStatus;
+  final DateTime? leftAt;
+  final bool readOnly;
+  final DateTime? snapshotTime;
   final AppError? error;
 
   bool get isGroupLeft => groupMemberStatus == 1;
@@ -102,6 +108,9 @@ class GroupSettingsState {
     DateTime? currentUserMuteEndTime,
     int? pendingRequestCount,
     int? groupMemberStatus,
+    DateTime? leftAt,
+    bool? readOnly,
+    DateTime? snapshotTime,
     AppError? error,
   }) {
     return GroupSettingsState(
@@ -127,6 +136,9 @@ class GroupSettingsState {
           currentUserMuteEndTime ?? this.currentUserMuteEndTime,
       pendingRequestCount: pendingRequestCount ?? this.pendingRequestCount,
       groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
+      leftAt: leftAt ?? this.leftAt,
+      readOnly: readOnly ?? this.readOnly,
+      snapshotTime: snapshotTime ?? this.snapshotTime,
       error: error,
     );
   }
