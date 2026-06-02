@@ -17,6 +17,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/datasources/message_remote_data_source.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/mappers/message_dto_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/search/domain/entities/message_search_item.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 class MessageRepositoryImpl implements MessageRepository {
   MessageRepositoryImpl(this._remoteDataSource);
@@ -224,6 +225,7 @@ class MessageRepositoryImpl implements MessageRepository {
       pageSize: pageSize,
     );
     return items
+        .where((item) => item.messageType != MessageType.system)
         .map(
           (item) => ChatHistoryItem(
             messageId: item.messageId,
