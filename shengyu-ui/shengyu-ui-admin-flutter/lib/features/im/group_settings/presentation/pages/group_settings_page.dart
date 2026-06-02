@@ -528,46 +528,50 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               ],
             ),
           const SizedBox(height: 10),
-          if (!isReadOnly)
-            _SettingsGroup(
-              children: [
-                _DangerActionTile(
-                  title: strings.groupSettingsClearHistory,
-                  onTap: () => _clearChatHistory(
-                    context: context,
-                    ref: ref,
-                    controller: controller,
-                    state: state,
-                  ),
+          _SettingsGroup(
+            children: [
+              // 所有用户（包含只读/被踢）都可以清除聊天记录
+              _DangerActionTile(
+                title: strings.groupSettingsClearHistory,
+                onTap: () => _clearChatHistory(
+                  context: context,
+                  ref: ref,
+                  controller: controller,
+                  state: state,
                 ),
-                if (isOwner)
-                  _DangerActionTile(
-                    title: strings.groupSettingsTransferOwner,
-                    onTap: () async {
-                      await context.pushNamed(
-                        RouteNames.groupMembers,
-                        extra: GroupContextArgs(
-                          groupId: widget.args.groupId,
-                          groupName: title,
-                          mode: GroupMembersPageMode.transfer,
-                        ),
-                      );
-                    },
-                  ),
+              ),
+              // 正常模式下显示群主专属功能
+              if (!isReadOnly && isOwner)
                 _DangerActionTile(
-                  title: isOwner
-                      ? strings.groupSettingsDissolve
-                      : strings.groupSettingsQuitGroup,
-                  onTap: () => _exitGroup(
-                    context: context,
-                    ref: ref,
-                    controller: controller,
-                    state: state,
-                    isOwner: isOwner,
-                  ),
+                  title: strings.groupSettingsTransferOwner,
+                  onTap: () async {
+                    await context.pushNamed(
+                      RouteNames.groupMembers,
+                      extra: GroupContextArgs(
+                        groupId: widget.args.groupId,
+                        groupName: title,
+                        mode: GroupMembersPageMode.transfer,
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              // 退出群聊：
+              // 1. 正常模式：群主显示"解散群聊"，成员显示"退出群聊"
+              // 2. 只读模式（被踢/解散）：显示"删除会话记录"（退出群聊），用于清理列表
+              _DangerActionTile(
+                title: isReadOnly
+                    ? strings.groupSettingsQuitGroup
+                    : (isOwner ? strings.groupSettingsDissolve : strings.groupSettingsQuitGroup),
+                onTap: () => _exitGroup(
+                  context: context,
+                  ref: ref,
+                  controller: controller,
+                  state: state,
+                  isOwner: isOwner,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

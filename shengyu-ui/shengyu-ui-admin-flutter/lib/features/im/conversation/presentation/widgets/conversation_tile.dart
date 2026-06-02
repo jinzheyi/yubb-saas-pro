@@ -74,145 +74,170 @@ class _ConversationTileState extends State<ConversationTile> {
         onPointerUp: (_) => _cancelMouseLongPress(),
         onPointerCancel: (_) => _cancelMouseLongPress(),
         child: GestureDetector(
-          onLongPress: isLeftGroup ? null : widget.onLongPress,
-          onLongPressStart: isLeftGroup ? null : widget.onLongPressStart,
-          onSecondaryTapDown: isLeftGroup ? null : widget.onSecondaryTapDown,
+          onLongPress: widget.onLongPress,
+          onLongPressStart: widget.onLongPressStart,
+          onSecondaryTapDown: widget.onSecondaryTapDown,
           child: InkWell(
-            onTap: isLeftGroup ? null : widget.onTap,
-            child: Opacity(
-              opacity: isLeftGroup ? 0.5 : 1.0,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _ConversationAvatar(
-                      conversation: conversation,
-                      displayTitle: displayTitle,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        displayTitle,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                              color: isLeftGroup
-                                                  ? const Color(0xFFB1B7C5)
-                                                  : const Color(0xFF202531),
-                                            ),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _ConversationAvatar(
+                    conversation: conversation,
+                    displayTitle: displayTitle,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      displayTitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: isLeftGroup
+                                                ? const Color(0xFFB1B7C5)
+                                                : const Color(0xFF202531),
+                                          ),
+                                    ),
+                                  ),
+                                  if (showGroupCount) ...[
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '(${conversation.groupMemberCount})',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        fontSize: 13,
+                                        color: const Color(0xFFB1B7C5),
                                       ),
                                     ),
-                                    if (showGroupCount) ...[
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '(${conversation.groupMemberCount})',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              fontSize: 13,
-                                              color: const Color(0xFFB1B7C5),
-                                            ),
-                                      ),
-                                    ],
-                                    if (showGroupStatus) ...[
-                                      const SizedBox(width: 4),
-                                      _GroupStatusBadge(
-                                        status: conversation.groupMemberStatus!,
-                                      ),
-                                    ],
                                   ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _formatUpdatedAt(context, conversation.updatedAt),
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: isLeftGroup
-                                      ? const Color(0xFFC1C4C9)
-                                      : const Color(0xFF9AA2AF),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              if (conversation.lastMessageHasAtMe)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 6),
-                                  child: Text(
-                                    '[@我]',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFFF97316),
+                                  if (showGroupStatus && !isLeftGroup) ...[
+                                    const SizedBox(width: 4),
+                                    _GroupStatusBadge(
+                                      status: conversation.groupMemberStatus!,
                                     ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatUpdatedAt(context, conversation.updatedAt),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: isLeftGroup
+                                    ? const Color(0xFFC1C4C9)
+                                    : const Color(0xFF9AA2AF),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (conversation.lastMessageHasAtMe && !isLeftGroup)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Text(
+                                  '[@我]',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFFF97316),
                                   ),
-                                ),
-                              Expanded(
-                                child: Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      for (final token in previewTokens)
-                                        ...buildEmojiInlineSpans(
-                                          text: token.text,
-                                          textStyle: theme.textTheme.bodyMedium!
-                                              .copyWith(
-                                                fontSize: 13,
-                                                height: 18 / 13,
-                                                color: token.isNotice
-                                                    ? const Color(0xFF99A0AF)
-                                                    : isLeftGroup
-                                                        ? const Color(0xFF9AA2AF)
-                                                        : const Color(0xFF697386),
-                                              ),
-                                          emojiSize: 14,
-                                          emojiPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 1,
-                                              ),
-                                        ),
-                                    ],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (conversation.isMuted)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8),
-                                  child: AppIcon(
-                                    AppIconKind.muteOff,
-                                    size: 14,
-                                    color: Color(0xFFC1C4C9),
+                            Expanded(
+                              child: Text.rich(
+                                TextSpan(
+                                  children: _buildMessageSpans(
+                                    theme,
+                                    isLeftGroup,
+                                    conversation,
+                                    previewTokens,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ],
-                      ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (conversation.isMuted)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8),
+                                child: AppIcon(
+                                  AppIconKind.muteOff,
+                                  size: 14,
+                                  color: Color(0xFFC1C4C9),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  List<InlineSpan> _buildMessageSpans(
+    ThemeData theme,
+    bool isLeftGroup,
+    Conversation conversation,
+    List<_PreviewToken> previewTokens,
+  ) {
+    if (isLeftGroup) {
+      final statusText = conversation.isGroupKicked
+          ? '你已被移出群聊'
+          : conversation.isGroupLeft
+              ? '你已退出该群聊'
+              : '该群已解散';
+      return [
+        TextSpan(
+          text: statusText,
+          style: theme.textTheme.bodyMedium!.copyWith(
+            fontSize: 13,
+            height: 18 / 13,
+            color: const Color(0xFF9AA2AF),
+          ),
+        ),
+      ];
+    }
+
+    final spans = <InlineSpan>[];
+    for (final token in previewTokens) {
+      spans.addAll(
+        buildEmojiInlineSpans(
+          text: token.text,
+          textStyle: theme.textTheme.bodyMedium!.copyWith(
+            fontSize: 13,
+            height: 18 / 13,
+            color: token.isNotice
+                ? const Color(0xFF99A0AF)
+                : const Color(0xFF697386),
+          ),
+          emojiSize: 14,
+          emojiPadding: const EdgeInsets.symmetric(horizontal: 1),
+        ),
+      );
+    }
+    return spans;
   }
 
   void _handlePointerDown(PointerDownEvent event) {
@@ -314,7 +339,6 @@ bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
   if (_isNoticePreview(tokenText)) {
     return true;
   }
-  // System messages (e.g., group mute announcements) should be highlighted
   if (conversation.lastMessageType == MessageType.system) {
     return true;
   }
@@ -357,9 +381,6 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
   if (preview.isNotEmpty) {
     return preview.length > 100 ? '${preview.substring(0, 100)}...' : preview;
   }
-  // Don't show fallback for text messages with empty content
-  // This handles both brand-new conversations and local optimistic messages
-  // that haven't been confirmed by the server yet
   if (conversation.lastMessageType == MessageType.text) {
     return '';
   }
