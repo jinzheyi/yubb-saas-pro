@@ -18,5 +18,6 @@ final loginControllerProvider =
       return LoginController(
         ref.read(loginUseCaseProvider),
         ref.read(authSessionProvider.notifier),
+        ref,
       );
     });

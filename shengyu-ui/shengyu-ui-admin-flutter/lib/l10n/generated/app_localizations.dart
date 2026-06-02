@@ -1082,6 +1082,12 @@ abstract class AppLocalizations {
   /// **'No position set'**
   String get profilePostFallback;
 
+  /// No description provided for @profileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Load failed, pull down to retry'**
+  String get profileLoadError;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:

@@ -213,6 +213,7 @@
   "profileAvatarHint": "点击更换或删除头像",
   "profileDepartmentFallback": "未分配部门",
   "profilePostFallback": "未设置岗位",
+  "profileLoadError": "加载失败，请下拉刷新重试",
   "settingsTitle": "设置",
   "settingsThemeMode": "主题模式",
   "settingsThemeModeSummary": "跟随系统 / 浅色 / 深色",

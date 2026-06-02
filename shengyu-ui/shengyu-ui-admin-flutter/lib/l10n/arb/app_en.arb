@@ -213,6 +213,7 @@
   "profileAvatarHint": "Tap to change or remove avatar",
   "profileDepartmentFallback": "No department assigned",
   "profilePostFallback": "No position set",
+  "profileLoadError": "Load failed, pull down to retry",
   "settingsTitle": "Settings",
   "settingsThemeMode": "Theme",
   "settingsThemeModeSummary": "System / Light / Dark",

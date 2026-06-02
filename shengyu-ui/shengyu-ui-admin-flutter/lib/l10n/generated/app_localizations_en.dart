@@ -527,6 +527,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePostFallback => 'No position set';
 
   @override
+  String get profileLoadError => 'Load failed, pull down to retry';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override

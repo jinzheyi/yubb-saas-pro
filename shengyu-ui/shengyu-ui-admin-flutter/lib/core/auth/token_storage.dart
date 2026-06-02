@@ -63,5 +63,22 @@ class TokenStorage {
     await prefs.remove(StorageKeyRegistry.userId);
     await prefs.remove(StorageKeyRegistry.tenantId);
     await prefs.remove(StorageKeyRegistry.locale);
+    await prefs.remove(StorageKeyRegistry.deviceId);
+    await prefs.remove(StorageKeyRegistry.deviceType);
+    await prefs.remove(StorageKeyRegistry.deviceName);
+    await prefs.remove(StorageKeyRegistry.clientVersion);
+    await prefs.remove(StorageKeyRegistry.imBadgeSnapshot);
+    await prefs.remove(StorageKeyRegistry.conversationCursorVersion);
+    await prefs.remove(StorageKeyRegistry.groupRemovalNotice);
+    await _clearPrefsWithPrefix(StorageKeyRegistry.voicePlayedPrefix);
+    await _clearPrefsWithPrefix(StorageKeyRegistry.reeditHintPrefix);
+  }
+
+  Future<void> _clearPrefsWithPrefix(String prefix) async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith(prefix)).toList();
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
   }
 }

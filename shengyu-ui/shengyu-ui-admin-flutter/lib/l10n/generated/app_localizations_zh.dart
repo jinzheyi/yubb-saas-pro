@@ -520,6 +520,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profilePostFallback => '未设置岗位';
 
   @override
+  String get profileLoadError => '加载失败，请下拉刷新重试';
+
+  @override
   String get settingsTitle => '设置';
 
   @override

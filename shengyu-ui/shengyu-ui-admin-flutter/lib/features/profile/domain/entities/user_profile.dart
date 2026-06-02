@@ -9,6 +9,15 @@ class UserProfile {
     required this.postName,
   });
 
+  const UserProfile.empty()
+      : userId = '',
+        nickname = '',
+        mobile = '',
+        email = '',
+        avatarUrl = '',
+        departmentName = '',
+        postName = '';
+
   final String userId;
   final String nickname;
   final String mobile;
