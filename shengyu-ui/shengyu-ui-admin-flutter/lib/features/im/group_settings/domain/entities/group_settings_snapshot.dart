@@ -17,6 +17,7 @@ class GroupSettingsSnapshot {
     required this.pendingJoinRequestCount,
     this.groupMemberStatus,
     this.leftAt,
+    this.fromSnapshot = false,
   });
 
   final String groupId;
@@ -36,4 +37,5 @@ class GroupSettingsSnapshot {
   final int pendingJoinRequestCount;
   final int? groupMemberStatus;
   final DateTime? leftAt;
+  final bool fromSnapshot;
 }

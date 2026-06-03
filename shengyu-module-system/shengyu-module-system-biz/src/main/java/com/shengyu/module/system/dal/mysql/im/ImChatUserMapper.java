@@ -282,4 +282,35 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
         return chatUser != null ? chatUser.getLeftAt() : null;
     }
 
+    /**
+     * 保存群组快照数据（被踢/退群/解散时调用）
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param snapshotData JSON格式的快照数据
+     * @return 更新行数
+     */
+    default int saveSnapshotData(Long userId, Long chatId, String snapshotData) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getSnapshotData, snapshotData));
+    }
+
+    /**
+     * 清理群组快照数据（用户主动删除会话时调用）
+     * 清空 group_member_status、left_at、snapshot_data，恢复为干净状态
+     * 这样如果用户在群内，新消息到来时会重新创建干净的会话条目
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @return 更新行数
+     */
+    default int cleanGroupSnapshotAndStatus(Long userId, Long chatId) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getGroupMemberStatus, 0)
+                .set(ImChatUserDO::getLeftAt, null)
+                .set(ImChatUserDO::getSnapshotData, null));
+    }
+
 }

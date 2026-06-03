@@ -65,6 +65,8 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     private static final DateTimeFormatter GROUP_MUTE_TIP_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    private static final DateTimeFormatter SNAPSHOT_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private static final LocalDateTime PERMANENT_EXPIRE_TIME = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
 
     /** 入群申请限流: 同一用户5分钟内最多3次 */
@@ -295,6 +297,15 @@ public class ImGroupServiceImpl implements ImGroupService {
         ImChatDO groupChat = chatMapper.selectGroupChat(groupId, 2);
         Long chatId = groupChat != null ? groupChat.getId() : null;
 
+        // 构建并保存每个成员的群快照（群解散状态=3）
+        LocalDateTime now = LocalDateTime.now();
+        String snapshotData = buildGroupSnapshot(group, members, 3, now);
+        if (chatId != null) {
+            for (ImGroupUserDO member : members) {
+                saveGroupSnapshot(member.getUserId(), chatId, snapshotData);
+            }
+        }
+
         // 删除群组
         groupMapper.deleteById(groupId);
 
@@ -367,6 +378,26 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 删除群成员
         deleteGroupMemberRelation(groupId, userId, groupUser.getId());
 
+        // 主动退出群聊时，同时从会话列表中删除该会话并清理快照数据
+        // 这样用户退出后不会在会话列表中看到该群，符合微信效果
+        // 注意：退群是用户主动行为，不需要保存快照（被踢/解散才需要保存快照）
+        if (chatId != null) {
+            Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            try {
+                chatUserMapper.softDelete(userId, chatId);
+                chatUserMapper.cleanGroupSnapshotAndStatus(userId, chatId);
+                conversationUserStateMapper.cleanGroupSnapshotAndStatus(tenantId, userId, chatId);
+                Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+                conversationUserStateMapper.upsertAfterDelete(tenantId, chatId, userId, cursorVersion, true);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 退出群聊时清理会话列表失败, userId: {}, chatId: {}, error: {}",
+                        userId, chatId, e.getMessage());
+            }
+        }
+
         // 更新群成员数量
         group.setMemberCount(group.getMemberCount() - 1);
         groupMapper.updateById(group);
@@ -407,12 +438,20 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         Integer groupMemberStatus = 0;
         java.time.LocalDateTime leftAt = null;
+        String snapshotData = null;
         if (chatId != null) {
             ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
             if (chatUser != null) {
                 groupMemberStatus = chatUser.getGroupMemberStatus();
                 leftAt = chatUser.getLeftAt();
+                snapshotData = chatUser.getSnapshotData();
             }
+        }
+
+        // 如果用户已离群（被踢/退出/解散），优先返回快照数据
+        boolean hasLeftGroup = groupMemberStatus != null && groupMemberStatus != 0;
+        if (hasLeftGroup && snapshotData != null && !snapshotData.isEmpty()) {
+            return buildGroupFromSnapshot(snapshotData, groupId, chatId);
         }
 
         AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
@@ -458,6 +497,68 @@ public class ImGroupServiceImpl implements ImGroupService {
                 }
             }
         }
+
+        return respVO;
+    }
+
+    /**
+     * 从快照数据构建群响应VO（用于已离群用户）
+     */
+    private AppImGroupRespVO buildGroupFromSnapshot(String snapshotData, Long groupId, Long chatId) {
+        JSONObject snapshot = JSONUtil.parseObj(snapshotData);
+
+        AppImGroupRespVO respVO = new AppImGroupRespVO();
+        respVO.setId(groupId);
+        respVO.setName(snapshot.getStr("groupName", ""));
+        respVO.setNotice(snapshot.getStr("notice", ""));
+        respVO.setNoticePinned(snapshot.getBool("noticePinned", false));
+        respVO.setMemberCount(snapshot.getInt("memberCount", 0));
+        respVO.setGroupType(snapshot.getInt("groupType", 1));
+        respVO.setMuteAll(snapshot.getBool("muteAll", false));
+        respVO.setAllowMemberInvite(snapshot.getBool("allowMemberInvite", false));
+        respVO.setNeedApproval(snapshot.getBool("needApproval", false));
+        respVO.setOwnerId(Long.parseLong(snapshot.getStr("ownerUserId", "0")));
+        respVO.setOwnerName(snapshot.getStr("ownerName", ""));
+        respVO.setChatId(chatId);
+        respVO.setInGroup(false);
+        respVO.setMyRole(null);
+        respVO.setGroupMemberStatus(snapshot.getInt("groupMemberStatus", 0));
+
+        String leftAtStr = snapshot.getStr("leftAt", "");
+        if (!leftAtStr.isEmpty()) {
+            try {
+                respVO.setLeftAt(LocalDateTime.parse(leftAtStr, SNAPSHOT_TIME_FORMATTER));
+            } catch (Exception e) {
+                respVO.setLeftAt(null);
+            }
+        }
+
+        // 从快照中获取前4个成员用于头像展示
+        List<JSONObject> members = snapshot.getJSONArray("members").toList(JSONObject.class);
+        if (members != null && !members.isEmpty()) {
+            List<AppImGroupRespVO.GroupMemberItem> items = new ArrayList<>();
+            int limit = Math.min(members.size(), 4);
+            for (int i = 0; i < limit; i++) {
+                JSONObject member = members.get(i);
+                AppImGroupRespVO.GroupMemberItem item = new AppImGroupRespVO.GroupMemberItem();
+                String memberUserIdStr = member.getStr("userId", "");
+                if (!memberUserIdStr.isEmpty()) {
+                    item.setUserId(Long.parseLong(memberUserIdStr));
+                }
+                // 优先使用 nickname，其次 userName
+                String name = member.getStr("nickname", "");
+                if (name.isEmpty()) {
+                    name = member.getStr("userName", "");
+                }
+                item.setName(name);
+                item.setAvatar(member.getStr("avatarUrl", ""));
+                items.add(item);
+            }
+            respVO.setGroupMemberItems(items);
+        }
+
+        // 快照标记
+        respVO.setFromSnapshot(true);
 
         return respVO;
     }
@@ -645,9 +746,10 @@ public class ImGroupServiceImpl implements ImGroupService {
         ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
         Long chatId = chat != null ? chat.getId() : null;
 
+        LocalDateTime now = LocalDateTime.now();
+
         // 先标记群成员状态为2（已被踢）并设置离群时间
         if (chatId != null) {
-            LocalDateTime now = LocalDateTime.now();
             Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
             if (tenantId == null) {
                 tenantId = 0L;
@@ -656,12 +758,20 @@ public class ImGroupServiceImpl implements ImGroupService {
             conversationUserStateMapper.updateGroupMemberStatus(tenantId, memberUserId, chatId, 2, now, null);
         }
 
-        // 删除群成员
+        // 删除群成员（必须在构建快照前删除，确保快照不包含被踢用户）
         deleteGroupMemberRelation(groupId, memberUserId, memberToRemove.getId());
 
-        // 更新群成员数量
-        group.setMemberCount(group.getMemberCount() - 1);
-        groupMapper.updateById(group);
+        // 构建并保存被踢用户的群快照（被踢状态=2）
+        // 注意：此时被踢用户已从 im_group_user 表删除，快照中的成员列表是踢人后的剩余成员
+        if (chatId != null) {
+            // 更新群成员数量
+            group.setMemberCount(group.getMemberCount() - 1);
+            groupMapper.updateById(group);
+
+            List<ImGroupUserDO> currentMembers = groupUserMapper.selectListByGroupId(groupId);
+            String snapshotData = buildGroupSnapshot(group, currentMembers, 2, now);
+            saveGroupSnapshot(memberUserId, chatId, snapshotData);
+        }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
         // 被踢出群：保留会话，仅更新状态（微信风格）
@@ -693,7 +803,21 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         // 查看类方法：不强制要求当前用户是群成员，允许被踢/退群用户查看群成员列表（只读）
-        // 查询所有群成员
+        // 检查用户是否已离群，如果是则返回快照成员
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = chat != null ? chat.getId() : null;
+        if (chatId != null) {
+            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+            if (chatUser != null && chatUser.getGroupMemberStatus() != null && chatUser.getGroupMemberStatus() != 0) {
+                // 用户已离群，返回快照成员
+                String snapshotData = chatUser.getSnapshotData();
+                if (snapshotData != null && !snapshotData.isEmpty()) {
+                    return buildMembersFromSnapshot(snapshotData);
+                }
+            }
+        }
+
+        // 正常查询所有群成员
         List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
         
         // 转换为VO并填充用户信息
@@ -1936,6 +2060,20 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
         
         // 2. 查看类方法：不强制要求当前用户是群成员，允许被踢/退群用户查看群公告（只读）
+        // 检查用户是否已离群，如果是则返回快照公告
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = chat != null ? chat.getId() : null;
+        if (chatId != null) {
+            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+            if (chatUser != null && chatUser.getGroupMemberStatus() != null && chatUser.getGroupMemberStatus() != 0) {
+                // 用户已离群，返回快照公告
+                String snapshotData = chatUser.getSnapshotData();
+                if (snapshotData != null && !snapshotData.isEmpty()) {
+                    JSONObject snapshot = JSONUtil.parseObj(snapshotData);
+                    return snapshot.getStr("notice", "");
+                }
+            }
+        }
         
         // 3. 返回群公告
         return group.getNotice();
@@ -2392,6 +2530,117 @@ public class ImGroupServiceImpl implements ImGroupService {
         } catch (Exception e) {
             log.warn("[ImGroupService] 清理限流器过期数据失败, error: {}", e.getMessage());
         }
+    }
+
+    // ==================== 群组快照相关方法 ====================
+
+    /**
+     * 构建群组快照JSON数据
+     * 快照包含：群名称、公告、成员数量、群主信息、成员列表关键信息、快照时间等
+     */
+    private String buildGroupSnapshot(ImGroupDO group, List<ImGroupUserDO> members, int groupMemberStatus, LocalDateTime leftAt) {
+        JSONObject snapshot = JSONUtil.createObj();
+        // 基础群信息
+        snapshot.set("groupName", group.getName() != null ? group.getName() : "");
+        snapshot.set("notice", group.getNotice() != null ? group.getNotice() : "");
+        snapshot.set("noticePinned", group.getNoticePinned() != null && group.getNoticePinned());
+        snapshot.set("memberCount", group.getMemberCount() != null ? group.getMemberCount() : 0);
+        snapshot.set("groupType", group.getGroupType() != null ? group.getGroupType() : 1);
+        snapshot.set("muteAll", group.getMuteAll() != null && group.getMuteAll());
+        snapshot.set("allowMemberInvite", group.getAllowMemberInvite() != null && group.getAllowMemberInvite());
+        snapshot.set("needApproval", group.getNeedApproval() != null && group.getNeedApproval());
+
+        // 群主信息
+        snapshot.set("ownerUserId", group.getOwnerId() != null ? String.valueOf(group.getOwnerId()) : "");
+        AdminUserDO owner = userMapper.selectById(group.getOwnerId());
+        snapshot.set("ownerName", owner != null && owner.getNickname() != null ? owner.getNickname() : "");
+
+        // 成员快照列表（只存关键信息：userId、昵称、角色、头像）
+        if (CollUtil.isNotEmpty(members)) {
+            List<JSONObject> memberSnapshots = new ArrayList<>();
+            List<Long> memberIds = new ArrayList<>();
+            List<Long> adminIds = new ArrayList<>();
+
+            for (ImGroupUserDO member : members) {
+                JSONObject memberJson = JSONUtil.createObj();
+                memberJson.set("userId", String.valueOf(member.getUserId()));
+                memberJson.set("role", member.getRole() != null ? member.getRole() : 0);
+                memberJson.set("nickname", member.getNickname() != null ? member.getNickname() : "");
+
+                AdminUserDO user = userMapper.selectById(member.getUserId());
+                if (user != null) {
+                    memberJson.set("userName", user.getNickname() != null ? user.getNickname() : "");
+                    memberJson.set("avatarUrl", user.getAvatar() != null ? user.getAvatar() : "");
+                } else {
+                    memberJson.set("userName", "");
+                    memberJson.set("avatarUrl", "");
+                }
+                memberSnapshots.add(memberJson);
+
+                memberIds.add(member.getUserId());
+                if (ImGroupMemberRoleEnum.isAdmin(member.getRole())) {
+                    adminIds.add(member.getUserId());
+                }
+            }
+
+            snapshot.set("members", memberSnapshots);
+            snapshot.set("memberIds", memberIds.stream().map(String::valueOf).collect(Collectors.toList()));
+            snapshot.set("adminUserIds", adminIds.stream().map(String::valueOf).collect(Collectors.toList()));
+        }
+
+        // 快照状态和时间
+        snapshot.set("groupMemberStatus", groupMemberStatus);
+        snapshot.set("leftAt", leftAt != null ? leftAt.format(SNAPSHOT_TIME_FORMATTER) : "");
+        snapshot.set("snapshotTime", LocalDateTime.now().format(SNAPSHOT_TIME_FORMATTER));
+
+        return snapshot.toString();
+    }
+
+    /**
+     * 保存群组快照到 im_chat_user 和 im_conversation_user_state
+     */
+    private void saveGroupSnapshot(Long userId, Long chatId, String snapshotData) {
+        try {
+            chatUserMapper.saveSnapshotData(userId, chatId, snapshotData);
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            conversationUserStateMapper.saveSnapshotData(tenantId, userId, chatId, snapshotData);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 保存群快照失败, userId: {}, chatId: {}, error: {}", userId, chatId, e.getMessage());
+        }
+    }
+
+    /**
+     * 从快照数据构建群成员列表（用于已离群用户）
+     */
+    private List<AppImGroupMemberRespVO> buildMembersFromSnapshot(String snapshotData) {
+        JSONObject snapshot = JSONUtil.parseObj(snapshotData);
+        List<JSONObject> memberList = snapshot.getJSONArray("members").toList(JSONObject.class);
+        if (memberList == null || memberList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<AppImGroupMemberRespVO> result = new ArrayList<>();
+        for (JSONObject member : memberList) {
+            AppImGroupMemberRespVO respVO = new AppImGroupMemberRespVO();
+            String userIdStr = member.getStr("userId", "");
+            if (!userIdStr.isEmpty()) {
+                respVO.setUserId(Long.parseLong(userIdStr));
+            }
+            String nickname = member.getStr("nickname", "");
+            if (nickname.isEmpty()) {
+                nickname = member.getStr("userName", "");
+            }
+            respVO.setNickname(nickname);
+            respVO.setUserNickname(nickname);
+            respVO.setUserAvatar(member.getStr("avatarUrl", ""));
+            respVO.setRole(member.getInt("role", 0));
+            respVO.setIsMuted(false);
+            result.add(respVO);
+        }
+        return result;
     }
 
 }

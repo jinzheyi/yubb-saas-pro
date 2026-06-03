@@ -2,6 +2,8 @@ package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
@@ -352,26 +354,18 @@ public class ImConversationServiceImpl implements ImConversationService {
                             if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
                                 item.setTargetId(chat.getGroupId());
                                 ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
-                                if (group != null) {
-                                    item.setTargetName(group.getName());
-                                    item.setTargetAvatar(group.getAvatar());
-                                    item.setGroupMemberCount(group.getMemberCount());
-                                    // 填充群成员信息列表（用于组合头像）
-                                    if (group.getId() != null) {
-                                        List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> groupMemberItems =
-                                                syncGroupMemberItemsMap.get(group.getId());
-                                        if (groupMemberItems != null && !groupMemberItems.isEmpty()) {
-                                            item.setGroupMemberItems(groupMemberItems);
-                                        }
+
+                                // 判断用户是否已离群
+                                boolean syncHasLeftGroup = state.getGroupMemberStatus() != null && state.getGroupMemberStatus() != 0;
+                                if (syncHasLeftGroup) {
+                                    String syncSnapshotData = state.getSnapshotData();
+                                    if (syncSnapshotData != null && !syncSnapshotData.isEmpty()) {
+                                        fillSyncItemFromSnapshot(item, syncSnapshotData, state);
+                                    } else if (group != null) {
+                                        fillSyncItemFromGroup(item, group, state, syncGroupMemberItemsMap);
                                     }
-                                    // 填充群组成员状态和离群时间
-                                    item.setGroupMemberStatus(state.getGroupMemberStatus());
-                                    item.setLeftAt(state.getLeftAt());
-                                    if (item.getLastMessageTime() == null
-                                            && state.getLastMessageId() == null
-                                            && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
-                                        item.setLastMessageTime(group.getCreateTime());
-                                    }
+                                } else if (group != null) {
+                                    fillSyncItemFromGroup(item, group, state, syncGroupMemberItemsMap);
                                 }
                             } else {
                                 Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
@@ -641,10 +635,28 @@ public class ImConversationServiceImpl implements ImConversationService {
         }
         chatUserMapper.softDelete(userId, conversationId);
 
+        // 清理群组快照数据（被踢/退群/解散的快照信息），恢复为干净状态
+        // 这样如果用户在群内，新消息到来时会重新创建干净的会话条目
+        try {
+            chatUserMapper.cleanGroupSnapshotAndStatus(userId, conversationId);
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 清理群快照数据失败, userId: {}, chatId: {}, error: {}",
+                    userId, conversationId, e.getMessage());
+        }
+
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
         try {
             Long tenantId = resolveTenantId();
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+
+            // 同时清理 im_conversation_user_state 的快照数据
+            try {
+                conversationUserStateMapper.cleanGroupSnapshotAndStatus(tenantId, userId, conversationId);
+            } catch (Exception e) {
+                log.warn("[ImConversationService] 清理会话用户态快照数据失败, userId: {}, chatId: {}, error: {}",
+                        userId, conversationId, e.getMessage());
+            }
+
             conversationUserStateMapper.upsertAfterDelete(
                     tenantId,
                     conversationId,
@@ -757,6 +769,11 @@ public class ImConversationServiceImpl implements ImConversationService {
         }
 
         chatUserMapper.softDelete(userId, chat.getId());
+
+        // 注意：此方法可能被群操作（退群/踢人/解散）的 DELETE 推送触发
+        // 也可能被用户主动删除会话触发
+        // 为保留快照查看能力，这里只做软删除，不清理快照数据
+        // 快照数据的清理应由用户主动删除会话时执行（deleteConversation 方法）
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
         try {
@@ -1026,23 +1043,22 @@ public class ImConversationServiceImpl implements ImConversationService {
             if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
                 respVO.setTargetId(chat.getGroupId());
                 ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
-                if (group != null) {
-                    respVO.setTargetName(group.getName());
-                    respVO.setTargetAvatar(group.getAvatar());
-                    respVO.setGroupMemberCount(group.getMemberCount());
-                    respVO.setGroupMemberAvatars(groupMemberAvatarsMap.get(group.getId()));
-                    respVO.setGroupMemberItems(groupMemberItemsMap.get(group.getId()));
 
-                    // 填充群组成员状态和离群时间
-                    respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
-                    respVO.setLeftAt(chatUser.getLeftAt());
+                // 判断用户是否已离群（被踢/退出/解散）
+                boolean hasLeftGroup = chatUser.getGroupMemberStatus() != null && chatUser.getGroupMemberStatus() != 0;
 
-                    // 群聊无消息：使用群创建时间作为会话时间
-                    if (respVO.getLastMessageTime() == null
-                            && chatUser.getLastMessageId() == null
-                            && (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
-                        respVO.setLastMessageTime(group.getCreateTime());
+                if (hasLeftGroup) {
+                    // 已离群：优先使用快照数据（冻结的群名称、成员信息等）
+                    String snapshotData = chatUser.getSnapshotData();
+                    if (snapshotData != null && !snapshotData.isEmpty()) {
+                        fillConversationFromSnapshot(respVO, snapshotData, chatUser);
+                    } else if (group != null) {
+                        // 快照不存在时降级使用实时数据
+                        fillConversationFromGroup(respVO, group, chatUser, groupMemberAvatarsMap, groupMemberItemsMap);
                     }
+                } else if (group != null) {
+                    // 正常在群：使用实时数据
+                    fillConversationFromGroup(respVO, group, chatUser, groupMemberAvatarsMap, groupMemberItemsMap);
                 }
             } else {
                 Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
@@ -1123,62 +1139,17 @@ public class ImConversationServiceImpl implements ImConversationService {
          if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
              respVO.setTargetId(chat.getGroupId());
              ImGroupDO group = groupMapper.selectById(chat.getGroupId());
-             if (group != null) {
-                 respVO.setTargetName(group.getName());
-                 respVO.setTargetAvatar(group.getAvatar());
-                 respVO.setGroupMemberCount(group.getMemberCount());
-                 
-                 // 获取群成员头像列表（最多4个）
-                 List<ImGroupUserDO> members = groupUserMapper.selectList(
-                         new LambdaQueryWrapperX<ImGroupUserDO>()
-                                 .eq(ImGroupUserDO::getGroupId, group.getId())
-                                 .orderByAsc(ImGroupUserDO::getJoinTime)
-                                 .last("LIMIT 4"));
-                 if (members != null && !members.isEmpty()) {
-                     List<Long> memberUserIds = members.stream()
-                             .map(ImGroupUserDO::getUserId)
-                             .collect(Collectors.toList());
-                     List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
-                     if (memberUsers != null) {
-                         List<String> avatars = memberUsers.stream()
-                                 .map(u -> u != null ? u.getAvatar() : null)
-                                 .filter(a -> a != null && !a.isEmpty())
-                                 .collect(Collectors.toList());
-                         if (!avatars.isEmpty()) {
-                             respVO.setGroupMemberAvatars(avatars);
-                         }
 
-                         // 获取群成员完整信息列表（用于组合头像）
-                         List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
-                         for (ImGroupUserDO member : members) {
-                             AdminUserDO user = memberUsers.stream()
-                                     .filter(u -> u != null && u.getId().equals(member.getUserId()))
-                                     .findFirst()
-                                     .orElse(null);
-                             if (user != null) {
-                                 AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
-                                 item.setUserId(user.getId());
-                                 item.setName(user.getNickname());
-                                 item.setAvatar(user.getAvatar());
-                                 items.add(item);
-                             }
-                         }
-                         if (!items.isEmpty()) {
-                             respVO.setGroupMemberItems(items);
-                         }
-                     }
+             boolean hasLeftGroup = chatUser.getGroupMemberStatus() != null && chatUser.getGroupMemberStatus() != 0;
+             if (hasLeftGroup) {
+                 String snapshotData = chatUser.getSnapshotData();
+                 if (snapshotData != null && !snapshotData.isEmpty()) {
+                     fillConversationFromSnapshot(respVO, snapshotData, chatUser);
+                 } else if (group != null) {
+                     fillConversationFromGroupSingle(respVO, group, chatUser);
                  }
-
-				// 填充群组成员状态和离群时间
-				respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
-				respVO.setLeftAt(chatUser.getLeftAt());
-
-				// 群聊无消息：使用群创建时间作为会话时间
-				if (respVO.getLastMessageTime() == null
-						&& chatUser.getLastMessageId() == null
-						&& (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
-					respVO.setLastMessageTime(group.getCreateTime());
-				}
+             } else if (group != null) {
+                 fillConversationFromGroupSingle(respVO, group, chatUser);
              }
          } else {
              Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
@@ -1201,6 +1172,191 @@ public class ImConversationServiceImpl implements ImConversationService {
          }
          fillConversationPresence(respVO);
          return respVO;
+    }
+
+    /**
+     * 从快照数据填充同步项VO（已离群用户使用）
+     */
+    private void fillSyncItemFromSnapshot(AppImConversationSyncItemRespVO item, String snapshotData, ImConversationUserStateDO state) {
+        JSONObject snapshot = JSONUtil.parseObj(snapshotData);
+        item.setTargetName(snapshot.getStr("groupName", ""));
+        item.setGroupMemberCount(snapshot.getInt("memberCount", 0));
+        item.setGroupMemberStatus(snapshot.getInt("groupMemberStatus", state.getGroupMemberStatus()));
+        item.setLeftAt(state.getLeftAt());
+
+        List<JSONObject> members = snapshot.getJSONArray("members").toList(JSONObject.class);
+        if (members != null && !members.isEmpty()) {
+            List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> syncItems = new ArrayList<>();
+            int limit = Math.min(members.size(), 4);
+            for (int i = 0; i < limit; i++) {
+                JSONObject member = members.get(i);
+                String nickname = member.getStr("nickname", "");
+                if (nickname.isEmpty()) {
+                    nickname = member.getStr("userName", "");
+                }
+                String userIdStr = member.getStr("userId", "");
+                AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem syncItem =
+                        new AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem();
+                if (!userIdStr.isEmpty()) {
+                    syncItem.setUserId(Long.parseLong(userIdStr));
+                }
+                syncItem.setName(nickname);
+                syncItem.setAvatar(member.getStr("avatarUrl", ""));
+                syncItems.add(syncItem);
+            }
+            if (!syncItems.isEmpty()) {
+                item.setGroupMemberItems(syncItems);
+            }
+        }
+    }
+
+    /**
+     * 从实时群数据填充同步项VO（正常在群用户使用）
+     */
+    private void fillSyncItemFromGroup(AppImConversationSyncItemRespVO item, ImGroupDO group, ImConversationUserStateDO state,
+                                       Map<Long, List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem>> syncGroupMemberItemsMap) {
+        item.setTargetName(group.getName());
+        item.setTargetAvatar(group.getAvatar());
+        item.setGroupMemberCount(group.getMemberCount());
+        if (group.getId() != null) {
+            List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> groupMemberItems =
+                    syncGroupMemberItemsMap.get(group.getId());
+            if (groupMemberItems != null && !groupMemberItems.isEmpty()) {
+                item.setGroupMemberItems(groupMemberItems);
+            }
+        }
+        item.setGroupMemberStatus(state.getGroupMemberStatus());
+        item.setLeftAt(state.getLeftAt());
+        if (item.getLastMessageTime() == null
+                && state.getLastMessageId() == null
+                && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
+            item.setLastMessageTime(group.getCreateTime());
+        }
+    }
+
+    /**
+     * 从实时群数据填充会话VO（正常在群用户使用 - 单个查询版本）
+     */
+    private void fillConversationFromGroupSingle(AppImConversationRespVO respVO, ImGroupDO group, ImChatUserDO chatUser) {
+        respVO.setTargetName(group.getName());
+        respVO.setTargetAvatar(group.getAvatar());
+        respVO.setGroupMemberCount(group.getMemberCount());
+
+        // 获取群成员头像列表（最多4个）
+        List<ImGroupUserDO> members = groupUserMapper.selectList(
+                new LambdaQueryWrapperX<ImGroupUserDO>()
+                        .eq(ImGroupUserDO::getGroupId, group.getId())
+                        .orderByAsc(ImGroupUserDO::getJoinTime)
+                        .last("LIMIT 4"));
+        if (members != null && !members.isEmpty()) {
+            List<Long> memberUserIds = members.stream()
+                    .map(ImGroupUserDO::getUserId)
+                    .collect(Collectors.toList());
+            List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
+            if (memberUsers != null) {
+                List<String> avatars = memberUsers.stream()
+                        .map(u -> u != null ? u.getAvatar() : null)
+                        .filter(a -> a != null && !a.isEmpty())
+                        .collect(Collectors.toList());
+                if (!avatars.isEmpty()) {
+                    respVO.setGroupMemberAvatars(avatars);
+                }
+
+                List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
+                for (ImGroupUserDO member : members) {
+                    AdminUserDO user = memberUsers.stream()
+                            .filter(u -> u != null && u.getId().equals(member.getUserId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (user != null) {
+                        AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
+                        item.setUserId(user.getId());
+                        item.setName(user.getNickname());
+                        item.setAvatar(user.getAvatar());
+                        items.add(item);
+                    }
+                }
+                if (!items.isEmpty()) {
+                    respVO.setGroupMemberItems(items);
+                }
+            }
+        }
+
+        respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
+        respVO.setLeftAt(chatUser.getLeftAt());
+
+        // 群聊无消息：使用群创建时间作为会话时间
+        if (respVO.getLastMessageTime() == null
+                && chatUser.getLastMessageId() == null
+                && (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
+            respVO.setLastMessageTime(group.getCreateTime());
+        }
+    }
+
+    /**
+     * 从快照数据填充会话VO（已离群用户使用）
+     */
+    private void fillConversationFromSnapshot(AppImConversationRespVO respVO, String snapshotData, ImChatUserDO chatUser) {
+        JSONObject snapshot = JSONUtil.parseObj(snapshotData);
+        respVO.setTargetName(snapshot.getStr("groupName", ""));
+        respVO.setGroupMemberCount(snapshot.getInt("memberCount", 0));
+        respVO.setGroupMemberStatus(snapshot.getInt("groupMemberStatus", chatUser.getGroupMemberStatus()));
+        respVO.setLeftAt(chatUser.getLeftAt());
+
+        // 从快照中获取前4个成员用于头像展示
+        List<JSONObject> members = snapshot.getJSONArray("members").toList(JSONObject.class);
+        if (members != null && !members.isEmpty()) {
+            List<String> avatars = new ArrayList<>();
+            List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
+            int limit = Math.min(members.size(), 4);
+            for (int i = 0; i < limit; i++) {
+                JSONObject member = members.get(i);
+                String avatar = member.getStr("avatarUrl", "");
+                String nickname = member.getStr("nickname", "");
+                if (nickname.isEmpty()) {
+                    nickname = member.getStr("userName", "");
+                }
+                String userIdStr = member.getStr("userId", "");
+                if (!avatar.isEmpty()) {
+                    avatars.add(avatar);
+                }
+                AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
+                if (!userIdStr.isEmpty()) {
+                    item.setUserId(Long.parseLong(userIdStr));
+                }
+                item.setName(nickname);
+                item.setAvatar(avatar);
+                items.add(item);
+            }
+            if (!avatars.isEmpty()) {
+                respVO.setGroupMemberAvatars(avatars);
+            }
+            if (!items.isEmpty()) {
+                respVO.setGroupMemberItems(items);
+            }
+        }
+    }
+
+    /**
+     * 从实时群数据填充会话VO（正常在群用户使用）
+     */
+    private void fillConversationFromGroup(AppImConversationRespVO respVO, ImGroupDO group, ImChatUserDO chatUser,
+                                           Map<Long, List<String>> groupMemberAvatarsMap,
+                                           Map<Long, List<AppImConversationRespVO.GroupMemberItem>> groupMemberItemsMap) {
+        respVO.setTargetName(group.getName());
+        respVO.setTargetAvatar(group.getAvatar());
+        respVO.setGroupMemberCount(group.getMemberCount());
+        respVO.setGroupMemberAvatars(groupMemberAvatarsMap.get(group.getId()));
+        respVO.setGroupMemberItems(groupMemberItemsMap.get(group.getId()));
+        respVO.setGroupMemberStatus(chatUser.getGroupMemberStatus());
+        respVO.setLeftAt(chatUser.getLeftAt());
+
+        // 群聊无消息：使用群创建时间作为会话时间
+        if (respVO.getLastMessageTime() == null
+                && chatUser.getLastMessageId() == null
+                && (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
+            respVO.setLastMessageTime(group.getCreateTime());
+        }
     }
 
     private String buildPreviewByType(Integer messageType, String raw, String extra) {

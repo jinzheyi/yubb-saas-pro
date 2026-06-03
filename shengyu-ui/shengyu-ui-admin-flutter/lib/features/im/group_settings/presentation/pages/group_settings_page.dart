@@ -557,19 +557,21 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 ),
               // 退出群聊：
               // 1. 正常模式：群主显示"解散群聊"，成员显示"退出群聊"
-              // 2. 只读模式（被踢/解散）：显示"删除会话记录"（退出群聊），用于清理列表
-              _DangerActionTile(
-                title: isReadOnly
-                    ? strings.groupSettingsQuitGroup
-                    : (isOwner ? strings.groupSettingsDissolve : strings.groupSettingsQuitGroup),
-                onTap: () => _exitGroup(
-                  context: context,
-                  ref: ref,
-                  controller: controller,
-                  state: state,
-                  isOwner: isOwner,
+              // 2. 只读模式且已离群（被踢/解散）：不显示退出群聊按钮
+              // 3. 只读模式但未离群：显示"删除会话记录"，用于清理列表
+              if (!state.hasLeftGroup)
+                _DangerActionTile(
+                  title: isReadOnly
+                      ? strings.groupSettingsQuitGroup
+                      : (isOwner ? strings.groupSettingsDissolve : strings.groupSettingsQuitGroup),
+                  onTap: () => _exitGroup(
+                    context: context,
+                    ref: ref,
+                    controller: controller,
+                    state: state,
+                    isOwner: isOwner,
+                  ),
                 ),
-              ),
             ],
           ),
         ],

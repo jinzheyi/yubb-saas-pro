@@ -16,6 +16,7 @@ class GroupInfoDto {
     required this.myNickname,
     this.groupMemberStatus,
     this.leftAt,
+    this.fromSnapshot = false,
   });
 
   final String groupId;
@@ -34,6 +35,7 @@ class GroupInfoDto {
   final String myNickname;
   final int? groupMemberStatus;
   final DateTime? leftAt;
+  final bool fromSnapshot;
 
   factory GroupInfoDto.fromJson(Map<String, dynamic> json) {
     return GroupInfoDto(
@@ -56,6 +58,7 @@ class GroupInfoDto {
       myNickname: '${json['myNickname'] ?? json['nickname'] ?? ''}',
       groupMemberStatus: _parseInt(json['groupMemberStatus'] ?? json['memberStatus']),
       leftAt: _parseDateTime(json['leftAt']),
+      fromSnapshot: json['fromSnapshot'] == true,
     );
   }
 

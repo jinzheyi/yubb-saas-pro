@@ -36,4 +36,7 @@ public class AppImGroupMemberRespVO {
     @Schema(description = "部门名称", example = "技术部")
     private String deptName;
 
+    @Schema(description = "是否被禁言", example = "false")
+    private Boolean isMuted;
+
 }

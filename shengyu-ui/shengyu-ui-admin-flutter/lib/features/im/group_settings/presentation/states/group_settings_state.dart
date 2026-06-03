@@ -52,6 +52,7 @@ class GroupSettingsState {
     this.leftAt,
     this.readOnly = false,
     this.snapshotTime,
+    this.isFromSnapshot = false,
     this.error,
   });
 
@@ -79,6 +80,7 @@ class GroupSettingsState {
   final DateTime? leftAt;
   final bool readOnly;
   final DateTime? snapshotTime;
+  final bool isFromSnapshot;
   final AppError? error;
 
   bool get isGroupLeft => groupMemberStatus == 1;
@@ -111,6 +113,7 @@ class GroupSettingsState {
     DateTime? leftAt,
     bool? readOnly,
     DateTime? snapshotTime,
+    bool? isFromSnapshot,
     AppError? error,
   }) {
     return GroupSettingsState(
@@ -139,6 +142,7 @@ class GroupSettingsState {
       leftAt: leftAt ?? this.leftAt,
       readOnly: readOnly ?? this.readOnly,
       snapshotTime: snapshotTime ?? this.snapshotTime,
+      isFromSnapshot: isFromSnapshot ?? this.isFromSnapshot,
       error: error,
     );
   }

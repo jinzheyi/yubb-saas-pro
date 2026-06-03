@@ -25,6 +25,9 @@ public class AppImGroupRespVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long ownerId;
 
+    @Schema(description = "群主名称", example = "张三")
+    private String ownerName;
+
     @Schema(description = "群类型(1-普通群 2-工作群)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer groupType;
 
@@ -79,6 +82,9 @@ public class AppImGroupRespVO {
     @Schema(description = "会话ID（用于关联群设置）", example = "100")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long chatId;
+
+    @Schema(description = "是否来自快照数据（被踢/退出/解散后返回的是离群时的冻结数据）", example = "false")
+    private Boolean fromSnapshot;
 
     @Data
     @Schema(description = "群成员信息项(用于组合头像)")

@@ -33,6 +33,8 @@ abstract final class GroupSettingsDtoMapper {
       myNickname: group.myNickname,
       pendingJoinRequestCount: pendingJoinRequestCount,
       groupMemberStatus: group.groupMemberStatus,
+      leftAt: group.leftAt,
+      fromSnapshot: group.fromSnapshot,
     );
   }
 

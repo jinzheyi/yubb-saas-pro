@@ -244,4 +244,40 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                 .set(ImConversationUserStateDO::getLeftAt, null)
                 .set(cursorVersion != null, ImConversationUserStateDO::getCursorVersion, cursorVersion));
     }
+
+    /**
+     * 保存群组快照数据（被踢/退群/解散时调用）
+     * @param tenantId 租户ID
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param snapshotData JSON格式的快照数据
+     * @return 更新行数
+     */
+    default int saveSnapshotData(Long tenantId, Long userId, Long chatId, String snapshotData) {
+        return update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ImConversationUserStateDO>()
+                .eq(ImConversationUserStateDO::getTenantId, tenantId)
+                .eq(ImConversationUserStateDO::getUserId, userId)
+                .eq(ImConversationUserStateDO::getChatId, chatId)
+                .eq(ImConversationUserStateDO::getDeleted, false)
+                .set(ImConversationUserStateDO::getSnapshotData, snapshotData));
+    }
+
+    /**
+     * 清理群组快照数据（用户主动删除会话时调用）
+     * 清空 group_member_status、left_at、snapshot_data，恢复为干净状态
+     * @param tenantId 租户ID
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @return 更新行数
+     */
+    default int cleanGroupSnapshotAndStatus(Long tenantId, Long userId, Long chatId) {
+        return update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ImConversationUserStateDO>()
+                .eq(ImConversationUserStateDO::getTenantId, tenantId)
+                .eq(ImConversationUserStateDO::getUserId, userId)
+                .eq(ImConversationUserStateDO::getChatId, chatId)
+                .eq(ImConversationUserStateDO::getDeleted, false)
+                .set(ImConversationUserStateDO::getGroupMemberStatus, 0)
+                .set(ImConversationUserStateDO::getLeftAt, null)
+                .set(ImConversationUserStateDO::getSnapshotData, null));
+    }
 }

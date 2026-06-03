@@ -111,7 +111,8 @@ class GroupSettingsController extends StateNotifier<GroupSettingsState> {
         pendingRequestCount: pendingRequestCount,
         groupMemberStatus: snapshot.groupMemberStatus,
         leftAt: snapshot.leftAt,
-        readOnly: membershipBlocked,
+        readOnly: membershipBlocked || snapshot.fromSnapshot,
+        isFromSnapshot: snapshot.fromSnapshot,
       ));
     } catch (error, stackTrace) {
       _setStateIfActive(state.copyWith(

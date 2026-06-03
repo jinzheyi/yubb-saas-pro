@@ -28,6 +28,14 @@ ADD COLUMN `left_at` datetime NULL DEFAULT NULL COMMENT '离群时间（被踢/�
 ALTER TABLE `im_conversation_user_state` 
 ADD INDEX `idx_user_group_status`(`tenant_id` ASC, `user_id` ASC, `group_member_status` ASC) USING BTREE;
 
+-- 7. im_chat_user 表新增快照数据字段（JSON格式，冻结离群时的群信息）
+ALTER TABLE `im_chat_user` 
+ADD COLUMN `snapshot_data` json NULL DEFAULT NULL COMMENT '群组快照数据JSON（被踢/退群/解散时冻结，包含群名称、公告、成员列表关键信息等）' AFTER `left_at`;
+
+-- 8. im_conversation_user_state 表新增快照数据字段
+ALTER TABLE `im_conversation_user_state` 
+ADD COLUMN `snapshot_data` json NULL DEFAULT NULL COMMENT '群组快照数据JSON（被踢/退群/解散时冻结，用于会话列表和聊天页展示）' AFTER `left_at`;
+
 -- 7. 更新 im_conversation_user_state 的群组成员状态（从 im_chat_user 同步）
 UPDATE `im_conversation_user_state` cus
 INNER JOIN `im_chat_user` cu ON cus.chat_id = cu.chat_id AND cus.user_id = cu.user_id AND cus.tenant_id = cu.tenant_id
@@ -72,7 +80,9 @@ WHERE c.chat_type = 2
 -- ========================================
 -- ALTER TABLE `im_chat_user` DROP COLUMN `group_member_status`;
 -- ALTER TABLE `im_chat_user` DROP COLUMN `left_at`;
+-- ALTER TABLE `im_chat_user` DROP COLUMN `snapshot_data`;
 -- ALTER TABLE `im_chat_user` DROP INDEX `idx_user_group_status`;
 -- ALTER TABLE `im_conversation_user_state` DROP COLUMN `group_member_status`;
 -- ALTER TABLE `im_conversation_user_state` DROP COLUMN `left_at`;
+-- ALTER TABLE `im_conversation_user_state` DROP COLUMN `snapshot_data`;
 -- ALTER TABLE `im_conversation_user_state` DROP INDEX `idx_user_group_status`;

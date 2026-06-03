@@ -74,4 +74,9 @@ public class ImConversationUserStateDO extends TenantBaseDO {
      * 离群时间（被踢/退群时间，用于限制只能查询离群前的消息）
      */
     private LocalDateTime leftAt;
+
+    /**
+     * 群组快照数据JSON（被踢/退群/解散时冻结，用于会话列表和聊天页展示）
+     */
+    private String snapshotData;
 }
