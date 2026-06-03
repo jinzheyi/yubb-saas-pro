@@ -350,6 +350,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                     : _selectedConversation?.chatId ?? '',
                 pinned: _selectedConversation?.isPinned ?? false,
                 unread: (_selectedConversation?.unreadCount ?? 0) > 0,
+                isGroupRemoved: _selectedConversation?.isGroupKicked == true ||
+                    _selectedConversation?.isGroupDisbanded == true ||
+                    _selectedConversation?.isGroupLeft == true,
                 onPinTap: () => _handleMenuAction(_ConversationMenuAction.pin),
                 onUnreadTap: () =>
                     _handleMenuAction(_ConversationMenuAction.unread),
@@ -1030,6 +1033,7 @@ class _ConversationContextMenu extends StatelessWidget {
     required this.title,
     required this.pinned,
     required this.unread,
+    required this.isGroupRemoved,
     required this.onPinTap,
     required this.onUnreadTap,
     required this.onDeleteTap,
@@ -1038,6 +1042,7 @@ class _ConversationContextMenu extends StatelessWidget {
   final String title;
   final bool pinned;
   final bool unread;
+  final bool isGroupRemoved;
   final VoidCallback onPinTap;
   final VoidCallback onUnreadTap;
   final VoidCallback onDeleteTap;
@@ -1079,11 +1084,13 @@ class _ConversationContextMenu extends StatelessWidget {
                 ),
               ),
             ),
-            _MenuTextButton(label: pinned ? '取消置顶' : '置顶会话', onTap: onPinTap),
-            _MenuTextButton(
-              label: unread ? '标为已读' : '标为未读',
-              onTap: onUnreadTap,
-            ),
+            if (!isGroupRemoved) ...[
+              _MenuTextButton(label: pinned ? '取消置顶' : '置顶会话', onTap: onPinTap),
+              _MenuTextButton(
+                label: unread ? '标为已读' : '标为未读',
+                onTap: onUnreadTap,
+              ),
+            ],
             _MenuTextButton(
               label: '删除会话',
               color: const Color(0xFFFF4D4F),
