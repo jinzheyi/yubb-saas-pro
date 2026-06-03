@@ -57,6 +57,16 @@ class GroupMembersController extends StateNotifier<GroupMembersState> {
           isMuted: member.isMuted,
         );
       }).toList();
+
+      // 从群设置状态中获取 groupMemberStatus
+      int? groupMemberStatus;
+      try {
+        final settingsState = await _repository.getGroupSettings(_args.groupId);
+        groupMemberStatus = settingsState.groupMemberStatus;
+      } catch (_) {
+        // 忽略，使用默认值
+      }
+
       final validSelections = state.selectedMemberIds
           .where((memberId) => items.any((item) => item.id == memberId))
           .toSet();
@@ -65,6 +75,7 @@ class GroupMembersController extends StateNotifier<GroupMembersState> {
         members: items,
         currentUserRoleCode: currentUserRoleCode,
         selectedMemberIds: validSelections,
+        groupMemberStatus: groupMemberStatus,
       );
     } catch (error, stackTrace) {
       if (_disposed) {

@@ -13,6 +13,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/stat
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
 class GroupMembersPage extends ConsumerStatefulWidget {
   const GroupMembersPage({super.key, required this.args});
@@ -25,11 +26,13 @@ class GroupMembersPage extends ConsumerStatefulWidget {
 
 class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   final Map<String, GlobalKey> _sectionKeys = <String, GlobalKey>{};
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -57,11 +60,13 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         : widget.args.isTransferMode
         ? strings.groupMembersTransferTitle
         : strings.groupMembersTitleWithCount(state.visibleMembers.length);
-    final backLabel = widget.args.isViewMode
-        ? strings.backAction
-        : strings.cancelAction;
     final selectedCount = state.selectedMemberIds.length;
-    final isReadOnly = widget.args.isViewMode && state.currentUserRoleCode == 0;
+
+    // 只有真正不在群内的用户才显示只读提示（群主除外）
+    // hasLeftGroup 表示被踢/主动退出/群已解散
+    // 群主始终在群内（解散前），所以不显示提示
+    final isTrulyNotInGroup = state.hasLeftGroup;
+    final isReadOnly = widget.args.isViewMode && isTrulyNotInGroup;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -137,7 +142,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.search_rounded,
+                        ShengyuIconFont.chaxun,
                         size: 16,
                         color: Color(0xFF98A1B2),
                       ),
@@ -145,9 +150,9 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          onChanged: isReadOnly ? null : controller.updateKeyword,
-                          enabled: !isReadOnly,
+                          focusNode: _searchFocusNode,
                           textInputAction: TextInputAction.search,
+                          enabled: !isReadOnly,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Color(0xFF202531),
@@ -165,8 +170,21 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                             ),
                             contentPadding: EdgeInsets.zero,
                           ),
+                          onChanged: isReadOnly ? null : controller.updateKeyword,
                         ),
                       ),
+                      if (_searchController.text.trim().isNotEmpty)
+                        InkWell(
+                          onTap: () {
+                            _searchController.clear();
+                            controller.updateKeyword('');
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Color(0xFF98A1B2),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -637,7 +655,8 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       case 'group_member_added':
       case 'group_member_removed':
       case 'group_owner_transferred':
-        unawaited(controller.load());
+        // 使用 Future 延迟，避免在 build 期间修改 provider
+        Future(() => controller.load());
         break;
       case 'group_disbanded':
         _showSnackBar(context, strings.groupDissolved);
@@ -645,7 +664,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
         break;
       case 'group_member_mute_changed':
       case 'group_mute_all_changed':
-        unawaited(controller.load());
+        Future(() => controller.load());
         break;
     }
   }
