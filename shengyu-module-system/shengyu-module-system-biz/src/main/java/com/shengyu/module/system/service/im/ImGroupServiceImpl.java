@@ -251,6 +251,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_PERMISSION_DENIED);
         }
 
+        // 记录变更前的名称，用于后续通知
+        String oldName = group.getName();
+        boolean nameChanged = updateReqVO.getName() != null && !updateReqVO.getName().equals(oldName);
+
         // 更新群组信息
         if (updateReqVO.getName() != null) {
             group.setName(updateReqVO.getName());
@@ -272,7 +276,34 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
         groupMapper.updateById(group);
 
-        log.info("[ImGroupService] 更新群组成功, groupId: {}, userId: {}", group.getId(), userId);
+        // 获取群成员和会话信息，用于后续通知
+        List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(group.getId());
+        List<Long> memberIds = members.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
+        ImChatDO groupChat = chatMapper.selectGroupChat(group.getId(), 2);
+        Long chatId = groupChat != null ? groupChat.getId() : null;
+
+        // 如果名称发生变化，通知所有群成员并触发会话刷新
+        if (nameChanged) {
+            final Long finalTenantId = TenantContextHolder.getTenantId() != null ? TenantContextHolder.getTenantId() : 0L;
+            final Long finalGroupId = group.getId();
+            final String finalName = group.getName();
+            // 发送 WebSocket 通知给所有群成员
+            runAfterCommit(() -> pushGroupInfoUpdatedNotify(finalGroupId, chatId, memberIds,
+                    userId, oldName, finalName, finalTenantId));
+            // 触发会话刷新（通过 MQ 消息驱动增量补偿）
+            if (chatId != null) {
+                ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
+                refreshMessage.setAction("UPDATE");
+                refreshMessage.setOperatorUserId(userId);
+                refreshMessage.setGroupId(finalGroupId);
+                refreshMessage.setChatId(chatId);
+                refreshMessage.setMemberIds(memberIds);
+                refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
+                groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
+            }
+        }
+
+        log.info("[ImGroupService] 更新群组成功, groupId: {}, userId: {}, nameChanged: {}", group.getId(), userId, nameChanged);
     }
 
     @Override
@@ -1960,6 +1991,33 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, extra);
             } catch (Exception e) {
                 log.warn("[ImGroupService] 推送群解散状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void pushGroupInfoUpdatedNotify(Long groupId, Long chatId, List<Long> memberIds,
+                                            Long operatorUserId, String oldName, String newName, Long tenantId) {
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_info_updated")
+                .set("groupId", String.valueOf(groupId))
+                .set("chatId", chatId != null ? String.valueOf(chatId) : "")
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("oldName", oldName != null ? oldName : "")
+                .set("newName", newName != null ? newName : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_INFO_UPDATED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群信息更新通知失败, groupId: {}, targetUserId: {}, error: {}",
                         groupId, targetUserId, e.getMessage(), e);
             }
         }

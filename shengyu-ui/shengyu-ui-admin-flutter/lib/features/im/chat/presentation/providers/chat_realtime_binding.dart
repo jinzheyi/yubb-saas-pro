@@ -419,6 +419,10 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
     _handlePresenceUpdateNotify(ref, chatId, payload);
     return;
   }
+  if (action == 'group_info_updated') {
+    _handleGroupInfoUpdatedNotify(ref, chatId, payload);
+    return;
+  }
   if (action == 'voice_played' ||
       action == 'group_member_mute_changed' ||
       action == 'group_mute_all_changed' ||
@@ -515,6 +519,31 @@ void _handlePresenceUpdateNotify(
         ),
         lastActiveTime: lastActiveTime,
       );
+}
+
+void _handleGroupInfoUpdatedNotify(
+  Ref ref,
+  String chatId,
+  Map<String, Object?> payload,
+) {
+  final pageState = ref.read(chatControllerProvider);
+  if (pageState.entryArgs.conversationType != ConversationType.group) {
+    return;
+  }
+  final notifyGroupId = payload['groupId']?.toString().trim() ?? '';
+  final currentGroupId = pageState.entryArgs.targetId?.trim() ?? '';
+  if (notifyGroupId.isEmpty ||
+      currentGroupId.isEmpty ||
+      notifyGroupId != currentGroupId) {
+    return;
+  }
+  final newName = payload['newName']?.toString().trim() ?? '';
+  if (newName.isEmpty || pageState.chatTitle == newName) {
+    return;
+  }
+  ref
+      .read(chatControllerProvider.notifier)
+      .updateChatTitle(newName);
 }
 
 int? _parseNotifyTime(Object? raw) {

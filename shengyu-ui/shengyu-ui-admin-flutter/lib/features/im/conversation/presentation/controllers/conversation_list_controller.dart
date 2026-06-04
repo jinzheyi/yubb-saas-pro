@@ -447,6 +447,35 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
   }
 
+  void patchConversationTitle({
+    required String chatId,
+    required String title,
+    String? targetId,
+    ConversationType? conversationType,
+  }) {
+    if (title.isEmpty) {
+      return;
+    }
+    final items = [...state.conversations];
+    final index = _findConversationIndex(
+      items,
+      chatId: chatId,
+      targetId: targetId,
+      conversationType: conversationType,
+    );
+    if (index < 0) {
+      return;
+    }
+    if (items[index].title == title) {
+      return;
+    }
+    items[index] = items[index].copyWith(title: title);
+    state = state.copyWith(
+      status: ConversationListStatus.ready,
+      conversations: _sortConversations(items),
+    );
+  }
+
   void applyBadgeSnapshot(Map<String, int> conversationBadges) {
     if (conversationBadges.isEmpty || state.conversations.isEmpty) {
       return;

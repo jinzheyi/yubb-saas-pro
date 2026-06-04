@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 
 final groupMemberRemovedSignalProvider =
     StateProvider<GroupMemberRemovedSignal?>((ref) => null);
@@ -101,6 +102,10 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
     _handleGroupLifecycleAction(ref, action, payload);
     return;
   }
+  if (action == 'group_info_updated') {
+    _handleGroupInfoUpdatedAction(ref, action, payload);
+    return;
+  }
   if (_isJoinRequestAction(action)) {
     final groupId = payload['groupId']?.toString().trim() ?? '';
     if (groupId.isNotEmpty && groupId != '0') {
@@ -148,8 +153,41 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
       content == 'GROUP_MEMBER_ADDED' ||
       content == 'GROUP_MEMBER_REMOVED' ||
       content == 'GROUP_OWNER_TRANSFERRED' ||
-      content == 'GROUP_DISBANDED') {
+      content == 'GROUP_DISBANDED' ||
+      content == 'GROUP_INFO_UPDATED') {
     ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+  }
+}
+
+void _handleGroupInfoUpdatedAction(
+  Ref ref,
+  String action,
+  Map<String, Object?> payload,
+) {
+  final chatId = payload['chatId']?.toString().trim() ?? '';
+  final groupId = payload['groupId']?.toString().trim() ?? '';
+  final newName = payload['newName']?.toString().trim() ?? '';
+  if (newName.isEmpty) {
+    return;
+  }
+  if (chatId.isNotEmpty && chatId != '0') {
+    ref
+        .read(conversationListControllerProvider.notifier)
+        .patchConversationTitle(
+          chatId: chatId,
+          title: newName,
+          targetId: groupId.isNotEmpty ? groupId : null,
+          conversationType: ConversationType.group,
+        );
+  } else if (groupId.isNotEmpty && groupId != '0') {
+    ref
+        .read(conversationListControllerProvider.notifier)
+        .patchConversationTitle(
+          chatId: '',
+          title: newName,
+          targetId: groupId,
+          conversationType: ConversationType.group,
+        );
   }
 }
 

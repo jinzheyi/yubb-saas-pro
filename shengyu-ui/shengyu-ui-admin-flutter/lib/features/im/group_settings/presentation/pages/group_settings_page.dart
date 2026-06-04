@@ -16,6 +16,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/prov
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
@@ -373,16 +374,17 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
               _NavSettingTile(
                 title: strings.groupSettingsGroupName,
                 value: title,
-                enabled: !isReadOnly,
-                onTap: isReadOnly
-                    ? null
-                    : () => _showEditDialog(
+                enabled: !isReadOnly && isOwner,
+                onTap: (!isReadOnly && isOwner)
+                    ? () => _showEditDialog(
                         context: context,
                         title: strings.groupSettingsEditGroupName,
                         initialValue: title,
                         maxLength: 30,
                         onConfirm: controller.updateGroupName,
-                      ),
+                        isGroupName: true,
+                      )
+                    : null,
               ),
             ],
           ),
@@ -648,6 +650,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     required String initialValue,
     required int maxLength,
     required Future<void> Function(String value) onConfirm,
+    bool isGroupName = false,
   }) async {
     final inputController = TextEditingController(text: initialValue);
     final strings = AppLocalizations.of(context);
@@ -697,7 +700,14 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         );
       },
     );
-    inputController.dispose();
+    if (!mounted) {
+      inputController.dispose();
+      return;
+    }
+    // 延迟 dispose，确保对话框关闭动画完成后再释放 controller
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      inputController.dispose();
+    });
     if (result == null) {
       return;
     }
@@ -710,6 +720,18 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       successMessage: strings.confirmAction,
       showSuccess: false,
     );
+    // 修改群名称成功后，同步更新会话列表中的群名称
+    if (isGroupName && context.mounted) {
+      final settingsState = ref.read(groupSettingsControllerProvider(widget.args));
+      if (settingsState.chatId.isNotEmpty) {
+        ref.read(conversationListControllerProvider.notifier).patchConversationTitle(
+          chatId: settingsState.chatId,
+          title: result,
+          targetId: widget.args.groupId,
+          conversationType: ConversationType.group,
+        );
+      }
+    }
   }
 
   Future<void> _handleAsyncAction(

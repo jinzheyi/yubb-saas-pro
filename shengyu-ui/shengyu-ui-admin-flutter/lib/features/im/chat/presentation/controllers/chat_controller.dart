@@ -42,6 +42,13 @@ class ChatController extends StateNotifier<ChatPageState> {
   final ChatTimelineController _timelineController;
   final ChatReceiptController _receiptController;
 
+  void updateChatTitle(String title) {
+    if (state.chatTitle == title) {
+      return;
+    }
+    state = state.copyWith(chatTitle: title);
+  }
+
   Future<void> initialize(ChatEntryArgs args) async {
     state = state.copyWith(
       entryArgs: args,
