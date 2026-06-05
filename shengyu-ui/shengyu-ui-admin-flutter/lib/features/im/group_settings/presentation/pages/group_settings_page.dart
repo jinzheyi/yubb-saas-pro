@@ -513,20 +513,6 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                       );
                     },
                   ),
-                _NavSettingTile(
-                  title: strings.groupSettingsNickname,
-                  value: state.myNickname,
-                  enabled: !isReadOnly,
-                  onTap: isReadOnly
-                      ? null
-                      : () => _showEditDialog(
-                          context: context,
-                          title: strings.groupSettingsEditNickname,
-                          initialValue: state.myNickname,
-                          maxLength: 15,
-                          onConfirm: controller.updateMyNickname,
-                        ),
-                ),
               ],
             ),
           const SizedBox(height: 10),
