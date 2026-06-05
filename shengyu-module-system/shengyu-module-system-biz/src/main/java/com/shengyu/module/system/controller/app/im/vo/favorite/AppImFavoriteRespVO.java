@@ -44,4 +44,18 @@ public class AppImFavoriteRespVO {
     @Schema(description = "收藏记录创建时间")
     private LocalDateTime favoriteTime;
 
+    // ====== 以下为新增：发送者信息（与聊天记录接口保持一致） ======
+
+    @Schema(description = "发送者ID", example = "40001")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long senderId;
+
+    @Schema(description = "发送者昵称", example = "马化腾")
+    private String senderNickname;
+
+    @Schema(description = "发送者头像", example = "http://...")
+    private String senderAvatar;
+
+    @Schema(description = "是否是自己发送的消息", example = "true")
+    private Boolean isSelf;
 }

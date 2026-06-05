@@ -12,4 +12,7 @@ public class AppImFavoritePageReqVO {
 
     @Schema(description = "每页数量", example = "20")
     private Integer pageSize;
+
+    @Schema(description = "类型筛选：default(全部)/normal(文字)/media(图片视频)/file(文件)", example = "default")
+    private String tab;
 }

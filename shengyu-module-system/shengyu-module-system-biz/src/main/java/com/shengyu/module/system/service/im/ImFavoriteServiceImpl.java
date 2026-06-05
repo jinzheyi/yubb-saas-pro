@@ -14,17 +14,18 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendRe
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImMessageFavoriteDO;
+import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImMessageFavoriteMapper;
+import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.MESSAGE_NOT_EXISTS;
@@ -41,6 +42,9 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
 
     @Resource
     private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private AdminUserMapper adminUserMapper;
 
     @Resource
     private ImMessageService messageService;
@@ -94,24 +98,30 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
             pageSize = 100;
         }
         int offset = (pageNo - 1) * pageSize;
+        String tab = normalizeSearchTab(reqVO != null ? reqVO.getTab() : null);
 
         Long tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
             tenantId = 0L;
         }
 
-        Long total = favoriteMapper.countByUserId(tenantId, userId);
+        Long total = favoriteMapper.countByUserIdAndTab(tenantId, userId, tab);
         if (total == null || total <= 0) {
             return new PageResult<>(new ArrayList<>(), 0L);
         }
 
-        List<ImMessageFavoriteDO> favorites = favoriteMapper.selectPageByUserId(tenantId, userId, offset, pageSize);
+        List<ImMessageFavoriteDO> favorites = favoriteMapper.selectPageByUserId(tenantId, userId, tab, offset, pageSize);
         if (favorites == null || favorites.isEmpty()) {
             return new PageResult<>(new ArrayList<>(), total);
         }
+
+        // 批量查询发送者信息
+        Map<Long, AdminUserDO> senderMap = buildSenderMapFromFavorites(favorites);
+        Long currentUserId = userId;
+
         List<AppImFavoriteRespVO> list = new ArrayList<>();
         for (ImMessageFavoriteDO favorite : favorites) {
-            list.add(buildFavoriteResp(favorite));
+            list.add(buildFavoriteResp(favorite, senderMap, currentUserId));
         }
 
         return new PageResult<>(list, total);
@@ -184,8 +194,11 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
         List<ImMessageFavoriteDO> favorites = favoriteMapper.selectSearchPageByUserId(tenantId, userId, keyword, tab, offset, pageSize);
         List<AppImFavoriteRespVO> list = new ArrayList<>();
         if (favorites != null && !favorites.isEmpty()) {
+            // 批量查询发送者信息
+            Map<Long, AdminUserDO> senderMap = buildSenderMapFromFavorites(favorites);
+            Long currentUserId = userId;
             for (ImMessageFavoriteDO favorite : favorites) {
-                list.add(buildFavoriteResp(favorite));
+                list.add(buildFavoriteResp(favorite, senderMap, currentUserId));
             }
         }
         resp.setList(list);
@@ -250,6 +263,12 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
     }
 
     private AppImFavoriteRespVO buildFavoriteResp(ImMessageFavoriteDO favorite) {
+        return buildFavoriteResp(favorite, null, null);
+    }
+
+    private AppImFavoriteRespVO buildFavoriteResp(ImMessageFavoriteDO favorite,
+                                                  Map<Long, AdminUserDO> senderMap,
+                                                  Long currentUserId) {
         AppImFavoriteRespVO respVO = new AppImFavoriteRespVO();
         respVO.setFavoriteId(favorite.getId());
         respVO.setMessageId(favorite.getMessageId());
@@ -261,7 +280,65 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
         respVO.setMessageSnapshot(favorite.getMessageSnapshot());
         respVO.setSendTime(favorite.getSourceSendTime());
         respVO.setFavoriteTime(favorite.getCreateTime());
+
+        // 填充发送者信息
+        Long senderId = extractSenderId(favorite);
+        respVO.setSenderId(senderId);
+        if (senderId != null) {
+            AdminUserDO sender = senderMap != null ? senderMap.get(senderId) : adminUserMapper.selectById(senderId);
+            if (sender != null) {
+                respVO.setSenderNickname(sender.getNickname());
+                respVO.setSenderAvatar(sender.getAvatar());
+            }
+        }
+        respVO.setIsSelf(senderId != null && senderId.equals(currentUserId));
+
         return respVO;
+    }
+
+    /**
+     * 从收藏列表中提取所有发送者ID并批量查询用户信息
+     */
+    private Map<Long, AdminUserDO> buildSenderMapFromFavorites(List<ImMessageFavoriteDO> favorites) {
+        Set<Long> senderIds = new LinkedHashSet<>();
+        for (ImMessageFavoriteDO favorite : favorites) {
+            Long senderId = extractSenderId(favorite);
+            if (senderId != null) {
+                senderIds.add(senderId);
+            }
+        }
+        if (senderIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        return adminUserMapper.selectBatchIds(senderIds).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(AdminUserDO::getId, item -> item, (left, right) -> left));
+    }
+
+    /**
+     * 从收藏记录中提取发送者ID
+     * 优先从 messageSnapshot JSON 中解析 senderId
+     */
+    private Long extractSenderId(ImMessageFavoriteDO favorite) {
+        String snapshot = favorite.getMessageSnapshot();
+        if (StrUtil.isBlank(snapshot)) {
+            return null;
+        }
+        try {
+            JSONObject snapshotObj = JSONUtil.parseObj(snapshot);
+            Long senderId = snapshotObj.getLong("senderId", null);
+            if (senderId == null) {
+                // 兼容字符串类型的 senderId
+                String senderIdStr = snapshotObj.getStr("senderId");
+                if (StrUtil.isNotBlank(senderIdStr)) {
+                    senderId = Long.parseLong(senderIdStr);
+                }
+            }
+            return senderId;
+        } catch (Exception e) {
+            log.warn("[extractSenderId][解析 messageSnapshot 失败, favoriteId={}, snapshot={}]", favorite.getId(), snapshot, e);
+            return null;
+        }
     }
 
     private String buildMessageSnapshot(ImChatMessageDO message) {

@@ -1,17 +1,30 @@
-import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_args/favorite_detail_route_args.dart';
+import 'package:intl/intl.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/domain/entities/favorite_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/providers/favorite_providers.dart';
-import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/states/favorites_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
+import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class FavoritesPage extends ConsumerStatefulWidget {
   const FavoritesPage({super.key});
@@ -21,25 +34,29 @@ class FavoritesPage extends ConsumerStatefulWidget {
 }
 
 class _FavoritesPageState extends ConsumerState<FavoritesPage> {
-  static const _tabs = ['default', 'normal', 'media', 'file'];
-  static const _searchDebounce = Duration(milliseconds: 300);
+  static const int _pageSize = 20;
 
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  Timer? _searchTimer;
+  final ScrollController _scrollController = ScrollController();
+  List<FavoriteItem> _records = const [];
+  bool _loading = false;
+  bool _searched = false;
+  bool _hasMore = true;
+  int _pageNo = 1;
+  DateTime? _startTime;
+  DateTime? _endTime;
+  _FavoriteFilter _filter = _FavoriteFilter.all;
+  String _currentKeyword = '';
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
-    Future.microtask(
-      () => ref.read(favoritesControllerProvider.notifier).load(),
-    );
+    _loadInitialData();
   }
 
   @override
   void dispose() {
-    _searchTimer?.cancel();
     _searchController.dispose();
     _scrollController
       ..removeListener(_handleScroll)
@@ -50,250 +67,1126 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final state = ref.watch(favoritesControllerProvider);
-    if (_searchController.text != state.keyword) {
-      _searchController.value = TextEditingValue(
-        text: state.keyword,
-        selection: TextSelection.collapsed(offset: state.keyword.length),
-      );
-    }
-    final tabLabels = <String>[
-      strings.favoriteTabDefault,
-      strings.favoriteTabNormal,
-      strings.favoriteTabMedia,
-      strings.favoriteTabFile,
-    ];
-    final visibleEntries = state.items
-        .map(
-          (item) => _FavoriteCardEntry(
-            item: item,
-            display: _buildDisplayItem(strings, item),
-          ),
-        )
-        .where((entry) => _matchesTab(state.tab, entry.display.kind))
-        .toList(growable: false);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const AppIcon(
+            AppIconKind.chevronLeft,
+            size: 22,
+            color: Color(0xFF202531),
+          ),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         centerTitle: true,
         title: Text(strings.favoritePageTitle),
       ),
-      body: switch (state.status) {
-        FavoritesStatus.initial || FavoritesStatus.loading
-            when state.items.isEmpty =>
-          Center(
-            child: Text(
-              strings.favoriteDetailLoading,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF98A1B2)),
-            ),
-          ),
-        FavoritesStatus.failed when state.items.isEmpty => AppErrorView(
-          error: state.error,
-          onRetry: () => ref.read(favoritesControllerProvider.notifier).load(),
-        ),
-        _ => Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: Color(0xFFE8ECF3))),
+      body: Column(
+        children: [
+          _buildSearchBar(),
+          _buildFilterBar(),
+          _buildDateFilter(),
+          Expanded(child: _buildContent(strings)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final strings = AppLocalizations.of(context);
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F8),
+                borderRadius: BorderRadius.circular(18),
               ),
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
                 children: [
-                  Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.center,
+                  const Icon(
+                    ShengyuIconFont.chaxun,
+                    size: 16,
+                    color: Color(0xFF98A1B2),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: TextField(
                       controller: _searchController,
-                      onChanged: _handleSearchChanged,
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        hintText: strings.favoriteSearchPlaceholder,
-                        hintStyle: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFFA7AFB9),
-                        ),
-                      ),
+                      textInputAction: TextInputAction.search,
+                      onChanged: (_) => setState(() {}),
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF202531),
                       ),
+                      onSubmitted: (_) => _search(reset: true),
+                      decoration: InputDecoration(
+                        hintText: strings.favoriteSearchPlaceholder,
+                        border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        isCollapsed: true,
+                        hintStyle: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF98A1B2),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: List.generate(_tabs.length, (index) {
-                        final selected = state.tab == _tabs[index];
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            right: index == _tabs.length - 1 ? 0 : 12,
+                  if (_searchController.text.trim().isNotEmpty)
+                    InkWell(
+                      onTap: () => _search(reset: true),
+                      child: const Icon(
+                        ShengyuIconFont.fasong,
+                        size: 16,
+                        color: Color(0xFF98A1B2),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      color: const Color(0xFFF5F7FB),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final filter in _FavoriteFilter.values)
+            _FilterChip(
+              label: filter.label(AppLocalizations.of(context)),
+              selected: _filter == filter,
+              onTap: () => _changeFilter(filter),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateFilter() {
+    final strings = AppLocalizations.of(context);
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: _DateFilterButton(
+              label: strings.chatHistoryStartTime,
+              value: _formatFilterDate(_startTime),
+              onTap: () => _pickDate(isStart: true),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _DateFilterButton(
+              label: strings.chatHistoryEndTime,
+              value: _formatFilterDate(_endTime),
+              onTap: () => _pickDate(isStart: false),
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: _resetFilters,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              side: BorderSide.none,
+              backgroundColor: const Color(0xFFF5F7FB),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: Text(strings.resetAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(AppLocalizations strings) {
+    if (_loading && _records.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_records.isEmpty) {
+      return _HistoryEmptyState(
+        message: _searched
+            ? strings.chatHistoryEmptySearched
+            : strings.favoritePageEmpty,
+      );
+    }
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: _records.length + 1,
+      itemBuilder: (context, index) {
+        if (index == _records.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Center(
+              child: Text(
+                _loading
+                    ? strings.chatHistoryLoading
+                    : (_hasMore ? '' : strings.chatHistoryNoMore),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF98A1B2),
+                ),
+              ),
+            ),
+          );
+        }
+        final item = _records[index];
+        final historyItem = _toHistoryItem(item);
+        final message = _toMessage(item, historyItem);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ContactsInitialAvatar(
+                    name: historyItem.senderName,
+                    color: _avatarColorFor(historyItem.senderId),
+                    avatarUrl: historyItem.senderAvatar,
+                    size: 40,
+                    borderRadius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          historyItem.senderName.trim().isEmpty
+                              ? strings.chatHistoryUnknownUser
+                              : historyItem.senderName.trim(),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF202531),
                           ),
-                          child: GestureDetector(
-                            onTap: () {
-                              ref
-                                  .read(favoritesControllerProvider.notifier)
-                                  .updateTab(_tabs[index]);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? const Color(0xFFECEFF7)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                tabLabels[index],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: selected
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                                  color: selected
-                                      ? const Color(0xFF4064A7)
-                                      : const Color(0xFF8A93A0),
-                                ),
-                              ),
-                            ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatTime(strings, historyItem.sentAt),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF98A1B2),
                           ),
-                        );
-                      }),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(favoritesControllerProvider.notifier).refresh(),
-                child: ListView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                  children: [
-                    if (visibleEntries.isEmpty &&
-                        state.status != FavoritesStatus.loading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 80),
-                        child: Center(
-                          child: Text(
-                            strings.favoritePageEmpty,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF98A1B2),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ...visibleEntries.map(
-                        (entry) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _FavoriteCard(
-                            item: entry.item,
-                            display: entry.display,
-                            onTap: () => _openFavorite(entry.item),
-                            onLongPress: () => _showItemActions(entry.item),
-                          ),
-                        ),
-                      ),
-                    if (state.status == FavoritesStatus.failed &&
-                        state.items.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: Text(
-                            state.error?.message ?? strings.favoriteDetailLoadFailed,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFE54D4F),
-                            ),
-                          ),
-                        ),
-                      )
-                    else if (state.status == FavoritesStatus.loading ||
-                        state.loadingMore)
-                      _FooterNotice(text: strings.favoriteDetailLoading)
-                    else if (!state.hasMore && visibleEntries.isNotEmpty)
-                      _FooterNotice(text: strings.chatMediaNoMore)
-                    else if (visibleEntries.isNotEmpty)
-                      _FooterNotice(text: strings.chatMediaPullMore),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      },
-    );
-  }
-
-  void _handleSearchChanged(String value) {
-    _searchTimer?.cancel();
-    _searchTimer = Timer(_searchDebounce, () {
-      ref.read(favoritesControllerProvider.notifier).updateKeyword(value.trim());
-    });
-  }
-
-  void _handleScroll() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
-    final threshold = _scrollController.position.maxScrollExtent - 120;
-    if (_scrollController.position.pixels < threshold) {
-      return;
-    }
-    ref.read(favoritesControllerProvider.notifier).loadMore();
-  }
-
-  void _openFavorite(FavoriteItem item) {
-    if (item.favoriteId.trim().isEmpty || item.favoriteId == '0') {
-      _showNotice(AppLocalizations.of(context).favoriteOpenFailed);
-      return;
-    }
-    context.pushNamed(
-      RouteNames.favoriteDetail,
-      extra: FavoriteDetailRouteArgs(favoriteId: item.favoriteId),
-    );
-  }
-
-  Future<void> _showItemActions(FavoriteItem item) async {
-    final strings = AppLocalizations.of(context);
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(strings.favoriteCancelAction),
-                onTap: () => Navigator.of(sheetContext).pop(true),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 52),
+                child: _buildMessageBubble(message, historyItem, item),
               ),
             ],
           ),
         );
       },
     );
-    if (confirmed == true) {
-      await _removeFavorite(item);
+  }
+
+  ChatHistoryItem _toHistoryItem(FavoriteItem item) {
+    // 优先使用后端返回的发送者信息，兼容旧数据从快照解析
+    String senderName = item.senderNickname.trim();
+    String senderAvatar = item.senderAvatar.trim();
+    String senderId = item.senderId.trim();
+    
+    if (senderName.isEmpty) {
+      final parsedSnapshot = _safeParseJson(item.messageSnapshot);
+      final snapshotMap = parsedSnapshot is Map<String, dynamic> ? parsedSnapshot : null;
+      senderName = snapshotMap?['senderName']?.toString() ?? '';
+      senderAvatar = snapshotMap?['senderAvatar']?.toString() ?? '';
+      if (senderId.isEmpty) {
+        senderId = snapshotMap?['senderId']?.toString() ?? item.messageId;
+      }
+    }
+    if (senderId.isEmpty) {
+      senderId = item.messageId;
+    }
+    
+    String? sentAt;
+    final rawTime = item.sendTime.trim().isNotEmpty
+        ? item.sendTime
+        : item.favoriteTime;
+    if (rawTime.isNotEmpty) {
+      sentAt = rawTime.contains(' ')
+          ? rawTime.replaceFirst(' ', 'T')
+          : rawTime;
+    }
+    
+    DateTime? parsedDate;
+    if (sentAt != null && sentAt.isNotEmpty) {
+      parsedDate = DateTime.tryParse(sentAt);
+      if (parsedDate == null) {
+        final millis = int.tryParse(sentAt);
+        if (millis != null && millis > 0) {
+          parsedDate = DateTime.fromMillisecondsSinceEpoch(
+            sentAt.length <= 10 ? millis * 1000 : millis,
+          );
+        }
+      }
+    }
+
+    final content = _extractFavoriteContent(item);
+
+    return ChatHistoryItem(
+      messageId: item.messageId,
+      chatId: '',
+      sequence: '',
+      senderId: senderId,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
+      content: content,
+      messageType: _toMessageType(item.messageType),
+      sentAt: parsedDate,
+      extra: item.messageExtra,
+    );
+  }
+
+  Message _toMessage(FavoriteItem item, ChatHistoryItem historyItem) {
+    final extra = _parseMessageExtra(item);
+    return Message(
+      messageId: item.messageId,
+      chatId: '',
+      senderId: historyItem.senderId,
+      senderName: historyItem.senderName,
+      senderAvatar: historyItem.senderAvatar,
+      type: historyItem.messageType,
+      status: MessageStatus.delivered,
+      content: historyItem.content,
+      sentAt: historyItem.sentAt ?? DateTime.now(),
+      isOutgoing: false,
+      sequence: '',
+      extra: extra,
+    );
+  }
+
+  MessageExtra _parseMessageExtra(FavoriteItem item) {
+    final extraData = _parseExtraFromFavorite(item);
+    if (extraData.isNotEmpty) {
+      return MessageExtra(
+        fileId: extraData['fileId'],
+        fileUrl: extraData['url']?.isNotEmpty == true ? extraData['url'] : extraData['fileUrl'],
+        fileName: extraData['fileName'],
+        mimeType: extraData['fileType']?.isNotEmpty == true ? extraData['fileType'] : extraData['mimeType'],
+        fileType: extraData['fileType'],
+        fileSize: int.tryParse(extraData['size'] ?? extraData['fileSize'] ?? ''),
+        thumbnailUrl: extraData['thumbnailUrl'],
+        thumbFileId: extraData['thumbFileId'],
+        width: int.tryParse(extraData['width'] ?? ''),
+        height: int.tryParse(extraData['height'] ?? ''),
+        duration: int.tryParse(extraData['duration'] ?? ''),
+        durationMs: int.tryParse(extraData['durationMs'] ?? ''),
+        stickerId: extraData['stickerId'],
+        contactUserId: extraData['contactUserId'],
+        contactDisplayName: extraData['contactDisplayName'],
+        contactAvatar: extraData['contactAvatar'],
+        locationName: extraData['locationName'],
+        locationAddress: extraData['locationAddress'],
+        locationLatitude: double.tryParse(extraData['locationLatitude'] ?? ''),
+        locationLongitude: double.tryParse(extraData['locationLongitude'] ?? ''),
+        customType: extraData['customType'],
+      );
+    }
+
+    final content = item.messageContent.trim();
+    if (content.isEmpty || !content.startsWith('{') || !content.endsWith('}')) {
+      return MessageExtra(
+        fileName: _extractFavoritePlainText(item),
+      );
+    }
+    try {
+      final map = jsonDecode(content) as Map<String, dynamic>;
+      return MessageExtra(
+        fileId: map['fileId']?.toString(),
+        fileUrl: map['fileUrl']?.toString(),
+        fileName: map['fileName']?.toString(),
+        mimeType: map['mimeType']?.toString(),
+        fileType: map['fileType']?.toString(),
+        fileSize: int.tryParse(map['fileSize']?.toString() ?? ''),
+        thumbnailUrl: map['thumbnailUrl']?.toString(),
+        thumbFileId: map['thumbFileId']?.toString(),
+        width: int.tryParse(map['width']?.toString() ?? ''),
+        height: int.tryParse(map['height']?.toString() ?? ''),
+        duration: int.tryParse(map['duration']?.toString() ?? ''),
+        durationMs: int.tryParse(map['durationMs']?.toString() ?? ''),
+        stickerId: map['stickerId']?.toString(),
+        contactUserId: map['contactUserId']?.toString(),
+        contactDisplayName: map['contactDisplayName']?.toString(),
+        contactAvatar: map['contactAvatar']?.toString(),
+        locationName: map['locationName']?.toString(),
+        locationAddress: map['locationAddress']?.toString(),
+        locationLatitude: double.tryParse(map['locationLatitude']?.toString() ?? ''),
+        locationLongitude: double.tryParse(map['locationLongitude']?.toString() ?? ''),
+        customType: map['customType']?.toString(),
+      );
+    } catch (_) {
+      return MessageExtra(
+        fileName: _extractFavoritePlainText(item),
+      );
     }
   }
 
-  Future<void> _removeFavorite(FavoriteItem item) async {
+  Map<String, String> _parseExtraFromFavorite(FavoriteItem item) {
+    final extra = item.messageExtra.trim();
+    if (extra.isEmpty || !extra.startsWith('{') || !extra.endsWith('}')) {
+      return {};
+    }
+    try {
+      final map = jsonDecode(extra) as Map<String, dynamic>;
+      final result = <String, String>{};
+      for (final entry in map.entries) {
+        result[entry.key] = entry.value?.toString() ?? '';
+      }
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  String _extractFavoriteContent(FavoriteItem item) {
+    final preview = item.messagePreview.trim();
+    if (preview.isNotEmpty) {
+      return preview;
+    }
+    
+    final content = item.messageContent.trim();
+    if (content.isEmpty) {
+      return '';
+    }
+    
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        return map['content']?.toString() ??
+               map['text']?.toString() ??
+               map['fileName']?.toString() ??
+               content;
+      } catch (_) {
+        return content;
+      }
+    }
+    
+    return content;
+  }
+
+  String _extractFavoritePlainText(FavoriteItem item) {
+    final preview = item.messagePreview.trim();
+    if (preview.isNotEmpty) {
+      return preview;
+    }
+    
+    final content = item.messageContent.trim();
+    if (content.isEmpty) {
+      return '';
+    }
+    
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        return map['fileName']?.toString() ?? map['text']?.toString() ?? '';
+      } catch (_) {
+        return '';
+      }
+    }
+    return content;
+  }
+
+  MessageType _toMessageType(int type) {
+    return switch (type) {
+      1 => MessageType.text,
+      2 => MessageType.image,
+      3 => MessageType.voice,
+      4 => MessageType.video,
+      5 => MessageType.file,
+      6 => MessageType.location,
+      8 => MessageType.sticker,
+      9 => MessageType.custom,
+      _ => MessageType.text,
+    };
+  }
+
+  Widget _buildMessageBubble(Message message, ChatHistoryItem historyItem, FavoriteItem item) {
+    final keyword = _getSearchKeyword();
+    final isTextWithKeyword = message.type == MessageType.text && keyword.isNotEmpty;
+    
+    if (isTextWithKeyword) {
+      return GestureDetector(
+        onTap: () => _handleMessageTap(historyItem, item),
+        onLongPress: () => _showItemMenu(historyItem, item),
+        behavior: HitTestBehavior.translucent,
+        child: _CustomTextMessageBubble(
+          message: message,
+          keyword: keyword,
+        ),
+      );
+    }
+    
+    return GestureDetector(
+      onTap: () => _handleMessageTap(historyItem, item),
+      onLongPress: () => _showItemMenu(historyItem, item),
+      behavior: HitTestBehavior.translucent,
+      child: MessageBubbleFactory.build(
+        message,
+        onRetryMessage: (_) {},
+        onOpenMessage: (_) => _handleMessageTap(historyItem, item),
+        onLongPressMessage: (message, offset) => _showItemMenu(historyItem, item),
+        showOutgoingStatusFooter: false,
+        highlightKeyword: keyword.isNotEmpty ? keyword : null,
+        showFileName: true,
+        onOpenLink: _handleLinkTap,
+      ),
+    );
+  }
+
+  void _handleMessageTap(ChatHistoryItem historyItem, FavoriteItem item) {
+    if (historyItem.messageType == MessageType.file ||
+        historyItem.messageType == MessageType.image ||
+        historyItem.messageType == MessageType.video) {
+      _openMediaAnchor(historyItem, item);
+      return;
+    }
+    final message = _toMessage(item, historyItem);
+    if (_isLinkMessage(message)) {
+      _openLinkMessage(message);
+      return;
+    }
+  }
+
+  void _handleLinkTap(String url) {
+    if (!mounted) {
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).chatOpenFailed)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.browser,
+      extra: BrowserPageArgs(
+        url: uri.toString(),
+        title: AppLocalizations.of(context).chatMessageDetailTitle,
+        source: 'message',
+      ),
+    );
+  }
+
+  bool _isLinkMessage(Message message) {
+    if (message.type == MessageType.custom) {
+      final customType = message.extra.customType?.trim().toUpperCase() ?? '';
+      if (customType == 'LINK' ||
+          customType == 'URL' ||
+          customType == 'WEB_LINK') {
+        return true;
+      }
+    }
+    final content = message.content.trim();
+    if (content.isNotEmpty) {
+      final directUrl = RegExp(r'^https?:\/\/\S+$', caseSensitive: false);
+      final wwwUrl = RegExp(r'^www\.\S+$', caseSensitive: false);
+      if (directUrl.hasMatch(content) || wwwUrl.hasMatch(content)) {
+        return true;
+      }
+      if (content.startsWith('{') && content.endsWith('}')) {
+        try {
+          final map = jsonDecode(content) as Map<String, dynamic>;
+          final url = map['url']?.toString().trim() ?? '';
+          if (url.isNotEmpty) {
+            return true;
+          }
+        } catch (_) {}
+      }
+    }
+    return false;
+  }
+
+  void _openLinkMessage(Message message) {
+    final strings = AppLocalizations.of(context);
+    String rawUrl = '';
+    final content = message.content.trim();
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        rawUrl = map['url']?.toString().trim() ?? '';
+      } catch (_) {}
+    }
+    if (rawUrl.isEmpty && !content.startsWith('{')) {
+      rawUrl = content;
+    }
+    if (rawUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.chatOpenFailed)),
+      );
+      return;
+    }
+    final normalized = rawUrl.startsWith('www.') ? 'https://$rawUrl' : rawUrl;
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.chatOpenFailed)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.browser,
+      extra: BrowserPageArgs(
+        url: uri.toString(),
+        title: strings.chatMessageDetailTitle,
+        source: 'message',
+      ),
+    );
+  }
+
+  String _getSearchKeyword() {
+    return _searched ? _currentKeyword : _searchController.text.trim();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients || _loading || !_hasMore) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 160) {
+      final keyword = _searchController.text.trim();
+      if (keyword.isNotEmpty || _searched) {
+        _search(reset: false);
+      } else {
+        _loadMoreInitial();
+      }
+    }
+  }
+
+  Future<void> _loadMoreInitial() async {
+    if (_loading) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+    });
+    try {
+      final keyword = _searchController.text.trim();
+      final tab = _filter.toFavoriteTab();
+      
+      final page = await ref.read(favoriteRepositoryProvider).getFavorites(
+        keyword: keyword,
+        tab: tab,
+        pageNo: _pageNo + 1,
+        pageSize: _pageSize,
+      );
+      
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _records = <FavoriteItem>[..._records, ...page.items];
+        _pageNo = _pageNo + 1;
+        _hasMore = page.hasMore;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _changeFilter(_FavoriteFilter filter) async {
+    if (_filter == filter) {
+      return;
+    }
+    setState(() {
+      _filter = filter;
+      _records = const [];
+      _pageNo = 1;
+      _hasMore = true;
+    });
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty) {
+      await _search(reset: true);
+    } else {
+      await _loadInitialData();
+    }
+  }
+
+  Future<void> _search({required bool reset}) async {
+    final keyword = _searchController.text.trim();
+    final hasActiveFilter = _filter != _FavoriteFilter.all;
+    final shouldSearch = keyword.isNotEmpty || hasActiveFilter;
+    if (!shouldSearch) {
+      if (reset) {
+        setState(() {
+          _records = const [];
+          _searched = false;
+          _currentKeyword = '';
+          _pageNo = 1;
+          _hasMore = true;
+        });
+        await _loadInitialData();
+      }
+      return;
+    }
+    if (_loading) {
+      return;
+    }
+    final nextPage = reset ? 1 : _pageNo + 1;
+    final strings = AppLocalizations.of(context);
+    setState(() {
+      _loading = true;
+      if (reset) {
+        _searched = true;
+        _currentKeyword = keyword;
+      }
+    });
+    try {
+      final tab = _filter.toFavoriteTab();
+      final page = await ref.read(favoriteRepositoryProvider).getFavorites(
+        keyword: keyword,
+        tab: tab,
+        pageNo: nextPage,
+        pageSize: _pageSize,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _records = reset ? page.items : <FavoriteItem>[..._records, ...page.items];
+        _pageNo = nextPage;
+        _hasMore = page.hasMore;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.chatHistorySearchFailed)));
+    }
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final strings = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final initial = isStart ? (_startTime ?? now) : (_endTime ?? now);
+    final firstDate = DateTime(2000);
+    final lastDate = now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isAfter(lastDate) ? lastDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    if (isStart) {
+      if (_endTime != null && picked.isAfter(_endTime!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.chatHistoryStartAfterEnd)),
+        );
+        return;
+      }
+      setState(() {
+        _startTime = picked;
+      });
+    } else {
+      if (_startTime != null && picked.isBefore(_startTime!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.chatHistoryEndBeforeStart)),
+        );
+        return;
+      }
+      setState(() {
+        _endTime = picked;
+      });
+    }
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty || _searched) {
+      await _search(reset: true);
+    } else {
+      await _loadInitialData();
+    }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _startTime = null;
+      _endTime = null;
+      _filter = _FavoriteFilter.all;
+      _records = const [];
+      _pageNo = 1;
+      _hasMore = true;
+    });
+    if (_searched && _searchController.text.trim().isNotEmpty) {
+      _search(reset: true);
+    } else {
+      setState(() {
+        _searched = false;
+      });
+      _loadInitialData();
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    final keyword = _searchController.text.trim();
+    if (keyword.isNotEmpty || _searched) {
+      return;
+    }
+    if (_loading) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _pageNo = 1;
+      _hasMore = true;
+    });
+    try {
+      final tab = _filter.toFavoriteTab();
+      final page = await ref.read(favoriteRepositoryProvider).getFavorites(
+        keyword: '',
+        tab: tab,
+        pageNo: 1,
+        pageSize: _pageSize,
+      );
+      
+      var items = page.items;
+      if (_startTime != null || _endTime != null) {
+        items = items.where((item) {
+          final rawTime = item.sendTime.trim().isNotEmpty
+              ? item.sendTime
+              : item.favoriteTime;
+          if (rawTime.isEmpty) {
+            return true;
+          }
+          DateTime? date = DateTime.tryParse(
+            rawTime.contains(' ') ? rawTime.replaceFirst(' ', 'T') : rawTime,
+          );
+          if (date == null) {
+            final millis = int.tryParse(rawTime);
+            if (millis != null && millis > 0) {
+              date = DateTime.fromMillisecondsSinceEpoch(
+                rawTime.length <= 10 ? millis * 1000 : millis,
+              );
+            }
+          }
+          if (date == null) {
+            return true;
+          }
+          if (_startTime != null && date.isBefore(_startTime!)) {
+            return false;
+          }
+          if (_endTime != null && date.isAfter(_endTime!.add(const Duration(days: 1)))) {
+            return false;
+          }
+          return true;
+        }).toList();
+      }
+      
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _records = items;
+        _pageNo = 1;
+        _hasMore = items.length >= _pageSize;
+        _loading = false;
+        _searched = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  void _openMediaAnchor(ChatHistoryItem historyItem, FavoriteItem item) {
+    final strings = AppLocalizations.of(context);
+    final messageId = historyItem.messageId.trim();
+    if (messageId.isEmpty || messageId == '0') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.groupFilesForwardUnsupported)),
+      );
+      return;
+    }
+    final contentData = _parseContentData(item);
+    final fileId = contentData['fileId'] ?? '';
+    final fileUrl = contentData['fileUrl']?.isNotEmpty == true
+        ? contentData['fileUrl']!
+        : (contentData['url'] ?? '');
+    final fileName = contentData['fileName'] ?? '';
+    final mimeType = contentData['mimeType']?.isNotEmpty == true
+        ? contentData['mimeType']!
+        : (contentData['fileType'] ?? '');
+    final fileSize = int.tryParse(contentData['fileSize'] ?? contentData['size'] ?? '0') ?? 0;
+
+    if (historyItem.messageType == MessageType.image) {
+      _previewImageFile(fileId, fileUrl, fileName);
+      return;
+    }
+    if (historyItem.messageType == MessageType.video) {
+      context.pushNamed(
+        RouteNames.chatVideoPlayer,
+        extra: VideoPlayerRouteArgs(
+          url: fileUrl,
+          fileId: fileId,
+          title: fileName,
+        ),
+      );
+      return;
+    }
+    if (historyItem.messageType == MessageType.file) {
+      context.pushNamed(
+        RouteNames.filePreview,
+        extra: FilePreviewRouteArgs(
+          fileId: fileId.isNotEmpty ? fileId : messageId,
+          fileName: fileName,
+          mimeType: mimeType.isNotEmpty ? mimeType : 'application/octet-stream',
+          fileSize: fileSize,
+          messageId: messageId,
+          chatId: null,
+          sourceType: 'file',
+        ),
+      );
+      return;
+    }
+  }
+
+  Map<String, String> _parseContentData(FavoriteItem item) {
+    final extraData = _parseExtraFromFavorite(item);
+    if (extraData.isNotEmpty) {
+      return extraData;
+    }
+    
+    final content = item.messageContent.trim();
+    if (content.isEmpty) {
+      return {};
+    }
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = <String, String>{};
+        final pairs = content
+            .substring(1, content.length - 1)
+            .split(',')
+            .where((s) => s.contains(':'));
+        for (final pair in pairs) {
+          final parts = pair.split(':');
+          if (parts.length >= 2) {
+            final key = parts[0].trim().replaceAll(RegExp(r'''["']'''), '');
+            final value = parts.sublist(1).join(':').trim().replaceAll(RegExp(r'''["']'''), '');
+            map[key] = value;
+          }
+        }
+        return map;
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  Future<void> _previewImageFile(String fileId, String fileUrl, String fileName) async {
+    try {
+      final url = fileId.isNotEmpty
+          ? (await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId)).toString()
+          : fileUrl;
+      if (!mounted || url.isEmpty) {
+        return;
+      }
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'favorite-image-preview',
+        barrierColor: Colors.black,
+        pageBuilder: (dialogContext, animation, secondaryAnimation) {
+          return Material(
+            color: Colors.black,
+            child: GestureDetector(
+              onTap: () => Navigator.of(dialogContext).pop(),
+              child: Center(
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SelectableText(
+                        url,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _showItemMenu(ChatHistoryItem historyItem, FavoriteItem item) async {
+    final strings = AppLocalizations.of(context);
+    final canDownload = _canDownloadMessageType(historyItem.messageType);
+    final canForward = _canForwardMessageType(historyItem.messageType);
+
+    final menuItems = <Widget>[];
+    if (canDownload) {
+      menuItems.add(
+        ListTile(
+          leading: const Icon(Icons.download_rounded),
+          title: Text(strings.groupFilesActionDownload),
+          onTap: () {
+            Navigator.of(context).pop('download');
+            _downloadItem(item);
+          },
+        ),
+      );
+    }
+    if (canForward) {
+      menuItems.add(
+        ListTile(
+          leading: const Icon(Icons.forward_rounded),
+          title: Text(strings.groupFilesActionForward),
+          onTap: () {
+            Navigator.of(context).pop('forward');
+            _forwardItem(item);
+          },
+        ),
+      );
+    }
+    menuItems.add(
+      ListTile(
+        leading: const Icon(Icons.delete_outline_rounded),
+        title: Text(strings.favoriteCancelAction),
+        onTap: () {
+          Navigator.of(context).pop('unfavorite');
+          _unfavoriteItem(item);
+        },
+      ),
+    );
+
+    if (menuItems.isEmpty) {
+      return;
+    }
+
+    await showModalBottomSheet<String>(
+      context: context,
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: menuItems,
+          ),
+        );
+      },
+    );
+  }
+
+  bool _canDownloadMessageType(MessageType type) {
+    return type == MessageType.file ||
+        type == MessageType.image ||
+        type == MessageType.video ||
+        type == MessageType.voice;
+  }
+
+  bool _canForwardMessageType(MessageType type) {
+    return type != MessageType.voice &&
+        type != MessageType.location &&
+        type != MessageType.system;
+  }
+
+  Future<void> _downloadItem(FavoriteItem item) async {
+    final strings = AppLocalizations.of(context);
+    try {
+      final contentData = _parseContentData(item);
+      String fileId = contentData['fileId'] ?? '';
+      final fileName = contentData['fileName'] ?? _contentText(strings, item);
+      
+      Uri uri;
+      if (fileId.isNotEmpty) {
+        uri = await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId);
+      } else {
+        final directUrl = contentData['url']?.isNotEmpty == true
+            ? contentData['url']!
+            : item.messageContent.trim();
+        if (directUrl.isEmpty) {
+          throw StateError('missing file id and url');
+        }
+        fileId = item.messageId;
+        uri = Uri.parse(directUrl);
+      }
+      
+      await ref.read(fileDownloadServiceProvider).download(uri, suggestedFileName: fileName);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.groupFilesDownloadStarted)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.groupFilesDownloadFailed)));
+    }
+  }
+
+  void _forwardItem(FavoriteItem item) {
+    final strings = AppLocalizations.of(context);
+    final favoriteId = item.favoriteId.trim();
+    if (favoriteId.isEmpty || favoriteId == '0') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.favoriteOpenFailed)),
+      );
+      return;
+    }
+    context.pushNamed(
+      RouteNames.chatForwardTarget,
+      extra: ForwardTargetRouteArgs(favoriteId: favoriteId),
+    );
+  }
+
+  Future<void> _unfavoriteItem(FavoriteItem item) async {
     final strings = AppLocalizations.of(context);
     if (item.favoriteId.trim().isEmpty || item.favoriteId == '0') {
       _showNotice(strings.favoriteOpenFailed);
@@ -304,6 +1197,9 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       if (!mounted) {
         return;
       }
+      setState(() {
+        _records = _records.where((r) => r.favoriteId != item.favoriteId).toList();
+      });
       _showNotice(strings.favoriteCancelSuccess);
     } catch (error) {
       if (!mounted) {
@@ -318,122 +1214,315 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+
+  String _formatFilterDate(DateTime? value) {
+    if (value == null) {
+      return AppLocalizations.of(context).chatHistoryUnlimited;
+    }
+    return DateFormat('yyyy-MM-dd').format(value);
+  }
+
+  String _formatTime(AppLocalizations strings, DateTime? dateTime) {
+    if (dateTime == null) {
+      return strings.groupHistoryTimeUnknown;
+    }
+    final local = dateTime.toLocal();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(local.year, local.month, local.day);
+    final diffDays = today.difference(messageDay).inDays;
+    final timeText = DateFormat('HH:mm').format(local);
+    if (diffDays == 0) {
+      return strings.chatHistoryTodayAt(timeText);
+    }
+    if (diffDays == 1) {
+      return strings.chatHistoryYesterdayAt(timeText);
+    }
+    if (diffDays < 7) {
+      return strings.chatHistoryDaysAgoAt(diffDays, timeText);
+    }
+    return strings.chatHistoryMonthDayAt(local.month, local.day, timeText);
+  }
+
+  String _contentText(AppLocalizations strings, FavoriteItem item) {
+    if (item.messagePreview.isNotEmpty) {
+      return item.messagePreview;
+    }
+    
+    final content = item.messageContent.trim();
+    if (content.isNotEmpty) {
+      final contentData = _parseContentData(item);
+      if (contentData.containsKey('fileName')) {
+        return contentData['fileName']!;
+      }
+      if (contentData.containsKey('text')) {
+        return contentData['text']!;
+      }
+    }
+    
+    return switch (item.messageType) {
+      2 => strings.chatHistoryPreviewImage,
+      3 => strings.chatHistoryPreviewVoice,
+      4 => strings.chatHistoryPreviewVideo,
+      5 => strings.chatHistoryPreviewFile,
+      6 => strings.chatHistoryPreviewLocation,
+      8 => strings.chatHistoryPreviewSticker,
+      9 => strings.chatHistoryPreviewMessage,
+      _ => strings.chatHistoryPreviewMessage,
+    };
+  }
+
+  Color _avatarColorFor(String seed) {
+    return getUserAvatarColor(seed);
+  }
+
+  Object? _safeParseJson(Object? raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is Map<String, dynamic> || raw is List) {
+      return raw;
+    }
+    final text = raw.toString().trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    if (!((text.startsWith('{') && text.endsWith('}')) ||
+        (text.startsWith('[') && text.endsWith(']')))) {
+      return null;
+    }
+    try {
+      return jsonDecode(text);
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
-class _FavoriteCard extends StatelessWidget {
-  const _FavoriteCard({
-    required this.item,
-    required this.display,
+class _DateFilterButton extends StatelessWidget {
+  const _DateFilterButton({
+    required this.label,
+    required this.value,
     required this.onTap,
-    required this.onLongPress,
   });
 
-  final FavoriteItem item;
-  final _FavoriteDisplayItem display;
+  final String label;
+  final String value;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      display.typeLabel,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8A93A0),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _formatFavoriteTime(
-                      strings,
-                      item.sendTime.isNotEmpty ? item.sendTime : item.favoriteTime,
-                    ),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9AA3AF),
-                    ),
-                  ),
-                ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F7FB),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$label $value',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF202531)),
               ),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        RichText(
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          text: TextSpan(
-                            children: buildEmojiInlineSpans(
-                              text: display.title,
-                              textStyle: const TextStyle(
-                                fontSize: 14,
-                                height: 1.5,
-                                color: Color(0xFF202531),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (display.subTitle.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          RichText(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
-                              children: buildEmojiInlineSpans(
-                                text: display.subTitle,
-                                textStyle: const TextStyle(
-                                  fontSize: 12,
-                                  height: 1.5,
-                                  color: Color(0xFF8A93A0),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (display.thumb.isNotEmpty) ...[
-                    const SizedBox(width: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        display.thumb,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _FileThumbPlaceholder(
-                          kind: display.kind,
-                        ),
-                      ),
-                    ),
-                  ] else if (display.kind == _FavoriteCardKind.file) ...[
-                    const SizedBox(width: 12),
-                    const _FileThumbPlaceholder(kind: _FavoriteCardKind.file),
-                  ],
-                ],
-              ),
-            ],
+            ),
+            const AppIcon(
+              AppIconKind.chevronDown,
+              size: 16,
+              color: Color(0xFF98A1B2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryEmptyState extends StatelessWidget {
+  const _HistoryEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppIcon(
+              AppIconKind.history,
+              size: 56,
+              color: Color(0xFFD0D5DD),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, color: Color(0xFF98A1B2)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HighlightedContent extends StatelessWidget {
+  const _HighlightedContent({required this.text, required this.keyword});
+
+  final String text;
+  final String keyword;
+
+  @override
+  Widget build(BuildContext context) {
+    if (keyword.isEmpty || text.isEmpty) {
+      return RichText(
+        text: TextSpan(
+          children: buildEmojiInlineSpans(
+            text: text,
+            textStyle: const TextStyle(
+              fontSize: 14,
+              height: 1.6,
+              color: Color(0xFF4E5666),
+            ),
+          ),
+        ),
+      );
+    }
+    return RichText(
+      text: TextSpan(
+        children: _buildHighlightedEmojiSpans(),
+      ),
+    );
+  }
+
+  List<InlineSpan> _buildHighlightedEmojiSpans() {
+    final normalized = normalizeEmojiDisplayText(text);
+    final spans = <InlineSpan>[];
+    final lowerKeyword = keyword.toLowerCase();
+
+    final segments = <_EmojiSegment>[];
+    var lastEnd = 0;
+    for (final match in ChatEmojiCatalog.tokenRegExp.allMatches(normalized)) {
+      if (match.start > lastEnd) {
+        segments.add(_EmojiSegment(
+          text: normalized.substring(lastEnd, match.start),
+          isEmoji: false,
+        ));
+      }
+      segments.add(_EmojiSegment(
+        text: match.group(0) ?? '',
+        isEmoji: true,
+        emojiToken: match.group(0),
+      ));
+      lastEnd = match.end;
+    }
+    if (lastEnd < normalized.length) {
+      segments.add(_EmojiSegment(
+        text: normalized.substring(lastEnd),
+        isEmoji: false,
+      ));
+    }
+
+    for (final segment in segments) {
+      if (segment.isEmoji) {
+        final assets = ChatEmojiCatalog.candidateAssetsFor(
+            segment.emojiToken ?? segment.text);
+        if (assets.isNotEmpty) {
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              child: ChatEmojiAssetImage(assets: assets, size: 20),
+            ),
+          ));
+        } else {
+          spans.add(TextSpan(
+              text: segment.text,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: Color(0xFF4E5666),
+              )));
+        }
+      } else {
+        final lowerSource = segment.text.toLowerCase();
+        var searchStart = 0;
+        while (true) {
+          final idx = lowerSource.indexOf(lowerKeyword, searchStart);
+          if (idx < 0) {
+            if (searchStart < segment.text.length) {
+              spans.add(TextSpan(
+                  text: segment.text.substring(searchStart),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF4E5666),
+                  )));
+            }
+            break;
+          }
+          if (idx > searchStart) {
+            spans.add(TextSpan(
+                text: segment.text.substring(searchStart, idx),
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Color(0xFF4E5666),
+                )));
+          }
+          spans.add(TextSpan(
+            text: segment.text.substring(idx, idx + keyword.length),
+            style: const TextStyle(
+              color: Color(0xFF246BFD),
+              backgroundColor: Color(0xFFEAF1FF),
+              fontWeight: FontWeight.w600,
+            ),
+          ));
+          searchStart = idx + keyword.length;
+        }
+      }
+    }
+    return spans;
+  }
+}
+
+class _CustomTextMessageBubble extends StatelessWidget {
+  const _CustomTextMessageBubble({
+    required this.message,
+    required this.keyword,
+  });
+
+  final Message message;
+  final String keyword;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOutgoing = message.isOutgoing;
+    final alignment =
+        isOutgoing ? Alignment.centerRight : Alignment.centerLeft;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Align(
+        alignment: alignment,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isOutgoing ? const Color(0xFF246BFD) : const Color(0xFFF3F5F9),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: _HighlightedContent(
+            text: message.content,
+            keyword: keyword,
           ),
         ),
       ),
@@ -441,354 +1530,84 @@ class _FavoriteCard extends StatelessWidget {
   }
 }
 
-class _FileThumbPlaceholder extends StatelessWidget {
-  const _FileThumbPlaceholder({required this.kind});
+class _EmojiSegment {
+  final String text;
+  final bool isEmoji;
+  final String? emojiToken;
 
-  final _FavoriteCardKind kind;
+  _EmojiSegment({required this.text, required this.isEmoji, this.emojiToken});
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final icon = kind == _FavoriteCardKind.file
-        ? Icons.insert_drive_file_outlined
-        : Icons.image_not_supported_outlined;
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F4FA),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      alignment: Alignment.center,
-      child: Icon(icon, color: const Color(0xFF4B70D0)),
-    );
+enum _FavoriteFilter {
+  all(null),
+  text('text'),
+  image('image'),
+  video('video'),
+  file('file'),
+  link('link');
+
+  const _FavoriteFilter(this.apiValue);
+
+  final String? apiValue;
+
+  String label(AppLocalizations strings) {
+    return switch (this) {
+      _FavoriteFilter.all => strings.groupHistoryFilterAll,
+      _FavoriteFilter.text => strings.groupHistoryFilterText,
+      _FavoriteFilter.image => strings.groupHistoryFilterImage,
+      _FavoriteFilter.video => strings.groupHistoryFilterVideo,
+      _FavoriteFilter.file => strings.groupHistoryFilterFile,
+      _FavoriteFilter.link => strings.groupHistoryFilterLink,
+    };
+  }
+
+  String toFavoriteTab() {
+    return switch (this) {
+      _FavoriteFilter.all => 'default',
+      _FavoriteFilter.text => 'normal',
+      _FavoriteFilter.image => 'media',
+      _FavoriteFilter.video => 'media',
+      _FavoriteFilter.file => 'file',
+      _FavoriteFilter.link => 'default',
+    };
   }
 }
 
-class _FooterNotice extends StatelessWidget {
-  const _FooterNotice({required this.text});
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
-  final String text;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
+    return Material(
+      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF246BFD) : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected ? Colors.white : const Color(0xFF6B7280),
+            ),
+          ),
         ),
       ),
     );
   }
-}
-
-class _FavoriteCardEntry {
-  const _FavoriteCardEntry({required this.item, required this.display});
-
-  final FavoriteItem item;
-  final _FavoriteDisplayItem display;
-}
-
-enum _FavoriteCardKind { text, image, video, file, link, location }
-
-class _FavoriteDisplayItem {
-  const _FavoriteDisplayItem({
-    required this.kind,
-    required this.title,
-    required this.subTitle,
-    required this.thumb,
-    required this.typeLabel,
-  });
-
-  final _FavoriteCardKind kind;
-  final String title;
-  final String subTitle;
-  final String thumb;
-  final String typeLabel;
-}
-
-_FavoriteDisplayItem _buildDisplayItem(
-  AppLocalizations strings,
-  FavoriteItem item,
-) {
-  var kind = _FavoriteCardKind.text;
-  var title = item.messagePreview.isNotEmpty
-      ? item.messagePreview
-      : strings.chatPreviewMessage;
-  var subTitle = '';
-  var thumb = '';
-  var typeLabel = _buildTypeText(strings, item.messageType);
-
-  final parsedContent = _safeParseJson(item.messageContent);
-  final parsedExtra = _safeParseJson(item.messageExtra);
-  final parsedSnapshot = _safeParseJson(item.messageSnapshot);
-  final snapshotContent = parsedSnapshot is Map<String, dynamic>
-      ? _safeParseJson(parsedSnapshot['content'])
-      : null;
-  final snapshotExtra = parsedSnapshot is Map<String, dynamic>
-      ? _safeParseJson(parsedSnapshot['extra'])
-      : null;
-
-  if (item.messageType == 1) {
-    final textContent = _extractText(parsedContent ?? item.messageContent).trim();
-    if (_looksLikeLinkContent(textContent)) {
-      kind = _FavoriteCardKind.link;
-      title = textContent;
-      subTitle = textContent;
-      typeLabel = strings.favoriteDetailTypeDefault;
-    } else {
-      kind = _FavoriteCardKind.text;
-      title = textContent.isNotEmpty ? textContent : title;
-      typeLabel = strings.favoriteDetailTypeDefault;
-    }
-  } else if (item.messageType == 2) {
-    kind = _FavoriteCardKind.image;
-    thumb =
-        _resolveUrlFromObject(parsedContent) ??
-        _resolveUrlFromObject(parsedExtra) ??
-        _resolveUrlFromObject(snapshotContent) ??
-        _resolveUrlFromObject(snapshotExtra) ??
-        item.messageContent.trim();
-    final imageName =
-        _resolveNameFromObject(parsedContent) ??
-        _resolveNameFromObject(parsedExtra) ??
-        _resolveNameFromObject(snapshotContent) ??
-        _resolveNameFromObject(snapshotExtra) ??
-        '';
-    final previewText = item.messagePreview.trim();
-    final safePreviewText = _looksLikeLinkContent(previewText) ? '' : previewText;
-    title = imageName.isNotEmpty
-        ? imageName
-        : (safePreviewText.isNotEmpty ? safePreviewText : strings.chatPreviewImage);
-    typeLabel = strings.favoriteDetailTypeImage;
-  } else if (item.messageType == 4) {
-    kind = _FavoriteCardKind.video;
-    if (parsedExtra is Map<String, dynamic>) {
-      thumb =
-          parsedExtra['cover']?.toString() ??
-          parsedExtra['thumbnail']?.toString() ??
-          parsedExtra['thumbUrl']?.toString() ??
-          '';
-    }
-    title = item.messagePreview.isNotEmpty
-        ? item.messagePreview
-        : strings.chatPreviewVideo;
-    typeLabel = strings.favoriteDetailTypeVideo;
-  } else if (item.messageType == 5) {
-    kind = _FavoriteCardKind.file;
-    final fileObj = parsedExtra is Map<String, dynamic>
-        ? parsedExtra
-        : (snapshotExtra is Map<String, dynamic> ? snapshotExtra : null);
-    final fileName = fileObj?['fileName']?.toString() ?? '';
-    final fileSizeRaw = fileObj?['size'];
-    final size = fileSizeRaw is num
-        ? fileSizeRaw.toInt()
-        : int.tryParse(fileSizeRaw?.toString() ?? '') ?? 0;
-    title = fileName.isNotEmpty
-        ? fileName
-        : (item.messagePreview.isNotEmpty ? item.messagePreview : strings.chatPreviewFile);
-    subTitle = _buildFileSizeText(size);
-    typeLabel = strings.favoriteDetailTypeFile;
-  } else if (item.messageType == 9) {
-    final customObj = parsedContent is Map<String, dynamic>
-        ? parsedContent
-        : (parsedExtra is Map<String, dynamic> ? parsedExtra : null);
-    final customType = customObj?['type']?.toString().toUpperCase() ?? '';
-    final customUrl =
-        _resolveUrlFromObject(customObj) ??
-        _resolveUrlFromObject(snapshotContent) ??
-        _resolveUrlFromObject(snapshotExtra) ??
-        '';
-    if (customType == 'LINK' ||
-        customType == 'URL' ||
-        customType == 'WEB_LINK' ||
-        customUrl.isNotEmpty) {
-      kind = _FavoriteCardKind.link;
-      title = customObj?['title']?.toString().trim().isNotEmpty == true
-          ? customObj!['title'].toString()
-          : customUrl;
-      subTitle = customUrl;
-      typeLabel = strings.favoriteDetailTypeDefault;
-    } else {
-      kind = _FavoriteCardKind.text;
-      title = item.messagePreview.isNotEmpty
-          ? item.messagePreview
-          : strings.chatPreviewMessage;
-      typeLabel = strings.favoriteDetailTypeDefault;
-    }
-  } else {
-    kind = _FavoriteCardKind.text;
-    title = item.messagePreview.isNotEmpty
-        ? item.messagePreview
-        : strings.chatPreviewMessage;
-    typeLabel = strings.favoriteDetailTypeDefault;
-  }
-
-  return _FavoriteDisplayItem(
-    kind: kind,
-    title: title,
-    subTitle: subTitle,
-    thumb: thumb,
-    typeLabel: typeLabel,
-  );
-}
-
-bool _matchesTab(String tab, _FavoriteCardKind kind) {
-  switch (tab) {
-    case 'normal':
-      return kind != _FavoriteCardKind.image &&
-          kind != _FavoriteCardKind.video &&
-          kind != _FavoriteCardKind.file;
-    case 'media':
-      return kind == _FavoriteCardKind.image || kind == _FavoriteCardKind.video;
-    case 'file':
-      return kind == _FavoriteCardKind.file;
-    default:
-      return true;
-  }
-}
-
-String _formatFavoriteTime(AppLocalizations strings, String raw) {
-  final normalized = raw.trim();
-  if (normalized.isEmpty) {
-    return '';
-  }
-  DateTime? date = DateTime.tryParse(
-    normalized.contains(' ') ? normalized.replaceFirst(' ', 'T') : normalized,
-  );
-  if (date == null) {
-    final millis = int.tryParse(normalized);
-    if (millis != null && millis > 0) {
-      date = DateTime.fromMillisecondsSinceEpoch(
-        normalized.length <= 10 ? millis * 1000 : millis,
-      );
-    }
-  }
-  if (date == null) {
-    return normalized;
-  }
-  final now = DateTime.now();
-  if (date.year == now.year) {
-    return '${date.month}-${date.day}';
-  }
-  return '${date.year}-${date.month}-${date.day}';
-}
-
-String _buildTypeText(AppLocalizations strings, int type) {
-  switch (type) {
-    case 1:
-      return strings.favoriteDetailTypeNote;
-    case 2:
-      return strings.favoriteDetailTypeImage;
-    case 3:
-      return strings.chatPreviewVoice;
-    case 4:
-      return strings.favoriteDetailTypeVideo;
-    case 5:
-      return strings.favoriteDetailTypeFile;
-    case 6:
-      return strings.chatLocationDefaultTitle;
-    case 8:
-      return strings.chatPreviewSticker;
-    case 9:
-      return strings.favoriteDetailTypeDefault;
-    default:
-      return strings.favoriteDetailTypeDefault;
-  }
-}
-
-dynamic _safeParseJson(Object? raw) {
-  if (raw == null) {
-    return null;
-  }
-  if (raw is Map<String, dynamic> || raw is List) {
-    return raw;
-  }
-  final text = raw.toString().trim();
-  if (text.isEmpty) {
-    return null;
-  }
-  if (!((text.startsWith('{') && text.endsWith('}')) ||
-      (text.startsWith('[') && text.endsWith(']')))) {
-    return null;
-  }
-  try {
-    return jsonDecode(text);
-  } catch (_) {
-    return null;
-  }
-}
-
-bool _looksLikeLinkContent(String raw) {
-  final value = raw.trim();
-  if (value.isEmpty) {
-    return false;
-  }
-  return RegExp(r'^https?:\/\/\S+$', caseSensitive: false).hasMatch(value) ||
-      RegExp(r'^www\.\S+$', caseSensitive: false).hasMatch(value);
-}
-
-String _extractText(Object? raw) {
-  if (raw == null) {
-    return '';
-  }
-  if (raw is String) {
-    return raw;
-  }
-  if (raw is Map<String, dynamic>) {
-    for (final key in ['content', 'text', 'title']) {
-      final value = raw[key]?.toString() ?? '';
-      if (value.isNotEmpty) {
-        return value;
-      }
-    }
-  }
-  return '';
-}
-
-String? _resolveUrlFromObject(Object? raw) {
-  if (raw is! Map<String, dynamic>) {
-    return null;
-  }
-  for (final key in ['url', 'link', 'href']) {
-    final value = raw[key]?.toString().trim() ?? '';
-    if (value.isNotEmpty) {
-      return value;
-    }
-  }
-  final nested = raw['content'];
-  if (nested is String && _looksLikeLinkContent(nested)) {
-    return nested.trim();
-  }
-  return _resolveUrlFromObject(nested);
-}
-
-String? _resolveNameFromObject(Object? raw) {
-  if (raw is! Map<String, dynamic>) {
-    return null;
-  }
-  for (final key in ['fileName', 'name', 'filename', 'title']) {
-    final value = raw[key]?.toString().trim() ?? '';
-    if (value.isNotEmpty) {
-      return value;
-    }
-  }
-  return _resolveNameFromObject(raw['content']);
-}
-
-String _buildFileSizeText(int size) {
-  if (size <= 0) {
-    return '';
-  }
-  if (size < 1024) {
-    return '${size}B';
-  }
-  if (size < 1024 * 1024) {
-    return '${(size / 1024).toStringAsFixed(1)}KB';
-  }
-  if (size < 1024 * 1024 * 1024) {
-    return '${(size / 1024 / 1024).toStringAsFixed(1)}MB';
-  }
-  return '${(size / 1024 / 1024 / 1024).toStringAsFixed(1)}GB';
 }

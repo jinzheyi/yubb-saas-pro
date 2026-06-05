@@ -33,7 +33,7 @@ class FavoriteRemoteDataSource {
           : '/system/im/favorite/search',
       queryParameters: {
         if (normalizedKeyword.isNotEmpty) 'keyword': normalizedKeyword,
-        if (normalizedKeyword.isNotEmpty) 'tab': tab,
+        'tab': tab,
         'pageNo': pageNo,
         'pageSize': pageSize,
       },

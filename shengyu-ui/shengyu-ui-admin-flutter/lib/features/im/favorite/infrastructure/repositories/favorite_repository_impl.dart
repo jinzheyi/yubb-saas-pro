@@ -35,6 +35,10 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
             messageSnapshot: item.messageSnapshot,
             sendTime: item.sendTime,
             favoriteTime: item.favoriteTime,
+            senderId: item.senderId,
+            senderNickname: item.senderNickname,
+            senderAvatar: item.senderAvatar,
+            isSelf: item.isSelf,
           ),
         )
         .toList(growable: false),

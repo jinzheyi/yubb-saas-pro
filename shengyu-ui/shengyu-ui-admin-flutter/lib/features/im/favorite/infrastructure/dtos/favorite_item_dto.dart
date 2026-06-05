@@ -9,6 +9,10 @@ class FavoriteItemDto {
     required this.messageSnapshot,
     required this.sendTime,
     required this.favoriteTime,
+    this.senderId = '',
+    this.senderNickname = '',
+    this.senderAvatar = '',
+    this.isSelf = false,
   });
 
   final String favoriteId;
@@ -21,7 +25,14 @@ class FavoriteItemDto {
   final String sendTime;
   final String favoriteTime;
 
+  // 发送者信息（与聊天记录接口保持一致）
+  final String senderId;
+  final String senderNickname;
+  final String senderAvatar;
+  final bool isSelf;
+
   factory FavoriteItemDto.fromJson(Map<String, dynamic> json) {
+    final isSelfRaw = json['isSelf'];
     return FavoriteItemDto(
       favoriteId:
           json['favoriteId']?.toString() ?? json['id']?.toString() ?? '',
@@ -39,6 +50,10 @@ class FavoriteItemDto {
       messageSnapshot: json['messageSnapshot']?.toString() ?? '',
       sendTime: json['sendTime']?.toString() ?? '',
       favoriteTime: json['favoriteTime']?.toString() ?? '',
+      senderId: json['senderId']?.toString() ?? '',
+      senderNickname: json['senderNickname']?.toString() ?? '',
+      senderAvatar: json['senderAvatar']?.toString() ?? '',
+      isSelf: isSelfRaw == true || isSelfRaw == 'true',
     );
   }
 

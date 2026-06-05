@@ -25,13 +25,40 @@ public interface ImMessageFavoriteMapper extends BaseMapperX<ImMessageFavoriteDO
     Long countByUserId(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
 
     @Select("<script>" +
+            "SELECT COUNT(1) FROM im_message_favorite " +
+            "WHERE tenant_id = #{tenantId} AND user_id = #{userId} AND deleted = 0 " +
+            "<if test='tab != null and tab != \"\" and tab == \"normal\"'> " +
+            "AND message_type NOT IN (2,4,5) " +
+            "</if> " +
+            "<if test='tab != null and tab != \"\" and tab == \"media\"'> " +
+            "AND message_type IN (2,4) " +
+            "</if> " +
+            "<if test='tab != null and tab != \"\" and tab == \"file\"'> " +
+            "AND message_type = 5 " +
+            "</if> " +
+            "</script>")
+    Long countByUserIdAndTab(@Param("tenantId") Long tenantId,
+                             @Param("userId") Long userId,
+                             @Param("tab") String tab);
+
+    @Select("<script>" +
             "SELECT * FROM im_message_favorite " +
             "WHERE tenant_id = #{tenantId} AND user_id = #{userId} AND deleted = 0 " +
+            "<if test='tab != null and tab != \"\" and tab == \"normal\"'> " +
+            "AND message_type NOT IN (2,4,5) " +
+            "</if> " +
+            "<if test='tab != null and tab != \"\" and tab == \"media\"'> " +
+            "AND message_type IN (2,4) " +
+            "</if> " +
+            "<if test='tab != null and tab != \"\" and tab == \"file\"'> " +
+            "AND message_type = 5 " +
+            "</if> " +
             "ORDER BY create_time DESC, id DESC " +
             "LIMIT #{limit} OFFSET #{offset}" +
             "</script>")
     List<ImMessageFavoriteDO> selectPageByUserId(@Param("tenantId") Long tenantId,
                                                  @Param("userId") Long userId,
+                                                 @Param("tab") String tab,
                                                  @Param("offset") Integer offset,
                                                  @Param("limit") Integer limit);
 
