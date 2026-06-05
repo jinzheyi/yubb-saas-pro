@@ -521,7 +521,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAvatarHint => 'Tap to change or remove avatar';
 
   @override
-  String get profileDepartmentFallback => 'No department assigned';
+  String get profileUploadAvatar => 'Upload Avatar';
+
+  @override
+  String get profileReuploadAvatar => 'Reupload Avatar';
+
+  @override
+  String get profileRemoveCustomAvatar => 'Remove Custom Avatar';
+
+  @override
+  String get profileConfirmRemoveAvatar => 'Confirm removing custom avatar';
+
+  @override
+  String get profileAvatarUploadSuccess => 'Avatar uploaded successfully';
+
+  @override
+  String get profileAvatarUploadFailed => 'Failed to upload avatar';
+
+  @override
+  String get profileAvatarRemoveSuccess => 'Avatar removed';
+
+  @override
+  String get profileAvatarRemoveFailed => 'Failed to remove avatar';
+
+  @override
+  String get profileAvatarUploading => 'Uploading avatar...';
+
+  @override
+  String get profileUploadFailedRetry => 'Upload failed, please retry';
+
+  @override
+  String get departmentFallback => 'No department assigned';
 
   @override
   String get profilePostFallback => 'No position set';

@@ -16,4 +16,37 @@ class ProfileRemoteDataSource {
     );
     return result.requireData();
   }
+
+  /// 上传用户头像（支持 Web 和原生平台）
+  /// 参考 uniappx: updateCurrentUserAvatar 调用 /system/user/avatar
+  Future<String> uploadAvatar({required String fileName, required List<int> bytes}) async {
+    final multipart = MultipartFile.fromBytes(
+      bytes,
+      filename: fileName,
+    );
+    final formData = FormData.fromMap({'avatarFile': multipart});
+
+    final response = await dio.post<Map<String, dynamic>>(
+      '/system/user/avatar',
+      data: formData,
+    );
+    final result = ApiResult.fromJson<Object?>(
+      response.data as Map<String, dynamic>? ?? const {},
+      dataParser: (raw) => raw,
+    );
+    final data = result.requireData();
+    if (data is String) {
+      return data;
+    }
+    if (data is Map) {
+      return data['url']?.toString() ?? '';
+    }
+    return data?.toString() ?? '';
+  }
+
+  /// 删除用户自定义头像
+  /// 参考 uniappx: clearCurrentUserAvatar 调用 DELETE /system/user/avatar
+  Future<void> deleteAvatar() async {
+    await dio.delete('/system/user/avatar');
+  }
 }

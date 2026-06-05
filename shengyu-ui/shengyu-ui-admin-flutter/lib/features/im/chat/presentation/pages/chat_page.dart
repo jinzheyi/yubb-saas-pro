@@ -365,8 +365,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
         ? const AsyncValue<List<GroupMember>>.data(<GroupMember>[])
         : ref.watch(groupMembersFutureProvider(groupId));
     final currentUserId = ref.watch(authSessionProvider).userId;
-    final currentUserAvatarUrl =
-        ref.watch(currentUserProfileProvider).valueOrNull?.avatarUrl ?? '';
     final groupMembers = groupMembersAsync.valueOrNull ?? const <GroupMember>[];
     final groupRestrictionHint = _resolveGroupSendRestrictionHint(
       groupSettingsState: groupSettingsState,
@@ -796,7 +794,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           watermarkText: _resolveCurrentUserDisplayName(
                             currentUserId,
                           ),
-                          currentUserAvatarUrl: currentUserAvatarUrl,
                           outgoingFooterLabelBuilder: isGroupChat
                               ? (message) => _buildReadReceiptEntryText(
                                   message,

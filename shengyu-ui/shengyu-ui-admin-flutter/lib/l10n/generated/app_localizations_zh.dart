@@ -514,7 +514,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileAvatarHint => '点击更换或删除头像';
 
   @override
-  String get profileDepartmentFallback => '未分配部门';
+  String get profileUploadAvatar => '上传头像';
+
+  @override
+  String get profileReuploadAvatar => '重新上传头像';
+
+  @override
+  String get profileRemoveCustomAvatar => '删除自定义头像';
+
+  @override
+  String get profileConfirmRemoveAvatar => '确认删除自定义头像';
+
+  @override
+  String get profileAvatarUploadSuccess => '头像上传成功';
+
+  @override
+  String get profileAvatarUploadFailed => '头像上传失败';
+
+  @override
+  String get profileAvatarRemoveSuccess => '头像已删除';
+
+  @override
+  String get profileAvatarRemoveFailed => '头像删除失败';
+
+  @override
+  String get profileAvatarUploading => '头像上传中...';
+
+  @override
+  String get profileUploadFailedRetry => '上传失败，请重试';
+
+  @override
+  String get departmentFallback => '未分配部门';
 
   @override
   String get profilePostFallback => '未设置岗位';

@@ -5,6 +5,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.UserTypeEnum;
@@ -42,6 +43,8 @@ import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.tenant.TenantService;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -103,6 +106,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     private NotifySendService notifySendService;
     @Resource
     private UserDeptMapper userDeptMapper;
+    @Resource
+    @Lazy // 懒加载，避免循环依赖
+    private com.shengyu.framework.websocket.core.sender.NettyMessageSender nettyMessageSender;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -366,6 +372,10 @@ public class AdminUserServiceImpl implements AdminUserService {
         sysUserDO.setId(id);
         sysUserDO.setAvatar(avatar);
         userMapper.updateById(sysUserDO);
+
+        // 广播头像变更事件到该用户的所有在线端（多端同步）
+        broadcastAvatarChanged(id, avatar);
+
         return avatar;
     }
 
@@ -376,6 +386,32 @@ public class AdminUserServiceImpl implements AdminUserService {
         sysUserDO.setId(id);
         sysUserDO.setAvatar("");
         userMapper.updateById(sysUserDO);
+
+        // 广播头像变更事件到该用户的所有在线端
+        broadcastAvatarChanged(id, "");
+    }
+
+    /**
+     * 广播用户头像变更事件到该用户的所有在线 WebSocket 连接
+     * 用于多端同步、会话列表刷新、聊天页头像刷新等场景
+     */
+    private void broadcastAvatarChanged(Long userId, String avatarUrl) {
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            String extra = JSONUtil.createObj()
+                    .set("action", "user_avatar_changed")
+                    .set("userId", String.valueOf(userId))
+                    .set("avatarUrl", avatarUrl != null ? avatarUrl : "")
+                    .toString();
+            TextMessage body = TextMessage.newBuilder().setContent("USER_AVATAR_CHANGED").build();
+            nettyMessageSender.sendToUserWithExtra(userId, MessageType.SYSTEM_NOTIFY, body,
+                    0L, userId, 0L, tenantId,
+                    null, null, null,
+                    null, null, extra);
+            log.info("[AdminUserService] 广播头像变更事件, userId={}, avatarUrl={}", userId, avatarUrl);
+        } catch (Exception e) {
+            log.warn("[AdminUserService] 广播头像变更事件失败, userId={}, error={}", userId, e.getMessage(), e);
+        }
     }
 
     @Override

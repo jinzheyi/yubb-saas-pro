@@ -109,6 +109,17 @@ class SocketInboundMapper {
     final extra = _decodeExtra(envelope.header.extra);
     final merged = <String, Object?>{...extra, ...body};
     final action = merged['action']?.toString() ?? '';
+
+    // 用户头像变更事件：拆分为独立事件类型，便于上层监听
+    if (action == 'user_avatar_changed') {
+      return <ImSocketEvent>[
+        ImSocketEvent(
+          type: SocketEventTypes.userAvatarChanged,
+          payload: merged,
+        ),
+      ];
+    }
+
     if (action == 'RENEW_SUGGEST') {
       return <ImSocketEvent>[
         ImSocketEvent(

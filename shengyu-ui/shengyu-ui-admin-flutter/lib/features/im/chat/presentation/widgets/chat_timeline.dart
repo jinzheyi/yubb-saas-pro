@@ -41,7 +41,6 @@ class ChatTimeline extends StatelessWidget {
     this.outgoingFooterLabelBuilder,
     this.showSenderNamesForIncoming = false,
     this.watermarkText,
-    this.currentUserAvatarUrl,
   });
 
   final List<Message> messages;
@@ -72,7 +71,6 @@ class ChatTimeline extends StatelessWidget {
   final String Function(Message message)? outgoingFooterLabelBuilder;
   final bool showSenderNamesForIncoming;
   final String? watermarkText;
-  final String? currentUserAvatarUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +160,6 @@ class ChatTimeline extends StatelessWidget {
                           activeVoicePlaybackDurationMs,
                       outgoingFooterLabelBuilder: outgoingFooterLabelBuilder,
                       showSenderNamesForIncoming: showSenderNamesForIncoming,
-                      currentUserAvatarUrl: currentUserAvatarUrl,
                     ),
                   ),
                 ],
@@ -223,7 +220,6 @@ class _MessageRow extends StatelessWidget {
     required this.activeVoicePlaybackDurationMs,
     required this.outgoingFooterLabelBuilder,
     required this.showSenderNamesForIncoming,
-    required this.currentUserAvatarUrl,
   });
 
   final List<Message> messages;
@@ -251,7 +247,6 @@ class _MessageRow extends StatelessWidget {
   final int activeVoicePlaybackDurationMs;
   final String Function(Message message)? outgoingFooterLabelBuilder;
   final bool showSenderNamesForIncoming;
-  final String? currentUserAvatarUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +361,7 @@ class _MessageRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          ChatAvatar(seed: senderDisplayName, imageUrl: currentUserAvatarUrl),
+          ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
         ],
       );
     }

@@ -476,6 +476,39 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
   }
 
+  /// 更新会话目标头像（用于对方头像变更时同步到会话列表）
+  void patchConversationAvatar({
+    required String targetId,
+    required String avatarUrl,
+    ConversationType? conversationType,
+  }) {
+    if (targetId.isEmpty || targetId == '0') {
+      return;
+    }
+    final normalizedAvatar = avatarUrl.trim();
+    if (normalizedAvatar.isEmpty) {
+      return;
+    }
+    final items = [...state.conversations];
+    final index = _findConversationIndex(
+      items,
+      chatId: '',
+      targetId: targetId,
+      conversationType: conversationType,
+    );
+    if (index < 0) {
+      return;
+    }
+    if (items[index].targetAvatar?.trim() == normalizedAvatar) {
+      return;
+    }
+    items[index] = items[index].copyWith(targetAvatar: normalizedAvatar);
+    state = state.copyWith(
+      status: ConversationListStatus.ready,
+      conversations: _sortConversations(items),
+    );
+  }
+
   void applyBadgeSnapshot(Map<String, int> conversationBadges) {
     if (conversationBadges.isEmpty || state.conversations.isEmpty) {
       return;

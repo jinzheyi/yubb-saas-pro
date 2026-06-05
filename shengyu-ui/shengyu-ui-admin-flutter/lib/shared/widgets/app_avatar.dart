@@ -42,6 +42,8 @@ class AppAvatar extends StatelessWidget {
           width: size,
           height: size,
           fit: fit,
+          cacheWidth: (size * 2).toInt(),
+          cacheHeight: (size * 2).toInt(),
           errorBuilder: (_, _, _) {
             if (onImageError != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {

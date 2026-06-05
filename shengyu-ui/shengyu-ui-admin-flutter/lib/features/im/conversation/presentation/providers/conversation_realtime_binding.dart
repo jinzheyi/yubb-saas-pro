@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 
 final groupMemberRemovedSignalProvider =
@@ -51,6 +52,9 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
     case SocketEventTypes.badgeUpdated:
       _handleBadgeUpdated(ref, event);
       break;
+    case SocketEventTypes.userAvatarChanged:
+      _handleUserAvatarChanged(ref, event);
+      break;
     case SocketEventTypes.systemNotify:
       _handleConversationSystemNotify(ref, event);
       break;
@@ -63,6 +67,25 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
 Future<void> _initBadgeFromServer(Ref ref) async {
   final dio = ref.read(dioProvider);
   await ref.read(badgeServiceProvider.notifier).initBadgeData(dio);
+}
+
+/// 用户头像变更事件处理
+/// 刷新当前用户的个人资料（自己改头像时）
+void _handleUserAvatarChanged(Ref ref, ImSocketEvent event) {
+  final payload = event.payload;
+  final action = payload['action']?.toString() ?? '';
+  if (action != 'user_avatar_changed') {
+    return;
+  }
+
+  final currentUserId = ref.read(authSessionProvider).userId;
+  final changedUserId = payload['userId']?.toString() ?? '';
+  if (changedUserId.isEmpty || changedUserId != currentUserId) {
+    return;
+  }
+
+  // 仅处理自己的头像变更：刷新个人资料
+  ref.invalidate(currentUserProfileProvider);
 }
 
 void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {

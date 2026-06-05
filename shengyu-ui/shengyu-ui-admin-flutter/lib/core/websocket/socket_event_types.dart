@@ -26,4 +26,7 @@ abstract final class SocketEventTypes {
   static const messageRecalled = 'messageRecalled';
   static const readReceiptChanged = 'readReceiptChanged';
   static const typingReceived = 'typingReceived';
+
+  /// 用户头像变更事件（由后端 SYSTEM_NOTIFY action=user_avatar_changed 触发）
+  static const userAvatarChanged = 'userAvatarChanged';
 }

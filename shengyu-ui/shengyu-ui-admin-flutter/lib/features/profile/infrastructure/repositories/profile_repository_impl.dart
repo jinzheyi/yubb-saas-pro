@@ -20,4 +20,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
       postName: dto.postName,
     );
   }
+
+  @override
+  Future<String> uploadAvatar({required String fileName, required List<int> bytes}) {
+    return _remoteDataSource.uploadAvatar(fileName: fileName, bytes: bytes);
+  }
+
+  @override
+  Future<void> deleteAvatar() {
+    return _remoteDataSource.deleteAvatar();
+  }
 }

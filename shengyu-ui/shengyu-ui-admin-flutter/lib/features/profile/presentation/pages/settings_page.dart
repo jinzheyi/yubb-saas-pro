@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -28,7 +32,10 @@ class SettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.only(top: 10, bottom: 24),
         children: [
           if (profile != null)
-            _SettingsProfileCard(profile: profile)
+            _SettingsProfileCard(
+              profile: profile,
+              onTapAvatar: () => _showAvatarActionSheet(context, ref),
+            )
           else if (profileAsync.hasError)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -86,6 +93,177 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
+
+  /// 弹出头像操作面板
+  Future<void> _showAvatarActionSheet(BuildContext context, WidgetRef ref) async {
+    final strings = AppLocalizations.of(context);
+    final profile = ref.read(currentUserProfileProvider).valueOrNull;
+    final hasAvatar = profile != null && profile.avatarUrl.isNotEmpty;
+
+    if (!context.mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
+              title: Text(hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadAvatar(context, ref);
+              },
+            ),
+            if (hasAvatar) ...[
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                title: Text(
+                  strings.profileRemoveCustomAvatar,
+                  style: const TextStyle(color: Color(0xFFFF4B4B)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmRemoveAvatar(context, ref);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAvatar(BuildContext context, WidgetRef ref) async {
+    final strings = AppLocalizations.of(context);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty || !context.mounted) return;
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    if (bytes == null || bytes.isEmpty) return;
+    final fileName = picked.name.isNotEmpty ? picked.name : 'avatar.jpg';
+
+    if (!context.mounted) return;
+    final dialogFuture = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Consumer(
+          builder: (dialogContext, ref, _) {
+            final uploadState = ref.watch(avatarUploadStateProvider);
+            return Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (uploadState.isUploading) ...[
+                      CircularProgressIndicator(
+                        value: uploadState.progress > 0 ? uploadState.progress : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(strings.profileAvatarUploading),
+                    ] else ...[
+                      const Icon(Icons.check_circle, size: 48, color: Color(0xFF07C160)),
+                      const SizedBox(height: 16),
+                      Text(strings.profileAvatarUploadSuccess),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    final success = await ref.read(avatarUploadStateProvider.notifier).upload(
+      fileName: fileName,
+      bytes: bytes,
+    );
+
+    // 关闭进度对话框
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? strings.profileAvatarUploadSuccess : strings.profileAvatarUploadFailed),
+          backgroundColor: success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    await dialogFuture.catchError((_) {});
+  }
+
+  Future<void> _confirmRemoveAvatar(BuildContext context, WidgetRef ref) async {
+    final strings = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(strings.profileConfirmRemoveAvatar),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancelAction),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF4B4B)),
+            child: Text(strings.confirmAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final dialogFuture = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
+    );
+
+    final success = await ref.read(avatarUploadStateProvider.notifier).delete();
+
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? strings.profileAvatarRemoveSuccess : strings.profileAvatarRemoveFailed),
+          backgroundColor: success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    await dialogFuture.catchError((_) {});
+  }
 }
 
 class _SettingsGroup extends StatelessWidget {
@@ -116,9 +294,13 @@ class _SettingsGroup extends StatelessWidget {
 }
 
 class _SettingsProfileCard extends StatelessWidget {
-  const _SettingsProfileCard({required this.profile});
+  const _SettingsProfileCard({
+    required this.profile,
+    required this.onTapAvatar,
+  });
 
   final UserProfile profile;
+  final VoidCallback onTapAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -132,21 +314,59 @@ class _SettingsProfileCard extends StatelessWidget {
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       margin: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            profile.nickname.trim().isEmpty ? '--' : profile.nickname.trim(),
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF202531),
+          GestureDetector(
+            onTap: onTapAvatar,
+            child: Stack(
+              children: [
+                AppAvatar(
+                  name: profile.nickname,
+                  avatarUrl: profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
+                  size: 56,
+                  borderRadius: 14,
+                  fontSize: 18,
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3D6FF5),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            parts.isEmpty ? '--' : parts.join(' · '),
-            style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.nickname.trim().isEmpty ? '--' : profile.nickname.trim(),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF202531),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  parts.isEmpty ? '--' : parts.join(' · '),
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
+                ),
+              ],
+            ),
           ),
         ],
       ),

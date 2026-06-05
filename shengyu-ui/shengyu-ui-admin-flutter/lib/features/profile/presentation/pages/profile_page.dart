@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,6 +62,8 @@ class ProfilePage extends ConsumerWidget {
               summary: summary,
               secondaryLine: secondaryLine,
               avatarUrl: profile.avatarUrl,
+              nickname: profile.nickname,
+              onTapAvatar: () => _showAvatarActionSheet(context, ref),
             ),
             const SizedBox(height: 14),
             PrimaryMenuSection(
@@ -123,6 +128,186 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
+  /// 弹出头像操作面板（参考 uniappx 老项目）
+  Future<void> _showAvatarActionSheet(BuildContext context, WidgetRef ref) async {
+    final strings = ref.read(appStringsProvider);
+    final profile = ref.read(currentUserProfileProvider).valueOrNull;
+    final hasAvatar = profile != null && profile.avatarUrl.isNotEmpty;
+
+    if (!context.mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
+              title: Text(
+                hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadAvatar(context, ref);
+              },
+            ),
+            if (hasAvatar) ...[
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                title: Text(
+                  strings.profileRemoveCustomAvatar,
+                  style: const TextStyle(color: Color(0xFFFF4B4B)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmRemoveAvatar(context, ref);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 选择图片并上传
+  Future<void> _pickAndUploadAvatar(BuildContext context, WidgetRef ref) async {
+    final strings = ref.read(appStringsProvider);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty || !context.mounted) {
+      return;
+    }
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
+    final fileName = picked.name.isNotEmpty ? picked.name : 'avatar.jpg';
+
+    // 显示上传进度
+    if (!context.mounted) return;
+    final dialogFuture = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Consumer(
+          builder: (dialogContext, ref, _) {
+            final uploadState = ref.watch(avatarUploadStateProvider);
+            return Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (uploadState.isUploading) ...[
+                      CircularProgressIndicator(value: uploadState.progress > 0 ? uploadState.progress : null),
+                      const SizedBox(height: 16),
+                      Text(strings.profileAvatarUploading),
+                    ] else ...[
+                      const Icon(Icons.check_circle, size: 48, color: Color(0xFF07C160)),
+                      const SizedBox(height: 16),
+                      Text(strings.profileAvatarUploadSuccess),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    final success = await ref.read(avatarUploadStateProvider.notifier).upload(
+      fileName: fileName,
+      bytes: bytes,
+    );
+
+    // 关闭进度对话框
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (success) {
+      if (context.mounted) _showToast(context, strings.profileAvatarUploadSuccess, success: true);
+    } else {
+      if (context.mounted) _showToast(context, strings.profileAvatarUploadFailed, success: false);
+    }
+
+    // 等待 dialogFuture 完成，避免未处理的异常
+    await dialogFuture.catchError((_) {});
+  }
+
+  /// 确认删除头像
+  Future<void> _confirmRemoveAvatar(BuildContext context, WidgetRef ref) async {
+    final strings = ref.read(appStringsProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(strings.profileConfirmRemoveAvatar),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancelAction),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF4B4B)),
+            child: Text(strings.confirmAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final dialogFuture = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
+    );
+
+    final success = await ref.read(avatarUploadStateProvider.notifier).delete();
+
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (success) {
+      _showToast(context, strings.profileAvatarRemoveSuccess, success: true);
+    } else {
+      _showToast(context, strings.profileAvatarRemoveFailed, success: false);
+    }
+
+    await dialogFuture.catchError((_) {});
+  }
+
+  void _showToast(BuildContext context, String message, {required bool success}) {
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null || message.trim().isEmpty) return;
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => _CenterToast(message: message, success: success, onDismiss: () => entry.remove()),
+    );
+    overlay.insert(entry);
+  }
+
   String _buildSummary(dynamic strings, UserProfile profile) {
     final post = profile.postName.isNotEmpty
         ? profile.postName
@@ -167,6 +352,8 @@ class ProfilePage extends ConsumerWidget {
               summary: '',
               secondaryLine: '',
               avatarUrl: null,
+              nickname: '',
+              onTapAvatar: () => _showAvatarActionSheet(context, ref),
             ),
             const SizedBox(height: 14),
             Padding(
@@ -297,18 +484,74 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
+/// 居中 Toast 提示
+class _CenterToast extends StatefulWidget {
+  const _CenterToast({required this.message, required this.success, required this.onDismiss});
+  final String message;
+  final bool success;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_CenterToast> createState() => _CenterToastState();
+}
+
+class _CenterToastState extends State<_CenterToast> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) widget.onDismiss();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xCC1F2329),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.success ? Icons.check_circle : Icons.error_outline,
+                color: widget.success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.message,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({
     required this.username,
     required this.summary,
     required this.secondaryLine,
     required this.avatarUrl,
+    required this.nickname,
+    required this.onTapAvatar,
   });
 
   final String username;
   final String summary;
   final String secondaryLine;
   final String? avatarUrl;
+  final String nickname;
+  final VoidCallback onTapAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -321,10 +564,33 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              _ProfileAvatar(
-                name: username,
-                avatarUrl: avatarUrl,
-                fontSize: theme.textTheme.headlineSmall?.fontSize ?? 24,
+              GestureDetector(
+                onTap: onTapAvatar,
+                child: Stack(
+                  children: [
+                    _ProfileAvatar(
+                      name: username,
+                      avatarUrl: avatarUrl,
+                      fontSize: theme.textTheme.headlineSmall?.fontSize ?? 24,
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF3D6FF5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(

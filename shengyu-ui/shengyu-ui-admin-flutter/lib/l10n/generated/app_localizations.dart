@@ -1070,11 +1070,71 @@ abstract class AppLocalizations {
   /// **'Tap to change or remove avatar'**
   String get profileAvatarHint;
 
-  /// No description provided for @profileDepartmentFallback.
+  /// No description provided for @profileUploadAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Avatar'**
+  String get profileUploadAvatar;
+
+  /// No description provided for @profileReuploadAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Reupload Avatar'**
+  String get profileReuploadAvatar;
+
+  /// No description provided for @profileRemoveCustomAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Custom Avatar'**
+  String get profileRemoveCustomAvatar;
+
+  /// No description provided for @profileConfirmRemoveAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm removing custom avatar'**
+  String get profileConfirmRemoveAvatar;
+
+  /// No description provided for @profileAvatarUploadSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar uploaded successfully'**
+  String get profileAvatarUploadSuccess;
+
+  /// No description provided for @profileAvatarUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload avatar'**
+  String get profileAvatarUploadFailed;
+
+  /// No description provided for @profileAvatarRemoveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar removed'**
+  String get profileAvatarRemoveSuccess;
+
+  /// No description provided for @profileAvatarRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove avatar'**
+  String get profileAvatarRemoveFailed;
+
+  /// No description provided for @profileAvatarUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading avatar...'**
+  String get profileAvatarUploading;
+
+  /// No description provided for @profileUploadFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed, please retry'**
+  String get profileUploadFailedRetry;
+
+  /// No description provided for @departmentFallback.
   ///
   /// In en, this message translates to:
   /// **'No department assigned'**
-  String get profileDepartmentFallback;
+  String get departmentFallback;
 
   /// No description provided for @profilePostFallback.
   ///
