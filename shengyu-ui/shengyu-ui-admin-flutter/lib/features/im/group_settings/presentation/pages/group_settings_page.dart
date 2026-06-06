@@ -579,7 +579,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       ),
       centerTitle: true,
       title: Text(
-        isReadOnly ? '群设置（只读）' : strings.groupSettingsTitle,
+        isReadOnly ? strings.groupSettingsReadOnlyTitle : strings.groupSettingsTitle,
       ),
     );
   }
@@ -595,19 +595,19 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     Color textColor;
 
     if (state.isGroupKicked) {
-      hint = '你已被移出群聊，当前仅可查看历史信息';
+      hint = strings.groupSettingsReadOnlyBannerKicked;
       bgColor = Colors.orange[50]!;
       textColor = Colors.orange[800]!;
     } else if (state.isGroupLeft) {
-      hint = '你已退出群聊，当前仅可查看历史信息';
+      hint = strings.groupSettingsReadOnlyBannerLeft;
       bgColor = Colors.blue[50]!;
       textColor = Colors.blue[800]!;
     } else if (state.isGroupDisbanded) {
-      hint = '该群已解散';
+      hint = strings.groupSettingsReadOnlyBannerDisbanded;
       bgColor = Colors.red[50]!;
       textColor = Colors.red[800]!;
     } else {
-      hint = '你已不在群内';
+      hint = strings.groupSettingsReadOnlyBannerDefault;
       bgColor = Colors.grey[100]!;
       textColor = Colors.grey[800]!;
     }

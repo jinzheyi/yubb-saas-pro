@@ -387,6 +387,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       AppLanguageMode.system => strings.languageModeSystemTitle,
       AppLanguageMode.zhCn => strings.languageModeZhCnTitle,
       AppLanguageMode.en => strings.languageModeEnTitle,
+      AppLanguageMode.ja => strings.languageModeJaTitle,
+      AppLanguageMode.ko => strings.languageModeKoTitle,
     };
   }
 

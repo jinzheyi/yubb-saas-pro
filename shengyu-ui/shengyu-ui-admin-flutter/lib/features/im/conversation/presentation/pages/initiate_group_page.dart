@@ -18,6 +18,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/provid
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -56,12 +57,13 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final selectionState = ref.watch(contactSelectionControllerProvider);
     final filtered = _filteredContacts();
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: Text(widget.args.isAddMode ? '添加成员' : '发起群聊'),
+        title: Text(widget.args.isAddMode ? strings.addMemberAction : strings.createGroupAction),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
           onPressed: _handleBack,
@@ -78,7 +80,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '搜索成员',
+                      hintText: strings.searchMemberHint,
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _searchController.text.trim().isEmpty
                           ? null
@@ -104,7 +106,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                   items: [
                     ContactPickerCategoryAction(
                       icon: AppIconKind.groupsFill,
-                      label: '我的群组',
+                      label: strings.myGroups,
                       color: const Color(0xFFFB923C),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyGroups,
@@ -116,7 +118,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.starOutline,
-                      label: '我的关注',
+                      label: strings.myFollows,
                       color: const Color(0xFFEAB308),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyFollowing,
@@ -128,7 +130,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.tree,
-                      label: '组织架构',
+                      label: strings.organization,
                       color: const Color(0xFF84CC16),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsOrg,
@@ -140,7 +142,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                     ),
                     ContactPickerCategoryAction(
                       icon: AppIconKind.apartment,
-                      label: '我的部门',
+                      label: strings.myDepartments,
                       color: const Color(0xFF06B6D4),
                       onTap: () => _openPickerCategory(
                         RouteNames.contactsMyDepartment,
@@ -427,6 +429,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
       _submitting = true;
     });
     try {
+      final strings = AppLocalizations.of(context);
       if (widget.args.isAddMode) {
         await ref
             .read(groupSettingsRepositoryProvider)
@@ -441,7 +444,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('添加成员成功')));
+        ).showSnackBar(SnackBar(content: Text(strings.groupMemberAddedSuccess)));
         context.pop(true);
       } else {
         final groupName = _trimGroupName(_generateGroupName(selectedMembers));

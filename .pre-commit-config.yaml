@@ -1,0 +1,14 @@
+# Pre-commit hooks configuration
+# Install: brew install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: check-i18n
+        name: Check i18n translation integrity
+        entry: bash shengyu-ui/shengyu-ui-admin-flutter/scripts/check_i18n.sh
+        language: system
+        files: ^shengyu-ui/shengyu-ui-admin-flutter/lib/l10n/arb/.*\.arb$
+        pass_filenames: false
+        description: "Validates ARB file translation completeness and placeholder metadata consistency"

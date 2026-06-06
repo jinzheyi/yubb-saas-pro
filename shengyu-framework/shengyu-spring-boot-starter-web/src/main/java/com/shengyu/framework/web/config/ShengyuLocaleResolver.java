@@ -11,15 +11,20 @@ import java.util.Locale;
  * 统一语言解析：
  * - 支持 zh/zh-CN/zh-Hans -> zh_CN
  * - 支持 en/en-US -> en
+ * - 预留 ja/ko 支持（前端暂不开放，底层能力已就绪）
  * - 其它语言回退到简体中文
  */
 public class ShengyuLocaleResolver extends AcceptHeaderLocaleResolver {
 
     private static final Locale LOCALE_ZH_CN = Locale.SIMPLIFIED_CHINESE;
     private static final Locale LOCALE_EN = Locale.ENGLISH;
+    private static final Locale LOCALE_JA = Locale.JAPANESE;
+    private static final Locale LOCALE_KO = Locale.KOREAN;
     private static final List<Locale> SUPPORTED_LOCALES = Arrays.asList(
             LOCALE_ZH_CN,
-            LOCALE_EN
+            LOCALE_EN,
+            LOCALE_JA,
+            LOCALE_KO
     );
 
     public ShengyuLocaleResolver() {
@@ -39,6 +44,12 @@ public class ShengyuLocaleResolver extends AcceptHeaderLocaleResolver {
         }
         if (normalized.startsWith("en")) {
             return LOCALE_EN;
+        }
+        if (normalized.startsWith("ja")) {
+            return LOCALE_JA;
+        }
+        if (normalized.startsWith("ko")) {
+            return LOCALE_KO;
         }
         return getDefaultLocale();
     }

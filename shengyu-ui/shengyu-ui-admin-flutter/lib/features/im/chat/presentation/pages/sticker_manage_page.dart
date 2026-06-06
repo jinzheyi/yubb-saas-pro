@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_empty_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_loading_view.dart';
@@ -141,10 +142,12 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
             ),
           );
 
+    final strings = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5FA),
       appBar: AppBar(
-        title: const Text('表情管理'),
+        title: Text(strings.stickerManageTitle),
         actions: [
           TextButton(
             onPressed: _loading || _savingSort
@@ -157,12 +160,12 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
                       }
                     });
                   },
-            child: Text(_sortMode ? '完成' : '整理'),
+            child: Text(_sortMode ? strings.doneAction : strings.organizeAction),
           ),
         ],
       ),
       body: PrimaryPageScaffold(
-        title: '表情管理',
+        title: strings.stickerManageTitle,
         headerBottomSpacing: 8,
         body: body,
       ),
@@ -292,6 +295,7 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
     if (_savingSort) {
       return;
     }
+    final strings = AppLocalizations.of(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -306,7 +310,7 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
                   size: 20,
                   color: Color(0xFF202531),
                 ),
-                title: const Text('删除表情'),
+                title: Text(strings.deleteStickerAction),
                 onTap: () => Navigator.of(sheetContext).pop(true),
               ),
               ListTile(
@@ -315,7 +319,7 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
                   size: 20,
                   color: Color(0xFF202531),
                 ),
-                title: const Text('取消'),
+                title: Text(strings.cancelAction),
                 onTap: () => Navigator.of(sheetContext).pop(false),
               ),
             ],
@@ -343,7 +347,7 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('已删除表情')));
+      ).showSnackBar(SnackBar(content: Text(strings.stickerDeleted)));
     } catch (error) {
       if (!mounted) {
         return;
@@ -388,6 +392,7 @@ class _StickerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -489,22 +494,22 @@ class _StickerTile extends StatelessWidget {
                 runSpacing: 6,
                 children: [
                   _SortMiniButton(
-                    label: '置顶',
+                    label: strings.stickerPin,
                     enabled: canMoveTop && !savingSort,
                     onTap: onMoveTop,
                   ),
                   _SortMiniButton(
-                    label: '左移',
+                    label: strings.stickerMoveLeft,
                     enabled: canMoveTop && !savingSort,
                     onTap: onMoveLeft,
                   ),
                   _SortMiniButton(
-                    label: '右移',
+                    label: strings.stickerMoveRight,
                     enabled: canMoveBottom && !savingSort,
                     onTap: onMoveRight,
                   ),
                   _SortMiniButton(
-                    label: '置底',
+                    label: strings.stickerMoveBottom,
                     enabled: canMoveBottom && !savingSort,
                     onTap: onMoveBottom,
                   ),

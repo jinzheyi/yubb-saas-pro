@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_invite_verification_result.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 
@@ -56,11 +57,12 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final verified = _verified;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(title: const Text('加入群聊')),
+      appBar: AppBar(title: Text(strings.joinGroupAction)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -73,19 +75,19 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '手动输入入群信息',
+                Text(
+                  strings.manualEntryTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF202531),
+                    color: const Color(0xFF202531),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _inputController,
                   decoration: InputDecoration(
-                    hintText: '请输入邀请码或群邀请链接',
+                    hintText: strings.inputInviteCodeHint,
                     filled: true,
                     fillColor: const Color(0xFFF3F4F8),
                     border: OutlineInputBorder(
@@ -102,21 +104,21 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _loading ? null : _handlePasteInvite,
-                        child: const Text('粘贴'),
+                        child: Text(strings.pasteAction),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
                         onPressed: _loading ? null : _handleManualVerify,
-                        child: Text(_loading ? '校验中...' : '校验'),
+                        child: Text(_loading ? strings.verifyingAction : strings.verifyAction),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '支持直接粘贴老项目二维码链接、邀请码文本或扫码结果。',
+                  strings.invitePasteHint,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: const Color(0xFF98A1B2),
                   ),
@@ -134,7 +136,7 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
             )
           else if (_hasVerifyAttempted && !_isValid)
             _JoinGroupErrorCard(
-              message: _errorMessage.isEmpty ? '邀请码无效或已过期' : _errorMessage,
+              message: _errorMessage.isEmpty ? strings.invalidInviteExpired : _errorMessage,
               onRetry: _resetVerifyState,
             )
           else if (verified != null && _isValid)
@@ -150,7 +152,7 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
               padding: const EdgeInsets.symmetric(vertical: 56),
               alignment: Alignment.center,
               child: Text(
-                '等待输入邀请码',
+                strings.waitingForInput,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: const Color(0xFF697386),
                 ),
@@ -165,7 +167,8 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim() ?? '';
     if (text.isEmpty) {
-      _showMessage('剪贴板为空');
+      if (!mounted) return;
+      _showMessage(AppLocalizations.of(context).clipboardEmpty);
       return;
     }
     _inputController.text = text;
@@ -179,7 +182,7 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
         _hasVerifyAttempted = true;
         _isValid = false;
         _alreadyInGroup = false;
-        _errorMessage = '无法识别入群码或邀请链接';
+        _errorMessage = AppLocalizations.of(context).unrecognizedInvite;
       });
       return;
     }
@@ -198,13 +201,14 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       setState(() {
         _verified = verified;
         _isValid = verified.valid;
         _groupId = verified.groupId.isNotEmpty
             ? verified.groupId
             : payload.groupId;
-        _errorMessage = verified.valid ? '' : '邀请码无效或已过期';
+        _errorMessage = verified.valid ? '' : strings.invalidInviteExpired;
       });
     } catch (error) {
       if (!mounted) {
@@ -237,8 +241,9 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       final message = result.message.trim().isEmpty
-          ? (result.resultType == 2 ? '申请已提交' : '已加入群聊')
+          ? (result.resultType == 2 ? strings.applicationSubmitted : strings.joinedGroup)
           : result.message.trim();
       _showMessage(message);
       if (result.resultType == 2) {
@@ -361,7 +366,8 @@ class _JoinGroupPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final expireText = _formatExpireText(verified.expireTime);
+    final strings = AppLocalizations.of(context);
+    final expireText = _formatExpireText(verified.expireTime, strings);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -387,7 +393,7 @@ class _JoinGroupPreviewCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             verified.groupName.trim().isEmpty
-                ? '未命名群聊'
+                ? strings.unnamedGroup
                 : verified.groupName.trim(),
             style: const TextStyle(
               fontSize: 18,
@@ -402,14 +408,14 @@ class _JoinGroupPreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _InfoRow(
-            label: '邀请码',
+            label: strings.groupInviteCode,
             value: verified.groupId.trim().isEmpty
                 ? '--'
                 : verified.groupId.trim(),
           ),
-          _InfoRow(label: '过期时间', value: expireText),
+          _InfoRow(label: strings.expireTime, value: expireText),
           if (verified.needApproval)
-            const _InfoRow(label: '加入方式', value: '需管理员审核'),
+            _InfoRow(label: strings.groupJoinMethod, value: strings.groupJoinRequiresApproval),
           const SizedBox(height: 20),
           if (alreadyInGroup)
             OutlinedButton(
@@ -417,7 +423,7 @@ class _JoinGroupPreviewCard extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
               ),
-              child: const Text('查看群聊'),
+              child: Text(strings.viewGroupAction),
             )
           else
             FilledButton(
@@ -426,7 +432,7 @@ class _JoinGroupPreviewCard extends StatelessWidget {
                 minimumSize: const Size.fromHeight(44),
               ),
               child: Text(
-                joining ? '提交中...' : (verified.needApproval ? '提交申请' : '加入群聊'),
+                joining ? strings.submittingAction : (verified.needApproval ? strings.submitApplication : strings.joinGroupAction),
               ),
             ),
         ],
@@ -434,7 +440,7 @@ class _JoinGroupPreviewCard extends StatelessWidget {
     );
   }
 
-  String _formatExpireText(String raw) {
+  String _formatExpireText(String raw, AppLocalizations strings) {
     final text = raw.trim();
     if (text.isEmpty) {
       return '--';
@@ -445,12 +451,12 @@ class _JoinGroupPreviewCard extends StatelessWidget {
     }
     final diff = expire.toLocal().difference(DateTime.now());
     if (diff.inSeconds <= 0) {
-      return '已过期';
+      return strings.expired;
     }
     if (diff.inHours > 0) {
-      return '${diff.inHours}小时${diff.inMinutes % 60}分钟后过期';
+      return strings.hoursMinutesExpire(diff.inHours, diff.inMinutes % 60);
     }
-    return '${diff.inMinutes}分钟后过期';
+    return strings.minutesExpire(diff.inMinutes);
   }
 }
 
@@ -462,6 +468,7 @@ class _JoinGroupErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -486,13 +493,13 @@ class _JoinGroupErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '请重新输入有效的邀请码或邀请链接。',
+          Text(
+            strings.reEnterHint,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: Color(0xFF697386)),
           ),
           const SizedBox(height: 16),
-          OutlinedButton(onPressed: onRetry, child: const Text('重新输入')),
+          OutlinedButton(onPressed: onRetry, child: Text(strings.reEnterAction)),
         ],
       ),
     );

@@ -3,14 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
-class LanguageSettingsPage extends ConsumerWidget {
+class LanguageSettingsPage extends ConsumerStatefulWidget {
   const LanguageSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LanguageSettingsPage> createState() =>
+      _LanguageSettingsPageState();
+}
+
+class _LanguageSettingsPageState
+    extends ConsumerState<LanguageSettingsPage> {
+  AppLanguageMode? _pendingMode;
+
+  @override
+  Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final state = ref.watch(appLocaleControllerProvider);
     final controller = ref.read(appLocaleControllerProvider.notifier);
+
+    final displayMode = _pendingMode ?? state.languageMode;
 
     final options = [
       (
@@ -30,15 +41,38 @@ class LanguageSettingsPage extends ConsumerWidget {
       ),
     ];
 
+    final hasChanges = _pendingMode != null && _pendingMode != state.languageMode;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            if (hasChanges) {
+              _showCancelConfirm(context);
+            } else {
+              Navigator.of(context).maybePop();
+            }
+          },
         ),
         centerTitle: true,
         title: Text(strings.settingsLanguage),
+        actions: [
+          TextButton(
+            onPressed: hasChanges
+                ? () async {
+                    await controller.selectLanguageMode(_pendingMode!);
+                    if (mounted) {
+                      setState(() {
+                        _pendingMode = null;
+                      });
+                    }
+                  }
+                : null,
+            child: Text(strings.confirmAction),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
@@ -54,9 +88,12 @@ class LanguageSettingsPage extends ConsumerWidget {
                   _LanguageOptionTile(
                     title: options[index].title,
                     description: options[index].description,
-                    selected: state.languageMode == options[index].mode,
-                    onTap: () =>
-                        controller.selectLanguageMode(options[index].mode),
+                    selected: displayMode == options[index].mode,
+                    onTap: () {
+                      setState(() {
+                        _pendingMode = options[index].mode;
+                      });
+                    },
                   ),
                   if (index != options.length - 1)
                     const Divider(
@@ -96,6 +133,33 @@ class LanguageSettingsPage extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelConfirm(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.cancelAction),
+        content: Text(strings.discardChangesConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.continueEditAction),
+          ),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                _pendingMode = null;
+              });
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).maybePop();
+            },
+            child: Text(strings.discardAction),
           ),
         ],
       ),

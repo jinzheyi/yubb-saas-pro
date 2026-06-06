@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 
-enum AppLanguageMode { system, zhCn, en }
+enum AppLanguageMode { system, zhCn, en, ja, ko }
 
 class AppLocaleState {
   const AppLocaleState({
@@ -81,6 +81,8 @@ class AppLocaleController extends StateNotifier<AppLocaleState> {
     return switch (raw) {
       'zhCn' => AppLanguageMode.zhCn,
       'en' => AppLanguageMode.en,
+      'ja' => AppLanguageMode.ja,
+      'ko' => AppLanguageMode.ko,
       _ => AppLanguageMode.system,
     };
   }
@@ -92,6 +94,8 @@ class AppLocaleController extends StateNotifier<AppLocaleState> {
       ),
       AppLanguageMode.zhCn => const Locale('zh', 'CN'),
       AppLanguageMode.en => const Locale('en'),
+      AppLanguageMode.ja => const Locale('ja'),
+      AppLanguageMode.ko => const Locale('ko'),
     };
   }
 

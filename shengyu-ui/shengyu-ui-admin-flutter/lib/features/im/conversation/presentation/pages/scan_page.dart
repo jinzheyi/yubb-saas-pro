@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -72,6 +73,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
@@ -161,9 +163,9 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                               ),
                             ],
                           )
-                        : const _ScannerFallback(
-                            title: '当前平台未接入原生扫码',
-                            description: '仍可继续通过下方入口手动入群。',
+                        : _ScannerFallback(
+                            title: strings.scanPlatformNotSupported,
+                            description: strings.scanManualJoinHint,
                           ),
                   ),
                 ),
@@ -278,9 +280,10 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('切换手电筒失败: $error')));
+      ).showSnackBar(SnackBar(content: Text(strings.torchToggleFailed(error.toString()))));
     }
   }
 

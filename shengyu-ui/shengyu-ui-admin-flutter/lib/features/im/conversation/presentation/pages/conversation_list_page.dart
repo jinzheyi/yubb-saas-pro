@@ -1049,6 +1049,7 @@ class _ConversationContextMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -1085,14 +1086,14 @@ class _ConversationContextMenu extends StatelessWidget {
               ),
             ),
             if (!isGroupRemoved) ...[
-              _MenuTextButton(label: pinned ? '取消置顶' : '置顶会话', onTap: onPinTap),
+              _MenuTextButton(label: pinned ? strings.pinConversation : strings.unpinConversation, onTap: onPinTap),
               _MenuTextButton(
-                label: unread ? '标为已读' : '标为未读',
+                label: unread ? strings.markAsRead : strings.markAsUnread,
                 onTap: onUnreadTap,
               ),
             ],
             _MenuTextButton(
-              label: '删除会话',
+              label: strings.deleteConversation,
               color: const Color(0xFFFF4D4F),
               onTap: onDeleteTap,
             ),

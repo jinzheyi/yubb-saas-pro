@@ -684,22 +684,24 @@ class _SystemMessage extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0x0F1F2329),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                _resolveSystemMessageText(message, strings),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7380),
-                  height: 1.5,
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0x0F1F2329),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _resolveSystemMessageText(message, strings),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7380),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),

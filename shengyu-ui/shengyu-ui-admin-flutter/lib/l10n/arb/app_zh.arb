@@ -1,30 +1,44 @@
 {
   "@@locale": "zh",
+
+  "@@@APP_COMMON": "Section: App Common",
   "appName": "圣钰科技 IM",
   "loginIntro": "企业级即时通讯与协同入口",
   "enterConversation": "进入会话",
-  "conversationTitle": "会话",
-  "contactsTitle": "通讯录",
-  "workbenchTitle": "工作台",
-  "profileTitle": "我的",
-  "chatTitle": "聊天",
-  "emptyConversation": "暂无会话",
-  "inputMessage": "输入消息",
+  "backAction": "返回",
+  "cancelAction": "取消",
+  "confirmAction": "确定",
+  "doneAction": "完成",
+  "organizeAction": "整理",
+  "retry": "重试",
+  "unknownError": "系统开小差了，请稍后重试",
+  "searchAction": "搜索",
+  "resetAction": "重置",
   "searchHint": "搜索",
+  "searchMinLength": "请至少输入 2 个字符",
+
+  "@@@AUTH": "Section: Auth",
   "usernameLabel": "账号",
   "passwordLabel": "密码",
   "usernamePasswordLogin": "账号密码登录",
   "phoneLogin": "手机号登录",
   "loginAction": "登录",
-  "tabConversations": "消息",
-  "tabContacts": "通讯录",
-  "tabWorkbench": "工作台",
-  "tabProfile": "我",
+
+  "@@@CONVERSATION": "Section: Conversation",
+  "conversationTitle": "会话",
+  "emptyConversation": "暂无会话",
   "conversationShortcutRecent": "最近更新",
   "conversationShortcutUsers": "用户",
   "conversationShortcutGroups": "用户群体",
   "conversationShortcutMention": "提到我的",
   "conversationShortcutMute": "免打扰",
+  "chatPageReadOnlyBannerKicked": "你已被移出群聊，无法发送和接收消息",
+  "chatPageReadOnlyBannerLeft": "你已退出群聊，无法发送和接收消息",
+  "chatPageReadOnlyBannerDisbanded": "该群已解散，无法发送和接收消息",
+  "chatPageBackToConversations": "返回会话列表",
+
+  "@@@CONTACTS": "Section: Contacts",
+  "contactsTitle": "通讯录",
   "contactsMyGroups": "我的群组",
   "contactsFavorites": "我的关注",
   "contactsOrganization": "组织结构",
@@ -34,7 +48,9 @@
   "contactsCountPeople": "{count}人",
   "@contactsCountPeople": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "contactsProfileTitle": "用户详情",
@@ -60,20 +76,277 @@
   "contactsDetailLoadFailed": "加载用户详情失败",
   "contactsDetailCallInDevelopment": "通话功能开发中",
   "contactsDetailShareUnsupported": "分享名片暂未接入",
-  "chatSettingsTitle": "聊天设置",
-  "chatSettingsNoRoleInfo": "暂无岗位信息",
-  "chatSettingsTop": "置顶聊天",
-  "chatSettingsNotify": "消息免打扰",
-  "chatSettingsChatFilesSingle": "聊天文件",
-  "chatSettingsClearHistory": "清空聊天记录",
-  "chatSettingsClearHistoryConfirm": "确认清空当前聊天记录吗？",
-  "chatSettingsSubordinateTip": "注：如需移交、删除下属关系等操作，请在通讯录中前往对应人员详情页处理。",
-  "chatSettingsPinned": "已置顶聊天",
-  "chatSettingsUnpinned": "已取消置顶",
-  "chatSettingsNotifyEnabled": "已开启消息提醒",
-  "chatSettingsNotifyDisabled": "已开启免打扰",
-  "chatSettingsCleared": "聊天记录已清空",
-  "chatSettingsClearHistoryFailed": "清空聊天记录失败",
+  "contactsSearchResultTitle": "搜索结果",
+  "contactsSearchKeyword": "关键词：{keyword}",
+  "@contactsSearchKeyword": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "contactsSearchInputHint": "搜索联系人或部门",
+  "contactsPeopleSectionTitle": "联系人",
+  "contactsDepartmentSectionTitle": "部门",
+  "contactsSearchEmpty": "暂无结果",
+  "contactsFavoritesEmpty": "暂无关注联系人",
+  "contactsListEmpty": "暂无联系人",
+  "contactsMyGroupsEmpty": "暂无群组",
+  "contactsDepartmentsEmpty": "暂无部门成员",
+  "contactsOrganizationEmpty": "暂无组织架构数据",
+  "contactsSectionRecent": "最近联系人",
+
+  "@@@CHAT": "Section: Chat",
+  "chatTitle": "聊天",
+  "inputMessage": "输入消息",
+  "chatTimeToday": "今天 {time}",
+  "@chatTimeToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTimeYesterday": "昨天 {time}",
+  "@chatTimeYesterday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatLoadOlder": "查看更多消息",
+  "chatReadOnly": "当前会话为只读模式",
+  "chatReadOnlyClosed": "当前会话已关闭",
+  "chatGroupRemovedCannotSend": "你已被移出群聊，无法发送消息",
+  "chatGroupMuteAllEnabled": "当前群已开启全员禁言",
+  "chatGroupMuteAllDisabled": "当前群已关闭全员禁言",
+  "chatGroupMutedUntil": "当前已被禁言至 {time}",
+  "@chatGroupMutedUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMutedNoSend": "当前已被禁言，无法发送消息",
+  "chatGroupYouUnmuted": "你已被解除禁言",
+  "chatGroupMemberMutedGeneric": "群成员已被禁言",
+  "chatGroupMemberUnmutedGeneric": "群成员已被解除禁言",
+  "chatGroupMemberAdded": "有新成员加入群聊",
+  "chatGroupMemberRemoved": "有成员被移出群聊",
+  "chatGroupOwnerTransferred": "群主已完成转让",
+  "chatGroupOwnerTransferredTo": "群主已转让给\"{name}\"",
+  "@chatGroupOwnerTransferredTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberAddedOne": "\"{firstName}\" 加入了群聊",
+  "@chatGroupMemberAddedOne": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberAddedTwo": "\"{firstName}\"、\"{secondName}\" 加入了群聊",
+  "@chatGroupMemberAddedTwo": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      },
+      "secondName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberAddedMany": "\"{firstName}\"、\"{secondName}\" 等{otherCount}人加入了群聊",
+  "@chatGroupMemberAddedMany": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      },
+      "secondName": {
+        "type": "String"
+      },
+      "otherCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chatGroupMemberRemovedNamed": "\"{name}\" 已被移出群聊",
+  "@chatGroupMemberRemovedNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberRoleSetAdmin": "群成员已被设为管理员",
+  "chatGroupMemberRoleSetAdminNamed": "\"{operatorName}\" 将 \"{targetName}\" 设置为管理员",
+  "@chatGroupMemberRoleSetAdminNamed": {
+    "placeholders": {
+      "operatorName": {
+        "type": "String"
+      },
+      "targetName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberRoleSetMember": "群成员已被设置为普通成员",
+  "chatGroupMemberRoleSetMemberNamed": "\"{operatorName}\" 将 \"{targetName}\" 设置为普通成员",
+  "@chatGroupMemberRoleSetMemberNamed": {
+    "placeholders": {
+      "operatorName": {
+        "type": "String"
+      },
+      "targetName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberMutedNamed": "\"{name}\" 已被禁言",
+  "@chatGroupMemberMutedNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberMutedUntil": "\"{name}\" 已被禁言至 {time}",
+  "@chatGroupMemberMutedUntil": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupMemberUnmutedNamed": "\"{name}\" 已被解除禁言",
+  "@chatGroupMemberUnmutedNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupYouAreNewOwner": "你已成为新群主",
+  "chatGroupYouTransferredOwner": "你已转让群主",
+  "chatGroupSystemSender": "系统",
+  "chatGroupNoticeUpdated": "群公告有更新",
+  "messageSending": "发送中",
+  "messageSent": "已发送",
+  "messageDelivered": "已送达",
+  "messageRead": "已读",
+  "messageFailed": "发送失败",
+  "retrySend": "重发消息",
+  "attachImageAction": "发送图片",
+  "attachFileAction": "发送文件",
+  "attachmentCapabilityPending": "附件选择器与上传入口正在接入中",
+  "chatOpenFailed": "打开失败",
+  "chatNoMoreMessages": "没有更多消息了",
+  "chatPreviewUnknownSender": "未知",
+  "chatPreviewMessage": "消息",
+  "chatPreviewMessageDeleted": "原消息已删除",
+  "chatPreviewImage": "[图片]",
+  "chatPreviewEmoji": "[表情]",
+  "chatPreviewSticker": "[动画表情]",
+  "chatPreviewVoice": "[语音]",
+  "chatPreviewVideo": "[视频]",
+  "chatPreviewFile": "[文件]",
+  "chatPreviewFileWithName": "[文件] {name}",
+  "@chatPreviewFileWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatPreviewLocation": "[位置]",
+  "chatPreviewContactCard": "[名片]",
+  "chatPreviewChatHistory": "[聊天记录]",
+  "chatPreviewRecalled": "[消息已撤回]",
+  "chatCustomMessage": "[自定义消息]",
+  "chatClickToViewDetail": "点击查看详情",
+  "chatRecallSuccess": "已撤回",
+  "chatRecallConfirmTitle": "提示",
+  "chatRecallConfirmContent": "确定撤回那条消息吗？",
+  "chatRecallFailed": "撤回失败",
+  "chatRecallSelfTip": "你撤回了一条消息",
+  "chatRecallOtherTip": "{operatorName}撤回了一条消息",
+  "@chatRecallOtherTip": {
+    "placeholders": {
+      "operatorName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCopySuccess": "已复制消息内容",
+  "chatFavoriteSuccess": "已收藏消息",
+  "chatDeleteSuccess": "已删除",
+  "chatDeleteFailed": "删除失败",
+  "chatDeleteConfirmTitle": "删除消息",
+  "chatDeleteConfirmContent": "确定删除这条消息吗？",
+  "chatRetryingMessage": "正在重新发送消息",
+  "chatHeaderGroupNotice": "群公告",
+  "chatMultiDeleteTitle": "提示",
+  "chatMultiDeleteContent": "确定删除选中的 {count} 条消息吗？",
+  "@chatMultiDeleteContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatVoiceUploadRetry": "语音上传失败，点击重试",
+  "chatSelectedCount": "已选择 {count} 条",
+  "@chatSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatForwardUnsupported": "当前文件暂不支持转发",
+  "chatForwardSuccess": "已转发到 {title}",
+  "@chatForwardSuccess": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReeditExpired": "重新编辑已过期",
+  "chatReeditUnsupported": "该消息类型不支持重新编辑",
+  "chatReeditAction": "重新编辑",
+  "chatRecordPermissionDenied": "录音失败，请检查麦克风权限",
+  "chatRecordTooShort": "说话时间太短",
+  "chatRecordFileCreateFailed": "录音文件生成失败",
+  "chatUploading": "上传中",
+  "chatOtherUser": "对方",
+  "chatAnchorFallback": "原消息已不可定位，已为你打开最近消息",
+  "chatQuoteMessageMissing": "原消息已不存在",
+  "chatVoiceFileUnavailable": "语音文件不可用",
+  "chatVoicePlayUrlFailed": "语音播放地址获取失败",
+
+  "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
+  "chatActionFavoriteSticker": "添加到表情",
+  "chatActionCopy": "复制",
+  "chatActionQuote": "引用回复",
+  "chatActionFavorite": "收藏",
+  "chatActionRecall": "撤回",
+  "chatActionDelete": "删除",
+  "chatActionMultiSelect": "多选",
+  "chatMoreActionCamera": "拍摄",
+  "chatMoreActionCall": "音视频",
+
+  "@@@CHAT_MEDIA": "Section: Chat Media",
   "chatMediaTitle": "聊天媒体",
   "chatMediaEmpty": "暂无媒体记录",
   "chatMediaToday": "今天",
@@ -81,8 +354,12 @@
   "chatMediaMonthDay": "{month}-{day}",
   "@chatMediaMonthDay": {
     "placeholders": {
-      "month": {},
-      "day": {}
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
     }
   },
   "chatMediaLoadingMore": "加载更多中...",
@@ -92,8 +369,16 @@
   "chatMediaImageFallback": "图片",
   "chatImagePlaceholder": "图片",
   "chatMediaFileFallback": "文件",
+  "chatVideoPlayerTitle": "视频播放",
+  "chatVideoPlayerLoadFailed": "视频加载失败",
+  "chatVideoPlayerFallbackHint": "请重试，或使用外部应用打开该视频",
+  "chatVideoPlayerOpenExternally": "外部打开",
+  "chatVideoPlayerOpenExternalFailed": "外部打开失败",
+
+  "@@@CHAT_HISTORY": "Section: Chat History",
   "chatHistoryTitle": "聊天记录",
   "chatHistoryEmpty": "暂无聊天记录",
+  "chatMessageDetailTitle": "消息详情",
   "chatHistorySearchPlaceholder": "搜索聊天记录",
   "chatHistoryStartTime": "开始",
   "chatHistoryEndTime": "结束",
@@ -111,28 +396,42 @@
   "chatHistoryTodayAt": "今天 {time}",
   "@chatHistoryTodayAt": {
     "placeholders": {
-      "time": {}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "chatHistoryYesterdayAt": "昨天 {time}",
   "@chatHistoryYesterdayAt": {
     "placeholders": {
-      "time": {}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "chatHistoryDaysAgoAt": "{count}天前 {time}",
   "@chatHistoryDaysAgoAt": {
     "placeholders": {
-      "count": {},
-      "time": {}
+      "count": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "chatHistoryMonthDayAt": "{month}-{day} {time}",
   "@chatHistoryMonthDayAt": {
     "placeholders": {
-      "month": {},
-      "day": {},
-      "time": {}
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "chatHistoryPreviewImage": "[图片]",
@@ -150,119 +449,428 @@
   "globalChatSearchEmpty": "暂无相关聊天记录",
   "globalChatSearchLoading": "搜索中...",
   "globalChatSearchLoadMore": "上拉加载更多",
-  "searchAction": "搜索",
-  "resetAction": "重置",
-  "searchMinLength": "请至少输入 2 个字符",
-  "chatTimeToday": "今天 {time}",
-  "@chatTimeToday": {
+
+  "@@@CHAT_SETTINGS": "Section: Chat Settings",
+  "chatSettingsTitle": "聊天设置",
+  "chatSettingsNoRoleInfo": "暂无岗位信息",
+  "chatSettingsTop": "置顶聊天",
+  "chatSettingsNotify": "消息免打扰",
+  "chatSettingsChatFilesSingle": "聊天文件",
+  "chatSettingsClearHistory": "清空聊天记录",
+  "chatSettingsClearHistoryConfirm": "确认清空当前聊天记录吗？",
+  "chatSettingsSubordinateTip": "注：如需移交、删除下属关系等操作，请在通讯录中前往对应人员详情页处理。",
+  "chatSettingsPinned": "已置顶聊天",
+  "chatSettingsUnpinned": "已取消置顶",
+  "chatSettingsNotifyEnabled": "已开启消息提醒",
+  "chatSettingsNotifyDisabled": "已开启免打扰",
+  "chatSettingsCleared": "聊天记录已清空",
+  "chatSettingsClearHistoryFailed": "清空聊天记录失败",
+
+  "@@@CHAT_FORWARD": "Section: Chat Forward",
+  "chatForwardEmptyTarget": "暂无可转发的会话",
+  "chatForwardTargetTitle": "选择会话",
+  "chatForwardTargetSummarySend": "将发送",
+  "chatForwardTargetSummaryForward": "将转发",
+  "chatForwardTargetSummaryTo": "到",
+  "chatForwardTargetMessageCount": "{count}条消息",
+  "@chatForwardTargetMessageCount": {
     "placeholders": {
-      "time": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "chatTimeYesterday": "昨天 {time}",
-  "@chatTimeYesterday": {
+  "chatForwardTargetSingleForward": "逐条转发",
+  "chatForwardTargetCombineForward": "合并转发",
+  "chatForwardTargetSending": "发送中...",
+  "chatForwardTargetSent": "已发送",
+  "chatForwardTargetForwarded": "已转发",
+  "chatForwardTargetForwardFailed": "转发失败",
+  "chatForwardTargetPartialSuccess": "部分成功 {successCount}/{expectedCount}",
+  "@chatForwardTargetPartialSuccess": {
     "placeholders": {
-      "time": {}
+      "successCount": {
+        "type": "int"
+      },
+      "expectedCount": {
+        "type": "int"
+      }
     }
   },
-  "chatLoadOlder": "查看更多消息",
-  "contactsSearchResultTitle": "搜索结果",
-  "contactsSearchKeyword": "关键词：{keyword}",
-  "@contactsSearchKeyword": {
+  "chatForwardSingle": "逐条转发",
+  "chatForwardCombine": "合并转发",
+  "chatForwardMenu": "转发",
+  "chatForwardSelectTarget": "选择会话",
+  "chatForwardDialogSend": "发送",
+  "chatChooseForwardMessage": "请选择要转发的消息",
+  "chatMaxSelectReached": "最多选择 {count} 条消息",
+  "@chatMaxSelectReached": {
     "placeholders": {
-      "keyword": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "contactsSearchInputHint": "搜索联系人或部门",
-  "contactsPeopleSectionTitle": "联系人",
-  "contactsDepartmentSectionTitle": "部门",
-  "contactsSearchEmpty": "暂无结果",
-  "contactsFavoritesEmpty": "暂无关注联系人",
-  "contactsListEmpty": "暂无联系人",
-  "contactsMyGroupsEmpty": "暂无群组",
-  "contactsDepartmentsEmpty": "暂无部门成员",
-  "contactsOrganizationEmpty": "暂无组织架构数据",
-  "contactsSectionRecent": "最近联系人",
-  "workbenchIntro": "常用协同能力与业务入口集中在这里。",
-  "workbenchApproval": "审批",
-  "workbenchTodo": "待办",
-  "workbenchCalendar": "日程",
-  "workbenchFiles": "云文件",
-  "workbenchMeeting": "会议",
-  "workbenchAnnouncements": "公告",
-  "workbenchEdit": "编辑",
-  "workbenchOfficeFlow": "办公流程",
-  "workbenchCommonFeatures": "常用功能",
-  "workbenchMail": "邮件",
-  "workbenchDelegation": "流程代理",
-  "workbenchAccountSwitch": "账号切换",
-  "workbenchAttendance": "考勤打卡",
-  "workbenchFieldWork": "外勤",
-  "workbenchMetricPlaceholder": "--",
-  "profileUnknownUser": "未命名用户",
-  "profileCompanyLabel": "圣钰科技",
-  "profileSectionSettings": "设置",
-  "profileSectionAbout": "关于",
-  "profileNotifications": "消息通知",
-  "profilePrivacy": "隐私与安全",
-  "profileVersionLabel": "当前版本",
-  "profileThemeSwitch": "切换主题",
-  "profileFavorites": "收藏",
-  "profileScan": "扫一扫",
-  "profileLogout": "退出登录",
-  "profileAvatarHint": "点击更换或删除头像",
-  "profileUploadAvatar": "上传头像",
-  "profileReuploadAvatar": "重新上传头像",
-  "profileRemoveCustomAvatar": "删除自定义头像",
-  "profileConfirmRemoveAvatar": "确认删除自定义头像",
-  "profileAvatarUploadSuccess": "头像上传成功",
-  "profileAvatarUploadFailed": "头像上传失败",
-  "profileAvatarRemoveSuccess": "头像已删除",
-  "profileAvatarRemoveFailed": "头像删除失败",
-  "profileAvatarUploading": "头像上传中...",
-  "profileUploadFailedRetry": "上传失败，请重试",
-  "departmentFallback": "未分配部门",
-  "profilePostFallback": "未设置岗位",
-  "profileLoadError": "加载失败，请下拉刷新重试",
-  "settingsTitle": "设置",
-  "settingsThemeMode": "主题模式",
-  "settingsThemeModeSummary": "跟随系统 / 浅色 / 深色",
-  "settingsLanguage": "语言设置",
-  "settingsLanguageSummary": "跟随系统 / 简体中文 / English",
-  "settingsAboutApp": "关于圣钰 IM",
-  "settingsVersionValue": "版本 1.0.0",
-  "themeSettingsTitle": "主题模式",
-  "themeModeLightTitle": "浅色模式",
-  "themeModeLightDescription": "始终使用浅色页面与聊天背景",
-  "themeModeDarkTitle": "深色模式",
-  "themeModeDarkDescription": "始终使用深色页面与聊天背景",
-  "themePreviewTitle": "当前预览",
-  "themePreviewMessage": "接近老项目风格的主链路页面预览",
-  "retry": "重试",
-  "languageSettingsTitle": "语言设置",
-  "languageModeSystemTitle": "跟随系统",
-  "languageModeSystemDescription": "使用设备当前语言",
-  "languageModeZhCnTitle": "简体中文",
-  "languageModeZhCnDescription": "强制使用中文（zh-CN）",
-  "languageModeEnTitle": "English",
-  "languageModeEnDescription": "强制使用英文",
-  "languageEffectiveLabel": "当前生效语言",
-  "retrySend": "重发消息",
-  "messageSending": "发送中",
-  "messageSent": "已发送",
-  "messageDelivered": "已送达",
-  "messageRead": "已读",
-  "messageFailed": "发送失败",
-  "attachImageAction": "发送图片",
-  "attachFileAction": "发送文件",
-  "attachmentCapabilityPending": "附件选择器与上传入口正在接入中",
-  "unknownError": "系统开小差了，请稍后重试",
-  "groupSettingsTitle": "群聊设置",
+  "chatChooseDeleteMessage": "请选择要删除的消息",
+  "chatForwardCombineDetailTitle": "合并转发详情",
+  "chatForwardCombineDetailInvalidParams": "参数无效",
+  "chatForwardCombineDetailLoading": "加载中...",
+  "chatForwardCombineDetailContentUnavailable": "内容不可查看",
+  "chatForwardCombineDetailQuoteTooDeep": "引用层级过深",
+  "chatForwardCombineDetailCircularReference": "检测到循环引用",
+  "chatForwardCombineDetailTodayAt": "今天 {time}",
+  "@chatForwardCombineDetailTodayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatForwardCombineDetailYesterdayAt": "昨天 {time}",
+  "@chatForwardCombineDetailYesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatForwardCombineDetailEmpty": "暂无内容",
+  "chatForwardCombineDetailLoadFailed": "加载失败",
+
+  "@@@CHAT_READ_RECEIPT": "Section: Chat Read Receipt",
+  "chatReadReceiptTitle": "已读详情",
+  "chatReadReceiptClose": "关闭",
+  "chatReadReceiptReadLabel": "已读",
+  "chatReadReceiptUnreadTab": "未读",
+  "chatReadReceiptRead": "已读 {count} 人",
+  "@chatReadReceiptRead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReadReceiptUnread": "未读 {count} 人",
+  "@chatReadReceiptUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReadReceiptVoiceHint": "语音消息\"已读\"按会话阅读水位统计，不代表已听语音",
+  "chatReadReceiptTotal": "总接收人数 {count} 人",
+  "@chatReadReceiptTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReadReceiptEmptyRead": "暂无已读记录",
+  "chatReadReceiptEmptyUnread": "暂无未读成员",
+  "chatReadReceiptLoading": "加载中...",
+  "chatReadReceiptNoMore": "没有更多了",
+  "chatReadReceiptUnreadLabel": "暂未阅读",
+  "chatReadReceiptUnknownUser": "未知用户",
+  "chatReadReceiptReadAtUnknown": "暂无阅读时间",
+  "chatReadReceiptPending": "处理中",
+  "chatReadReceiptDataLoading": "回执数据加载中，请稍后重试",
+  "chatReadReceiptJustNow": "刚刚",
+  "chatReadReceiptTodayAt": "今天 {time}",
+  "@chatReadReceiptTodayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReadReceiptYesterdayAt": "昨天 {time}",
+  "@chatReadReceiptYesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+
+  "@@@CHAT_PRESENCE": "Section: Chat Presence",
+  "chatPresenceOffline": "离线",
+  "chatPresenceOnline": "在线",
+  "chatPresenceMobileOnline": "手机在线",
+  "chatPresenceWebOnline": "网页在线",
+  "chatPresenceMultiDeviceOnline": "多端在线",
+  "chatPresenceJustNowActive": "刚刚活跃",
+  "chatPresenceMinutesAgoActive": "{count}分钟前活跃",
+  "@chatPresenceMinutesAgoActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatPresenceTodayActiveAt": "今天活跃于 {time}",
+  "@chatPresenceTodayActiveAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatPresenceYesterdayActiveAt": "昨天活跃于 {time}",
+  "@chatPresenceYesterdayActiveAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatPresenceWeekdayActiveAt": "{weekday}活跃于 {time}",
+  "@chatPresenceWeekdayActiveAt": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatPresenceRecentlyActive": "近期活跃",
+  "chatPresenceSunday": "周日",
+  "chatPresenceMonday": "周一",
+  "chatPresenceTuesday": "周二",
+  "chatPresenceWednesday": "周三",
+  "chatPresenceThursday": "周四",
+  "chatPresenceFriday": "周五",
+  "chatPresenceSaturday": "周六",
+
+  "@@@CHAT_TYPING": "Section: Chat Typing",
+  "chatTypingDirect": "正在输入...",
+  "chatTypingNamed": "{name} 正在输入...",
+  "@chatTypingNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTypingNamedMany": "{names} 等人正在输入...",
+  "@chatTypingNamedMany": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+
+  "@@@CHAT_RECORDING": "Section: Chat Recording",
+  "chatRecordingSlideToCancel": "手指上滑，取消发送",
+  "chatRecordingReleaseToCancelShort": "松开 取消",
+
+  "@@@CHAT_EMOJI_STICKER": "Section: Chat Emoji & Sticker",
+  "chatActionFavoriteSticker": "添加到表情",
+  "chatStickerCannotAdd": "当前消息不可添加",
+  "chatStickerAdded": "已添加到表情",
+  "chatStickerExists": "已在表情库中",
+  "chatMaxStickerReached": "最多添加{count}张表情",
+  "@chatMaxStickerReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatStickerAdd": "添加",
+  "chatEmojiManage": "管理",
+  "chatEmojiTab": "表情",
+  "chatStickerTab": "贴纸",
+  "chatEmojiDelete": "删除",
+  "chatEmojiRecent": "最近使用",
+  "chatEmojiAll": "所有表情",
+
+  "@@@CHAT_LOCATION": "Section: Chat Location",
+  "chatMoreActionLocation": "位置",
+  "chatSelectLocationTitle": "选择位置",
+  "chatSelectLocationSearchHint": "搜索位置",
+  "chatSelectLocationSearchEmptyHint": "输入地点关键词后搜索真实位置",
+  "chatSelectLocationSendCurrent": "发送当前位置",
+  "chatSelectLocationTapToLocate": "点击发送当前位置",
+  "chatSelectLocationNearbyTitle": "附近地点",
+  "chatSelectLocationSearchResultTitle": "搜索结果",
+  "chatSelectLocationNoNearbyResult": "暂无附近地点",
+  "chatSelectLocationNoSearchResult": "暂无搜索结果",
+  "chatSelectLocationQuotaTitle": "位置服务额度已耗尽",
+  "chatSelectLocationQuotaDesc": "当前定位检索服务暂时不可用，请稍后再试",
+  "chatSelectLocationQuotaTip": "可先切换其他方式发送位置",
+  "chatSelectLocationServiceDisabledTitle": "位置服务未开启",
+  "chatSelectLocationServiceDisabledDesc": "当前环境尚未开启位置检索服务",
+  "chatSelectLocationChoose": "请选择位置",
+  "chatSelectLocationCurrentUnavailable": "当前位置暂不可用",
+  "chatCurrentLocationName": "当前位置",
+  "chatLocationUnknownName": "未知位置",
+  "chatLocationSendSuccess": "已发送位置",
+  "chatLocationMissing": "位置信息缺失",
+  "chatLocationOpenFailed": "暂时无法打开该位置",
+  "chatLocationNavigateAction": "导航前往",
+  "chatLocationCopyAction": "复制位置",
+  "chatLocationOpenUnsupported": "当前设备暂不支持直接打开地图，可复制位置信息后使用",
+  "chatLocationDefaultTitle": "位置",
+  "chatLocationCoordinateFallback": "经纬度：{lat}, {lng}",
+  "@chatLocationCoordinateFallback": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "chatLocationCopied": "位置信息已复制",
+
+  "@@@CHAT_CONTACT_CARD": "Section: Chat Contact Card",
+  "chatMoreActionContactCard": "名片",
+  "chatSelectContactCardTitle": "选择名片",
+  "chatSelectContactCardSearchHint": "搜索联系人",
+  "chatSelectContactCardLoading": "加载中...",
+  "chatSelectContactCardEmpty": "暂无可选联系人",
+  "chatSelectContactCardLoadFailed": "加载联系人失败",
+  "chatSelectContactCardPlaceholder": "请选择 1 位联系人",
+  "chatSelectContactCardSelected": "已选择：{name}",
+  "@chatSelectContactCardSelected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatContactCardLabel": "个人名片",
+  "chatContactCardUnknownName": "未知联系人",
+  "chatContactCardSendSuccess": "已发送名片",
+  "chatContactMissing": "名片联系人不存在",
+
+  "@@@CHAT_FILE_PREVIEW": "Section: Chat File Preview",
+  "filePreviewTitle": "文件预览",
+  "filePreviewForward": "转发",
+  "filePreviewPreview": "预览",
+  "filePreviewDownload": "下载",
+  "filePreviewPreviewUnavailable": "当前文件暂不支持预览",
+  "filePreviewDownloadStarted": "已开始下载",
+  "filePreviewDownloadFailed": "下载失败",
+  "filePreviewForwardUnsupported": "当前文件暂不支持转发",
+  "filePreviewModePdf": "PDF 预览",
+  "filePreviewModeImage": "图片预览",
+  "filePreviewModeVideo": "视频预览",
+  "filePreviewModeAudio": "音频预览",
+  "filePreviewModeText": "文本预览",
+  "filePreviewModeMarkdown": "Markdown 预览",
+  "filePreviewModeServerPdf": "服务端 PDF 预览",
+  "filePreviewModeServerHtml": "服务端 HTML 预览",
+  "filePreviewModeOffice": "Office 预览",
+  "filePreviewModeDownloadOnly": "仅支持下载",
+  "filePreviewModeUnknown": "文件预览",
+
+  "@@@CHAT_BROWSER": "Section: Chat Browser",
+  "browserTitle": "安全浏览",
+  "browserSourceScan": "扫码",
+  "browserSourceMessage": "消息",
+  "browserSourceFile": "文件",
+  "browserSourceExternal": "外部",
+  "browserUnknownSafeLink": "未知安全链接",
+  "browserBlockedTitle": "无法直接打开该内容",
+  "browserBlockedDesc": "当前内容不是可直接访问的安全网页链接，你仍可以复制后自行处理。",
+  "browserBlockedLabel": "原始内容",
+  "browserEmptyContent": "暂无内容",
+  "browserCopyLink": "复制链接",
+  "browserCopyContent": "复制内容",
+  "browserOpenExternally": "外部打开",
+  "browserNothingToCopy": "没有可复制的内容",
+  "browserCopySuccess": "复制成功",
+  "browserOpenExternalFailed": "外部打开失败",
+  "browserFileLoadingTitle": "正在准备文档预览",
+  "browserFileLoadingDesc": "文档转换或加载可能需要一点时间，请稍候。",
+  "browserFileFailedTitle": "文档预览失败",
+  "browserFileFailedDesc": "当前文档暂时无法在应用内完成预览，你可以重试或改用外部打开。",
+
+  "@@@CHAT_FAVORITE_STATUS": "Section: Chat Favorite Status",
+  "favoriteStatusDeleted": "原消息已删除",
+  "favoriteStatusRecalled": "原消息已撤回",
+  "favoriteStatusUnavailable": "原消息不可用",
+
+  "@@@CHAT_MENTION": "Section: Chat Mention",
+  "chatMentionSearchPlaceholder": "搜索群成员",
+  "chatMentionClose": "关闭",
+  "chatMentionLoading": "成员加载中...",
+  "chatMentionEmpty": "暂无可选择成员",
+  "chatMentionAllMembers": "所有人",
+  "chatMentionAllMembersHint": "仅群主或管理员可用",
+
+  "@@@GROUP": "Section: Group",
+  "groupMemberAlreadyExists": "该成员已在群聊中",
+  "groupMemberFull": "群人数已达上限",
+  "groupMemberNotExists": "该成员已不在群聊中",
+  "groupMembersMute24h": "禁言 24 小时",
+  "groupMembersMutedUntil": "禁言至 {month}-{day} {hour}:{minute}",
+  "@groupMembersMutedUntil": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      },
+      "hour": {
+        "type": "String"
+      },
+      "minute": {
+        "type": "String"
+      }
+    }
+  },
+  "groupJoinApplySubmitted": "已提交入群申请",
+  "groupJoinWaitingApproval": "等待管理员审批",
+  "groupJoinApproved": "入群申请已通过",
+  "groupJoinRejected": "入群申请已被拒绝",
+  "groupJoinWithdrawn": "已撤回入群申请",
+  "groupJoinWithdrawFailed": "撤回申请失败",
+  "groupInviteCodeInvalid": "邀请码无效",
+  "groupInviteCodeExpired": "邀请码已过期",
+  "groupInviteCodeUsageLimitReached": "邀请码使用次数已达上限",
+  "groupDissolved": "群已解散",
+  "groupLeftStatus": "已退出",
+  "groupKickedStatus": "已被踢",
+  "groupDisbandedStatus": "已解散",
+  "groupLeftCannotSend": "你已退出该群聊，无法发送消息",
+  "groupKickedCannotSend": "你已被移出群聊，无法发送消息",
+  "groupDisbandedCannotSend": "该群已解散，无法发送消息",
+  "groupSettingsLeftPageTitle": "已退出群聊",
+  "groupSettingsKickedPageTitle": "已被移出群聊",
+  "groupSettingsDisbandedPageTitle": "群聊已解散",
+  "groupSettingsLeftHint": "你已退出该群聊，无法查看群设置",
+  "groupSettingsKickedHint": "你已被管理员移出群聊，无法查看群设置",
+  "groupSettingsDisbandedHint": "群主已解散该群聊，无法查看群设置",
+  "groupSettingsBackToConversations": "返回会话列表",
+  "groupSettingsReadOnlyBannerKicked": "你已被移出群聊，当前仅可查看历史信息",
+  "groupSettingsReadOnlyBannerLeft": "你已退出群聊，当前仅可查看历史信息",
+  "groupSettingsReadOnlyBannerDisbanded": "该群已解散",
+  "groupSettingsReadOnlyBannerDefault": "你已不在群内",
+  "groupSettingsSnapshotTimeLabel": "快照时间",
+  "groupSettingsLeftTimeLabel": "离群时间",
+  "groupSettingsCannotViewQrCode": "你无法查看该群二维码",
+  "groupSettingsCannotViewQrCodeHint": "你已不在该群内，无法获取群二维码",
+  "groupSettingsReadOnlyMembersHint": "你已不在该群内，仅可查看成员列表",
+  "groupInviteCodeTenantMismatch": "该邀请码不属于当前企业",
+  "groupJoinRequestRateLimited": "申请提交过于频繁，请稍后再试",
+
+  "@@@GROUP_MEMBERS": "Section: Group Members",
   "groupMembersTitle": "群成员",
   "groupMembersTitleWithCount": "群成员({count})",
   "@groupMembersTitleWithCount": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "groupMembersRemoveTitle": "删除成员",
@@ -270,7 +878,9 @@
   "groupMembersConfirmSelected": "确定({count})",
   "@groupMembersConfirmSelected": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "groupMembersCannotRemoveOwner": "群主不能删除",
@@ -279,7 +889,9 @@
   "groupMembersRemoveConfirm": "确认删除以下成员：{names}？",
   "@groupMembersRemoveConfirm": {
     "placeholders": {
-      "names": {}
+      "names": {
+        "type": "String"
+      }
     }
   },
   "groupMembersAlreadyOwner": "该成员已经是群主",
@@ -288,30 +900,24 @@
   "groupMembersTransferConfirm": "确认将群主转让给 {name}？",
   "@groupMembersTransferConfirm": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupMembersTransferredTo": "已转让给 {name}",
   "@groupMembersTransferredTo": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupMembersTransferFailed": "转让群主失败",
   "groupMembersActionSuccess": "操作成功",
-  "groupMemberAlreadyExists": "该成员已在群聊中",
-  "groupMemberFull": "群人数已达上限",
-  "groupMemberNotExists": "该成员已不在群聊中",
-  "groupMembersMute24h": "禁言 24 小时",
-  "groupMembersMutedUntil": "禁言至 {month}-{day} {hour}:{minute}",
-  "@groupMembersMutedUntil": {
-    "placeholders": {
-      "month": {},
-      "day": {},
-      "hour": {},
-      "minute": {}
-    }
-  },
+
+  "@@@GROUP_SETTINGS": "Section: Group Settings",
+  "groupSettingsTitle": "群聊设置",
   "groupSettingsViewAllMembers": "查看全部群成员",
   "groupSettingsAdd": "添加",
   "groupSettingsRemove": "删除",
@@ -350,25 +956,33 @@
   "groupSettingsConfirmSetAdmin": "确认将 {name} 设为管理员？",
   "@groupSettingsConfirmSetAdmin": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupSettingsConfirmRemoveAdmin": "确认取消 {name} 的管理员身份？",
   "@groupSettingsConfirmRemoveAdmin": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupSettingsConfirmMuteMember": "确认禁言 {name}？",
   "@groupSettingsConfirmMuteMember": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupSettingsConfirmUnmuteMember": "确认解除 {name} 的禁言？",
   "@groupSettingsConfirmUnmuteMember": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupSettingsSetAdminSuccess": "已设为管理员",
@@ -384,71 +998,38 @@
   "groupSettingsConfirmRemoveMember": "确认移除 {name}？",
   "@groupSettingsConfirmRemoveMember": {
     "placeholders": {
-      "name": {}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "groupSettingsPendingEmpty": "暂无待处理",
   "groupSettingsPendingCount": "{count} 条待处理",
   "@groupSettingsPendingCount": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "groupJoinRequestsTitle": "入群审批",
-  "groupJoinRequestsEmpty": "暂无待审批申请",
-  "groupJoinRequestsTabPending": "待处理",
-  "groupJoinRequestsTabProcessed": "已处理",
-  "groupJoinRequestsEmptyPending": "暂无待处理申请",
-  "groupJoinRequestsEmptyProcessed": "暂无已处理申请",
-  "groupJoinRequestsStatusPending": "待处理",
-  "groupJoinRequestsStatusApproved": "已通过",
-  "groupJoinRequestsStatusRejected": "已拒绝",
-  "groupJoinRequestsApplyTime": "申请时间：{time}",
-  "@groupJoinRequestsApplyTime": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "groupJoinRequestsHandleTime": "处理时间：{time}",
-  "@groupJoinRequestsHandleTime": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "groupJoinRequestsHandleResult": "处理结果：{result}",
-  "@groupJoinRequestsHandleResult": {
-    "placeholders": {
-      "result": {}
-    }
-  },
-  "groupJoinRequestsReject": "拒绝",
-  "groupJoinRequestsApprove": "通过",
-  "groupJoinRequestsApproved": "已通过申请",
-  "groupJoinRequestsRejected": "已拒绝申请",
-  "groupJoinRequestsRejectTitle": "拒绝申请",
-  "groupJoinRequestsRejectConfirm": "确认拒绝 {name} 的入群申请？",
-  "@groupJoinRequestsRejectConfirm": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "groupJoinRequestsRejectedByAdmin": "管理员已拒绝",
-  "groupJoinRequestsUnknownMember": "未知成员",
-  "groupJoinRequestsTimeUnknown": "暂无处理时间",
   "groupSettingsSave": "保存",
   "groupSettingsDone": "完成",
   "groupSettingsManage": "管理",
   "groupSettingsRemoveSelected": "移除所选成员 ({count})",
   "@groupSettingsRemoveSelected": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "groupSettingsSearchMembers": "搜索成员",
   "groupSettingsMembersCount": "共 {count} 位成员",
   "@groupSettingsMembersCount": {
     "placeholders": {
-      "count": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "groupSettingsMemberDetail": "成员详情",
@@ -473,19 +1054,59 @@
   "groupQrCodeRefreshFailed": "刷新失败",
   "groupQrCodeExpired": "已过期",
   "groupQrCodeLoading": "二维码加载中...",
-  "groupJoinApplySubmitted": "已提交入群申请",
-  "groupJoinWaitingApproval": "等待管理员审批",
-  "groupJoinApproved": "入群申请已通过",
-  "groupJoinRejected": "入群申请已被拒绝",
-  "groupJoinWithdrawn": "已撤回入群申请",
-  "groupJoinWithdrawFailed": "撤回申请失败",
-  "groupInviteCodeInvalid": "邀请码无效",
-  "groupInviteCodeExpired": "邀请码已过期",
-  "groupInviteCodeUsageLimitReached": "邀请码使用次数已达上限",
-  "groupDissolved": "群已解散",
-  "groupMemberFull": "群人数已达上限",
-  "groupInviteCodeTenantMismatch": "该邀请码不属于当前企业",
-  "groupJoinRequestRateLimited": "申请提交过于频繁，请稍后再试",
+
+  "@@@GROUP_JOIN_REQUESTS": "Section: Group Join Requests",
+  "groupJoinRequestsTitle": "入群审批",
+  "groupJoinRequestsEmpty": "暂无待审批申请",
+  "groupJoinRequestsTabPending": "待处理",
+  "groupJoinRequestsTabProcessed": "已处理",
+  "groupJoinRequestsEmptyPending": "暂无待处理申请",
+  "groupJoinRequestsEmptyProcessed": "暂无已处理申请",
+  "groupJoinRequestsStatusPending": "待处理",
+  "groupJoinRequestsStatusApproved": "已通过",
+  "groupJoinRequestsStatusRejected": "已拒绝",
+  "groupJoinRequestsApplyTime": "申请时间：{time}",
+  "@groupJoinRequestsApplyTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "groupJoinRequestsHandleTime": "处理时间：{time}",
+  "@groupJoinRequestsHandleTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "groupJoinRequestsHandleResult": "处理结果：{result}",
+  "@groupJoinRequestsHandleResult": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "groupJoinRequestsReject": "拒绝",
+  "groupJoinRequestsApprove": "通过",
+  "groupJoinRequestsApproved": "已通过申请",
+  "groupJoinRequestsRejected": "已拒绝申请",
+  "groupJoinRequestsRejectTitle": "拒绝申请",
+  "groupJoinRequestsRejectConfirm": "确认拒绝 {name} 的入群申请？",
+  "@groupJoinRequestsRejectConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupJoinRequestsRejectedByAdmin": "管理员已拒绝",
+  "groupJoinRequestsUnknownMember": "未知成员",
+  "groupJoinRequestsTimeUnknown": "暂无处理时间",
+
+  "@@@GROUP_ANNOUNCEMENT": "Section: Group Announcement",
   "groupAnnouncementEdit": "编辑",
   "groupAnnouncementContent": "群公告内容",
   "groupAnnouncementEditTitle": "编辑群公告",
@@ -508,6 +1129,8 @@
   "groupAnnouncementPublishFailed": "群公告发布失败",
   "groupAnnouncementDiscardTitle": "放弃本次编辑？",
   "groupAnnouncementDiscardContent": "当前修改尚未保存，确认退出编辑吗？",
+
+  "@@@GROUP_FILES": "Section: Group Files",
   "groupFilesSearch": "搜索群文件",
   "groupFilesEmpty": "暂无群文件",
   "groupFilesActionDownload": "下载",
@@ -515,6 +1138,8 @@
   "groupFilesDownloadStarted": "已开始下载",
   "groupFilesDownloadFailed": "下载失败",
   "groupFilesForwardUnsupported": "当前文件暂不支持转发",
+
+  "@@@GROUP_HISTORY": "Section: Group History",
   "groupHistorySearch": "搜索聊天记录",
   "groupHistoryEmpty": "暂无相关聊天记录",
   "groupHistoryTimeUnknown": "暂无发送时间",
@@ -525,6 +1150,8 @@
   "groupHistoryFilterImage": "图片",
   "groupHistoryFilterVideo": "视频",
   "groupHistoryFilterLink": "链接",
+
+  "@@@FAVORITE": "Section: Favorite",
   "favoritePageTitle": "消息收藏",
   "favoritePageEmpty": "暂无收藏消息",
   "favoriteSearchPlaceholder": "搜索收藏",
@@ -549,484 +1176,193 @@
   "favoriteCancelAction": "取消收藏",
   "favoriteCancelSuccess": "已取消收藏",
   "favoriteOpenFailed": "无法打开收藏详情",
-  "chatOpenFailed": "打开失败",
-  "chatMessageDetailTitle": "消息详情",
-  "browserTitle": "安全浏览",
-  "browserSourceScan": "扫码",
-  "browserSourceMessage": "消息",
-  "browserSourceFile": "文件",
-  "browserSourceExternal": "外部",
-  "browserUnknownSafeLink": "未知安全链接",
-  "browserBlockedTitle": "无法直接打开该内容",
-  "browserBlockedDesc": "当前内容不是可直接访问的安全网页链接，你仍可以复制后自行处理。",
-  "browserBlockedLabel": "原始内容",
-  "browserEmptyContent": "暂无内容",
-  "browserCopyLink": "复制链接",
-  "browserCopyContent": "复制内容",
-  "browserOpenExternally": "外部打开",
-  "browserNothingToCopy": "没有可复制的内容",
-  "browserCopySuccess": "复制成功",
-  "browserOpenExternalFailed": "外部打开失败",
-  "browserFileLoadingTitle": "正在准备文档预览",
-  "browserFileLoadingDesc": "文档转换或加载可能需要一点时间，请稍候。",
-  "browserFileFailedTitle": "文档预览失败",
-  "browserFileFailedDesc": "当前文档暂时无法在应用内完成预览，你可以重试或改用外部打开。",
-  "favoriteStatusDeleted": "原消息已删除",
-  "favoriteStatusRecalled": "原消息已撤回",
-  "favoriteStatusUnavailable": "原消息不可用",
-  "chatReadOnlyClosed": "当前会话已关闭",
-  "chatGroupRemovedCannotSend": "你已被移出群聊，无法发送消息",
-  "chatGroupMuteAllEnabled": "当前群已开启全员禁言",
-  "chatGroupMuteAllDisabled": "当前群已关闭全员禁言",
-  "chatGroupMutedUntil": "当前已被禁言至 {time}",
-  "@chatGroupMutedUntil": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatGroupMutedNoSend": "当前已被禁言，无法发送消息",
-  "chatGroupYouUnmuted": "你已被解除禁言",
-  "chatGroupMemberMutedGeneric": "群成员已被禁言",
-  "chatGroupMemberUnmutedGeneric": "群成员已被解除禁言",
-  "chatGroupMemberAdded": "有新成员加入群聊",
-  "chatGroupMemberRemoved": "有成员被移出群聊",
-  "chatGroupOwnerTransferred": "群主已完成转让",
-  "chatGroupOwnerTransferredTo": "群主已转让给“{name}”",
-  "@chatGroupOwnerTransferredTo": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatGroupMemberAddedOne": "“{firstName}” 加入了群聊",
-  "@chatGroupMemberAddedOne": {
-    "placeholders": {
-      "firstName": {}
-    }
-  },
-  "chatGroupMemberAddedTwo": "“{firstName}”、“{secondName}” 加入了群聊",
-  "@chatGroupMemberAddedTwo": {
-    "placeholders": {
-      "firstName": {},
-      "secondName": {}
-    }
-  },
-  "chatGroupMemberAddedMany": "“{firstName}”、“{secondName}” 等{otherCount}人加入了群聊",
-  "@chatGroupMemberAddedMany": {
-    "placeholders": {
-      "firstName": {},
-      "secondName": {},
-      "otherCount": {}
-    }
-  },
-  "chatGroupMemberRemovedNamed": "“{name}” 已被移出群聊",
-  "@chatGroupMemberRemovedNamed": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatGroupMemberRoleSetAdmin": "群成员已被设为管理员",
-  "chatGroupMemberRoleSetAdminNamed": "“{operatorName}” 将 “{targetName}” 设置为管理员",
-  "@chatGroupMemberRoleSetAdminNamed": {
-    "placeholders": {
-      "operatorName": {},
-      "targetName": {}
-    }
-  },
-  "chatGroupMemberRoleSetMember": "群成员已被设置为普通成员",
-  "chatGroupMemberRoleSetMemberNamed": "“{operatorName}” 将 “{targetName}” 设置为普通成员",
-  "@chatGroupMemberRoleSetMemberNamed": {
-    "placeholders": {
-      "operatorName": {},
-      "targetName": {}
-    }
-  },
-  "chatGroupMemberMutedNamed": "“{name}” 已被禁言",
-  "@chatGroupMemberMutedNamed": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatGroupMemberMutedUntil": "“{name}” 已被禁言至 {time}",
-  "@chatGroupMemberMutedUntil": {
-    "placeholders": {
-      "name": {},
-      "time": {}
-    }
-  },
-  "chatGroupMemberUnmutedNamed": "“{name}” 已被解除禁言",
-  "@chatGroupMemberUnmutedNamed": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "groupLeftStatus": "已退出",
-  "groupKickedStatus": "已被踢",
-  "groupDisbandedStatus": "已解散",
-  "groupLeftCannotSend": "你已退出该群聊，无法发送消息",
-  "groupKickedCannotSend": "你已被移出群聊，无法发送消息",
-  "groupDisbandedCannotSend": "该群已解散，无法发送消息",
-  "groupSettingsLeftPageTitle": "已退出群聊",
-  "groupSettingsKickedPageTitle": "已被移出群聊",
-  "groupSettingsDisbandedPageTitle": "群聊已解散",
-  "groupSettingsLeftHint": "你已退出该群聊，无法查看群设置",
-  "groupSettingsKickedHint": "你已被管理员移出群聊，无法查看群设置",
-  "groupSettingsDisbandedHint": "群主已解散该群聊，无法查看群设置",
-  "groupSettingsBackToConversations": "返回会话列表",
-  "groupSettingsReadOnlyBannerKicked": "你已被移出群聊，当前仅可查看历史信息",
-  "groupSettingsReadOnlyBannerLeft": "你已退出群聊，当前仅可查看历史信息",
-  "groupSettingsReadOnlyBannerDisbanded": "该群已解散",
-  "groupSettingsReadOnlyBannerDefault": "你已不在群内",
-  "groupSettingsSnapshotTimeLabel": "快照时间",
-  "groupSettingsLeftTimeLabel": "离群时间",
-  "chatPageReadOnlyBannerKicked": "你已被移出群聊，无法发送和接收消息",
-  "chatPageReadOnlyBannerLeft": "你已退出群聊，无法发送和接收消息",
-  "chatPageReadOnlyBannerDisbanded": "该群已解散，无法发送和接收消息",
-  "chatPageBackToConversations": "返回会话列表",
-  "groupSettingsCannotViewQrCode": "你无法查看该群二维码",
-  "groupSettingsCannotViewQrCodeHint": "你已不在该群内，无法获取群二维码",
-  "groupSettingsReadOnlyMembersHint": "你已不在该群内，仅可查看成员列表",
-  "chatGroupYouAreNewOwner": "你已成为新群主",
-  "chatGroupYouTransferredOwner": "你已转让群主",
-  "chatGroupSystemSender": "系统",
-  "chatGroupNoticeUpdated": "群公告有更新",
-  "chatForwardEmptyTarget": "暂无可转发的会话",
-  "chatForwardTargetTitle": "选择会话",
-  "chatForwardTargetSummarySend": "将发送",
-  "chatForwardTargetSummaryForward": "将转发",
-  "chatForwardTargetSummaryTo": "到",
-  "chatForwardTargetMessageCount": "{count}条消息",
-  "@chatForwardTargetMessageCount": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatForwardTargetSingleForward": "逐条转发",
-  "chatForwardTargetCombineForward": "合并转发",
-  "chatForwardTargetSending": "发送中...",
-  "chatForwardTargetSent": "已发送",
-  "chatForwardTargetForwarded": "已转发",
-  "chatVideoPlayerTitle": "视频播放",
-  "chatVideoPlayerLoadFailed": "视频加载失败",
-  "chatVideoPlayerFallbackHint": "请重试，或使用外部应用打开该视频",
-  "chatVideoPlayerOpenExternally": "外部打开",
-  "chatVideoPlayerOpenExternalFailed": "外部打开失败",
-  "chatForwardTargetForwardFailed": "转发失败",
-  "chatForwardTargetPartialSuccess": "部分成功 {successCount}/{expectedCount}",
-  "@chatForwardTargetPartialSuccess": {
-    "placeholders": {
-      "successCount": {},
-      "expectedCount": {}
-    }
-  },
-  "chatForwardSingle": "逐条转发",
-  "chatForwardCombine": "合并转发",
-  "chatForwardMenu": "转发",
-  "chatForwardSelectTarget": "选择会话",
-  "chatForwardDialogSend": "发送",
-  "chatChooseForwardMessage": "请选择要转发的消息",
-  "chatMaxSelectReached": "最多选择 {count} 条消息",
-  "@chatMaxSelectReached": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatChooseDeleteMessage": "请选择要删除的消息",
-  "chatVoiceUploadRetry": "语音上传失败，点击重试",
-  "chatMaxStickerReached": "最多添加{count}张表情",
-  "@chatMaxStickerReached": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatSelectedCount": "已选择 {count} 条",
-  "@chatSelectedCount": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatForwardUnsupported": "当前文件暂不支持转发",
-  "chatForwardSuccess": "已转发到 {title}",
-  "chatForwardCombineDetailTitle": "合并转发详情",
-  "chatForwardCombineDetailInvalidParams": "参数无效",
-  "chatForwardCombineDetailLoading": "加载中...",
-  "chatForwardCombineDetailContentUnavailable": "内容不可查看",
-  "chatForwardCombineDetailQuoteTooDeep": "引用层级过深",
-  "chatForwardCombineDetailCircularReference": "检测到循环引用",
-  "chatForwardCombineDetailTodayAt": "今天 {time}",
-  "@chatForwardCombineDetailTodayAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatForwardCombineDetailYesterdayAt": "昨天 {time}",
-  "@chatForwardCombineDetailYesterdayAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatForwardCombineDetailEmpty": "暂无内容",
-  "chatForwardCombineDetailLoadFailed": "加载失败",
-  "chatRecallSuccess": "已撤回",
-  "chatRecallConfirmTitle": "提示",
-  "chatRecallConfirmContent": "确定撤回这条消息吗？",
-  "chatRecallFailed": "撤回失败",
-  "chatRecallSelfTip": "你撤回了一条消息",
-  "chatRecallOtherTip": "{operatorName}撤回了一条消息",
-  "@chatRecallOtherTip": {
-    "placeholders": {
-      "operatorName": {}
-    }
-  },
-  "chatCopySuccess": "已复制消息内容",
-  "chatFavoriteSuccess": "已收藏消息",
-  "chatDeleteSuccess": "已删除",
-  "chatDeleteFailed": "删除失败",
-  "chatDeleteConfirmTitle": "删除消息",
-  "chatDeleteConfirmContent": "确定删除这条消息吗？",
-  "chatRetryingMessage": "正在重新发送消息",
-  "chatHeaderGroupNotice": "群公告",
-  "chatReadOnly": "当前会话为只读模式",
-  "chatMultiDeleteTitle": "提示",
-  "chatMultiDeleteContent": "确定删除选中的 {count} 条消息吗？",
-  "@chatMultiDeleteContent": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatMentionSearchPlaceholder": "搜索群成员",
-  "chatMentionClose": "关闭",
-  "chatMentionLoading": "成员加载中...",
-  "chatMentionEmpty": "暂无可选择成员",
-  "chatMentionAllMembers": "所有人",
-  "chatMentionAllMembersHint": "仅群主或管理员可用",
-  "chatPresenceOffline": "离线",
-  "chatPresenceOnline": "在线",
-  "chatPresenceMobileOnline": "手机在线",
-  "chatPresenceWebOnline": "网页在线",
-  "chatPresenceMultiDeviceOnline": "多端在线",
-  "chatPresenceJustNowActive": "刚刚活跃",
-  "chatPresenceMinutesAgoActive": "{count}分钟前活跃",
-  "@chatPresenceMinutesAgoActive": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatPresenceTodayActiveAt": "今天活跃于 {time}",
-  "@chatPresenceTodayActiveAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatPresenceYesterdayActiveAt": "昨天活跃于 {time}",
-  "@chatPresenceYesterdayActiveAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatPresenceWeekdayActiveAt": "{weekday}活跃于 {time}",
-  "@chatPresenceWeekdayActiveAt": {
-    "placeholders": {
-      "weekday": {},
-      "time": {}
-    }
-  },
-  "chatPresenceRecentlyActive": "近期活跃",
-  "chatPresenceSunday": "周日",
-  "chatPresenceMonday": "周一",
-  "chatPresenceTuesday": "周二",
-  "chatPresenceWednesday": "周三",
-  "chatPresenceThursday": "周四",
-  "chatPresenceFriday": "周五",
-  "chatPresenceSaturday": "周六",
-  "chatTypingDirect": "正在输入...",
-  "chatTypingNamed": "{name} 正在输入...",
-  "@chatTypingNamed": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatTypingNamedMany": "{names} 等人正在输入...",
-  "@chatTypingNamedMany": {
-    "placeholders": {
-      "names": {}
-    }
-  },
-  "chatRecordingSlideToCancel": "手指上滑，取消发送",
-  "chatRecordingReleaseToCancelShort": "松开 取消",
-  "chatQuoteMessageMissing": "原消息已不存在",
-  "chatAnchorFallback": "原消息已不可定位，已为你打开最近消息",
-  "chatNoMoreMessages": "没有更多消息了",
-  "chatPreviewUnknownSender": "未知",
-  "chatPreviewMessage": "消息",
-  "chatPreviewMessageDeleted": "原消息已删除",
-  "chatPreviewImage": "[图片]",
-  "chatPreviewEmoji": "[表情]",
-  "chatPreviewSticker": "[动画表情]",
-  "chatPreviewVoice": "[语音]",
-  "chatPreviewVideo": "[视频]",
-  "chatPreviewFile": "[文件]",
-  "chatPreviewFileWithName": "[文件] {name}",
-  "@chatPreviewFileWithName": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatPreviewLocation": "[位置]",
-  "chatPreviewContactCard": "[名片]",
-  "chatPreviewChatHistory": "[聊天记录]",
-  "chatPreviewRecalled": "[消息已撤回]",
-  "chatCustomMessage": "[自定义消息]",
-  "chatClickToViewDetail": "点击查看详情",
-  "chatActionFavoriteSticker": "添加到表情",
-  "chatActionCopy": "复制",
-  "chatActionQuote": "引用回复",
-  "chatActionFavorite": "收藏",
-  "chatActionRecall": "撤回",
-  "chatActionDelete": "删除",
-  "chatActionMultiSelect": "多选",
-  "chatMoreActionCamera": "拍摄",
-  "chatMoreActionLocation": "位置",
-  "chatMoreActionContactCard": "名片",
-  "chatMoreActionCall": "音视频",
-  "chatSelectLocationTitle": "选择位置",
-  "chatSelectLocationSearchHint": "搜索位置",
-  "chatSelectLocationSearchEmptyHint": "输入地点关键词后搜索真实位置",
-  "chatSelectLocationSendCurrent": "发送当前位置",
-  "chatSelectLocationTapToLocate": "点击发送当前位置",
-  "chatSelectLocationNearbyTitle": "附近地点",
-  "chatSelectLocationSearchResultTitle": "搜索结果",
-  "chatSelectLocationNoNearbyResult": "暂无附近地点",
-  "chatSelectLocationNoSearchResult": "暂无搜索结果",
-  "chatSelectLocationQuotaTitle": "位置服务额度已耗尽",
-  "chatSelectLocationQuotaDesc": "当前定位检索服务暂时不可用，请稍后再试",
-  "chatSelectLocationQuotaTip": "可先切换其他方式发送位置",
-  "chatSelectLocationServiceDisabledTitle": "位置服务未开启",
-  "chatSelectLocationServiceDisabledDesc": "当前环境尚未开启位置检索服务",
-  "chatSelectLocationChoose": "请选择位置",
-  "chatSelectLocationCurrentUnavailable": "当前位置暂不可用",
-  "chatCurrentLocationName": "当前位置",
-  "chatLocationUnknownName": "未知位置",
-  "chatLocationSendSuccess": "已发送位置",
-  "chatLocationMissing": "位置信息缺失",
-  "chatLocationOpenFailed": "暂时无法打开该位置",
-  "chatLocationNavigateAction": "导航前往",
-  "chatLocationCopyAction": "复制位置",
-  "chatLocationOpenUnsupported": "当前设备暂不支持直接打开地图，可复制位置信息后使用",
-  "chatLocationDefaultTitle": "位置",
-  "chatLocationCoordinateFallback": "经纬度：{lat}, {lng}",
-  "@chatLocationCoordinateFallback": {
-    "placeholders": {
-      "lat": {},
-      "lng": {}
-    }
-  },
-  "chatLocationCopied": "位置信息已复制",
-  "chatSelectContactCardTitle": "选择名片",
-  "chatSelectContactCardSearchHint": "搜索联系人",
-  "chatSelectContactCardLoading": "加载中...",
-  "chatSelectContactCardEmpty": "暂无可选联系人",
-  "chatSelectContactCardLoadFailed": "加载联系人失败",
-  "chatSelectContactCardPlaceholder": "请选择 1 位联系人",
-  "chatSelectContactCardSelected": "已选择：{name}",
-  "@chatSelectContactCardSelected": {
-    "placeholders": {
-      "name": {}
-    }
-  },
-  "chatContactCardLabel": "个人名片",
-  "chatContactCardUnknownName": "未知联系人",
-  "chatContactCardSendSuccess": "已发送名片",
-  "chatContactMissing": "名片联系人不存在",
-  "filePreviewTitle": "文件预览",
-  "filePreviewForward": "转发",
-  "filePreviewPreview": "预览",
-  "filePreviewDownload": "下载",
-  "filePreviewPreviewUnavailable": "当前文件暂不支持预览",
-  "filePreviewDownloadStarted": "已开始下载",
-  "filePreviewDownloadFailed": "下载失败",
-  "filePreviewForwardUnsupported": "当前文件暂不支持转发",
-  "filePreviewModePdf": "PDF 预览",
-  "filePreviewModeImage": "图片预览",
-  "filePreviewModeVideo": "视频预览",
-  "filePreviewModeAudio": "音频预览",
-  "filePreviewModeText": "文本预览",
-  "filePreviewModeMarkdown": "Markdown 预览",
-  "filePreviewModeServerPdf": "服务端 PDF 预览",
-  "filePreviewModeServerHtml": "服务端 HTML 预览",
-  "filePreviewModeOffice": "Office 预览",
-  "filePreviewModeDownloadOnly": "仅支持下载",
-  "filePreviewModeUnknown": "文件预览",
-  "@chatForwardSuccess": {
-    "placeholders": {
-      "title": {}
-    }
-  },
-  "chatReadReceiptTitle": "已读详情",
-  "chatReadReceiptClose": "关闭",
-  "chatReadReceiptReadLabel": "已读",
-  "chatReadReceiptUnreadTab": "未读",
-  "chatReadReceiptRead": "已读 {count}",
-  "@chatReadReceiptRead": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatReadReceiptUnread": "未读 {count}",
-  "@chatReadReceiptUnread": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatReadReceiptVoiceHint": "语音消息“已读”按会话阅读水位统计，不代表已听语音",
-  "chatReadReceiptTotal": "总接收人数 {count}",
-  "@chatReadReceiptTotal": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "chatReadReceiptEmptyRead": "暂无已读记录",
-  "chatReadReceiptEmptyUnread": "暂无未读成员",
-  "chatReadReceiptLoading": "加载中...",
-  "chatReadReceiptNoMore": "没有更多了",
-  "chatReadReceiptUnreadLabel": "暂未阅读",
-  "chatReadReceiptUnknownUser": "未知用户",
-  "chatReadReceiptReadAtUnknown": "暂无阅读时间",
-  "chatReadReceiptPending": "处理中",
-  "chatReadReceiptDataLoading": "回执数据加载中，请稍后重试",
-  "chatReadReceiptJustNow": "刚刚",
-  "chatReadReceiptTodayAt": "今天 {time}",
-  "@chatReadReceiptTodayAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatReadReceiptYesterdayAt": "昨天 {time}",
-  "@chatReadReceiptYesterdayAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "chatVoiceFileUnavailable": "语音文件不可用",
-  "chatVoicePlayUrlFailed": "语音播放地址获取失败",
-  "chatStickerCannotAdd": "当前消息不可添加",
-  "chatStickerAdded": "已添加到表情",
-  "chatStickerExists": "已在表情库中",
-  "chatOtherUser": "对方",
-  "chatReeditExpired": "重新编辑已过期",
-  "chatReeditUnsupported": "该消息类型不支持重新编辑",
-  "chatReeditAction": "重新编辑",
-  "chatRecordPermissionDenied": "录音失败，请检查麦克风权限",
-  "chatRecordTooShort": "说话时间太短",
-  "chatRecordFileCreateFailed": "录音文件生成失败",
-  "chatUploading": "上传中",
-  "chatStickerAdd": "添加",
-  "chatEmojiManage": "管理",
-  "chatEmojiTab": "表情",
-  "chatStickerTab": "贴纸",
-  "chatEmojiDelete": "删除",
-  "chatEmojiRecent": "最近使用",
-  "chatEmojiAll": "所有表情",
-  "backAction": "返回",
-  "cancelAction": "取消",
-  "confirmAction": "确定"
+
+  "@@@SETTINGS": "Section: Settings",
+  "settingsTitle": "设置",
+  "settingsThemeMode": "主题模式",
+  "settingsThemeModeSummary": "跟随系统 / 浅色 / 深色",
+  "settingsLanguage": "语言设置",
+  "settingsLanguageSummary": "跟随系统 / 简体中文 / English",
+  "settingsAboutApp": "关于圣钰 IM",
+  "settingsVersionValue": "版本 1.0.0",
+
+  "@@@THEME": "Section: Theme",
+  "themeSettingsTitle": "主题模式",
+  "themeModeLightTitle": "浅色模式",
+  "themeModeLightDescription": "始终使用浅色页面与聊天背景",
+  "themeModeDarkTitle": "深色模式",
+  "themeModeDarkDescription": "始终使用深色页面与聊天背景",
+  "themePreviewTitle": "当前预览",
+  "themePreviewMessage": "接近老项目风格的主链路页面预览",
+
+  "@@@LANGUAGE": "Section: Language",
+  "languageSettingsTitle": "语言设置",
+  "languageModeSystemTitle": "跟随系统",
+  "languageModeSystemDescription": "使用设备当前语言",
+  "languageModeZhCnTitle": "简体中文",
+  "languageModeZhCnDescription": "强制使用中文（zh-CN）",
+  "languageModeEnTitle": "English",
+  "languageModeEnDescription": "强制使用英文",
+  "languageModeJaTitle": "日本語",
+  "languageModeJaDescription": "强制使用日文",
+  "languageModeKoTitle": "한국어",
+  "languageModeKoDescription": "强制使用韩文",
+  "languageEffectiveLabel": "当前生效语言",
+
+  "@@@PROFILE": "Section: Profile",
+  "profileTitle": "我的",
+  "profileUnknownUser": "未命名用户",
+  "profileCompanyLabel": "圣钰科技",
+  "profileSectionSettings": "设置",
+  "profileSectionAbout": "关于",
+  "profileNotifications": "消息通知",
+  "profilePrivacy": "隐私与安全",
+  "profileVersionLabel": "当前版本",
+  "profileThemeSwitch": "切换主题",
+  "profileFavorites": "收藏",
+  "profileScan": "扫一扫",
+  "profileLogout": "退出登录",
+  "profileAvatarHint": "点击更换或删除头像",
+  "profileUploadAvatar": "上传头像",
+  "profileReuploadAvatar": "重新上传头像",
+  "profileRemoveCustomAvatar": "删除自定义头像",
+  "profileConfirmRemoveAvatar": "确认删除自定义头像",
+  "profileAvatarUploadSuccess": "头像上传成功",
+  "profileAvatarUploadFailed": "头像上传失败",
+  "profileAvatarRemoveSuccess": "头像已删除",
+  "profileAvatarRemoveFailed": "头像删除失败",
+  "profileAvatarUploading": "头像上传中...",
+  "profileUploadFailedRetry": "上传失败，请重试",
+  "departmentFallback": "未分配部门",
+  "profilePostFallback": "未设置岗位",
+  "profileLoadError": "加载失败，请下拉刷新重试",
+
+  "@@@WORKBENCH": "Section: Workbench",
+  "workbenchTitle": "工作台",
+  "workbenchIntro": "常用协同能力与业务入口集中在这里。",
+  "workbenchApproval": "审批",
+  "workbenchTodo": "待办",
+  "workbenchCalendar": "日程",
+  "workbenchFiles": "云文件",
+  "workbenchMeeting": "会议",
+  "workbenchAnnouncements": "公告",
+  "workbenchEdit": "编辑",
+  "workbenchOfficeFlow": "办公流程",
+  "workbenchCommonFeatures": "常用功能",
+  "workbenchMail": "邮件",
+  "workbenchDelegation": "流程代理",
+  "workbenchAccountSwitch": "账号切换",
+  "workbenchAttendance": "考勤打卡",
+  "workbenchFieldWork": "外勤",
+  "workbenchMetricPlaceholder": "--",
+
+  "@@@SYSTEM": "Section: System",
+  "tabConversations": "消息",
+  "tabContacts": "通讯录",
+  "tabWorkbench": "工作台",
+  "tabProfile": "我",
+
+  "@@@GLOBAL_ACTIONS": "Section: Global Actions",
+
+  "@@@STICKER": "Section: Sticker",
+  "stickerManageTitle": "表情管理",
+  "stickerPin": "置顶",
+  "stickerMoveLeft": "左移",
+  "stickerMoveRight": "右移",
+  "stickerMoveBottom": "置底",
+  "stickerDeleted": "已删除表情",
+  "deleteStickerAction": "删除表情",
+
+  "@@@CONVERSATION_ACTIONS": "Section: Conversation Actions",
+  "pinConversation": "置顶会话",
+  "unpinConversation": "取消置顶",
+  "markAsRead": "标为已读",
+  "markAsUnread": "标为未读",
+  "deleteConversation": "删除会话",
+
+  "@@@GROUP": "Section: Group",
+  "groupSettingsReadOnlyTitle": "群设置（只读）",
+  "groupKickedHint": "你已被移出群聊，当前仅可查看历史信息",
+  "groupLeftHint": "你已退出群聊，当前仅可查看历史信息",
+  "groupDisbandedHint": "该群已解散",
+  "groupNotInGroupHint": "你已不在群内",
+  "groupMemberCount": "{count} 人群",
+  "myGroups": "我的群组",
+  "myFollows": "我的关注",
+  "organization": "组织架构",
+  "myDepartments": "我的部门",
+  "groupMemberAddedSuccess": "添加成员成功",
+  "addMemberAction": "添加成员",
+  "createGroupAction": "发起群聊",
+  "searchMemberHint": "搜索成员",
+  "atLeastTwoMembers": "至少选择两名成员",
+  "atLeastOneMember": "至少选择一名成员",
+  "groupInviteCode": "邀请码",
+  "groupExpireTime": "过期时间",
+  "groupJoinMethod": "加入方式",
+  "groupJoinRequiresApproval": "需管理员审核",
+  "scanPlatformNotSupported": "当前平台未接入原生扫码",
+  "scanManualJoinHint": "仍可继续通过下方入口手动入群。",
+
+  "@@@CALL": "Section: Call",
+  "callSwitch": "切换",
+
+  "@@@TOAST": "Section: Toast/Snackbar",
+  "torchToggleFailed": "切换手电筒失败: {error}",
+
+  "@@@SEARCH": "Section: Search",
+  "searchTabAll": "全部",
+  "searchTabMessage": "消息",
+  "searchTabContact": "联系人",
+  "searchTabGroup": "群聊",
+  "searchTabMedia": "媒体",
+  "joinGroupAction": "加入群聊",
+  "viewGroupAction": "查看群聊",
+  "invalidInviteExpired": "邀请码无效或已过期",
+  "manualEntryTitle": "手动输入入群信息",
+  "inputInviteCodeHint": "请输入邀请码或群邀请链接",
+  "pasteAction": "粘贴",
+  "verifyingAction": "校验中...",
+  "verifyAction": "校验",
+  "invitePasteHint": "支持直接粘贴老项目二维码链接、邀请码文本或扫码结果。",
+  "waitingForInput": "等待输入邀请码",
+  "clipboardEmpty": "剪贴板为空",
+  "unrecognizedInvite": "无法识别入群码或邀请链接",
+  "unnamedGroup": "未命名群聊",
+  "expired": "已过期",
+  "hoursMinutesExpire": "{hours}小时{minutes}分钟后过期",
+  "minutesExpire": "{minutes}分钟后过期",
+  "applicationSubmitted": "申请已提交",
+  "joinedGroup": "已加入群聊",
+  "submittingAction": "提交中...",
+  "submitApplication": "提交申请",
+  "reEnterAction": "重新输入",
+  "reEnterHint": "请重新输入有效的邀请码或邀请链接。",
+  "expireTime": "过期时间",
+  "groupChatNotExist": "群聊不存在",
+
+  "@@@SEARCH_PAGE": "Section: Search Page",
+  "searchMinLengthHint": "请输入至少 2 个字符开始搜索",
+  "searchingAction": "搜索中...",
+  "noResultsFound": "未找到\"{query}\"相关内容",
+  "loadMoreAction": "加载更多...",
+  "noMoreData": "没有更多了",
+  "clearHistoryTitle": "清空搜索历史",
+  "clearHistoryConfirm": "确认清空全部搜索历史吗？",
+  "deleteHistoryTitle": "删除搜索历史",
+  "deleteHistoryConfirm": "确认删除\"{keyword}\"吗？",
+  "searchHistory": "搜索历史",
+  "hotSearches": "热门搜索",
+  "yesterday": "昨天",
+  "groupMessages": "群消息",
+  "directMessages": "单聊消息",
+  "contactType": "联系人",
+  "groupType": "群聊",
+  "mediaType": "媒体",
+  "memberCountLabel": "{count} 人群",
+
+  "@@@LANGUAGE_SETTINGS": "Section: Language Settings",
+  "discardChangesConfirm": "确认放弃语言更改？",
+  "continueEditAction": "继续编辑",
+  "discardAction": "放弃"
 }

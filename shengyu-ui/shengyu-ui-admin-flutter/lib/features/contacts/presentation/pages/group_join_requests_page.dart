@@ -94,6 +94,7 @@ class _PendingGroupTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final count = group.pendingJoinRequestCount;
     final displayText = count > 99 ? '99+' : '$count';
     return ContactsChevronTile(
@@ -107,7 +108,7 @@ class _PendingGroupTile extends StatelessWidget {
         ),
       ),
       title: group.name,
-      subtitle: '群成员 ${group.memberCount} 人',
+      subtitle: strings.groupMemberCount(group.memberCount),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(

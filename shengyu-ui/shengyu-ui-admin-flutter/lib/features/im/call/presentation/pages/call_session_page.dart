@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/states/call_state.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
 class CallSessionPage extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     ref.listen<CallState>(callControllerProvider, (previous, next) {
       final wasFinished =
           previous != null &&
@@ -210,7 +212,7 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
                   if (isVideoEnabled)
                     _CallToolButton(
                       icon: Icons.cameraswitch_outlined,
-                      label: '切换',
+                      label: strings.callSwitch,
                       onTap: canSwitchCamera
                           ? () => ref
                                 .read(callControllerProvider.notifier)

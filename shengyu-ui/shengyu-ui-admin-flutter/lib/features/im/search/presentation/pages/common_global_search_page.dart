@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
@@ -39,13 +40,7 @@ class _CommonGlobalSearchPageState
 
   final List<String> _historyList = <String>[];
   final List<String> _hotList = <String>[];
-  final List<_SearchTabItem> _tabs = const <_SearchTabItem>[
-    _SearchTabItem(key: 'all', label: '全部'),
-    _SearchTabItem(key: 'message', label: '消息'),
-    _SearchTabItem(key: 'contact', label: '联系人'),
-    _SearchTabItem(key: 'group', label: '群聊'),
-    _SearchTabItem(key: 'media', label: '媒体'),
-  ];
+  List<_SearchTabItem>? _tabs;
 
   List<_GlobalSearchResultItem> _resultList = const <_GlobalSearchResultItem>[];
   _SearchFacets _facets = const _SearchFacets();
@@ -76,6 +71,21 @@ class _CommonGlobalSearchPageState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tabs == null) {
+      final strings = AppLocalizations.of(context);
+      _tabs = <_SearchTabItem>[
+        _SearchTabItem(key: 'all', label: strings.searchTabAll),
+        _SearchTabItem(key: 'message', label: strings.searchTabMessage),
+        _SearchTabItem(key: 'contact', label: strings.searchTabContact),
+        _SearchTabItem(key: 'group', label: strings.searchTabGroup),
+        _SearchTabItem(key: 'media', label: strings.searchTabMedia),
+      ];
+    }
+  }
+
+  @override
   void dispose() {
     _searchTimer?.cancel();
     _searchController.dispose();
@@ -85,6 +95,7 @@ class _CommonGlobalSearchPageState
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final showResultPanel =
         _normalizedKeyword().length >= _minSearchKeywordLength;
     final showTipPanel = _normalizedKeyword().isNotEmpty && !showResultPanel;
@@ -125,8 +136,8 @@ class _CommonGlobalSearchPageState
                                 fontSize: 14,
                                 color: Color(0xFF202531),
                               ),
-                              decoration: const InputDecoration(
-                                hintText: '搜索',
+                              decoration: InputDecoration(
+                                hintText: strings.searchHint,
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -148,8 +159,8 @@ class _CommonGlobalSearchPageState
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () => context.pop(),
-                    child: const Text(
-                      '取消',
+                    child: Text(
+                      strings.cancelAction,
                       style: TextStyle(
                         fontSize: 16,
                         color: Color(0xFF246BFD),
@@ -170,11 +181,11 @@ class _CommonGlobalSearchPageState
             if (!showResultPanel && _hotList.isNotEmpty)
               _SearchHotPanel(hotList: _hotList, onTap: _searchHot),
             if (showTipPanel)
-              const Expanded(
+              Expanded(
                 child: Center(
                   child: Text(
-                    '请输入至少 2 个字符开始搜索',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF98A1B2)),
+                    strings.searchMinLengthHint,
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF98A1B2)),
                   ),
                 ),
               )
@@ -191,7 +202,7 @@ class _CommonGlobalSearchPageState
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemBuilder: (context, index) {
-                          final tab = _tabs[index];
+                          final tab = _tabs![index];
                           final active = _activeTab == tab.key;
                           return GestureDetector(
                             onTap: () => _switchTab(tab.key),
@@ -221,7 +232,7 @@ class _CommonGlobalSearchPageState
                         },
                         separatorBuilder: (context, index) =>
                             const SizedBox(width: 8),
-                        itemCount: _tabs.length,
+                        itemCount: _tabs?.length ?? 0,
                       ),
                     ),
                     Expanded(
@@ -246,11 +257,11 @@ class _CommonGlobalSearchPageState
                                 ),
                               ),
                             if (_loading && _resultList.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 40),
                                 child: Center(
                                   child: Text(
-                                    '搜索中...',
+                                    strings.searchingAction,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF98A1B2),
@@ -265,7 +276,7 @@ class _CommonGlobalSearchPageState
                                 ),
                                 child: Center(
                                   child: Text(
-                                    '未找到“${_normalizedKeyword()}”相关内容',
+                                    strings.noResultsFound(_normalizedKeyword()),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF697386),
@@ -274,11 +285,11 @@ class _CommonGlobalSearchPageState
                                 ),
                               ),
                             if (_loadingMore && _resultList.isNotEmpty)
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
                                   child: Text(
-                                    '加载更多...',
+                                    strings.loadMoreAction,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Color(0xFF98A1B2),
@@ -290,11 +301,11 @@ class _CommonGlobalSearchPageState
                                 !_loadingMore &&
                                 !_hasMore &&
                                 _resultList.isNotEmpty)
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
                                   child: Text(
-                                    '没有更多了',
+                                    strings.noMoreData,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Color(0xFF98A1B2),
@@ -657,19 +668,20 @@ class _CommonGlobalSearchPageState
   }
 
   String _buildTypeLabel({required String type, required Object? meta}) {
+    final strings = AppLocalizations.of(context);
     if (type == 'contact') {
-      return '联系人';
+      return strings.contactType;
     }
     if (type == 'group') {
-      return '群聊';
+      return strings.groupType;
     }
     if (type == 'media') {
-      return '媒体';
+      return strings.mediaType;
     }
     return _resolveConversationType(meta: meta, raw: meta) ==
             ConversationType.group
-        ? '群消息'
-        : '单聊消息';
+        ? strings.groupMessages
+        : strings.directMessages;
   }
 
   String _resolveAvatarUrlByType({
@@ -802,20 +814,23 @@ class _CommonGlobalSearchPageState
   Future<void> _clearHistory() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('清空搜索历史'),
-        content: const Text('确认清空全部搜索历史吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final strings = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(strings.clearHistoryTitle),
+          content: Text(strings.clearHistoryConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(strings.cancelAction),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(strings.confirmAction),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) {
       return;
@@ -837,20 +852,23 @@ class _CommonGlobalSearchPageState
   Future<void> _deleteHistoryKeyword(String keyword) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除搜索历史'),
-        content: Text('确认删除“$keyword”吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final strings = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(strings.deleteHistoryTitle),
+          content: Text(strings.deleteHistoryConfirm(keyword)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(strings.cancelAction),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(strings.confirmAction),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) {
       return;
@@ -956,6 +974,7 @@ class _SearchHistoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       color: Colors.white,
@@ -965,10 +984,10 @@ class _SearchHistoryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '搜索历史',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
+                  strings.searchHistory,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
                 ),
               ),
               GestureDetector(
@@ -1025,6 +1044,7 @@ class _SearchHotPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       color: Colors.white,
@@ -1032,9 +1052,9 @@ class _SearchHotPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '热门搜索',
-            style: TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
+          Text(
+            strings.hotSearches,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -1175,7 +1195,7 @@ class _SearchResultTile extends StatelessWidget {
     );
   }
 
-  static String _formatResultTime(int timestamp) {
+  static String _formatResultTime(int timestamp, {String? yesterdayLabel}) {
     if (timestamp <= 0) {
       return '';
     }
@@ -1192,7 +1212,7 @@ class _SearchResultTile extends StatelessWidget {
     if (date.year == yesterday.year &&
         date.month == yesterday.month &&
         date.day == yesterday.day) {
-      return '昨天';
+      return yesterdayLabel ?? '昨天';
     }
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
