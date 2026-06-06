@@ -50,6 +50,9 @@ public class AppImConversationRespVO {
     @Schema(description = "最后一条消息是否@了我（用于会话列表[有人@我]标记）", example = "false")
     private Boolean lastMessageHasAtMe;
 
+    @Schema(description = "最后一条消息的系统消息事件Key（用于前端国际化渲染）", example = "im.system.group_member_added_one")
+    private String lastMessageSystemEventKey;
+
     @Schema(description = "最后一条消息时间", example = "2026-02-11 10:30:00")
     private LocalDateTime lastMessageTime;
 

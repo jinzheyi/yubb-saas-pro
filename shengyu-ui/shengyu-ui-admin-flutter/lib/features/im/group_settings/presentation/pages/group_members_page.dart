@@ -447,7 +447,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
           errorMsg.contains('群成员不存在')) {
         _showSnackBar(context, strings.groupMemberNotExists);
       } else {
-        _showSnackBar(context, errorMsg);
+        _showSnackBar(context, strings.operationFailed(errorMsg));
       }
     }
   }
@@ -595,7 +595,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       if (!context.mounted) {
         return;
       }
-      _showSnackBar(context, error.toString());
+      _showSnackBar(context, strings.operationFailed(error.toString()));
     }
   }
 

@@ -20,6 +20,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/prov
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
+import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 
 final Map<String, Timer> _singleChatPresenceRefreshTimers = <String, Timer>{};
@@ -87,18 +88,18 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             targetId: pageState.entryArgs.targetId,
             messageId: effectiveMessage.messageId,
             messageSequence: effectiveMessage.sequence,
-            preview: ref
-                .read(messagePreviewFormatterProvider)
-                .formatConversationPreview(
-                  type: effectiveMessage.type,
-                  content: effectiveMessage.content,
-                  customType: effectiveMessage.extra.customType,
-                  fileName: effectiveMessage.extra.fileName,
-                  systemEventKey: effectiveMessage.extra.systemEventKey,
-                  conversationType: pageState.entryArgs.conversationType,
-                  isSelf: effectiveMessage.isOutgoing,
-                  senderName: effectiveMessage.senderName,
-                ),
+            preview: createConversationPreviewFormatter(
+              ref.read(appLocaleProvider),
+            ).call(
+              type: effectiveMessage.type,
+              content: effectiveMessage.content,
+              customType: effectiveMessage.extra.customType,
+              fileName: effectiveMessage.extra.fileName,
+              systemEventKey: effectiveMessage.extra.systemEventKey,
+              conversationType: pageState.entryArgs.conversationType,
+              isSelf: effectiveMessage.isOutgoing,
+              senderName: effectiveMessage.senderName,
+            ),
             messageType: effectiveMessage.type,
             senderName: effectiveMessage.senderName,
             isSelf: effectiveMessage.isOutgoing,
@@ -233,18 +234,18 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             targetId: pageState.entryArgs.targetId,
             messageId: effectiveRecalled.messageId,
             messageSequence: effectiveRecalled.sequence,
-            preview: ref
-                .read(messagePreviewFormatterProvider)
-                .formatConversationPreview(
-                  type: effectiveRecalled.type,
-                  content: effectiveRecalled.content,
-                  customType: effectiveRecalled.extra.customType,
-                  fileName: effectiveRecalled.extra.fileName,
-                  systemEventKey: effectiveRecalled.extra.systemEventKey,
-                  conversationType: pageState.entryArgs.conversationType,
-                  isSelf: effectiveRecalled.isOutgoing,
-                  senderName: effectiveRecalled.senderName,
-                ),
+            preview: createConversationPreviewFormatter(
+              ref.read(appLocaleProvider),
+            ).call(
+              type: effectiveRecalled.type,
+              content: effectiveRecalled.content,
+              customType: effectiveRecalled.extra.customType,
+              fileName: effectiveRecalled.extra.fileName,
+              systemEventKey: effectiveRecalled.extra.systemEventKey,
+              conversationType: pageState.entryArgs.conversationType,
+              isSelf: effectiveRecalled.isOutgoing,
+              senderName: effectiveRecalled.senderName,
+            ),
             messageType: effectiveRecalled.type,
             senderName: effectiveRecalled.senderName,
             isSelf: effectiveRecalled.isOutgoing,

@@ -90,6 +90,75 @@
   "contactsDepartmentSectionTitle": "部门",
   "contactsSearchEmpty": "暂无结果",
   "contactsFavoritesEmpty": "暂无关注联系人",
+
+  "@@@MESSAGE_PREVIEWS": "Section: Message Preview Texts (Conversation List)",
+  "messagePreviewImage": "[图片]",
+  "messagePreviewVoice": "[语音]",
+  "messagePreviewVideo": "[视频]",
+  "messagePreviewFile": "[文件]",
+  "messagePreviewFileWithName": "[文件] {fileName}",
+  "@messagePreviewFileWithName": {
+    "description": "文件消息预览（带文件名）",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "messagePreviewLocation": "[位置]",
+  "messagePreviewEmoji": "[表情]",
+  "messagePreviewSticker": "[动画表情]",
+  "messagePreviewContactCard": "[名片]",
+  "messagePreviewForward": "[聊天记录]",
+  "messagePreviewSystem": "[系统消息]",
+  "messagePreviewMePrefix": "我",
+  "messagePreviewMePrefixColon": "我:{summary}",
+  "@messagePreviewMePrefixColon": {
+    "description": "会话列表中自己发送的消息前缀",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "messagePreviewUnknownSender": "未知",
+  "messagePreviewSenderColon": "{sender}:{summary}",
+  "@messagePreviewSenderColon": {
+    "description": "会话列表中他人发送的消息前缀",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+
+  "@@@CONVERSATION_NOTICES": "Section: Conversation List Inline Notices",
+  "conversationPinnedNotice": "已置顶会话",
+  "conversationUnpinnedNotice": "已取消置顶",
+  "conversationMarkedReadNotice": "已标为已读",
+  "conversationMarkedUnreadNotice": "已标为未读",
+  "conversationDeleteDialogTitle": "删除会话",
+  "conversationDeleteDialogContent": "删除后将从当前用户会话列表移除。",
+  "conversationDeletedNotice": "会话已删除",
+  "cancelAction": "取消",
+  "confirmAction": "确定",
+  "operationFailed": "操作失败: {error}",
+
+  "@@@SYSTEM_EVENT_PREVIEWS": "Section: System Event Preview Texts (Conversation List)",
+  "systemEventGroupNoticeUpdated": "群公告有更新",
+  "systemEventGroupMuteAllEnabled": "当前群已开启全员禁言",
+  "systemEventGroupMuteAllDisabled": "当前群已关闭全员禁言",
+  "systemEventGroupMemberAdded": "有新成员加入群聊",
+  "systemEventGroupMemberRemoved": "有成员被移出群聊",
+  "systemEventGroupOwnerTransferred": "群主已完成转让",
+  "systemEventGroupMemberRoleSetAdmin": "群成员已被设为管理员",
+  "systemEventGroupMemberRoleSetMember": "群成员已被设置为普通成员",
+  "systemEventGroupMemberMuted": "群成员已被禁言",
+  "systemEventGroupMemberUnmuted": "群成员已被解除禁言",
+
   "contactsListEmpty": "暂无联系人",
   "contactsMyGroupsEmpty": "暂无群组",
   "contactsDepartmentsEmpty": "暂无部门成员",
@@ -1297,6 +1366,8 @@
   "searchMemberHint": "搜索成员",
   "atLeastTwoMembers": "至少选择两名成员",
   "atLeastOneMember": "至少选择一名成员",
+  "groupNotAllowedAddMember": "当前群不允许添加成员",
+  "mustRetainCurrentUserInGroup": "当前登录账号必须保留在群聊中",
   "groupInviteCode": "邀请码",
   "groupExpireTime": "过期时间",
   "groupJoinMethod": "加入方式",

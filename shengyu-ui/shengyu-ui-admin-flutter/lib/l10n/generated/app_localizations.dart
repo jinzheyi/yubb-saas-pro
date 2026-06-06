@@ -135,7 +135,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmAction.
   ///
   /// In en, this message translates to:
-  /// **'Confirm'**
+  /// **'OK'**
   String get confirmAction;
 
   /// No description provided for @doneAction.
@@ -509,6 +509,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No favorite contacts yet'**
   String get contactsFavoritesEmpty;
+
+  /// No description provided for @messagePreviewImage.
+  ///
+  /// In en, this message translates to:
+  /// **'[Image]'**
+  String get messagePreviewImage;
+
+  /// No description provided for @messagePreviewVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'[Voice]'**
+  String get messagePreviewVoice;
+
+  /// No description provided for @messagePreviewVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'[Video]'**
+  String get messagePreviewVideo;
+
+  /// No description provided for @messagePreviewFile.
+  ///
+  /// In en, this message translates to:
+  /// **'[File]'**
+  String get messagePreviewFile;
+
+  /// File message preview with filename
+  ///
+  /// In en, this message translates to:
+  /// **'[File] {fileName}'**
+  String messagePreviewFileWithName(String fileName);
+
+  /// No description provided for @messagePreviewLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'[Location]'**
+  String get messagePreviewLocation;
+
+  /// No description provided for @messagePreviewEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'[Emoji]'**
+  String get messagePreviewEmoji;
+
+  /// No description provided for @messagePreviewSticker.
+  ///
+  /// In en, this message translates to:
+  /// **'[Sticker]'**
+  String get messagePreviewSticker;
+
+  /// No description provided for @messagePreviewContactCard.
+  ///
+  /// In en, this message translates to:
+  /// **'[Contact Card]'**
+  String get messagePreviewContactCard;
+
+  /// No description provided for @messagePreviewForward.
+  ///
+  /// In en, this message translates to:
+  /// **'[Chat History]'**
+  String get messagePreviewForward;
+
+  /// No description provided for @messagePreviewSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'[System]'**
+  String get messagePreviewSystem;
+
+  /// No description provided for @messagePreviewMePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get messagePreviewMePrefix;
+
+  /// Prefix for self-sent message in conversation list
+  ///
+  /// In en, this message translates to:
+  /// **'Me:{summary}'**
+  String messagePreviewMePrefixColon(String summary);
+
+  /// No description provided for @messagePreviewUnknownSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get messagePreviewUnknownSender;
+
+  /// Prefix for other-sent message in conversation list
+  ///
+  /// In en, this message translates to:
+  /// **'{sender}:{summary}'**
+  String messagePreviewSenderColon(String sender, String summary);
+
+  /// No description provided for @conversationPinnedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation pinned'**
+  String get conversationPinnedNotice;
+
+  /// No description provided for @conversationUnpinnedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation unpinned'**
+  String get conversationUnpinnedNotice;
+
+  /// No description provided for @conversationMarkedReadNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as read'**
+  String get conversationMarkedReadNotice;
+
+  /// No description provided for @conversationMarkedUnreadNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as unread'**
+  String get conversationMarkedUnreadNotice;
+
+  /// No description provided for @conversationDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Conversation'**
+  String get conversationDeleteDialogTitle;
+
+  /// No description provided for @conversationDeleteDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove the conversation from your list.'**
+  String get conversationDeleteDialogContent;
+
+  /// No description provided for @conversationDeletedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation deleted'**
+  String get conversationDeletedNotice;
+
+  /// Generic error toast message with technical detail
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed: {error}'**
+  String operationFailed(String error);
+
+  /// No description provided for @systemEventGroupNoticeUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'The group notice has been updated'**
+  String get systemEventGroupNoticeUpdated;
+
+  /// No description provided for @systemEventGroupMuteAllEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This group has muted all members'**
+  String get systemEventGroupMuteAllEnabled;
+
+  /// No description provided for @systemEventGroupMuteAllDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This group has turned off mute-all'**
+  String get systemEventGroupMuteAllDisabled;
+
+  /// No description provided for @systemEventGroupMemberAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'A new member joined the group'**
+  String get systemEventGroupMemberAdded;
+
+  /// No description provided for @systemEventGroupMemberRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'A member was removed from the group'**
+  String get systemEventGroupMemberRemoved;
+
+  /// No description provided for @systemEventGroupOwnerTransferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Group ownership has been transferred'**
+  String get systemEventGroupOwnerTransferred;
+
+  /// No description provided for @systemEventGroupMemberRoleSetAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'A group member was set as admin'**
+  String get systemEventGroupMemberRoleSetAdmin;
+
+  /// No description provided for @systemEventGroupMemberRoleSetMember.
+  ///
+  /// In en, this message translates to:
+  /// **'A group member was set as member'**
+  String get systemEventGroupMemberRoleSetMember;
+
+  /// No description provided for @systemEventGroupMemberMuted.
+  ///
+  /// In en, this message translates to:
+  /// **'A group member has been muted'**
+  String get systemEventGroupMemberMuted;
+
+  /// No description provided for @systemEventGroupMemberUnmuted.
+  ///
+  /// In en, this message translates to:
+  /// **'A group member has been unmuted'**
+  String get systemEventGroupMemberUnmuted;
 
   /// No description provided for @contactsListEmpty.
   ///
@@ -4532,6 +4730,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select at least 1 member'**
   String get atLeastOneMember;
+
+  /// No description provided for @groupNotAllowedAddMember.
+  ///
+  /// In en, this message translates to:
+  /// **'This group does not allow adding members'**
+  String get groupNotAllowedAddMember;
+
+  /// No description provided for @mustRetainCurrentUserInGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'The current logged-in account must be retained in the group'**
+  String get mustRetainCurrentUserInGroup;
 
   /// No description provided for @groupInviteCode.
   ///

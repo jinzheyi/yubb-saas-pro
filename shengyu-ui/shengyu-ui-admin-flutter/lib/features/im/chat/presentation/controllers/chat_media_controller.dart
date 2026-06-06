@@ -21,7 +21,8 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/repositori
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
-import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
+import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart'
+    show ConversationPreviewFormatter;
 
 class ChatMediaController extends StateNotifier<ChatMediaState> {
   ChatMediaController(
@@ -37,7 +38,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
   final MediaPickerService _mediaPickerService;
   final ChatUploadCoordinator _chatUploadCoordinator;
   final OptimisticMessageFactory _optimisticMessageFactory;
-  final MessagePreviewFormatter _messagePreviewFormatter;
+  final ConversationPreviewFormatter _messagePreviewFormatter;
   final ConversationListController _conversationListController;
   final ChatTimelineController _timelineController;
   final GroupSettingsRepository _groupSettingsRepository;
@@ -651,7 +652,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       targetId: entryArgs.targetId,
       messageId: message.messageId,
       messageSequence: message.sequence,
-      preview: _messagePreviewFormatter.formatConversationPreview(
+      preview: _messagePreviewFormatter(
         type: message.type,
         content: message.content,
         customType: message.extra.customType,

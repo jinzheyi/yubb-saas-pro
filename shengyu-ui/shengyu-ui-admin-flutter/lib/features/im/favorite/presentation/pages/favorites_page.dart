@@ -1205,7 +1205,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       if (!mounted) {
         return;
       }
-      _showNotice('$error');
+      _showNotice(strings.operationFailed(error.toString()));
     }
   }
 

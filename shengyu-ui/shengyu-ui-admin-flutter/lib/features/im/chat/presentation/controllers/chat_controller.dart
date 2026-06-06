@@ -19,7 +19,8 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_pa
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
-import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
+import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart'
+    show ConversationPreviewFormatter;
 
 class ChatController extends StateNotifier<ChatPageState> {
   ChatController(
@@ -37,7 +38,7 @@ class ChatController extends StateNotifier<ChatPageState> {
   final SendMessageUseCase _sendMessageUseCase;
   final MarkConversationReadUseCase _markConversationReadUseCase;
   final OptimisticMessageFactory _optimisticMessageFactory;
-  final MessagePreviewFormatter _messagePreviewFormatter;
+  final ConversationPreviewFormatter _messagePreviewFormatter;
   final ConversationListController _conversationListController;
   final ChatTimelineController _timelineController;
   final ChatReceiptController _receiptController;
@@ -540,7 +541,7 @@ class ChatController extends StateNotifier<ChatPageState> {
   }
 
   String _conversationPreview(Message message) {
-    return _messagePreviewFormatter.formatConversationPreview(
+    return _messagePreviewFormatter(
       type: message.type,
       content: message.content,
       customType: message.extra.customType,

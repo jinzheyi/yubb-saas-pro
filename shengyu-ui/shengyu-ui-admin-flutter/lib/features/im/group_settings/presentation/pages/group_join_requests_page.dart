@@ -345,9 +345,10 @@ class _GroupJoinRequestsPageState extends ConsumerState<GroupJoinRequestsPage> {
       setState(() {
         _processingRequestId = '';
       });
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
@@ -410,7 +411,7 @@ class _GroupJoinRequestsPageState extends ConsumerState<GroupJoinRequestsPage> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 

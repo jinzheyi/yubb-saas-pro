@@ -88,6 +88,75 @@
   "contactsDepartmentSectionTitle": "Departments",
   "contactsSearchEmpty": "No results",
   "contactsFavoritesEmpty": "No favorite contacts yet",
+
+  "@@@MESSAGE_PREVIEWS": "Section: Message Preview Texts (Conversation List)",
+  "messagePreviewImage": "[Image]",
+  "messagePreviewVoice": "[Voice]",
+  "messagePreviewVideo": "[Video]",
+  "messagePreviewFile": "[File]",
+  "messagePreviewFileWithName": "[File] {fileName}",
+  "@messagePreviewFileWithName": {
+    "description": "File message preview with filename",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "messagePreviewLocation": "[Location]",
+  "messagePreviewEmoji": "[Emoji]",
+  "messagePreviewSticker": "[Sticker]",
+  "messagePreviewContactCard": "[Contact Card]",
+  "messagePreviewForward": "[Chat History]",
+  "messagePreviewSystem": "[System]",
+  "messagePreviewMePrefix": "나",
+  "messagePreviewMePrefixColon": "나:{summary}",
+  "@messagePreviewMePrefixColon": {
+    "description": "Prefix for self-sent message in conversation list",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "messagePreviewUnknownSender": "Unknown",
+  "messagePreviewSenderColon": "{sender}:{summary}",
+  "@messagePreviewSenderColon": {
+    "description": "Prefix for other-sent message in conversation list",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+
+  "@@@CONVERSATION_NOTICES": "Section: Conversation List Inline Notices",
+  "conversationPinnedNotice": "Conversation pinned",
+  "conversationUnpinnedNotice": "Conversation unpinned",
+  "conversationMarkedReadNotice": "Marked as read",
+  "conversationMarkedUnreadNotice": "Marked as unread",
+  "conversationDeleteDialogTitle": "Delete Conversation",
+  "conversationDeleteDialogContent": "This will remove the conversation from your list.",
+  "conversationDeletedNotice": "Conversation deleted",
+  "cancelAction": "Cancel",
+  "confirmAction": "OK",
+  "operationFailed": "Operation failed: {error}",
+
+  "@@@SYSTEM_EVENT_PREVIEWS": "Section: System Event Preview Texts (Conversation List)",
+  "systemEventGroupNoticeUpdated": "The group notice has been updated",
+  "systemEventGroupMuteAllEnabled": "This group has muted all members",
+  "systemEventGroupMuteAllDisabled": "This group has turned off mute-all",
+  "systemEventGroupMemberAdded": "A new member joined the group",
+  "systemEventGroupMemberRemoved": "A member was removed from the group",
+  "systemEventGroupOwnerTransferred": "Group ownership has been transferred",
+  "systemEventGroupMemberRoleSetAdmin": "A group member was set as admin",
+  "systemEventGroupMemberRoleSetMember": "A group member was set as member",
+  "systemEventGroupMemberMuted": "A group member has been muted",
+  "systemEventGroupMemberUnmuted": "A group member has been unmuted",
+
   "contactsListEmpty": "No contacts yet",
   "contactsMyGroupsEmpty": "No groups yet",
   "contactsDepartmentsEmpty": "No department members yet",

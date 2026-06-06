@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.exception.ServiceException;
@@ -341,6 +342,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                         item.setLastMessageType(lastMessageType);
                         item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
                                 lastMessage != null ? lastMessage.getExtra() : null));
+                        item.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
                         item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
                         item.setLastMessageTime(state.getLastMessageTime());
                         item.setIsPinned(state.getIsPinned());
@@ -1035,6 +1037,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             respVO.setLastMessageType(lastType);
             respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                     lastMessage != null ? lastMessage.getExtra() : null));
+            respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
             // 无消息时：群聊会话时间取群创建时间；有消息时取最后一条消息时间
             respVO.setLastMessageTime(chatUser.getLastMessageTime());
             respVO.setIsPinned(chatUser.getIsPinned());
@@ -1131,6 +1134,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         respVO.setLastMessageType(lastType);
         respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                 lastMsg != null ? lastMsg.getExtra() : null));
+        respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMsg != null ? lastMsg.getExtra() : null));
         // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
         respVO.setLastMessageTime(chatUser.getLastMessageTime());
         respVO.setIsPinned(chatUser.getIsPinned());
@@ -1410,6 +1414,32 @@ public class ImConversationServiceImpl implements ImConversationService {
                 return "[系统消息]";
             default:
                 return "[消息]";
+        }
+    }
+
+    /**
+     * 从消息 extra JSON 中提取系统消息事件 Key（用于前端国际化渲染）
+     */
+    private String extractSystemEventKey(String extra) {
+        if (extra == null || extra.isEmpty()) {
+            return null;
+        }
+        try {
+            JSONObject root = JSONUtil.parseObj(extra);
+            if (root == null || root.isEmpty()) {
+                return null;
+            }
+            JSONObject i18n = root.getJSONObject("i18n");
+            if (i18n == null || i18n.isEmpty()) {
+                return null;
+            }
+            String eventKey = i18n.getStr("eventKey");
+            if (StrUtil.isBlank(eventKey)) {
+                return null;
+            }
+            return eventKey;
+        } catch (Exception e) {
+            return null;
         }
     }
 

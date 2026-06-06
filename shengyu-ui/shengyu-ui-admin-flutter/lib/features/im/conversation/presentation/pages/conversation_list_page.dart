@@ -745,6 +745,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   }
 
   Future<void> _handleMenuAction(_ConversationMenuAction action) async {
+    final strings = AppLocalizations.of(context);
     final conversation = _selectedConversation;
     if (conversation == null) {
       return;
@@ -764,38 +765,38 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
             chatId: conversation.chatId,
             isPinned: !conversation.isPinned,
           );
-          _showInlineNotice(!conversation.isPinned ? '已置顶会话' : '已取消置顶');
+          _showInlineNotice(!conversation.isPinned ? strings.conversationPinnedNotice : strings.conversationUnpinnedNotice);
           break;
         case _ConversationMenuAction.unread:
           if (conversation.unreadCount > 0) {
             await controller.markConversationReadRemotely(conversation.chatId);
-            _showInlineNotice('已标为已读');
+            _showInlineNotice(strings.conversationMarkedReadNotice);
           } else {
             controller.markConversationUnreadLocally(conversation.chatId);
-            _showInlineNotice('已标为未读');
+            _showInlineNotice(strings.conversationMarkedUnreadNotice);
           }
           break;
         case _ConversationMenuAction.delete:
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (dialogContext) => AlertDialog(
-              title: const Text('删除会话'),
-              content: const Text('删除后将从当前用户会话列表移除。'),
+              title: Text(strings.conversationDeleteDialogTitle),
+              content: Text(strings.conversationDeleteDialogContent),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('取消'),
+                  child: Text(strings.cancelAction),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(dialogContext).pop(true),
-                  child: const Text('确定'),
+                  child: Text(strings.confirmAction),
                 ),
               ],
             ),
           );
           if (confirmed == true) {
             await controller.deleteConversation(conversation.chatId);
-            _showInlineNotice('会话已删除');
+            _showInlineNotice(strings.conversationDeletedNotice);
           }
           break;
       }
@@ -805,7 +806,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 

@@ -292,7 +292,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
       if (!mounted) {
         return;
       }
-      _showMessage(error.toString());
+      _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
     }
   }
 

@@ -75,6 +75,7 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
+import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -3971,18 +3972,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
             targetId: pageState.entryArgs.targetId,
             messageId: recalled.messageId,
             messageSequence: recalled.sequence,
-            preview: ref
-                .read(messagePreviewFormatterProvider)
-                .formatConversationPreview(
-                  type: recalled.type,
-                  content: recalled.content,
-                  customType: recalled.extra.customType,
-                  fileName: recalled.extra.fileName,
-                  systemEventKey: recalled.extra.systemEventKey,
-                  conversationType: pageState.entryArgs.conversationType,
-                  isSelf: recalled.isOutgoing,
-                  senderName: recalled.senderName,
-                ),
+            preview: createConversationPreviewFormatter(
+              ref.read(appLocaleProvider),
+            ).call(
+              type: recalled.type,
+              content: recalled.content,
+              customType: recalled.extra.customType,
+              fileName: recalled.extra.fileName,
+              systemEventKey: recalled.extra.systemEventKey,
+              conversationType: pageState.entryArgs.conversationType,
+              isSelf: recalled.isOutgoing,
+              senderName: recalled.senderName,
+            ),
             messageType: recalled.type,
             senderName: recalled.senderName,
             isSelf: recalled.isOutgoing,
@@ -4250,13 +4251,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   String _buildQuotePreview(Message message) {
-    return ref
-        .read(messagePreviewFormatterProvider)
-        .format(
-          type: message.type,
-          content: message.content,
-          customType: message.extra.customType,
-        );
+    return createMessagePreviewFormatter(
+      ref.read(appLocaleProvider),
+    ).call(
+      type: message.type,
+      content: message.content,
+      customType: message.extra.customType,
+    );
   }
 
   void _clearQuoteReply() {
@@ -5442,18 +5443,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
           targetId: widget.args.targetId,
           messageId: retryKey,
           messageSequence: localMessage.sequence,
-          preview: ref
-              .read(messagePreviewFormatterProvider)
-              .formatConversationPreview(
-                type: localMessage.type,
-                content: localMessage.content,
-                customType: localMessage.extra.customType,
-                fileName: localMessage.extra.fileName,
-                systemEventKey: localMessage.extra.systemEventKey,
-                conversationType: widget.args.conversationType,
-                isSelf: localMessage.isOutgoing,
-                senderName: localMessage.senderName,
-              ),
+          preview: createConversationPreviewFormatter(
+            ref.read(appLocaleProvider),
+          ).call(
+            type: localMessage.type,
+            content: localMessage.content,
+            customType: localMessage.extra.customType,
+            fileName: localMessage.extra.fileName,
+            systemEventKey: localMessage.extra.systemEventKey,
+            conversationType: widget.args.conversationType,
+            isSelf: localMessage.isOutgoing,
+            senderName: localMessage.senderName,
+          ),
           messageType: localMessage.type,
           senderName: localMessage.senderName,
           isSelf: localMessage.isOutgoing,
@@ -5522,18 +5523,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
             targetId: widget.args.targetId,
             messageId: normalizedSent.messageId,
             messageSequence: normalizedSent.sequence,
-            preview: ref
-                .read(messagePreviewFormatterProvider)
-                .formatConversationPreview(
-                  type: normalizedSent.type,
-                  content: normalizedSent.content,
-                  customType: normalizedSent.extra.customType,
-                  fileName: normalizedSent.extra.fileName,
-                  systemEventKey: normalizedSent.extra.systemEventKey,
-                  conversationType: widget.args.conversationType,
-                  isSelf: normalizedSent.isOutgoing,
-                  senderName: normalizedSent.senderName,
-                ),
+            preview: createConversationPreviewFormatter(
+              ref.read(appLocaleProvider),
+            ).call(
+              type: normalizedSent.type,
+              content: normalizedSent.content,
+              customType: normalizedSent.extra.customType,
+              fileName: normalizedSent.extra.fileName,
+              systemEventKey: normalizedSent.extra.systemEventKey,
+              conversationType: widget.args.conversationType,
+              isSelf: normalizedSent.isOutgoing,
+              senderName: normalizedSent.senderName,
+            ),
             messageType: normalizedSent.type,
             senderName: normalizedSent.senderName,
             isSelf: normalizedSent.isOutgoing,

@@ -328,7 +328,7 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
         ),
       );
     } catch (error) {
-      _showMessage(error.toString());
+      _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
     }
   }
 

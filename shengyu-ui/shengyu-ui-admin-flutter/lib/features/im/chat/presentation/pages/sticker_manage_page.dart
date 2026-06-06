@@ -276,12 +276,13 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       setState(() {
         _stickers = previous;
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     } finally {
       if (mounted) {
         setState(() {
@@ -354,7 +355,7 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 }

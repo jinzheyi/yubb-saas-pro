@@ -155,8 +155,9 @@ class GroupMemberDetailPage extends ConsumerWidget {
                           if (!context.mounted) {
                             return;
                           }
+                          final strings = AppLocalizations.of(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(error.toString())),
+                            SnackBar(content: Text(strings.operationFailed(error.toString()))),
                           );
                         }
                       },
@@ -259,7 +260,7 @@ class GroupMemberDetailPage extends ConsumerWidget {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
@@ -314,7 +315,7 @@ class GroupMemberDetailPage extends ConsumerWidget {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg)),
+          SnackBar(content: Text(strings.operationFailed(errorMsg))),
         );
       }
     }
@@ -380,7 +381,7 @@ class GroupMemberDetailPage extends ConsumerWidget {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
@@ -444,7 +445,7 @@ class GroupMemberDetailPage extends ConsumerWidget {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 

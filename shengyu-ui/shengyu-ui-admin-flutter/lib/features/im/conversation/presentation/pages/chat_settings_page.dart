@@ -255,12 +255,13 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       setState(() {
         _pinnedOverride = !value;
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     } finally {
       if (mounted) {
         setState(() {
@@ -310,7 +311,7 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     } finally {
       if (mounted) {
         setState(() {

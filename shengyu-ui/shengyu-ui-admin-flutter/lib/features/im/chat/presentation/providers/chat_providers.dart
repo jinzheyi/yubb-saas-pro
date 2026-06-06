@@ -39,6 +39,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_pa
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_timeline_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 
 class ChatRuntimeNotice {
@@ -189,7 +190,7 @@ final chatMediaControllerProvider =
         ref.read(mediaPickerServiceProvider),
         ref.read(chatUploadCoordinatorProvider),
         ref.read(optimisticMessageFactoryProvider),
-        ref.read(messagePreviewFormatterProvider),
+        createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
         ref.read(chatTimelineControllerProvider.notifier),
         ref.read(groupSettingsRepositoryProvider),
@@ -237,7 +238,7 @@ final chatControllerProvider =
         ref.read(sendMessageUseCaseProvider),
         ref.read(markConversationReadUseCaseProvider),
         ref.read(optimisticMessageFactoryProvider),
-        ref.read(messagePreviewFormatterProvider),
+        createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
         ref.read(chatTimelineControllerProvider.notifier),
         ref.read(chatReceiptControllerProvider),

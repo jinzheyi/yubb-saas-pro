@@ -1,20 +1,194 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
-final messagePreviewFormatterProvider = Provider<MessagePreviewFormatter>((
-  ref,
-) {
-  return MessagePreviewFormatter(ref.watch(appLocaleProvider));
+/// 消息预览格式化器工厂函数类型
+///
+/// 用于控制器层，在不持有 BuildContext 的情况下基于 locale 字符串
+/// 获取消息预览文本。
+///
+/// 使用方式（控制器中）：
+///   final locale = ref.read(appLocaleProvider);
+///   final preview = formatConversationPreviewByLocale(
+///     locale: locale,
+///     type: message.type,
+///     content: message.content,
+///     // ...
+///   );
+typedef ConversationPreviewFormatter = String Function({
+  required MessageType type,
+  required String content,
+  String? customType,
+  required ConversationType conversationType,
+  required bool isSelf,
+  String? senderName,
+  String? fileName,
+  String? systemEventKey,
 });
 
-class MessagePreviewFormatter {
-  const MessagePreviewFormatter(this.locale);
+/// 消息预览格式化器工厂函数类型（简化版，仅 format 方法）
+typedef MessagePreviewFormatter = String Function({
+  required MessageType type,
+  required String content,
+  String? customType,
+  String? fileName,
+  String? systemEventKey,
+});
 
-  final String locale;
+/// 基于 locale 的消息预览格式化器工厂（控制器层使用）
+///
+/// 此工厂根据 locale 字符串返回对应的预览文本，
+/// 不依赖 BuildContext，适用于控制器/UseCase 层。
+///
+/// 注意：控制器层仅返回消息摘要（如 "[图片]"、消息内容本身），
+/// 不添加 "我:" 发送者前缀。前缀由 UI 层统一通过
+/// AppLocalizations 处理，以确保完整的国际化支持。
+ConversationPreviewFormatter createConversationPreviewFormatter(
+  String locale,
+) {
+  return ({
+    required MessageType type,
+    required String content,
+    String? customType,
+    required ConversationType conversationType,
+    required bool isSelf,
+    String? senderName,
+    String? fileName,
+    String? systemEventKey,
+  }) {
+    return _formatMessagePreview(
+      locale: locale,
+      type: type,
+      content: content,
+      customType: customType,
+      fileName: fileName,
+      systemEventKey: systemEventKey,
+    );
+  };
+}
 
-  bool get _isZh => locale.toLowerCase().startsWith('zh');
+/// 基于 locale 的消息预览格式化器（简化版，仅 format 方法）
+MessagePreviewFormatter createMessagePreviewFormatter(String locale) {
+  return ({
+    required MessageType type,
+    required String content,
+    String? customType,
+    String? fileName,
+    String? systemEventKey,
+  }) {
+    return _formatMessagePreview(
+      locale: locale,
+      type: type,
+      content: content,
+      customType: customType,
+      fileName: fileName,
+      systemEventKey: systemEventKey,
+    );
+  };
+}
+
+/// 内部方法：基于 locale 格式化单条消息预览
+String _formatMessagePreview({
+  required String locale,
+  required MessageType type,
+  required String content,
+  String? customType,
+  String? fileName,
+  String? systemEventKey,
+}) {
+  switch (type) {
+    case MessageType.image:
+      return _t(locale, '[Image]', '[图片]');
+    case MessageType.voice:
+      return _t(locale, '[Voice]', '[语音]');
+    case MessageType.video:
+      return _t(locale, '[Video]', '[视频]');
+    case MessageType.file:
+      final resolvedName = (fileName ?? '').trim();
+      if (resolvedName.isNotEmpty) {
+        return '${_t(locale, '[File]', '[文件]')} $resolvedName';
+      }
+      return _t(locale, '[File]', '[文件]');
+    case MessageType.location:
+      return _t(locale, '[Location]', '[位置]');
+    case MessageType.emoji:
+      return _t(locale, '[Emoji]', '[表情]');
+    case MessageType.sticker:
+      return _t(locale, '[Sticker]', '[动画表情]');
+    case MessageType.custom:
+      final normalizedCustomType = (customType ?? '').trim().toUpperCase();
+      if (normalizedCustomType == 'CONTACT_CARD') {
+        return _t(locale, '[Contact Card]', '[名片]');
+      }
+      return _t(locale, '[Chat History]', '[聊天记录]');
+    case MessageType.contactCard:
+      return _t(locale, '[Contact Card]', '[名片]');
+    case MessageType.system:
+      // 优先使用 systemEventKey 本地化渲染，忽略服务端硬编码 content
+      if (systemEventKey != null && systemEventKey.isNotEmpty) {
+        return _systemEventPreview(locale, systemEventKey);
+      }
+      return content;
+    case MessageType.text:
+      return content;
+  }
+}
+
+/// 内部方法：系统事件预览文本
+String _systemEventPreview(String locale, String? systemEventKey) {
+  switch (systemEventKey) {
+    case 'im.system.group_notice_updated':
+      return _t(locale, 'The group notice has been updated', '群公告有更新');
+    case 'im.system.group_mute_all_enabled':
+      return _t(locale, 'This group has muted all members', '当前群已开启全员禁言');
+    case 'im.system.group_mute_all_disabled':
+      return _t(locale, 'This group has turned off mute-all', '当前群已关闭全员禁言');
+    case 'im.system.group_member_added_one':
+    case 'im.system.group_member_added_two':
+    case 'im.system.group_member_added_many':
+      return _t(locale, 'A new member joined the group', '有新成员加入群聊');
+    case 'im.system.group_member_removed':
+      return _t(locale, 'A member was removed from the group', '有成员被移出群聊');
+    case 'im.system.group_owner_transferred':
+      return _t(locale, 'Group ownership has been transferred', '群主已完成转让');
+    case 'im.system.group_member_role_set_admin':
+      return _t(locale, 'A group member was set as admin', '群成员已被设为管理员');
+    case 'im.system.group_member_role_set_member':
+      return _t(
+        locale,
+        'A group member was set as member',
+        '群成员已被设置为普通成员',
+      );
+    case 'im.system.group_member_muted':
+    case 'im.system.group_member_muted_until':
+      return _t(locale, 'A group member has been muted', '群成员已被禁言');
+    case 'im.system.group_member_unmuted':
+      return _t(locale, 'A group member has been unmuted', '群成员已被解除禁言');
+    default:
+      return _t(locale, '[System]', '[系统消息]');
+  }
+}
+
+/// 简易翻译辅助：优先返回国际化文本（如果有 BuildContext），fallback 到硬编码
+///
+/// 注意：此方法中的 fallback 硬编码文本与 ARB 文件中的翻译保持一致，
+/// 确保控制器层在未连接 BuildContext 时仍能正确显示对应语言的文本。
+String _t(String locale, String enText, String zhText) {
+  final normalizedLocale = locale.toLowerCase();
+  if (normalizedLocale.startsWith('zh')) {
+    return zhText;
+  }
+  return enText;
+}
+
+/// UI 层使用的消息预览格式化器（通过 AppLocalizations 获取翻译）
+///
+/// 适用于有 BuildContext 的场景，如 conversation_tile.dart 中的 UI 组件。
+/// 所有文本通过 AppLocalizations 获取，支持完整的 ICU MessageFormat 和运行时语言切换。
+class MessagePreviewFormatterWithContext {
+  MessagePreviewFormatterWithContext(this._l10n);
+
+  final AppLocalizations _l10n;
 
   String format({
     required MessageType type,
@@ -25,39 +199,37 @@ class MessagePreviewFormatter {
   }) {
     switch (type) {
       case MessageType.image:
-        return _isZh ? '[图片]' : '[Image]';
+        return _l10n.messagePreviewImage;
       case MessageType.voice:
-        return _isZh ? '[语音]' : '[Voice]';
+        return _l10n.messagePreviewVoice;
       case MessageType.video:
-        return _isZh ? '[视频]' : '[Video]';
+        return _l10n.messagePreviewVideo;
       case MessageType.file:
         final resolvedName = (fileName ?? '').trim();
         if (resolvedName.isNotEmpty) {
-          return _isZh ? '[文件] $resolvedName' : '[File] $resolvedName';
+          return _l10n.messagePreviewFileWithName(resolvedName);
         }
-        return _isZh ? '[文件]' : '[File]';
+        return _l10n.messagePreviewFile;
       case MessageType.location:
-        return _isZh ? '[位置]' : '[Location]';
+        return _l10n.messagePreviewLocation;
       case MessageType.emoji:
-        return _isZh ? '[表情]' : '[Emoji]';
+        return _l10n.messagePreviewEmoji;
       case MessageType.sticker:
-        return _isZh ? '[动画表情]' : '[Sticker]';
+        return _l10n.messagePreviewSticker;
       case MessageType.custom:
         final normalizedCustomType = (customType ?? '').trim().toUpperCase();
         if (normalizedCustomType == 'CONTACT_CARD') {
-          return _isZh ? '[名片]' : '[Contact Card]';
+          return _l10n.messagePreviewContactCard;
         }
-        if (normalizedCustomType == 'FORWARD_COMBINE') {
-          return _isZh ? '[聊天记录]' : '[Chat History]';
-        }
-        return _isZh ? '[聊天记录]' : '[Chat History]';
+        return _l10n.messagePreviewForward;
       case MessageType.contactCard:
-        return _isZh ? '[名片]' : '[Contact Card]';
+        return _l10n.messagePreviewContactCard;
       case MessageType.system:
-        if (content.isNotEmpty) {
-          return content;
+        // 优先使用 systemEventKey 本地化渲染，忽略服务端硬编码 content
+        if (systemEventKey != null && systemEventKey.isNotEmpty) {
+          return _systemEventPreviewWithContext(systemEventKey);
         }
-        return _systemEventPreview(systemEventKey);
+        return content;
       case MessageType.text:
         return content;
     }
@@ -84,48 +256,48 @@ class MessagePreviewFormatter {
       return summary;
     }
     if (conversationType != ConversationType.group) {
-      // For single chat, add "我:" prefix for self messages
       if (isSelf) {
-        final selfPrefix = _isZh ? '我' : 'Me';
-        return summary.isEmpty ? selfPrefix : '$selfPrefix:$summary';
+        return summary.isEmpty
+            ? _l10n.messagePreviewMePrefix
+            : _l10n.messagePreviewMePrefixColon(summary);
       }
       return summary;
     }
     final prefix = isSelf
-        ? (_isZh ? '我' : 'Me')
+        ? _l10n.messagePreviewMePrefix
         : ((senderName ?? '').trim().isNotEmpty
               ? (senderName ?? '').trim()
-              : (_isZh ? '未知' : 'Unknown'));
-    return '$prefix:$summary';
+              : _l10n.messagePreviewUnknownSender);
+    return _l10n.messagePreviewSenderColon(prefix, summary);
   }
 
-  String _systemEventPreview(String? systemEventKey) {
+  String _systemEventPreviewWithContext(String? systemEventKey) {
     switch (systemEventKey) {
       case 'im.system.group_notice_updated':
-        return _isZh ? '群公告有更新' : 'The group notice has been updated';
+        return _l10n.systemEventGroupNoticeUpdated;
       case 'im.system.group_mute_all_enabled':
-        return _isZh ? '当前群已开启全员禁言' : 'This group has muted all members';
+        return _l10n.systemEventGroupMuteAllEnabled;
       case 'im.system.group_mute_all_disabled':
-        return _isZh ? '当前群已关闭全员禁言' : 'This group has turned off mute-all';
+        return _l10n.systemEventGroupMuteAllDisabled;
       case 'im.system.group_member_added_one':
       case 'im.system.group_member_added_two':
       case 'im.system.group_member_added_many':
-        return _isZh ? '有新成员加入群聊' : 'A new member joined the group';
+        return _l10n.systemEventGroupMemberAdded;
       case 'im.system.group_member_removed':
-        return _isZh ? '有成员被移出群聊' : 'A member was removed from the group';
+        return _l10n.systemEventGroupMemberRemoved;
       case 'im.system.group_owner_transferred':
-        return _isZh ? '群主已完成转让' : 'Group ownership has been transferred';
+        return _l10n.systemEventGroupOwnerTransferred;
       case 'im.system.group_member_role_set_admin':
-        return _isZh ? '群成员已被设为管理员' : 'A group member was set as admin';
+        return _l10n.systemEventGroupMemberRoleSetAdmin;
       case 'im.system.group_member_role_set_member':
-        return _isZh ? '群成员已被设置为普通成员' : 'A group member was set as member';
+        return _l10n.systemEventGroupMemberRoleSetMember;
       case 'im.system.group_member_muted':
       case 'im.system.group_member_muted_until':
-        return _isZh ? '群成员已被禁言' : 'A group member has been muted';
+        return _l10n.systemEventGroupMemberMuted;
       case 'im.system.group_member_unmuted':
-        return _isZh ? '群成员已被解除禁言' : 'A group member has been unmuted';
+        return _l10n.systemEventGroupMemberUnmuted;
       default:
-        return _isZh ? '[系统消息]' : '[System]';
+        return _l10n.messagePreviewSystem;
     }
   }
 }

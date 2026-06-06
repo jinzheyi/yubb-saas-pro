@@ -188,9 +188,10 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 

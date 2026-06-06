@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancelAction => 'Cancel';
 
   @override
-  String get confirmAction => 'Confirm';
+  String get confirmAction => 'OK';
 
   @override
   String get doneAction => 'Done';
@@ -228,6 +228,121 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactsFavoritesEmpty => 'No favorite contacts yet';
+
+  @override
+  String get messagePreviewImage => '[Image]';
+
+  @override
+  String get messagePreviewVoice => '[Voice]';
+
+  @override
+  String get messagePreviewVideo => '[Video]';
+
+  @override
+  String get messagePreviewFile => '[File]';
+
+  @override
+  String messagePreviewFileWithName(String fileName) {
+    return '[File] $fileName';
+  }
+
+  @override
+  String get messagePreviewLocation => '[Location]';
+
+  @override
+  String get messagePreviewEmoji => '[Emoji]';
+
+  @override
+  String get messagePreviewSticker => '[Sticker]';
+
+  @override
+  String get messagePreviewContactCard => '[Contact Card]';
+
+  @override
+  String get messagePreviewForward => '[Chat History]';
+
+  @override
+  String get messagePreviewSystem => '[System]';
+
+  @override
+  String get messagePreviewMePrefix => 'Me';
+
+  @override
+  String messagePreviewMePrefixColon(String summary) {
+    return 'Me:$summary';
+  }
+
+  @override
+  String get messagePreviewUnknownSender => 'Unknown';
+
+  @override
+  String messagePreviewSenderColon(String sender, String summary) {
+    return '$sender:$summary';
+  }
+
+  @override
+  String get conversationPinnedNotice => 'Conversation pinned';
+
+  @override
+  String get conversationUnpinnedNotice => 'Conversation unpinned';
+
+  @override
+  String get conversationMarkedReadNotice => 'Marked as read';
+
+  @override
+  String get conversationMarkedUnreadNotice => 'Marked as unread';
+
+  @override
+  String get conversationDeleteDialogTitle => 'Delete Conversation';
+
+  @override
+  String get conversationDeleteDialogContent =>
+      'This will remove the conversation from your list.';
+
+  @override
+  String get conversationDeletedNotice => 'Conversation deleted';
+
+  @override
+  String operationFailed(String error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String get systemEventGroupNoticeUpdated =>
+      'The group notice has been updated';
+
+  @override
+  String get systemEventGroupMuteAllEnabled =>
+      'This group has muted all members';
+
+  @override
+  String get systemEventGroupMuteAllDisabled =>
+      'This group has turned off mute-all';
+
+  @override
+  String get systemEventGroupMemberAdded => 'A new member joined the group';
+
+  @override
+  String get systemEventGroupMemberRemoved =>
+      'A member was removed from the group';
+
+  @override
+  String get systemEventGroupOwnerTransferred =>
+      'Group ownership has been transferred';
+
+  @override
+  String get systemEventGroupMemberRoleSetAdmin =>
+      'A group member was set as admin';
+
+  @override
+  String get systemEventGroupMemberRoleSetMember =>
+      'A group member was set as member';
+
+  @override
+  String get systemEventGroupMemberMuted => 'A group member has been muted';
+
+  @override
+  String get systemEventGroupMemberUnmuted => 'A group member has been unmuted';
 
   @override
   String get contactsListEmpty => 'No contacts yet';
@@ -2519,6 +2634,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get atLeastOneMember => 'Select at least 1 member';
+
+  @override
+  String get groupNotAllowedAddMember =>
+      'This group does not allow adding members';
+
+  @override
+  String get mustRetainCurrentUserInGroup =>
+      'The current logged-in account must be retained in the group';
 
   @override
   String get groupInviteCode => 'Invite Code';

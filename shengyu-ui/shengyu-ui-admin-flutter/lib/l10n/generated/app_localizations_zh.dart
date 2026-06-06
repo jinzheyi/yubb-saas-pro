@@ -217,6 +217,113 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contactsFavoritesEmpty => '暂无关注联系人';
 
   @override
+  String get messagePreviewImage => '[图片]';
+
+  @override
+  String get messagePreviewVoice => '[语音]';
+
+  @override
+  String get messagePreviewVideo => '[视频]';
+
+  @override
+  String get messagePreviewFile => '[文件]';
+
+  @override
+  String messagePreviewFileWithName(String fileName) {
+    return '[文件] $fileName';
+  }
+
+  @override
+  String get messagePreviewLocation => '[位置]';
+
+  @override
+  String get messagePreviewEmoji => '[表情]';
+
+  @override
+  String get messagePreviewSticker => '[动画表情]';
+
+  @override
+  String get messagePreviewContactCard => '[名片]';
+
+  @override
+  String get messagePreviewForward => '[聊天记录]';
+
+  @override
+  String get messagePreviewSystem => '[系统消息]';
+
+  @override
+  String get messagePreviewMePrefix => '我';
+
+  @override
+  String messagePreviewMePrefixColon(String summary) {
+    return '我:$summary';
+  }
+
+  @override
+  String get messagePreviewUnknownSender => '未知';
+
+  @override
+  String messagePreviewSenderColon(String sender, String summary) {
+    return '$sender:$summary';
+  }
+
+  @override
+  String get conversationPinnedNotice => '已置顶会话';
+
+  @override
+  String get conversationUnpinnedNotice => '已取消置顶';
+
+  @override
+  String get conversationMarkedReadNotice => '已标为已读';
+
+  @override
+  String get conversationMarkedUnreadNotice => '已标为未读';
+
+  @override
+  String get conversationDeleteDialogTitle => '删除会话';
+
+  @override
+  String get conversationDeleteDialogContent => '删除后将从当前用户会话列表移除。';
+
+  @override
+  String get conversationDeletedNotice => '会话已删除';
+
+  @override
+  String operationFailed(String error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get systemEventGroupNoticeUpdated => '群公告有更新';
+
+  @override
+  String get systemEventGroupMuteAllEnabled => '当前群已开启全员禁言';
+
+  @override
+  String get systemEventGroupMuteAllDisabled => '当前群已关闭全员禁言';
+
+  @override
+  String get systemEventGroupMemberAdded => '有新成员加入群聊';
+
+  @override
+  String get systemEventGroupMemberRemoved => '有成员被移出群聊';
+
+  @override
+  String get systemEventGroupOwnerTransferred => '群主已完成转让';
+
+  @override
+  String get systemEventGroupMemberRoleSetAdmin => '群成员已被设为管理员';
+
+  @override
+  String get systemEventGroupMemberRoleSetMember => '群成员已被设置为普通成员';
+
+  @override
+  String get systemEventGroupMemberMuted => '群成员已被禁言';
+
+  @override
+  String get systemEventGroupMemberUnmuted => '群成员已被解除禁言';
+
+  @override
   String get contactsListEmpty => '暂无联系人';
 
   @override
@@ -2357,6 +2464,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get atLeastOneMember => '至少选择一名成员';
+
+  @override
+  String get groupNotAllowedAddMember => '当前群不允许添加成员';
+
+  @override
+  String get mustRetainCurrentUserInGroup => '当前登录账号必须保留在群聊中';
 
   @override
   String get groupInviteCode => '邀请码';

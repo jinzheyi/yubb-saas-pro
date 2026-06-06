@@ -327,7 +327,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         _loading = false;
       });
       if (error is! StateError) {
-        _showMessage(error.toString());
+        _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
       }
     }
   }
@@ -352,7 +352,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         if (!mounted) {
           return;
         }
-        _showMessage('当前群不允许添加成员');
+        _showMessage(AppLocalizations.of(context).groupNotAllowedAddMember);
         _handleBack();
       });
       throw StateError('当前群不允许添加成员');
@@ -385,7 +385,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
           ),
         );
     if (!selected && item.isCurrentUser) {
-      _showMessage('当前登录账号必须保留在群聊中');
+      _showMessage(AppLocalizations.of(context).mustRetainCurrentUserInGroup);
     }
   }
 
@@ -415,21 +415,21 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
     if (_submitting) {
       return;
     }
+    final strings = AppLocalizations.of(context);
     final selectionState = ref.read(contactSelectionControllerProvider);
     final selectedMembers = selectionState.entries.values.toList();
     if (!widget.args.isAddMode && selectedMembers.length < 2) {
-      _showMessage('至少选择两名成员');
+      _showMessage(strings.atLeastTwoMembers);
       return;
     }
     if (widget.args.isAddMode && selectedMembers.isEmpty) {
-      _showMessage('至少选择一名成员');
+      _showMessage(strings.atLeastOneMember);
       return;
     }
     setState(() {
       _submitting = true;
     });
     try {
-      final strings = AppLocalizations.of(context);
       if (widget.args.isAddMode) {
         await ref
             .read(groupSettingsRepositoryProvider)
@@ -484,15 +484,16 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         );
       }
     } catch (error) {
+      final strings = AppLocalizations.of(context);
       final errorMsg = error.toString();
       if (errorMsg.contains('GROUP_MEMBER_ALREADY_EXISTS') ||
           errorMsg.contains('已经是群成员')) {
-        _showMessage('该成员已在群聊中');
+        _showMessage(strings.groupMemberAlreadyExists);
       } else if (errorMsg.contains('GROUP_MEMBER_FULL') ||
           errorMsg.contains('群人数已达上限')) {
-        _showMessage('群人数已达上限');
+        _showMessage(strings.groupMemberFull);
       } else {
-        _showMessage(errorMsg);
+        _showMessage(strings.operationFailed(errorMsg));
       }
     } finally {
       if (mounted) {

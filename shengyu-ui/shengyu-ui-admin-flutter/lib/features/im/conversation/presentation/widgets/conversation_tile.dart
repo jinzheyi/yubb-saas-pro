@@ -346,7 +346,9 @@ bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
   final isExplicitSelfPreview =
       conversation.lastMessageIsSelf ||
       normalizedPreview.startsWith('我:') ||
-      normalizedPreview.startsWith('Me:');
+      normalizedPreview.startsWith('Me:') ||
+      normalizedPreview.startsWith('僕:') ||
+      normalizedPreview.startsWith('나:');
   return conversation.lastMessageType != MessageType.text &&
       !isExplicitSelfPreview;
 }
@@ -363,8 +365,8 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
       (conversation.lastMessageSenderName?.trim().isNotEmpty ?? false);
   final preview =
       (canFormatGroupPreview
-              ? MessagePreviewFormatter(
-                  strings.localeName,
+              ? MessagePreviewFormatterWithContext(
+                  strings,
                 ).formatConversationPreview(
                   type: conversation.lastMessageType,
                   content: conversation.lastMessagePreview,

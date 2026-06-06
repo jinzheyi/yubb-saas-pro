@@ -311,12 +311,13 @@ class _SearchChatHistoryPageState extends ConsumerState<SearchChatHistoryPage> {
       if (!mounted) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       setState(() {
         _loading = false;
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 

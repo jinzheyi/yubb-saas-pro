@@ -726,6 +726,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     required String successMessage,
     bool showSuccess = true,
   }) async {
+    final strings = AppLocalizations.of(context);
     try {
       await action();
       if (!context.mounted || !showSuccess) {
@@ -740,7 +741,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
@@ -811,7 +812,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
@@ -869,7 +870,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
     }
   }
 
