@@ -1850,8 +1850,27 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
 
             // 群聊推送给成员时，前端会话路由依赖 groupId；单聊依赖 receiverId/senderId
-            messageSender.sendToUserWithExtra(userId, messageType, messageBody,
-                    senderId, receiverId, groupId, tenantId, messageId, sequence, chatId,
+            // 获取发送者昵称和头像，确保 WebSocket 推送携带完整的发送者信息
+            String senderNickname = null;
+            String senderAvatar = null;
+            try {
+                ImChatDO chat = chatMapper.selectById(chatId);
+                String groupNickname = resolveGroupMemberNickname(chat, senderId, null);
+                if (StrUtil.isNotBlank(groupNickname)) {
+                    senderNickname = groupNickname;
+                } else {
+                    AdminUserDO sender = userMapper.selectById(senderId);
+                    if (sender != null) {
+                        senderNickname = sender.getNickname();
+                        senderAvatar = sender.getAvatar();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 获取发送者信息失败, senderId: {}, error: {}", senderId, e.getMessage());
+            }
+            
+            messageSender.sendToUserWithFullInfo(userId, messageType, messageBody,
+                    senderId, senderNickname, senderAvatar, receiverId, groupId, tenantId, messageId, sequence, chatId,
                     null, null, extraWithRev);
             log.debug("[ImMessageService] WebSocket 消息推送成功, userId: {}, messageId: {}", userId, messageId);
         } catch (Exception e) {

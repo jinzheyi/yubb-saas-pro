@@ -169,6 +169,14 @@ class SocketInboundMapper {
       'chatId': envelope.body['chatId']?.toString() ?? (header.chatId ?? ''),
       'senderId':
           envelope.body['senderId']?.toString() ?? (header.senderId ?? ''),
+      'senderName':
+          envelope.body['senderName']?.toString() ??
+          envelope.body['senderNickname']?.toString() ??
+          (header.senderNickname ?? ''),
+      'senderAvatar':
+          envelope.body['senderAvatar']?.toString() ??
+          envelope.body['avatarUrl']?.toString() ??
+          (header.senderAvatar ?? ''),
       'sequence':
           envelope.body['sequence']?.toString() ?? (header.sequence ?? ''),
       'rev':

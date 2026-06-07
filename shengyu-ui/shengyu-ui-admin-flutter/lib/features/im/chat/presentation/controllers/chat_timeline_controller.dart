@@ -514,6 +514,11 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         senderName: finalMessage.senderName.isNotEmpty
             ? finalMessage.senderName
             : other.senderName,
+        senderAvatar: finalMessage.senderAvatar?.isNotEmpty == true
+            ? finalMessage.senderAvatar
+            : (other.senderAvatar?.isNotEmpty == true
+                  ? other.senderAvatar
+                  : null),
         sentAt: previous.sentAt.millisecondsSinceEpoch > 0
             ? previous.sentAt
             : (finalMessage.sentAt.millisecondsSinceEpoch > 0
@@ -537,6 +542,11 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       senderName: next.senderName.isNotEmpty
           ? next.senderName
           : previous.senderName,
+      senderAvatar: next.senderAvatar?.isNotEmpty == true
+          ? next.senderAvatar
+          : (previous.senderAvatar?.isNotEmpty == true
+                ? previous.senderAvatar
+                : null),
       sentAt: next.sentAt.millisecondsSinceEpoch > 0
           ? next.sentAt
           : previous.sentAt,

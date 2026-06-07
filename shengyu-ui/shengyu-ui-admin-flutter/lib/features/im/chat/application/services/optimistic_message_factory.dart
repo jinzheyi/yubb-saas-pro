@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_ext
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/mention_segment.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_payload.dart';
+import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:uuid/uuid.dart';
@@ -25,6 +26,20 @@ class OptimisticMessageFactory {
   final Ref _ref;
   final Uuid _uuid;
 
+  /// 获取当前登录用户的名称和头像（用于乐观消息的头像显示）
+  ({String senderName, String? senderAvatar}) _resolveSelfInfo() {
+    final profileAsync = _ref.read(currentUserProfileProvider);
+    final profile = profileAsync.valueOrNull;
+    return (
+      senderName: profile?.nickname.trim().isNotEmpty == true
+          ? profile!.nickname.trim()
+          : '',
+      senderAvatar: profile?.avatarUrl.trim().isNotEmpty == true
+          ? profile!.avatarUrl.trim()
+          : null,
+    );
+  }
+
   String _legacyPrefixedId(String prefix) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final random = 100000 + (_uuid.v4().hashCode.abs() % 900000);
@@ -39,13 +54,15 @@ class OptimisticMessageFactory {
     List<MentionSegment> mentions = const <MentionSegment>[],
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     return Message(
       messageId: clientMessageId,
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.text,
       status: MessageStatus.sending,
       content: content,
@@ -70,6 +87,7 @@ class OptimisticMessageFactory {
     required String localPath,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     final resolvedName = _resolveFileName(
       fileName: fileName,
@@ -85,7 +103,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.image,
       status: MessageStatus.sending,
       content: localPath,
@@ -109,6 +128,7 @@ class OptimisticMessageFactory {
     required String localPath,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     final resolvedName = _resolveFileName(
       fileName: fileName,
@@ -124,7 +144,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.video,
       status: MessageStatus.sending,
       content: localPath,
@@ -150,13 +171,15 @@ class OptimisticMessageFactory {
     required String format,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     return Message(
       messageId: clientMessageId,
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.voice,
       status: MessageStatus.sending,
       content: '',
@@ -181,6 +204,7 @@ class OptimisticMessageFactory {
     required String localPath,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     final resolvedName = _resolveFileName(
       fileName: fileName,
@@ -196,7 +220,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.file,
       status: MessageStatus.sending,
       content: localPath,
@@ -217,6 +242,7 @@ class OptimisticMessageFactory {
     required ContactCardSharePayload payload,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _legacyPrefixedId('ccard');
     final displayName = payload.displayName.trim();
     final contentRaw = jsonEncode(<String, Object?>{
@@ -232,7 +258,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.contactCard,
       status: MessageStatus.sending,
       content: contentRaw,
@@ -254,6 +281,7 @@ class OptimisticMessageFactory {
     required LocationSharePayload payload,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _uuid.v4();
     final preview = payload.address.trim().isNotEmpty
         ? payload.address.trim()
@@ -263,7 +291,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.location,
       status: MessageStatus.sending,
       content: preview,
@@ -285,6 +314,7 @@ class OptimisticMessageFactory {
     required StickerPayload payload,
   }) {
     final session = _ref.read(authSessionProvider);
+    final selfInfo = _resolveSelfInfo();
     final clientMessageId = _legacyPrefixedId('stk');
     final stickerUrl = payload.url.trim();
     return Message(
@@ -292,7 +322,8 @@ class OptimisticMessageFactory {
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
-      senderName: '',
+      senderName: selfInfo.senderName,
+      senderAvatar: selfInfo.senderAvatar,
       type: MessageType.sticker,
       status: MessageStatus.sending,
       content: stickerUrl,

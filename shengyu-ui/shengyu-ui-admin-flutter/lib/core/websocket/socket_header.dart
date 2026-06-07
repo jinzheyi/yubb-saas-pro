@@ -4,6 +4,8 @@ class SocketHeader {
     required this.messageType,
     this.chatId,
     this.senderId,
+    this.senderNickname,
+    this.senderAvatar,
     this.receiverId,
     this.groupId,
     this.tenantId,
@@ -16,6 +18,8 @@ class SocketHeader {
   final int messageType;
   final String? chatId;
   final String? senderId;
+  final String? senderNickname;
+  final String? senderAvatar;
   final String? receiverId;
   final String? groupId;
   final String? tenantId;
@@ -29,6 +33,8 @@ class SocketHeader {
       messageType: (json['messageType'] as num?)?.toInt() ?? 0,
       chatId: json['chatId']?.toString(),
       senderId: json['senderId']?.toString(),
+      senderNickname: json['senderNickname']?.toString(),
+      senderAvatar: json['senderAvatar']?.toString(),
       receiverId: json['receiverId']?.toString(),
       groupId: json['groupId']?.toString(),
       tenantId: json['tenantId']?.toString(),

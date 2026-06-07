@@ -192,6 +192,17 @@ public class NettyMessageSender {
     public void sendToUserWithExtra(Long userId, MessageType messageType, MessageLite body,
                                     Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId,
                                     Long cursorVersion, Long conversationVersion, String headerExtra) {
+        sendToUserWithFullInfo(userId, messageType, body, senderId, null, null, receiverId, groupId, tenantId, messageId, sequence, chatId,
+                cursorVersion, conversationVersion, headerExtra);
+    }
+
+    /**
+     * 发送消息给指定用户（完整信息，包含发送者昵称和头像）
+     */
+    public void sendToUserWithFullInfo(Long userId, MessageType messageType, MessageLite body,
+                                       Long senderId, String senderNickname, String senderAvatar,
+                                       Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId,
+                                       Long cursorVersion, Long conversationVersion, String headerExtra) {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
@@ -201,12 +212,12 @@ public class NettyMessageSender {
             }
 
             if (log.isInfoEnabled()) {
-                log.info("[MessageSender] sendToUserWithExtra begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
+                log.info("[MessageSender] sendToUserWithFullInfo begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
             }
 
             ImMessage protobufMessage = buildMessageWithExtra(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, headerExtra);
-            String jsonPayload = buildJsonPayloadWithExtra(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, userId,
+            String jsonPayload = buildJsonPayloadWithFullInfo(messageType, body, senderId, senderNickname, senderAvatar, receiverId, groupId, tenantId, messageId, sequence, chatId, userId,
                     cursorVersion, conversationVersion, headerExtra);
 
             int successCount = 0;
@@ -247,7 +258,7 @@ public class NettyMessageSender {
                 }
             }
 
-            log.info("[MessageSender] sendToUserWithExtra done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
+            log.info("[MessageSender] sendToUserWithFullInfo done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
                     userId, messageType, messageId, sessions.size(), successCount);
         });
     }
@@ -526,12 +537,26 @@ public class NettyMessageSender {
     private String buildJsonPayloadWithExtra(MessageType messageType, MessageLite body,
                                             Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
                                             Long chatId, Long toUserId, Long cursorVersion, Long conversationVersion, String explicitExtra) {
+        return buildJsonPayloadWithFullInfo(messageType, body, senderId, null, null, receiverId, groupId, tenantId, messageId, sequence,
+                chatId, toUserId, cursorVersion, conversationVersion, explicitExtra);
+    }
+
+    private String buildJsonPayloadWithFullInfo(MessageType messageType, MessageLite body,
+                                               Long senderId, String senderNickname, String senderAvatar,
+                                               Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
+                                               Long chatId, Long toUserId, Long cursorVersion, Long conversationVersion, String explicitExtra) {
         Map<String, Object> root = new HashMap<>();
         Map<String, Object> header = new HashMap<>();
         header.put("messageId", messageId != null ? String.valueOf(messageId) : String.valueOf(generateMessageId()));
         header.put("messageType", messageType != null ? messageType.getNumber() : null);
         header.put("timestamp", System.currentTimeMillis());
         header.put("senderId", senderId != null ? String.valueOf(senderId) : "0");
+        if (StrUtil.isNotBlank(senderNickname)) {
+            header.put("senderNickname", senderNickname);
+        }
+        if (StrUtil.isNotBlank(senderAvatar)) {
+            header.put("senderAvatar", senderAvatar);
+        }
         header.put("receiverId", receiverId != null ? String.valueOf(receiverId) : "0");
         header.put("groupId", groupId != null ? String.valueOf(groupId) : "0");
         header.put("tenantId", tenantId != null ? String.valueOf(tenantId) : "0");
