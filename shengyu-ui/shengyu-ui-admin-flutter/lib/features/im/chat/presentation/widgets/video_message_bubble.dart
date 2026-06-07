@@ -70,7 +70,7 @@ class VideoMessageBubble extends ConsumerWidget {
                 ),
                 image: imageProvider == null
                     ? null
-                    : DecorationImage(image: imageProvider, fit: BoxFit.cover),
+                    : DecorationImage(image: imageProvider, fit: BoxFit.contain),
               ),
               clipBehavior: Clip.antiAlias,
               child: Stack(

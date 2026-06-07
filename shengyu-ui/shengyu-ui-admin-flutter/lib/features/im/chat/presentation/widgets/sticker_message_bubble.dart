@@ -92,7 +92,7 @@ class StickerMessageBubble extends StatelessWidget {
                       borderRadius: BorderRadius.circular(isEmoji ? 0 : 4),
                       child: Image(
                         image: imageProvider,
-                        fit: isEmoji ? BoxFit.contain : BoxFit.cover,
+                        fit: BoxFit.contain,
                       ),
                     ),
             ),

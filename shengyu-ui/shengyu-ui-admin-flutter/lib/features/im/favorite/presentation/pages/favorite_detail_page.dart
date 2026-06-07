@@ -452,7 +452,7 @@ class _VideoBlock extends StatelessWidget {
                     data.thumb,
                     width: double.infinity,
                     height: 220,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (_, _, _) => _videoFallback(),
                   )
                 else

@@ -6827,7 +6827,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                         ),
                                         child: Image.network(
                                           item.url,
-                                          fit: BoxFit.cover,
+                                          fit: BoxFit.contain,
                                           errorBuilder:
                                               (context, error, stackTrace) {
                                                 return const Center(

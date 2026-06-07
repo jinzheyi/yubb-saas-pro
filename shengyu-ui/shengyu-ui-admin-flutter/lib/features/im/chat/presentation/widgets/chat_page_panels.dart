@@ -923,7 +923,7 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                                     ),
                                     child: Image.network(
                                       item.url,
-                                      fit: BoxFit.cover,
+                                      fit: BoxFit.contain,
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                             return const Center(

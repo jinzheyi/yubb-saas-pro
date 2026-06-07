@@ -669,7 +669,7 @@ class _MediaLeading extends StatelessWidget {
           imageUrl,
           width: 44,
           height: 44,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
             return const _FileIconBox(icon: AppIconKind.image);
           },
@@ -686,7 +686,7 @@ class _MediaLeading extends StatelessWidget {
               imageUrl,
               width: 44,
               height: 44,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return const _FileIconBox(icon: AppIconKind.video);
               },

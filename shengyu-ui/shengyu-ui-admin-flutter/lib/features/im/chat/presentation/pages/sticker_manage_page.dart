@@ -427,7 +427,7 @@ class _StickerTile extends StatelessWidget {
                       decoration: const BoxDecoration(color: Color(0xFFF4F6FA)),
                       child: Image.network(
                         item.url,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return const Center(
                             child: AppIcon(

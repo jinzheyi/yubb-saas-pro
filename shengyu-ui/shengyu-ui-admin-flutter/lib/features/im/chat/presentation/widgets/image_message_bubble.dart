@@ -87,7 +87,7 @@ class ImageMessageBubble extends ConsumerWidget {
                         ? null
                         : DecorationImage(
                             image: imageProvider,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                           ),
                   ),
                   clipBehavior: Clip.antiAlias,
