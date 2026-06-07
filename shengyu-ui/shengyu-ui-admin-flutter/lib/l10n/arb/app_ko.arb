@@ -156,7 +156,7 @@
   "systemEventGroupMemberRoleSetMember": "A group member was set as member",
   "systemEventGroupMemberMuted": "A group member has been muted",
   "systemEventGroupMemberUnmuted": "A group member has been unmuted",
-  "systemEventGroupMemberAddedWithName": "{firstName} joined the group",
+  "systemEventGroupMemberAddedWithName": "\"{firstName}\" joined the group",
   "@systemEventGroupMemberAddedWithName": {
     "placeholders": {
       "firstName": {
@@ -164,7 +164,7 @@
       }
     }
   },
-  "systemEventGroupMemberRemovedWithName": "{firstName} was removed from the group",
+  "systemEventGroupMemberRemovedWithName": "\"{firstName}\" was removed from the group",
   "@systemEventGroupMemberRemovedWithName": {
     "placeholders": {
       "firstName": {
@@ -172,7 +172,7 @@
       }
     }
   },
-  "systemEventGroupOwnerTransferredTo": "Group ownership has been transferred to {firstName}",
+  "systemEventGroupOwnerTransferredTo": "Group ownership has been transferred to \"{firstName}\"",
   "@systemEventGroupOwnerTransferredTo": {
     "placeholders": {
       "firstName": {
@@ -180,7 +180,7 @@
       }
     }
   },
-  "systemEventGroupMemberRoleSetAdminWithName": "{firstName} was set as admin",
+  "systemEventGroupMemberRoleSetAdminWithName": "\"{firstName}\" was set as admin",
   "@systemEventGroupMemberRoleSetAdminWithName": {
     "placeholders": {
       "firstName": {
@@ -188,7 +188,7 @@
       }
     }
   },
-  "systemEventGroupMemberRoleSetMemberWithName": "{firstName} was set as member",
+  "systemEventGroupMemberRoleSetMemberWithName": "\"{firstName}\" was set as member",
   "@systemEventGroupMemberRoleSetMemberWithName": {
     "placeholders": {
       "firstName": {
@@ -196,7 +196,7 @@
       }
     }
   },
-  "systemEventGroupMemberMutedWithName": "{firstName} has been muted",
+  "systemEventGroupMemberMutedWithName": "\"{firstName}\" has been muted",
   "@systemEventGroupMemberMutedWithName": {
     "placeholders": {
       "firstName": {
@@ -204,7 +204,7 @@
       }
     }
   },
-  "systemEventGroupMemberUnmutedWithName": "{firstName} has been unmuted",
+  "systemEventGroupMemberUnmutedWithName": "\"{firstName}\" has been unmuted",
   "@systemEventGroupMemberUnmutedWithName": {
     "placeholders": {
       "firstName": {

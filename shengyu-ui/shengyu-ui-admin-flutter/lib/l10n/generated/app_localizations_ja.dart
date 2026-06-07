@@ -346,37 +346,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String systemEventGroupMemberAddedWithName(String firstName) {
-    return '$firstName joined the group';
+    return '\"$firstName\" joined the group';
   }
 
   @override
   String systemEventGroupMemberRemovedWithName(String firstName) {
-    return '$firstName was removed from the group';
+    return '\"$firstName\" was removed from the group';
   }
 
   @override
   String systemEventGroupOwnerTransferredTo(String firstName) {
-    return 'Group ownership has been transferred to $firstName';
+    return 'Group ownership has been transferred to \"$firstName\"';
   }
 
   @override
   String systemEventGroupMemberRoleSetAdminWithName(String firstName) {
-    return '$firstName was set as admin';
+    return '\"$firstName\" was set as admin';
   }
 
   @override
   String systemEventGroupMemberRoleSetMemberWithName(String firstName) {
-    return '$firstName was set as member';
+    return '\"$firstName\" was set as member';
   }
 
   @override
   String systemEventGroupMemberMutedWithName(String firstName) {
-    return '$firstName has been muted';
+    return '\"$firstName\" has been muted';
   }
 
   @override
   String systemEventGroupMemberUnmutedWithName(String firstName) {
-    return '$firstName has been unmuted';
+    return '\"$firstName\" has been unmuted';
   }
 
   @override

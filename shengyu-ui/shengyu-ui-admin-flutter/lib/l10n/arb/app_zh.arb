@@ -158,7 +158,7 @@
   "systemEventGroupMemberRoleSetMember": "群成员已被设置为普通成员",
   "systemEventGroupMemberMuted": "群成员已被禁言",
   "systemEventGroupMemberUnmuted": "群成员已被解除禁言",
-  "systemEventGroupMemberAddedWithName": "{firstName} 加入了群聊",
+  "systemEventGroupMemberAddedWithName": "\"{firstName}\" 加入了群聊",
   "@systemEventGroupMemberAddedWithName": {
     "placeholders": {
       "firstName": {
@@ -166,7 +166,7 @@
       }
     }
   },
-  "systemEventGroupMemberRemovedWithName": "{firstName} 被移出群聊",
+  "systemEventGroupMemberRemovedWithName": "\"{firstName}\" 被移出群聊",
   "@systemEventGroupMemberRemovedWithName": {
     "placeholders": {
       "firstName": {
@@ -174,7 +174,7 @@
       }
     }
   },
-  "systemEventGroupOwnerTransferredTo": "群主已转让给 {firstName}",
+  "systemEventGroupOwnerTransferredTo": "群主已转让给 \"{firstName}\"",
   "@systemEventGroupOwnerTransferredTo": {
     "placeholders": {
       "firstName": {
@@ -182,7 +182,7 @@
       }
     }
   },
-  "systemEventGroupMemberRoleSetAdminWithName": "{firstName} 已被设为管理员",
+  "systemEventGroupMemberRoleSetAdminWithName": "\"{firstName}\" 已被设为管理员",
   "@systemEventGroupMemberRoleSetAdminWithName": {
     "placeholders": {
       "firstName": {
@@ -190,7 +190,7 @@
       }
     }
   },
-  "systemEventGroupMemberRoleSetMemberWithName": "{firstName} 已被设置为普通成员",
+  "systemEventGroupMemberRoleSetMemberWithName": "\"{firstName}\" 已被设置为普通成员",
   "@systemEventGroupMemberRoleSetMemberWithName": {
     "placeholders": {
       "firstName": {
@@ -198,7 +198,7 @@
       }
     }
   },
-  "systemEventGroupMemberMutedWithName": "{firstName} 已被禁言",
+  "systemEventGroupMemberMutedWithName": "\"{firstName}\" 已被禁言",
   "@systemEventGroupMemberMutedWithName": {
     "placeholders": {
       "firstName": {
@@ -206,7 +206,7 @@
       }
     }
   },
-  "systemEventGroupMemberUnmutedWithName": "{firstName} 已被解除禁言",
+  "systemEventGroupMemberUnmutedWithName": "\"{firstName}\" 已被解除禁言",
   "@systemEventGroupMemberUnmutedWithName": {
     "placeholders": {
       "firstName": {

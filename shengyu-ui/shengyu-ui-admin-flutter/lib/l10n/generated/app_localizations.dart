@@ -711,43 +711,43 @@ abstract class AppLocalizations {
   /// No description provided for @systemEventGroupMemberAddedWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} joined the group'**
+  /// **'\"{firstName}\" joined the group'**
   String systemEventGroupMemberAddedWithName(String firstName);
 
   /// No description provided for @systemEventGroupMemberRemovedWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} was removed from the group'**
+  /// **'\"{firstName}\" was removed from the group'**
   String systemEventGroupMemberRemovedWithName(String firstName);
 
   /// No description provided for @systemEventGroupOwnerTransferredTo.
   ///
   /// In en, this message translates to:
-  /// **'Group ownership has been transferred to {firstName}'**
+  /// **'Group ownership has been transferred to \"{firstName}\"'**
   String systemEventGroupOwnerTransferredTo(String firstName);
 
   /// No description provided for @systemEventGroupMemberRoleSetAdminWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} was set as admin'**
+  /// **'\"{firstName}\" was set as admin'**
   String systemEventGroupMemberRoleSetAdminWithName(String firstName);
 
   /// No description provided for @systemEventGroupMemberRoleSetMemberWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} was set as member'**
+  /// **'\"{firstName}\" was set as member'**
   String systemEventGroupMemberRoleSetMemberWithName(String firstName);
 
   /// No description provided for @systemEventGroupMemberMutedWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} has been muted'**
+  /// **'\"{firstName}\" has been muted'**
   String systemEventGroupMemberMutedWithName(String firstName);
 
   /// No description provided for @systemEventGroupMemberUnmutedWithName.
   ///
   /// In en, this message translates to:
-  /// **'{firstName} has been unmuted'**
+  /// **'\"{firstName}\" has been unmuted'**
   String systemEventGroupMemberUnmutedWithName(String firstName);
 
   /// No description provided for @contactsListEmpty.
