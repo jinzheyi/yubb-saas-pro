@@ -36,6 +36,12 @@ ADD COLUMN `snapshot_data` json NULL DEFAULT NULL COMMENT '群组快照数据JSO
 ALTER TABLE `im_conversation_user_state` 
 ADD COLUMN `snapshot_data` json NULL DEFAULT NULL COMMENT '群组快照数据JSON（被踢/退群/解散时冻结，用于会话列表和聊天页展示）' AFTER `left_at`;
 
+-- 添加 lastMessageSenderId 字段到 im_chat_user 表
+ALTER TABLE `im_chat_user` ADD COLUMN `last_message_sender_id` BIGINT NULL COMMENT '最后一条消息发送者ID（冗余字段，避免回表查询 im_chat_message）' AFTER `last_message_sequence`;
+
+-- 添加 lastMessageSenderId 字段到 im_conversation_user_state 表
+ALTER TABLE `im_conversation_user_state` ADD COLUMN `last_message_sender_id` BIGINT NULL COMMENT '最后一条消息发送者ID（冗余字段，避免回表查询 im_chat_message）' AFTER `last_message_sequence`;
+
 -- 7. 更新 im_conversation_user_state 的群组成员状态（从 im_chat_user 同步）
 UPDATE `im_conversation_user_state` cus
 INNER JOIN `im_chat_user` cu ON cus.chat_id = cu.chat_id AND cus.user_id = cu.user_id AND cus.tenant_id = cu.tenant_id
