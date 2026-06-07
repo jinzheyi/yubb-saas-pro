@@ -154,6 +154,7 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
     final timestamp = _parseDateTime(
       snapshotMap['lastMessageTime'] ?? payload['lastMessageTime'],
     );
+    final currentUserId = ref.read(authSessionProvider).userId;
     ref
         .read(conversationListControllerProvider.notifier)
         .upsertFromSnapshot(
@@ -161,6 +162,7 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
           lastMessage: snapshotMap['lastMessageContent']?.toString() ?? '',
           updatedAt: timestamp ?? DateTime.now(),
           messageSequence: snapshotMap['lastMessageSequence']?.toString(),
+          currentUserId: currentUserId,
         );
     return;
   }

@@ -13,9 +13,10 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/infrastructure/dt
 import 'package:shengyu_ui_admin_im/features/im/group_settings/infrastructure/dtos/group_member_dto.dart';
 
 class GroupSettingsRemoteDataSource {
-  const GroupSettingsRemoteDataSource({required this.dio});
+  const GroupSettingsRemoteDataSource({required this.dio, required this.currentUserId});
 
   final Dio dio;
+  final String currentUserId;
 
   Future<GroupInfoDto> getGroup(String groupId) async {
     final response = await dio.get(
@@ -197,7 +198,7 @@ class GroupSettingsRemoteDataSource {
     final result = ApiResult.fromJson<ConversationDto>(
       response.data as Map<String, dynamic>,
       dataParser: (raw) =>
-          ConversationDto.fromJson(raw as Map<String, dynamic>? ?? const {}),
+          ConversationDto.fromJson(raw as Map<String, dynamic>? ?? const {}, currentUserId: currentUserId),
     );
     return result.requireData();
   }

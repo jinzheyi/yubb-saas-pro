@@ -26,7 +26,11 @@ class GroupJoinRequestSignal {
 
 final groupSettingsRemoteDataSourceProvider =
     Provider<GroupSettingsRemoteDataSource>((ref) {
-      return GroupSettingsRemoteDataSource(dio: ref.read(dioProvider));
+      final currentUserId = ref.read(authSessionProvider).userId;
+      return GroupSettingsRemoteDataSource(
+        dio: ref.read(dioProvider),
+        currentUserId: currentUserId,
+      );
     });
 
 final groupSettingsRepositoryProvider = Provider<GroupSettingsRepository>((

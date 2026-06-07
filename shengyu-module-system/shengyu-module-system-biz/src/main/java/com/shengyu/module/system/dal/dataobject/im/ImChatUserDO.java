@@ -38,6 +38,11 @@ public class ImChatUserDO extends TenantBaseDO {
 
     private Long lastMessageSequence;
 
+    /**
+     * 最后一条消息发送者ID（冗余字段，避免回表查询 im_chat_message）
+     */
+    private Long lastMessageSenderId;
+
     private Integer lastMessageType;
 
     private String lastMessageContent;

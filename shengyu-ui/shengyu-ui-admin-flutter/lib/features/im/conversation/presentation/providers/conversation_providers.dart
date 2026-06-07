@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/coordinators/conversation_sync_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/usecases/load_conversation_list_use_case.dart';
@@ -11,7 +12,11 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 
 final conversationRemoteDataSourceProvider =
     Provider<ConversationRemoteDataSource>((ref) {
-      return ConversationRemoteDataSource(dio: ref.read(dioProvider));
+      final currentUserId = ref.read(authSessionProvider).userId;
+      return ConversationRemoteDataSource(
+        dio: ref.read(dioProvider),
+        currentUserId: currentUserId,
+      );
     });
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {

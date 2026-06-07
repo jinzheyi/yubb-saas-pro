@@ -343,6 +343,10 @@ public class ImConversationServiceImpl implements ImConversationService {
                         item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
                                 lastMessage != null ? lastMessage.getExtra() : null));
                         Long senderId = lastMessage != null ? lastMessage.getSenderId() : null;
+                        // 优先使用 im_conversation_user_state 中的 lastMessageSenderId 冗余字段（避免消息表查不到导致 null）
+                        if (senderId == null) {
+                            senderId = state.getLastMessageSenderId();
+                        }
                         item.setLastMessageSenderId(senderId);
                         item.setLastMessageIsSelf(senderId != null && Objects.equals(senderId, userId));
                         item.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
@@ -553,6 +557,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
             Long lastMsgId = chatUser.getLastMessageId();
             Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
+            Long lastMsgSenderId = chatUser.getLastMessageSenderId();
             Integer lastMsgType = chatUser.getLastMessageType();
             String lastMsgContent = chatUser.getLastMessageContent();
             java.time.LocalDateTime lastMsgTime = chatUser.getLastMessageTime();
@@ -578,6 +583,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                     null,
                     lastMsgId,
                     lastMsgSeq,
+                    lastMsgSenderId,
                     lastMsgType,
                     lastMsgContent,
                     false,
@@ -1042,6 +1048,10 @@ public class ImConversationServiceImpl implements ImConversationService {
             respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                     lastMessage != null ? lastMessage.getExtra() : null));
             Long senderId1 = lastMessage != null ? lastMessage.getSenderId() : null;
+            // 优先使用 im_chat_user 中的 lastMessageSenderId 冗余字段（避免消息表查不到导致 null）
+            if (senderId1 == null) {
+                senderId1 = chatUser.getLastMessageSenderId();
+            }
             respVO.setLastMessageSenderId(senderId1);
             respVO.setLastMessageIsSelf(senderId1 != null && Objects.equals(senderId1, userId));
             respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
@@ -1143,6 +1153,10 @@ public class ImConversationServiceImpl implements ImConversationService {
         respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                 lastMsg != null ? lastMsg.getExtra() : null));
         Long senderId2 = lastMsg != null ? lastMsg.getSenderId() : null;
+        // 优先使用 im_chat_user 中的 lastMessageSenderId 冗余字段（避免消息表查不到导致 null）
+        if (senderId2 == null) {
+            senderId2 = chatUser.getLastMessageSenderId();
+        }
         respVO.setLastMessageSenderId(senderId2);
         respVO.setLastMessageIsSelf(senderId2 != null && Objects.equals(senderId2, userId));
         respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMsg != null ? lastMsg.getExtra() : null));

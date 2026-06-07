@@ -11,7 +11,7 @@ class ConversationSyncResponseDto {
   final List<ConversationDto> items;
   final bool hasMore;
 
-  factory ConversationSyncResponseDto.fromJson(Map<String, dynamic> json) {
+  factory ConversationSyncResponseDto.fromJson(Map<String, dynamic> json, {String? currentUserId}) {
     final rawItems =
         json['items'] as List<dynamic>? ??
         json['list'] as List<dynamic>? ??
@@ -25,7 +25,7 @@ class ConversationSyncResponseDto {
           '0',
       items: rawItems
           .whereType<Map<String, dynamic>>()
-          .map(ConversationDto.fromJson)
+          .map((e) => ConversationDto.fromJson(e, currentUserId: currentUserId))
           .toList(),
       hasMore: _parseBool(json['hasMore']) || _parseBool(json['more']),
     );

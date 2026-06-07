@@ -1698,7 +1698,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                             preview,
                             now,
                             unreadDelta,
-                            Boolean.TRUE.equals(chatUser.getNoDisturb())
+                            Boolean.TRUE.equals(chatUser.getNoDisturb()),
+                            tipMessage.getSenderId()
                     );
                 }
 
@@ -1713,6 +1714,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null,
                         tipMessage.getId(),
                         sequence,
+                        tipMessage.getSenderId(),
                         10,
                         preview,
                         Boolean.FALSE,

@@ -788,7 +788,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             finalPreview,
                             messageDO.getSendTime(),
                             isSender ? 0 : 1,
-                            Boolean.TRUE.equals(chatUser.getNoDisturb())
+                            Boolean.TRUE.equals(chatUser.getNoDisturb()),
+                            header.getSenderId()
                     );
 
                     Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
@@ -804,6 +805,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             lastReadTimeForUpsert,
                             messageDO.getId(),
                             messageDO.getSequence(),
+                            header.getSenderId(),
                             messageDO.getMessageType(),
                             finalPreview,
                             (!isSender && mentionParsed != null && (mentionParsed.atAll
@@ -854,7 +856,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         senderPreview,
                         messageDO.getSendTime(),
                         0,
-                        Boolean.TRUE.equals(sender.getNoDisturb())
+                        Boolean.TRUE.equals(sender.getNoDisturb()),
+                        header.getSenderId()
                 );
 
                 Long senderCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, header.getSenderId());
@@ -868,6 +871,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSendTime(),
                         messageDO.getId(),
                         messageDO.getSequence(),
+                        header.getSenderId(),
                         messageDO.getMessageType(),
                         senderPreview,
                         false,
@@ -892,7 +896,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         receiverPreview,
                         messageDO.getSendTime(),
                         1,
-                        Boolean.TRUE.equals(receiver.getNoDisturb())
+                        Boolean.TRUE.equals(receiver.getNoDisturb()),
+                        header.getSenderId()
                 );
 
                 Long receiverCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, header.getReceiverId());
@@ -906,6 +911,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         null,
                         messageDO.getId(),
                         messageDO.getSequence(),
+                        header.getSenderId(),
                         messageDO.getMessageType(),
                         receiverPreview,
                         false,

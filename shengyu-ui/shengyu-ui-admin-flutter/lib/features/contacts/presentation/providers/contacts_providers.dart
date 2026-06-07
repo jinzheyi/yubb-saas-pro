@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_search_result.dart';
@@ -15,7 +16,11 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/states/contac
 final contactsRemoteDataSourceProvider = Provider<ContactsRemoteDataSource>((
   ref,
 ) {
-  return ContactsRemoteDataSource(dio: ref.read(dioProvider));
+  final currentUserId = ref.read(authSessionProvider).userId;
+  return ContactsRemoteDataSource(
+    dio: ref.read(dioProvider),
+    currentUserId: currentUserId,
+  );
 });
 
 final contactsRepositoryProvider = Provider<ContactsRepository>((ref) {

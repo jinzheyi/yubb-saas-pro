@@ -4,9 +4,10 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/dtos
 import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/dtos/conversation_sync_response_dto.dart';
 
 class ConversationRemoteDataSource {
-  const ConversationRemoteDataSource({required this.dio});
+  const ConversationRemoteDataSource({required this.dio, required this.currentUserId});
 
   final Dio dio;
+  final String currentUserId;
 
   Future<List<ConversationDto>> fetchConversationList() async {
     final response = await dio.get('/system/im/conversation/list');
@@ -30,6 +31,7 @@ class ConversationRemoteDataSource {
       dataParser: (raw) {
         return ConversationSyncResponseDto.fromJson(
           raw as Map<String, dynamic>? ?? const {},
+          currentUserId: currentUserId,
         );
       },
     );
@@ -80,7 +82,7 @@ class ConversationRemoteDataSource {
     };
     return items
         .whereType<Map<String, dynamic>>()
-        .map(ConversationDto.fromJson)
+        .map((e) => ConversationDto.fromJson(e, currentUserId: currentUserId))
         .toList();
   }
 }

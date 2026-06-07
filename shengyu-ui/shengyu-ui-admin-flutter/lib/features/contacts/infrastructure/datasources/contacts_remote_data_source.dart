@@ -7,9 +7,10 @@ import 'package:shengyu_ui_admin_im/features/contacts/infrastructure/dtos/group_
 import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/dtos/conversation_dto.dart';
 
 class ContactsRemoteDataSource {
-  const ContactsRemoteDataSource({required this.dio});
+  const ContactsRemoteDataSource({required this.dio, required this.currentUserId});
 
   final Dio dio;
+  final String currentUserId;
 
   Future<List<ContactDto>> getContacts() async {
     final response = await dio.get('/system/im/contact/list');
@@ -134,7 +135,7 @@ class ContactsRemoteDataSource {
     final result = ApiResult.fromJson<ConversationDto>(
       response.data as Map<String, dynamic>,
       dataParser: (raw) =>
-          ConversationDto.fromJson(raw as Map<String, dynamic>? ?? const {}),
+          ConversationDto.fromJson(raw as Map<String, dynamic>? ?? const {}, currentUserId: currentUserId),
     );
     return result.requireData();
   }

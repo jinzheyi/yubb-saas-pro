@@ -76,7 +76,21 @@ class ConversationDto {
   final int lastActiveTime;
   final int? groupMemberStatus;
 
-  factory ConversationDto.fromJson(Map<String, dynamic> json) {
+  factory ConversationDto.fromJson(Map<String, dynamic> json, {String? currentUserId}) {
+    final senderId = json['lastMessageSenderId']?.toString() ??
+        json['senderId']?.toString() ??
+        '';
+    final parsedIsSelf =
+        _parseBool(json['lastMessageIsSelf']) ||
+        _parseBool(json['isSelf']) ||
+        _parseBool(json['isOutgoing']) ||
+        _parseBool(json['fromSelf']) ||
+        _parseBool(json['selfSend']);
+    // 当接口未返回 lastMessageIsSelf 时，通过 lastMessageSenderId 与当前登录用户ID对比推断
+    final isSelf = parsedIsSelf ||
+        (currentUserId != null && currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != '0'
+            ? currentUserId == senderId
+            : false);
     return ConversationDto(
       chatId:
           json['chatId']?.toString() ??
@@ -144,16 +158,8 @@ class ConversationDto {
           json['nickname']?.toString() ??
           json['userName']?.toString() ??
           '',
-      lastMessageIsSelf:
-          _parseBool(json['lastMessageIsSelf']) ||
-          _parseBool(json['isSelf']) ||
-          _parseBool(json['isOutgoing']) ||
-          _parseBool(json['fromSelf']) ||
-          _parseBool(json['selfSend']),
-      lastMessageSenderId:
-          json['lastMessageSenderId']?.toString() ??
-          json['senderId']?.toString() ??
-          '',
+      lastMessageIsSelf: isSelf,
+      lastMessageSenderId: senderId,
       lastMessageCustomType:
           json['lastMessageCustomType']?.toString() ??
           json['customType']?.toString() ??

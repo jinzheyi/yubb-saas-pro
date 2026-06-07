@@ -213,9 +213,10 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     required DateTime updatedAt,
     String? messageSequence,
     bool incrementUnread = false,
+    String? currentUserId,
   }) {
     final incoming = ConversationDtoMapper.toEntity(
-      ConversationDto.fromJson(snapshot),
+      ConversationDto.fromJson(snapshot, currentUserId: currentUserId),
     );
     if (incoming.chatId.trim().isEmpty || incoming.chatId.trim() == '0') {
       return;

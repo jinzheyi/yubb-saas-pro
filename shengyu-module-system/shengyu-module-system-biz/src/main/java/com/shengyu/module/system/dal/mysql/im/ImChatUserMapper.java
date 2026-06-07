@@ -196,6 +196,26 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
     }
 
     /**
+     * 更新会话最后一条消息及未读数（含发送者ID）
+     */
+    default int updateLastMessageAndIncrementUnread(Long id, Long lastMessageId, Long lastMessageSequence, Integer lastMessageType,
+                                                   String lastMessageContent, LocalDateTime lastMessageTime,
+                                                   Integer unreadIncrement, boolean noDisturb, Long lastMessageSenderId) {
+        LambdaUpdateWrapper<ImChatUserDO> wrapper = new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getId, id)
+                .set(ImChatUserDO::getLastMessageId, lastMessageId)
+                .set(ImChatUserDO::getLastMessageSequence, lastMessageSequence)
+                .set(ImChatUserDO::getLastMessageType, lastMessageType)
+                .set(ImChatUserDO::getLastMessageContent, lastMessageContent)
+                .set(ImChatUserDO::getLastMessageTime, lastMessageTime)
+                .set(ImChatUserDO::getLastMessageSenderId, lastMessageSenderId);
+        if (unreadIncrement != null && unreadIncrement > 0 && !noDisturb) {
+            wrapper.setSql("unread_count = unread_count + " + unreadIncrement);
+        }
+        return update(null, wrapper);
+    }
+
+    /**
      * 仅更新会话预览（lastMessageType/lastMessageContent），用于撤回等“最终态变更”。
      *
      * 约束：只在 lastMessageId 仍然等于目标 messageId 时才更新，避免 lastMessage 已推进后被回写覆盖。

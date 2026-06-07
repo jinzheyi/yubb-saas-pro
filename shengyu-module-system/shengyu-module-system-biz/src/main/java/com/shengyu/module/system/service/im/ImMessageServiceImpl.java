@@ -1266,7 +1266,8 @@ public class ImMessageServiceImpl implements ImMessageService {
                 chatUserMapper.updateLastMessageAndIncrementUnread(
                         chatUser.getId(), lastMessageId, lastMessageSequence, dbMessageType, finalPreview, lastMessageTime,
                         isSender ? 0 : 1,
-                        Boolean.TRUE.equals(chatUser.getNoDisturb()));
+                        Boolean.TRUE.equals(chatUser.getNoDisturb()),
+                        senderId);
 
 				// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
 				if (isSender && lastMessageSequence != null) {
@@ -1297,7 +1298,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     conversationUserStateMapper.upsertAfterMessage(
                             tenantId, chat.getId(), memberId, cursorVer,
                             unreadDelta, lastReadSeq, lastReadTime,
-                            lastMessageId, lastMessageSequence, dbMessageType, finalPreview, lastMessageHasAtMe, lastMessageTime);
+                            lastMessageId, lastMessageSequence, senderId, dbMessageType, finalPreview, lastMessageHasAtMe, lastMessageTime);
                 } catch (Exception e) {
                     log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
                             chat.getId(), memberId, e.getMessage());
@@ -1321,7 +1322,8 @@ public class ImMessageServiceImpl implements ImMessageService {
             chatUserMapper.updateLastMessageAndIncrementUnread(
                     sender.getId(), lastMessageId, lastMessageSequence, dbMessageType, senderPreview, lastMessageTime,
                     0,
-                    Boolean.TRUE.equals(sender.getNoDisturb()));
+                    Boolean.TRUE.equals(sender.getNoDisturb()),
+                    senderId);
 
 			// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
 			if (lastMessageSequence != null) {
@@ -1350,7 +1352,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), senderId, senderCursorVer,
                         0, lastMessageSequence, lastMessageTime,
-                        lastMessageId, lastMessageSequence, dbMessageType, senderPreview, false, lastMessageTime);
+                        lastMessageId, lastMessageSequence, senderId, dbMessageType, senderPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",
                         chat.getId(), senderId, e.getMessage());
@@ -1360,7 +1362,8 @@ public class ImMessageServiceImpl implements ImMessageService {
             chatUserMapper.updateLastMessageAndIncrementUnread(
                     receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, receiverPreview, lastMessageTime,
                     1,
-                    Boolean.TRUE.equals(receiver.getNoDisturb()));
+                    Boolean.TRUE.equals(receiver.getNoDisturb()),
+                    senderId);
 
             // 接收者侧写入 im_conversation_user_state（unreadDelta=1，支持离线 /sync 拉取未读）
             try {
@@ -1371,7 +1374,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), receiverId, receiverCursorVer,
                         1, null, null,
-                        lastMessageId, lastMessageSequence, dbMessageType, receiverPreview, false, lastMessageTime);
+                        lastMessageId, lastMessageSequence, senderId, dbMessageType, receiverPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊接收者), chatId: {}, receiverId: {}, error: {}",
                         chat.getId(), receiverId, e.getMessage());
@@ -2651,6 +2654,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                                 null,
                                 messageId,
                                 message.getSequence() != null ? message.getSequence() : 0L,
+                                message.getSenderId(),
                                 10,
                                 "[消息已撤回]",
                                 false,
