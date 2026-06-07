@@ -342,7 +342,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                         item.setLastMessageType(lastMessageType);
                         item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
                                 lastMessage != null ? lastMessage.getExtra() : null));
-                        item.setLastMessageSenderId(lastMessage != null ? lastMessage.getSenderId() : null);
+                        Long senderId = lastMessage != null ? lastMessage.getSenderId() : null;
+                        item.setLastMessageSenderId(senderId);
+                        item.setLastMessageIsSelf(senderId != null && Objects.equals(senderId, userId));
                         item.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
                         item.setLastMessageSystemEventParams(extractSystemEventParams(lastMessage != null ? lastMessage.getExtra() : null));
                         item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
@@ -1039,7 +1041,9 @@ public class ImConversationServiceImpl implements ImConversationService {
             respVO.setLastMessageType(lastType);
             respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                     lastMessage != null ? lastMessage.getExtra() : null));
-            respVO.setLastMessageSenderId(lastMessage != null ? lastMessage.getSenderId() : null);
+            Long senderId1 = lastMessage != null ? lastMessage.getSenderId() : null;
+            respVO.setLastMessageSenderId(senderId1);
+            respVO.setLastMessageIsSelf(senderId1 != null && Objects.equals(senderId1, userId));
             respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
             respVO.setLastMessageSystemEventParams(extractSystemEventParams(lastMessage != null ? lastMessage.getExtra() : null));
             // 无消息时：群聊会话时间取群创建时间；有消息时取最后一条消息时间
@@ -1138,7 +1142,9 @@ public class ImConversationServiceImpl implements ImConversationService {
         respVO.setLastMessageType(lastType);
         respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                 lastMsg != null ? lastMsg.getExtra() : null));
-        respVO.setLastMessageSenderId(lastMsg != null ? lastMsg.getSenderId() : null);
+        Long senderId2 = lastMsg != null ? lastMsg.getSenderId() : null;
+        respVO.setLastMessageSenderId(senderId2);
+        respVO.setLastMessageIsSelf(senderId2 != null && Objects.equals(senderId2, userId));
         respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMsg != null ? lastMsg.getExtra() : null));
         // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
         respVO.setLastMessageTime(chatUser.getLastMessageTime());

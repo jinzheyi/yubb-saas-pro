@@ -47,9 +47,12 @@ public class AppImConversationRespVO {
     @Schema(description = "最后一条消息内容", example = "你好")
     private String lastMessageContent;
 
-    @Schema(description = "最后一条消息发送者ID（用于前端判断是否为自己发送的消息）", example = "1001")
+    @Schema(description = "最后一条消息发送者ID（用于前端判断是否是自己发送的消息）", example = "1001")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long lastMessageSenderId;
+
+    @Schema(description = "最后一条消息是否为自己发送（true=自己发送，false=他人发送）", example = "false")
+    private Boolean lastMessageIsSelf;
 
     @Schema(description = "最后一条消息是否@了我（用于会话列表[有人@我]标记）", example = "false")
     private Boolean lastMessageHasAtMe;
