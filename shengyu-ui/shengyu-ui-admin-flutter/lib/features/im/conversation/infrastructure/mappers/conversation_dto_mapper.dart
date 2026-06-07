@@ -26,6 +26,9 @@ abstract final class ConversationDtoMapper {
       lastMessageSenderName: dto.lastMessageSenderName.isEmpty
           ? null
           : dto.lastMessageSenderName,
+      lastMessageSenderId: dto.lastMessageSenderId.isEmpty
+          ? null
+          : dto.lastMessageSenderId,
       lastMessageIsSelf: dto.lastMessageIsSelf,
       lastMessageCustomType: dto.lastMessageCustomType.isEmpty
           ? null
@@ -36,6 +39,9 @@ abstract final class ConversationDtoMapper {
       lastMessageSystemEventKey: dto.lastMessageSystemEventKey.isEmpty
           ? null
           : dto.lastMessageSystemEventKey,
+      lastMessageSystemEventParams: dto.lastMessageSystemEventParams.isEmpty
+          ? null
+          : dto.lastMessageSystemEventParams,
       lastMessageStatus: dto.lastMessageStatus,
       lastMessageHasAtMe: dto.lastMessageHasAtMe,
       groupMemberCount: dto.groupMemberCount,

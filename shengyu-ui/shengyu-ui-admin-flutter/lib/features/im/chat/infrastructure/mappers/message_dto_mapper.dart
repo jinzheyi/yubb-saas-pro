@@ -61,6 +61,7 @@ abstract final class MessageDtoMapper {
         reeditContent: dto.reeditContent,
         reeditDeadlineTs: dto.reeditDeadlineTs,
         systemEventKey: dto.systemEventKey,
+        systemEventParams: dto.systemEventParams,
       ),
     ));
   }

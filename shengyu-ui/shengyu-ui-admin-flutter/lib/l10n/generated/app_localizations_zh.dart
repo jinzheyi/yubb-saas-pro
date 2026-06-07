@@ -324,6 +324,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get systemEventGroupMemberUnmuted => '群成员已被解除禁言';
 
   @override
+  String systemEventGroupMemberAddedWithName(String firstName) {
+    return '$firstName 加入了群聊';
+  }
+
+  @override
+  String systemEventGroupMemberRemovedWithName(String firstName) {
+    return '$firstName 被移出群聊';
+  }
+
+  @override
+  String systemEventGroupOwnerTransferredTo(String firstName) {
+    return '群主已转让给 $firstName';
+  }
+
+  @override
+  String systemEventGroupMemberRoleSetAdminWithName(String firstName) {
+    return '$firstName 已被设为管理员';
+  }
+
+  @override
+  String systemEventGroupMemberRoleSetMemberWithName(String firstName) {
+    return '$firstName 已被设置为普通成员';
+  }
+
+  @override
+  String systemEventGroupMemberMutedWithName(String firstName) {
+    return '$firstName 已被禁言';
+  }
+
+  @override
+  String systemEventGroupMemberUnmutedWithName(String firstName) {
+    return '$firstName 已被解除禁言';
+  }
+
+  @override
   String get contactsListEmpty => '暂无联系人';
 
   @override

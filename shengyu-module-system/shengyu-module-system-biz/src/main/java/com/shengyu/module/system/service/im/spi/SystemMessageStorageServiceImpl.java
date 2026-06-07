@@ -1105,29 +1105,29 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         return content;
     }
 
+    /**
+     * 构建群聊预览文案：仅返回原始内容，由前端根据发送者标记动态添加国际化前缀
+     */
     private String buildGroupConversationPreview(String basePreview, boolean isSender,
                                                  String senderName, Long senderId) {
         String preview = StrUtil.nullToEmpty(basePreview).trim();
         if (preview.isEmpty()) {
             return truncateContent(preview);
         }
-        String prefix = isSender
-                ? "我"
-                : (StrUtil.isNotBlank(senderName)
-                ? senderName.trim()
-                : String.valueOf(senderId != null ? senderId : 0L));
-        return truncateContent(prefix + ":" + preview);
+        // 去除发送者前缀：数据库只存原始内容，前端根据 isSelf 标记动态拼接国际化文案
+        return truncateContent(preview);
     }
 
     /**
-     * 构建单聊预览文案：发送者侧添加"我:"前缀，接收者侧保持原样
+     * 构建单聊预览文案：仅返回原始内容，由前端根据发送者标记动态添加国际化前缀
      */
     private String buildSingleChatPreview(String basePreview) {
         String preview = StrUtil.nullToEmpty(basePreview).trim();
         if (preview.isEmpty()) {
             return truncateContent(preview);
         }
-        return truncateContent("我:" + preview);
+        // 去除发送者前缀：数据库只存原始内容，前端根据 isSelf 标记动态拼接国际化文案
+        return truncateContent(preview);
     }
 
     /**

@@ -41,6 +41,7 @@ class MessageExtra {
     this.reeditContent,
     this.reeditDeadlineTs,
     this.systemEventKey,
+    this.systemEventParams,
   });
 
   final String? revision;
@@ -82,6 +83,7 @@ class MessageExtra {
   final String? reeditContent;
   final int? reeditDeadlineTs;
   final String? systemEventKey;
+  final Map<String, String>? systemEventParams;
 
   MessageExtra copyWith({
     String? revision,
@@ -123,6 +125,7 @@ class MessageExtra {
     String? reeditContent,
     int? reeditDeadlineTs,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
   }) {
     return MessageExtra(
       revision: revision ?? this.revision,
@@ -165,6 +168,7 @@ class MessageExtra {
       reeditContent: reeditContent ?? this.reeditContent,
       reeditDeadlineTs: reeditDeadlineTs ?? this.reeditDeadlineTs,
       systemEventKey: systemEventKey ?? this.systemEventKey,
+      systemEventParams: systemEventParams ?? this.systemEventParams,
     );
   }
 }

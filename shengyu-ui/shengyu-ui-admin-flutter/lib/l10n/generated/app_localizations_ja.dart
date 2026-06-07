@@ -345,6 +345,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get systemEventGroupMemberUnmuted => 'A group member has been unmuted';
 
   @override
+  String systemEventGroupMemberAddedWithName(String firstName) {
+    return '$firstName joined the group';
+  }
+
+  @override
+  String systemEventGroupMemberRemovedWithName(String firstName) {
+    return '$firstName was removed from the group';
+  }
+
+  @override
+  String systemEventGroupOwnerTransferredTo(String firstName) {
+    return 'Group ownership has been transferred to $firstName';
+  }
+
+  @override
+  String systemEventGroupMemberRoleSetAdminWithName(String firstName) {
+    return '$firstName was set as admin';
+  }
+
+  @override
+  String systemEventGroupMemberRoleSetMemberWithName(String firstName) {
+    return '$firstName was set as member';
+  }
+
+  @override
+  String systemEventGroupMemberMutedWithName(String firstName) {
+    return '$firstName has been muted';
+  }
+
+  @override
+  String systemEventGroupMemberUnmutedWithName(String firstName) {
+    return '$firstName has been unmuted';
+  }
+
+  @override
   String get contactsListEmpty => 'No contacts yet';
 
   @override

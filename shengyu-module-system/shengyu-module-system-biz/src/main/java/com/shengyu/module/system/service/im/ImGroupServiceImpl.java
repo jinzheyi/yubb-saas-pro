@@ -361,7 +361,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
         // 推送群解散WebSocket通知给所有群成员
-        String tipContent = "群「" + group.getName() + "」已被群主解散";
+        String tipContent = ImSystemMessageI18nSupport.EVENT_GROUP_DISBANDED;
         String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
                 ImSystemMessageI18nSupport.EVENT_GROUP_DISBANDED, null);
         runAfterCommit(() -> {
@@ -443,7 +443,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
         // 推送成员退出WebSocket通知给剩余群成员
-        String tipContent = userId + " 已退出群聊";
+        String tipContent = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED;
         String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
                 ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED, null);
         runAfterCommit(() -> {
@@ -940,12 +940,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
             
             // 构建系统消息内容
-            String roleName = ImGroupMemberRoleEnum.isAdmin(newRole) ? "管理员" : "普通成员";
-            String content = String.format("\"%s\" 将 \"%s\" 设置为 %s",
-                    operator.getNickname(), targetUser.getNickname(), roleName);
             String eventKey = ImGroupMemberRoleEnum.isAdmin(newRole)
                     ? ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ROLE_SET_ADMIN
                     : ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ROLE_SET_MEMBER;
+            String content = eventKey;
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("operatorName", operator.getNickname());
             params.put("targetName", targetUser.getNickname());
@@ -1042,8 +1040,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupMapper.updateById(group);
 
         final String tipContent = Boolean.TRUE.equals(muted)
-                ? "已开启全员禁言，只有群主和管理员可以发言"
-                : "已解除全员禁言";
+                ? ImSystemMessageI18nSupport.EVENT_GROUP_MUTE_ALL_ENABLED
+                : ImSystemMessageI18nSupport.EVENT_GROUP_MUTE_ALL_DISABLED;
         final String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
                 Boolean.TRUE.equals(muted)
                         ? ImSystemMessageI18nSupport.EVENT_GROUP_MUTE_ALL_ENABLED
@@ -1637,8 +1635,8 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     private void pushGroupNoticeConversationUpdate(Long operatorUserId, Long groupId) {
-        String preview = "[群公告有更新]";
-        String tipContent = "群公告有更新";
+        String preview = ImSystemMessageI18nSupport.EVENT_GROUP_NOTICE_UPDATED;
+        String tipContent = ImSystemMessageI18nSupport.EVENT_GROUP_NOTICE_UPDATED;
         String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
                 ImSystemMessageI18nSupport.EVENT_GROUP_NOTICE_UPDATED,
                 Collections.emptyMap());
@@ -1744,29 +1742,21 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
+    /**
+     * 构建群成员禁言系统消息内容(存储国际化 key)
+     */
     private String buildGroupMemberMuteTipContent(ImGroupUserDO member, Long memberUserId, Boolean muted, LocalDateTime muteEndTime) {
-        String memberName = "";
-        if (member != null && member.getNickname() != null) {
-            memberName = member.getNickname().trim();
-        }
-        if (memberName.isEmpty() && memberUserId != null) {
-            AdminUserDO targetUser = userMapper.selectById(memberUserId);
-            if (targetUser != null && targetUser.getNickname() != null) {
-                memberName = targetUser.getNickname().trim();
-            }
-        }
-        if (memberName.isEmpty()) {
-            memberName = "该成员";
-        }
         if (Boolean.TRUE.equals(muted)) {
-            if (muteEndTime != null) {
-                return String.format("\"%s\" 已被禁言至 %s", memberName, muteEndTime.format(GROUP_MUTE_TIP_TIME_FORMATTER));
-            }
-            return String.format("\"%s\" 已被禁言", memberName);
+            return muteEndTime != null
+                    ? ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_MUTED_UNTIL
+                    : ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_MUTED;
         }
-        return String.format("\"%s\" 已被解除禁言", memberName);
+        return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_UNMUTED;
     }
 
+    /**
+     * 构建群成员加入系统消息内容(存储国际化 key)
+     */
     private String buildGroupMembersAddedTipContent(List<Long> addedMemberIds) {
         List<String> names = new ArrayList<>();
         if (CollUtil.isNotEmpty(addedMemberIds)) {
@@ -1781,18 +1771,22 @@ public class ImGroupServiceImpl implements ImGroupService {
                 }
             }
         }
+        // 返回国际化 key,由前端根据当前语言动态翻译
         if (names.isEmpty()) {
-            return "有新成员加入了群聊";
+            return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE;
         }
         if (names.size() == 1) {
-            return String.format("\"%s\" 加入了群聊", names.get(0));
+            return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE;
         }
         if (names.size() == 2) {
-            return String.format("\"%s\"、\"%s\" 加入了群聊", names.get(0), names.get(1));
+            return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_TWO;
         }
-        return String.format("\"%s\"、\"%s\" 等%d人加入了群聊", names.get(0), names.get(1), names.size());
+        return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_MANY;
     }
 
+    /**
+     * 构建群成员加入系统消息 extra(包含国际化参数)
+     */
     private String buildGroupMembersAddedTipExtra(List<Long> addedMemberIds) {
         List<String> names = new ArrayList<>();
         if (CollUtil.isNotEmpty(addedMemberIds)) {
@@ -1828,23 +1822,16 @@ public class ImGroupServiceImpl implements ImGroupService {
         return imSystemMessageI18nSupport.attachI18n(null, eventKey, params);
     }
 
+    /**
+     * 构建群成员移除系统消息内容(存储国际化 key)
+     */
     private String buildGroupMemberRemovedTipContent(ImGroupUserDO member, Long memberUserId) {
-        String memberName = "";
-        if (member != null && member.getNickname() != null) {
-            memberName = member.getNickname().trim();
-        }
-        if (memberName.isEmpty() && memberUserId != null) {
-            AdminUserDO user = userMapper.selectById(memberUserId);
-            if (user != null && user.getNickname() != null) {
-                memberName = user.getNickname().trim();
-            }
-        }
-        if (memberName.isEmpty()) {
-            memberName = "该成员";
-        }
-        return String.format("\"%s\" 已被移出群聊", memberName);
+        return ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED;
     }
 
+    /**
+     * 构建群成员移除系统消息 extra(包含国际化参数)
+     */
     private String buildGroupMemberRemovedTipExtra(ImGroupUserDO member, Long memberUserId) {
         String memberName = "";
         if (member != null && member.getNickname() != null) {
@@ -1866,20 +1853,7 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     private String buildGroupOwnerTransferredTipContent(Long newOwnerId, ImGroupUserDO newOwner) {
-        String memberName = "";
-        if (newOwner != null && newOwner.getNickname() != null) {
-            memberName = newOwner.getNickname().trim();
-        }
-        if (memberName.isEmpty() && newOwnerId != null) {
-            AdminUserDO user = userMapper.selectById(newOwnerId);
-            if (user != null && user.getNickname() != null) {
-                memberName = user.getNickname().trim();
-            }
-        }
-        if (memberName.isEmpty()) {
-            memberName = "该成员";
-        }
-        return String.format("群主已转让给“%s”", memberName);
+        return ImSystemMessageI18nSupport.EVENT_GROUP_OWNER_TRANSFERRED;
     }
 
     private String buildGroupOwnerTransferredTipExtra(Long newOwnerId, ImGroupUserDO newOwner) {
@@ -2552,7 +2526,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
         // 推送新成员加入WebSocket通知给所有群成员
-        String tipContent = "新成员已加入群聊「" + group.getName() + "」";
+        String tipContent = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE;
         String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
                 ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE, null);
         runAfterCommit(() -> {

@@ -110,6 +110,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     String? customType,
     String? fileName,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
     required MessageStatus messageStatus,
     required DateTime updatedAt,
     bool resetUnread = false,
@@ -153,6 +154,8 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             lastMessageFileName: fileName ?? items[index].lastMessageFileName,
             lastMessageSystemEventKey:
                 systemEventKey ?? items[index].lastMessageSystemEventKey,
+            lastMessageSystemEventParams:
+                systemEventParams ?? items[index].lastMessageSystemEventParams,
             lastMessageStatus: messageStatus,
             updatedAt: updatedAt,
             unreadCount: unreadCount,
@@ -178,6 +181,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             lastMessageCustomType: customType,
             lastMessageFileName: fileName,
             lastMessageSystemEventKey: systemEventKey,
+            lastMessageSystemEventParams: systemEventParams,
             lastMessageStatus: messageStatus,
             lastMessageHasAtMe: false,
             groupMemberCount: 0,

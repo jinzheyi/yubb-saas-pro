@@ -56,33 +56,42 @@ public class ImSystemMessageI18nSupport {
         return root.toString();
     }
 
+    /**
+     * 渲染系统消息。
+     * 新链路：content 存储国际化 key，extra.i18n 存储 params。
+     * 旧数据兼容：content 存储已翻译文本，extra.i18n 存储 eventKey + params。
+     */
     public String render(String fallbackContent, String rawExtra) {
         JSONObject root = parseObject(rawExtra);
-        if (root.isEmpty()) {
-            if (isRecallPreviewFallback(fallbackContent)) {
-                return renderRecallPreview(fallbackContent);
-            }
-            return fallbackContent;
-        }
-        JSONObject i18n = root.getJSONObject("i18n");
-        if (i18n == null) {
-            if (isRecallPreviewFallback(fallbackContent)) {
-                return renderRecallPreview(fallbackContent);
-            }
-            return fallbackContent;
-        }
-        String eventKey = i18n.getStr("eventKey");
-        if (StrUtil.isBlank(eventKey)) {
-            return fallbackContent;
-        }
-        JSONObject paramsObject = i18n.getJSONObject("params");
+        JSONObject i18n = root.isEmpty() ? null : root.getJSONObject("i18n");
+        
+        String eventKey = null;
         Map<String, String> params = new LinkedHashMap<>();
-        if (paramsObject != null) {
-            for (String key : paramsObject.keySet()) {
-                Object value = paramsObject.get(key);
-                params.put(key, value != null ? String.valueOf(value) : "");
+        
+        if (i18n != null) {
+            eventKey = i18n.getStr("eventKey");
+            JSONObject paramsObject = i18n.getJSONObject("params");
+            if (paramsObject != null) {
+                for (String key : paramsObject.keySet()) {
+                    Object value = paramsObject.get(key);
+                    params.put(key, value != null ? String.valueOf(value) : "");
+                }
             }
         }
+        
+        // 如果 extra 中没有 eventKey，尝试从 content 中获取（新链路：content 即为 key）
+        if (StrUtil.isBlank(eventKey) && StrUtil.isNotBlank(fallbackContent) 
+                && fallbackContent.startsWith("im.system.")) {
+            eventKey = fallbackContent.trim();
+        }
+        
+        if (StrUtil.isBlank(eventKey)) {
+            if (isRecallPreviewFallback(fallbackContent)) {
+                return renderRecallPreview(fallbackContent);
+            }
+            return fallbackContent;
+        }
+        
         Locale locale = LocaleContextHolder.getLocale();
         String template = messageSource.getMessage(eventKey, null, fallbackContent, locale);
         return replaceNamedPlaceholders(template, params, fallbackContent);

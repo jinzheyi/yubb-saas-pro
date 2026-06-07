@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shengyu_ui_admin_im/core/i18n/system_message_renderer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_avatar.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
@@ -250,10 +251,11 @@ class _MessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final quotePreviewChain = _buildQuotePreviewChain(
       messages,
       message,
-      strings,
+      context,
     );
     if (message.type == MessageType.system) {
       return _SystemMessage(
@@ -398,8 +400,9 @@ class _MessageRow extends StatelessWidget {
 List<QuotePreviewEntry> _buildQuotePreviewChain(
   List<Message> messages,
   Message message,
-  AppLocalizations strings,
+  BuildContext context,
 ) {
+  final strings = AppLocalizations.of(context);
   final quote = message.quoteInfo;
   if (quote == null || quote.messageId.trim().isEmpty) {
     return const <QuotePreviewEntry>[];
@@ -425,7 +428,7 @@ List<QuotePreviewEntry> _buildQuotePreviewChain(
               : (currentSender.isNotEmpty
                     ? currentSender
                     : strings.chatPreviewUnknownSender),
-          preview: _messagePreview(referenced, strings),
+          preview: _messagePreview(referenced, context),
           missing: false,
         ),
       );
@@ -457,7 +460,8 @@ List<QuotePreviewEntry> _buildQuotePreviewChain(
   return chain;
 }
 
-String _messagePreview(Message message, AppLocalizations strings) {
+String _messagePreview(Message message, BuildContext context) {
+  final strings = AppLocalizations.of(context);
   if (_isRecallPreview(message)) {
     return strings.chatPreviewRecalled;
   }
@@ -490,7 +494,7 @@ String _messagePreview(Message message, AppLocalizations strings) {
           ? strings.chatForwardCombine
           : strings.chatCustomMessage;
     case MessageType.system:
-      return _resolveSystemMessageText(message, strings);
+      return _resolveSystemMessageText(message, context);
   }
 }
 
@@ -503,38 +507,23 @@ bool _isRecallPreview(Message message) {
   return false;
 }
 
-String _resolveSystemMessageText(Message message, AppLocalizations strings) {
+String _resolveSystemMessageText(Message message, BuildContext context) {
   final content = message.content.trim();
-  if (content.isNotEmpty) {
+  if (content.isNotEmpty && !content.startsWith('im.system.')) {
     return content;
   }
-  switch (message.extra.systemEventKey) {
-    case 'im.system.group_notice_updated':
-      return strings.chatGroupNoticeUpdated;
-    case 'im.system.group_mute_all_enabled':
-      return strings.chatGroupMuteAllEnabled;
-    case 'im.system.group_mute_all_disabled':
-      return strings.chatGroupMuteAllDisabled;
-    case 'im.system.group_member_added_one':
-    case 'im.system.group_member_added_two':
-    case 'im.system.group_member_added_many':
-      return strings.chatGroupMemberAdded;
-    case 'im.system.group_member_removed':
-      return strings.chatGroupMemberRemoved;
-    case 'im.system.group_owner_transferred':
-      return strings.chatGroupOwnerTransferred;
-    case 'im.system.group_member_role_set_admin':
-      return strings.chatGroupMemberRoleSetAdmin;
-    case 'im.system.group_member_role_set_member':
-      return strings.chatGroupMemberRoleSetMember;
-    case 'im.system.group_member_muted':
-    case 'im.system.group_member_muted_until':
-      return strings.chatGroupMemberMutedGeneric;
-    case 'im.system.group_member_unmuted':
-      return strings.chatGroupMemberUnmutedGeneric;
-    default:
-      return strings.chatPreviewMessage;
-  }
+  
+  // Use SystemMessageRenderer for personalized rendering with params
+  final systemEventKey = content.startsWith('im.system.') 
+      ? content 
+      : message.extra.systemEventKey;
+  
+  return SystemMessageRenderer.render(
+    context,
+    systemEventKey,
+    params: message.extra.systemEventParams,
+    fallbackContent: content,
+  );
 }
 
 class _SelectionWrapper extends StatelessWidget {
@@ -695,7 +684,7 @@ class _SystemMessage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  _resolveSystemMessageText(message, strings),
+                  _resolveSystemMessageText(message, context),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 12,

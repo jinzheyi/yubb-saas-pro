@@ -34,6 +34,7 @@ public class ImConversationSnapshotServiceImpl implements ConversationSnapshotSe
         map.put("lastReadSequence", detail.getLastReadSequence() != null ? String.valueOf(detail.getLastReadSequence()) : null);
         map.put("lastMessageType", detail.getLastMessageType());
         map.put("lastMessageContent", detail.getLastMessageContent());
+        map.put("lastMessageSenderId", detail.getLastMessageSenderId() != null ? String.valueOf(detail.getLastMessageSenderId()) : null);
         map.put("lastMessageTime", detail.getLastMessageTime());
         map.put("isPinned", detail.getIsPinned());
         map.put("noDisturb", detail.getNoDisturb());

@@ -58,6 +58,7 @@ class MessageDto {
     this.reeditContent,
     this.reeditDeadlineTs,
     this.systemEventKey,
+    this.systemEventParams,
   });
 
   final String messageId;
@@ -107,6 +108,7 @@ class MessageDto {
   final String? reeditContent;
   final int? reeditDeadlineTs;
   final String? systemEventKey;
+  final Map<String, String>? systemEventParams;
 
   factory MessageDto.fromJson(Map<String, dynamic> json) {
     final extra = _readExtra(json['extra']);
@@ -121,6 +123,7 @@ class MessageDto {
     final status = _parseMessageStatus(statusRaw);
     final customType = _parseCustomType(contentMap, extra);
     final systemEventKey = _parseSystemEventKey(extra);
+    final systemEventParams = _parseSystemEventParams(extra);
     final isRecalled =
         statusRaw == '6' || statusRaw.toLowerCase() == 'recalled';
     final isSystemTip = !isRecalled && systemEventKey != null;
@@ -268,6 +271,7 @@ class MessageDto {
       reeditContent: _pickString(json, structuredFields, ['reeditContent']),
       reeditDeadlineTs: _pickInt(json, structuredFields, ['reeditDeadlineTs']),
       systemEventKey: systemEventKey,
+      systemEventParams: systemEventParams,
     );
   }
 
@@ -293,6 +297,25 @@ class MessageDto {
       final eventKey = i18n['eventKey']?.toString().trim() ?? '';
       if (eventKey.isNotEmpty && eventKey.startsWith('im.system.')) {
         return eventKey;
+      }
+    }
+    return null;
+  }
+
+  static Map<String, String>? _parseSystemEventParams(Map<String, dynamic> extra) {
+    final i18n = extra['i18n'];
+    if (i18n is Map) {
+      final params = i18n['params'];
+      if (params is Map) {
+        final result = <String, String>{};
+        params.forEach((key, value) {
+          final k = key.toString();
+          final v = value?.toString() ?? '';
+          if (k.isNotEmpty) {
+            result[k] = v;
+          }
+        });
+        return result.isEmpty ? null : result;
       }
     }
     return null;

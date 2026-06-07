@@ -342,13 +342,7 @@ bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
   if (conversation.lastMessageType == MessageType.system) {
     return true;
   }
-  final normalizedPreview = conversation.lastMessagePreview.trimLeft();
-  final isExplicitSelfPreview =
-      conversation.lastMessageIsSelf ||
-      normalizedPreview.startsWith('我:') ||
-      normalizedPreview.startsWith('Me:') ||
-      normalizedPreview.startsWith('僕:') ||
-      normalizedPreview.startsWith('나:');
+  final isExplicitSelfPreview = conversation.lastMessageIsSelf;
   return conversation.lastMessageType != MessageType.text &&
       !isExplicitSelfPreview;
 }
@@ -366,17 +360,18 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
   final preview =
       (canFormatGroupPreview
               ? MessagePreviewFormatterWithContext(
-                  strings,
-                ).formatConversationPreview(
-                  type: conversation.lastMessageType,
-                  content: conversation.lastMessagePreview,
-                  customType: conversation.lastMessageCustomType,
-                  fileName: conversation.lastMessageFileName,
-                  systemEventKey: conversation.lastMessageSystemEventKey,
-                  conversationType: conversation.conversationType,
-                  isSelf: conversation.lastMessageIsSelf,
-                  senderName: conversation.lastMessageSenderName,
-                )
+                strings,
+              ).formatConversationPreview(
+                type: conversation.lastMessageType,
+                content: conversation.lastMessagePreview,
+                customType: conversation.lastMessageCustomType,
+                fileName: conversation.lastMessageFileName,
+                systemEventKey: conversation.lastMessageSystemEventKey,
+                systemEventParams: conversation.lastMessageSystemEventParams,
+                conversationType: conversation.conversationType,
+                isSelf: conversation.lastMessageIsSelf,
+                senderName: conversation.lastMessageSenderName,
+              )
               : rawPreview)
           .trim()
           .replaceAll(RegExp(r'\r?\n+'), ' ');

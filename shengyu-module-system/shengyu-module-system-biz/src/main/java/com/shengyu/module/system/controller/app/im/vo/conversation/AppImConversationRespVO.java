@@ -47,11 +47,19 @@ public class AppImConversationRespVO {
     @Schema(description = "最后一条消息内容", example = "你好")
     private String lastMessageContent;
 
+    @Schema(description = "最后一条消息发送者ID（用于前端判断是否为自己发送的消息）", example = "1001")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long lastMessageSenderId;
+
     @Schema(description = "最后一条消息是否@了我（用于会话列表[有人@我]标记）", example = "false")
     private Boolean lastMessageHasAtMe;
 
-    @Schema(description = "最后一条消息的系统消息事件Key（用于前端国际化渲染）", example = "im.system.group_member_added_one")
+    @Deprecated
+    @Schema(description = "最后一条消息的系统消息事件Key（已废弃：系统消息国际化现统一通过 lastMessageContent + lastMessageSystemEventParams 处理）", example = "im.system.group_member_added_one")
     private String lastMessageSystemEventKey;
+
+    @Schema(description = "最后一条消息的系统消息事件参数（与 lastMessageContent 配合使用）", example = "{\"firstName\":\"张三\"}")
+    private java.util.Map<String, String> lastMessageSystemEventParams;
 
     @Schema(description = "最后一条消息时间", example = "2026-02-11 10:30:00")
     private LocalDateTime lastMessageTime;

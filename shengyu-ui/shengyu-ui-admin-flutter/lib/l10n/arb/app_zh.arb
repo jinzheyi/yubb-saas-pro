@@ -158,6 +158,62 @@
   "systemEventGroupMemberRoleSetMember": "群成员已被设置为普通成员",
   "systemEventGroupMemberMuted": "群成员已被禁言",
   "systemEventGroupMemberUnmuted": "群成员已被解除禁言",
+  "systemEventGroupMemberAddedWithName": "{firstName} 加入了群聊",
+  "@systemEventGroupMemberAddedWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupMemberRemovedWithName": "{firstName} 被移出群聊",
+  "@systemEventGroupMemberRemovedWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupOwnerTransferredTo": "群主已转让给 {firstName}",
+  "@systemEventGroupOwnerTransferredTo": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupMemberRoleSetAdminWithName": "{firstName} 已被设为管理员",
+  "@systemEventGroupMemberRoleSetAdminWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupMemberRoleSetMemberWithName": "{firstName} 已被设置为普通成员",
+  "@systemEventGroupMemberRoleSetMemberWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupMemberMutedWithName": "{firstName} 已被禁言",
+  "@systemEventGroupMemberMutedWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "systemEventGroupMemberUnmutedWithName": "{firstName} 已被解除禁言",
+  "@systemEventGroupMemberUnmutedWithName": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
 
   "contactsListEmpty": "暂无联系人",
   "contactsMyGroupsEmpty": "暂无群组",

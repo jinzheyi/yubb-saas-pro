@@ -27,10 +27,12 @@ class Conversation {
     required this.lastMessagePreview,
     required this.lastMessageType,
     this.lastMessageSenderName,
+    this.lastMessageSenderId,
     this.lastMessageIsSelf = false,
     this.lastMessageCustomType,
     this.lastMessageFileName,
     this.lastMessageSystemEventKey,
+    this.lastMessageSystemEventParams,
     required this.lastMessageStatus,
     this.lastMessageHasAtMe = false,
     this.groupMemberCount = 0,
@@ -61,10 +63,12 @@ class Conversation {
   final String lastMessagePreview;
   final MessageType lastMessageType;
   final String? lastMessageSenderName;
+  final String? lastMessageSenderId;
   final bool lastMessageIsSelf;
   final String? lastMessageCustomType;
   final String? lastMessageFileName;
   final String? lastMessageSystemEventKey;
+  final Map<String, String>? lastMessageSystemEventParams;
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
@@ -112,10 +116,12 @@ class Conversation {
     String? lastMessagePreview,
     MessageType? lastMessageType,
     String? lastMessageSenderName,
+    String? lastMessageSenderId,
     bool? lastMessageIsSelf,
     String? lastMessageCustomType,
     String? lastMessageFileName,
     String? lastMessageSystemEventKey,
+    Map<String, String>? lastMessageSystemEventParams,
     MessageStatus? lastMessageStatus,
     bool? lastMessageHasAtMe,
     int? groupMemberCount,
@@ -147,12 +153,16 @@ class Conversation {
       lastMessageType: lastMessageType ?? this.lastMessageType,
       lastMessageSenderName:
           lastMessageSenderName ?? this.lastMessageSenderName,
+      lastMessageSenderId:
+          lastMessageSenderId ?? this.lastMessageSenderId,
       lastMessageIsSelf: lastMessageIsSelf ?? this.lastMessageIsSelf,
       lastMessageCustomType:
           lastMessageCustomType ?? this.lastMessageCustomType,
       lastMessageFileName: lastMessageFileName ?? this.lastMessageFileName,
       lastMessageSystemEventKey:
           lastMessageSystemEventKey ?? this.lastMessageSystemEventKey,
+      lastMessageSystemEventParams:
+          lastMessageSystemEventParams ?? this.lastMessageSystemEventParams,
       lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
       lastMessageHasAtMe: lastMessageHasAtMe ?? this.lastMessageHasAtMe,
       groupMemberCount: groupMemberCount ?? this.groupMemberCount,

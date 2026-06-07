@@ -24,6 +24,7 @@ typedef ConversationPreviewFormatter = String Function({
   String? senderName,
   String? fileName,
   String? systemEventKey,
+  Map<String, String>? systemEventParams,
 });
 
 /// 消息预览格式化器工厂函数类型（简化版，仅 format 方法）
@@ -33,6 +34,7 @@ typedef MessagePreviewFormatter = String Function({
   String? customType,
   String? fileName,
   String? systemEventKey,
+  Map<String, String>? systemEventParams,
 });
 
 /// 基于 locale 的消息预览格式化器工厂（控制器层使用）
@@ -55,6 +57,7 @@ ConversationPreviewFormatter createConversationPreviewFormatter(
     String? senderName,
     String? fileName,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
   }) {
     return _formatMessagePreview(
       locale: locale,
@@ -63,6 +66,7 @@ ConversationPreviewFormatter createConversationPreviewFormatter(
       customType: customType,
       fileName: fileName,
       systemEventKey: systemEventKey,
+      systemEventParams: systemEventParams,
     );
   };
 }
@@ -75,6 +79,7 @@ MessagePreviewFormatter createMessagePreviewFormatter(String locale) {
     String? customType,
     String? fileName,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
   }) {
     return _formatMessagePreview(
       locale: locale,
@@ -83,6 +88,7 @@ MessagePreviewFormatter createMessagePreviewFormatter(String locale) {
       customType: customType,
       fileName: fileName,
       systemEventKey: systemEventKey,
+      systemEventParams: systemEventParams,
     );
   };
 }
@@ -95,6 +101,7 @@ String _formatMessagePreview({
   String? customType,
   String? fileName,
   String? systemEventKey,
+  Map<String, String>? systemEventParams,
 }) {
   switch (type) {
     case MessageType.image:
@@ -125,8 +132,12 @@ String _formatMessagePreview({
       return _t(locale, '[Contact Card]', '[名片]');
     case MessageType.system:
       // 优先使用 systemEventKey 本地化渲染，忽略服务端硬编码 content
-      if (systemEventKey != null && systemEventKey.isNotEmpty) {
-        return _systemEventPreview(locale, systemEventKey);
+      // 新链路：content 即为 eventKey（如 im.system.group_member_added_one）
+      final resolvedEventKey = (content.trim().startsWith('im.system.'))
+          ? content.trim()
+          : (systemEventKey?.isNotEmpty == true ? systemEventKey : null);
+      if (resolvedEventKey != null && resolvedEventKey.isNotEmpty) {
+        return _systemEventPreview(locale, resolvedEventKey, systemEventParams);
       }
       return content;
     case MessageType.text:
@@ -135,7 +146,11 @@ String _formatMessagePreview({
 }
 
 /// 内部方法：系统事件预览文本
-String _systemEventPreview(String locale, String? systemEventKey) {
+String _systemEventPreview(
+  String locale,
+  String? systemEventKey,
+  Map<String, String>? params,
+) {
   switch (systemEventKey) {
     case 'im.system.group_notice_updated':
       return _t(locale, 'The group notice has been updated', '群公告有更新');
@@ -146,14 +161,54 @@ String _systemEventPreview(String locale, String? systemEventKey) {
     case 'im.system.group_member_added_one':
     case 'im.system.group_member_added_two':
     case 'im.system.group_member_added_many':
+      final firstName = params?['firstName'] ?? '';
+      if (firstName.isNotEmpty) {
+        return _t(
+          locale,
+          '$firstName joined the group',
+          '$firstName 加入了群聊',
+        );
+      }
       return _t(locale, 'A new member joined the group', '有新成员加入群聊');
     case 'im.system.group_member_removed':
+      final memberName = params?['memberName'] ?? params?['firstName'] ?? '';
+      if (memberName.isNotEmpty) {
+        return _t(
+          locale,
+          '$memberName was removed from the group',
+          '$memberName 被移出群聊',
+        );
+      }
       return _t(locale, 'A member was removed from the group', '有成员被移出群聊');
     case 'im.system.group_owner_transferred':
+      final newOwnerName = params?['newOwnerName'] ?? params?['firstName'] ?? '';
+      if (newOwnerName.isNotEmpty) {
+        return _t(
+          locale,
+          'Group ownership has been transferred to $newOwnerName',
+          '群主已转让给 $newOwnerName',
+        );
+      }
       return _t(locale, 'Group ownership has been transferred', '群主已完成转让');
     case 'im.system.group_member_role_set_admin':
+      final adminTargetName = params?['targetName'] ?? params?['firstName'] ?? '';
+      if (adminTargetName.isNotEmpty) {
+        return _t(
+          locale,
+          '$adminTargetName was set as admin',
+          '$adminTargetName 已被设为管理员',
+        );
+      }
       return _t(locale, 'A group member was set as admin', '群成员已被设为管理员');
     case 'im.system.group_member_role_set_member':
+      final memberTargetName = params?['targetName'] ?? params?['firstName'] ?? '';
+      if (memberTargetName.isNotEmpty) {
+        return _t(
+          locale,
+          '$memberTargetName was set as member',
+          '$memberTargetName 已被设置为普通成员',
+        );
+      }
       return _t(
         locale,
         'A group member was set as member',
@@ -161,8 +216,24 @@ String _systemEventPreview(String locale, String? systemEventKey) {
       );
     case 'im.system.group_member_muted':
     case 'im.system.group_member_muted_until':
+      final mutedMemberName = params?['memberName'] ?? params?['firstName'] ?? '';
+      if (mutedMemberName.isNotEmpty) {
+        return _t(
+          locale,
+          '$mutedMemberName has been muted',
+          '$mutedMemberName 已被禁言',
+        );
+      }
       return _t(locale, 'A group member has been muted', '群成员已被禁言');
     case 'im.system.group_member_unmuted':
+      final unmutedMemberName = params?['memberName'] ?? params?['firstName'] ?? '';
+      if (unmutedMemberName.isNotEmpty) {
+        return _t(
+          locale,
+          '$unmutedMemberName has been unmuted',
+          '$unmutedMemberName 已被解除禁言',
+        );
+      }
       return _t(locale, 'A group member has been unmuted', '群成员已被解除禁言');
     default:
       return _t(locale, '[System]', '[系统消息]');
@@ -196,6 +267,7 @@ class MessagePreviewFormatterWithContext {
     String? customType,
     String? fileName,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
   }) {
     switch (type) {
       case MessageType.image:
@@ -226,8 +298,12 @@ class MessagePreviewFormatterWithContext {
         return _l10n.messagePreviewContactCard;
       case MessageType.system:
         // 优先使用 systemEventKey 本地化渲染，忽略服务端硬编码 content
-        if (systemEventKey != null && systemEventKey.isNotEmpty) {
-          return _systemEventPreviewWithContext(systemEventKey);
+        // 新链路：content 即为 eventKey（如 im.system.group_member_added_one）
+        final resolvedEventKey = (content.trim().startsWith('im.system.'))
+            ? content.trim()
+            : (systemEventKey?.isNotEmpty == true ? systemEventKey : null);
+        if (resolvedEventKey != null && resolvedEventKey.isNotEmpty) {
+          return _systemEventPreviewWithContext(resolvedEventKey, systemEventParams);
         }
         return content;
       case MessageType.text:
@@ -244,6 +320,7 @@ class MessagePreviewFormatterWithContext {
     String? senderName,
     String? fileName,
     String? systemEventKey,
+    Map<String, String>? systemEventParams,
   }) {
     final summary = format(
       type: type,
@@ -251,6 +328,7 @@ class MessagePreviewFormatterWithContext {
       customType: customType,
       fileName: fileName,
       systemEventKey: systemEventKey,
+      systemEventParams: systemEventParams,
     );
     if (type == MessageType.system) {
       return summary;
@@ -271,7 +349,10 @@ class MessagePreviewFormatterWithContext {
     return _l10n.messagePreviewSenderColon(prefix, summary);
   }
 
-  String _systemEventPreviewWithContext(String? systemEventKey) {
+  String _systemEventPreviewWithContext(
+    String? systemEventKey,
+    Map<String, String>? params,
+  ) {
     switch (systemEventKey) {
       case 'im.system.group_notice_updated':
         return _l10n.systemEventGroupNoticeUpdated;
@@ -282,20 +363,41 @@ class MessagePreviewFormatterWithContext {
       case 'im.system.group_member_added_one':
       case 'im.system.group_member_added_two':
       case 'im.system.group_member_added_many':
-        return _l10n.systemEventGroupMemberAdded;
+        final firstName = params?['firstName'] ?? '';
+        return firstName.isNotEmpty
+            ? _l10n.systemEventGroupMemberAddedWithName(firstName)
+            : _l10n.systemEventGroupMemberAdded;
       case 'im.system.group_member_removed':
-        return _l10n.systemEventGroupMemberRemoved;
+        final memberName = params?['memberName'] ?? '';
+        return memberName.isNotEmpty
+            ? _l10n.systemEventGroupMemberRemovedWithName(memberName)
+            : _l10n.systemEventGroupMemberRemoved;
       case 'im.system.group_owner_transferred':
-        return _l10n.systemEventGroupOwnerTransferred;
+        final newOwnerName = params?['newOwnerName'] ?? '';
+        return newOwnerName.isNotEmpty
+            ? _l10n.systemEventGroupOwnerTransferredTo(newOwnerName)
+            : _l10n.systemEventGroupOwnerTransferred;
       case 'im.system.group_member_role_set_admin':
-        return _l10n.systemEventGroupMemberRoleSetAdmin;
+        final targetName = params?['targetName'] ?? '';
+        return targetName.isNotEmpty
+            ? _l10n.systemEventGroupMemberRoleSetAdminWithName(targetName)
+            : _l10n.systemEventGroupMemberRoleSetAdmin;
       case 'im.system.group_member_role_set_member':
-        return _l10n.systemEventGroupMemberRoleSetMember;
+        final memberTargetName = params?['targetName'] ?? '';
+        return memberTargetName.isNotEmpty
+            ? _l10n.systemEventGroupMemberRoleSetMemberWithName(memberTargetName)
+            : _l10n.systemEventGroupMemberRoleSetMember;
       case 'im.system.group_member_muted':
       case 'im.system.group_member_muted_until':
-        return _l10n.systemEventGroupMemberMuted;
+        final mutedMemberName = params?['memberName'] ?? '';
+        return mutedMemberName.isNotEmpty
+            ? _l10n.systemEventGroupMemberMutedWithName(mutedMemberName)
+            : _l10n.systemEventGroupMemberMuted;
       case 'im.system.group_member_unmuted':
-        return _l10n.systemEventGroupMemberUnmuted;
+        final unmutedMemberName = params?['memberName'] ?? '';
+        return unmutedMemberName.isNotEmpty
+            ? _l10n.systemEventGroupMemberUnmutedWithName(unmutedMemberName)
+            : _l10n.systemEventGroupMemberUnmuted;
       default:
         return _l10n.messagePreviewSystem;
     }

@@ -20,9 +20,11 @@ class ConversationDto {
     required this.lastMessageType,
     required this.lastMessageSenderName,
     required this.lastMessageIsSelf,
+    required this.lastMessageSenderId,
     required this.lastMessageCustomType,
     required this.lastMessageFileName,
     required this.lastMessageSystemEventKey,
+    required this.lastMessageSystemEventParams,
     required this.lastMessageStatus,
     required this.lastMessageHasAtMe,
     required this.groupMemberCount,
@@ -54,9 +56,11 @@ class ConversationDto {
   final MessageType lastMessageType;
   final String lastMessageSenderName;
   final bool lastMessageIsSelf;
+  final String lastMessageSenderId;
   final String lastMessageCustomType;
   final String lastMessageFileName;
   final String lastMessageSystemEventKey;
+  final Map<String, String> lastMessageSystemEventParams;
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
@@ -146,6 +150,10 @@ class ConversationDto {
           _parseBool(json['isOutgoing']) ||
           _parseBool(json['fromSelf']) ||
           _parseBool(json['selfSend']),
+      lastMessageSenderId:
+          json['lastMessageSenderId']?.toString() ??
+          json['senderId']?.toString() ??
+          '',
       lastMessageCustomType:
           json['lastMessageCustomType']?.toString() ??
           json['customType']?.toString() ??
@@ -158,6 +166,10 @@ class ConversationDto {
           json['lastMessageSystemEventKey']?.toString() ??
           json['systemEventKey']?.toString() ??
           '',
+      lastMessageSystemEventParams:
+          _parseSystemEventParams(json['lastMessageSystemEventParams']) ??
+          _parseSystemEventParams(json['systemEventParams']) ??
+          const <String, String>{},
       lastMessageStatus: _parseMessageStatus(
         json['lastMessageStatus']?.toString(),
       ),
@@ -337,5 +349,20 @@ class ConversationDto {
     }
     final normalized = text.contains(' ') ? text.replaceFirst(' ', 'T') : text;
     return DateTime.tryParse(normalized);
+  }
+
+  static Map<String, String>? _parseSystemEventParams(Object? raw) {
+    if (raw is Map) {
+      final result = <String, String>{};
+      raw.forEach((key, value) {
+        final k = key.toString();
+        final v = value?.toString() ?? '';
+        if (k.isNotEmpty) {
+          result[k] = v;
+        }
+      });
+      return result.isEmpty ? null : result;
+    }
+    return null;
   }
 }

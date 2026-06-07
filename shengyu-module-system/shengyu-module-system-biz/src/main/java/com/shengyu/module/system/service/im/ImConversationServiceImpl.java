@@ -342,7 +342,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                         item.setLastMessageType(lastMessageType);
                         item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
                                 lastMessage != null ? lastMessage.getExtra() : null));
+                        item.setLastMessageSenderId(lastMessage != null ? lastMessage.getSenderId() : null);
                         item.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
+                        item.setLastMessageSystemEventParams(extractSystemEventParams(lastMessage != null ? lastMessage.getExtra() : null));
                         item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
                         item.setLastMessageTime(state.getLastMessageTime());
                         item.setIsPinned(state.getIsPinned());
@@ -1037,7 +1039,9 @@ public class ImConversationServiceImpl implements ImConversationService {
             respVO.setLastMessageType(lastType);
             respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                     lastMessage != null ? lastMessage.getExtra() : null));
+            respVO.setLastMessageSenderId(lastMessage != null ? lastMessage.getSenderId() : null);
             respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMessage != null ? lastMessage.getExtra() : null));
+            respVO.setLastMessageSystemEventParams(extractSystemEventParams(lastMessage != null ? lastMessage.getExtra() : null));
             // 无消息时：群聊会话时间取群创建时间；有消息时取最后一条消息时间
             respVO.setLastMessageTime(chatUser.getLastMessageTime());
             respVO.setIsPinned(chatUser.getIsPinned());
@@ -1134,6 +1138,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         respVO.setLastMessageType(lastType);
         respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
                 lastMsg != null ? lastMsg.getExtra() : null));
+        respVO.setLastMessageSenderId(lastMsg != null ? lastMsg.getSenderId() : null);
         respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMsg != null ? lastMsg.getExtra() : null));
         // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
         respVO.setLastMessageTime(chatUser.getLastMessageTime());
@@ -1438,6 +1443,37 @@ public class ImConversationServiceImpl implements ImConversationService {
                 return null;
             }
             return eventKey;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从消息 extra JSON 中提取系统消息事件参数（用于前端国际化渲染）
+     */
+    private java.util.Map<String, String> extractSystemEventParams(String extra) {
+        if (extra == null || extra.isEmpty()) {
+            return null;
+        }
+        try {
+            JSONObject root = JSONUtil.parseObj(extra);
+            if (root == null || root.isEmpty()) {
+                return null;
+            }
+            JSONObject i18n = root.getJSONObject("i18n");
+            if (i18n == null || i18n.isEmpty()) {
+                return null;
+            }
+            JSONObject params = i18n.getJSONObject("params");
+            if (params == null || params.isEmpty()) {
+                return null;
+            }
+            java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+            for (String key : params.keySet()) {
+                Object value = params.get(key);
+                result.put(key, value != null ? String.valueOf(value) : "");
+            }
+            return result.isEmpty() ? null : result;
         } catch (Exception e) {
             return null;
         }
