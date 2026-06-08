@@ -86,14 +86,6 @@ public interface AdminUserService {
     void clearUserAvatar(Long id);
 
     /**
-     * 更新用户主题偏好
-     *
-     * @param id 用户 id
-     * @param themeMode 主题模式
-     */
-    void updateUserThemePreference(Long id, String themeMode);
-
-    /**
      * 更新用户聊天气泡偏好
      *
      * @param id 用户 id

@@ -2232,10 +2232,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeDarkDescription => '始终使用深色页面与聊天背景';
 
   @override
+  String get themeModeSystemTitle => '跟随系统';
+
+  @override
+  String get themeModeSystemDescription => '跟随设备系统外观设置';
+
+  @override
   String get themePreviewTitle => '当前预览';
 
   @override
   String get themePreviewMessage => '接近老项目风格的主链路页面预览';
+
+  @override
+  String get themePreviewApplyBtn => '立即生效';
 
   @override
   String get languageSettingsTitle => '语言设置';

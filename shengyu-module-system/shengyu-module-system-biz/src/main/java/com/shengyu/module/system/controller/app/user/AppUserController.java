@@ -9,7 +9,6 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserDetailRespVO;
-import com.shengyu.module.system.controller.app.user.vo.AppUserThemeUpdateReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserChatBubbleUpdateReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserListReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserSimpleRespVO;
@@ -84,7 +83,6 @@ public class AppUserController {
         respVO.setSex(user.getSex());
         respVO.setDeptId(user.getDeptId());
         respVO.setRemark(user.getRemark());
-        respVO.setThemeMode(user.getThemeMode());
         respVO.setChatBubbleColor(user.getChatBubbleColor());
         respVO.setChatBubbleMode(user.getChatBubbleMode());
 
@@ -128,13 +126,6 @@ public class AppUserController {
     @Operation(summary = "清除当前用户自定义头像")
     public CommonResult<Boolean> clearCurrentUserAvatar() {
         userService.clearUserAvatar(SecurityFrameworkUtils.getLoginUserId());
-        return success(true);
-    }
-
-    @PutMapping("/theme")
-    @Operation(summary = "更新当前用户主题偏好")
-    public CommonResult<Boolean> updateCurrentUserTheme(@Valid @RequestBody AppUserThemeUpdateReqVO reqVO) {
-        userService.updateUserThemePreference(SecurityFrameworkUtils.getLoginUserId(), reqVO.getThemeMode());
         return success(true);
     }
 

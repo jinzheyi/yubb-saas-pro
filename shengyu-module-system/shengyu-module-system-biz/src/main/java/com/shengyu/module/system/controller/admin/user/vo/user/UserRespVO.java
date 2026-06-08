@@ -62,9 +62,6 @@ public class UserRespVO{
     @Schema(description = "用户头像", example = "https://www.iocoder.cn/xxx.png")
     private String avatar;
 
-    @Schema(description = "主题模式", example = "system")
-    private String themeMode;
-
     @Schema(description = "聊天气泡颜色", example = "#D2E3FC")
     private String chatBubbleColor;
 

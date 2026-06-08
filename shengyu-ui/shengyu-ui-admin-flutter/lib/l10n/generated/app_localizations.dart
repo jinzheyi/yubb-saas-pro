@@ -4239,6 +4239,18 @@ abstract class AppLocalizations {
   /// **'Always use dark pages and chat backgrounds'**
   String get themeModeDarkDescription;
 
+  /// No description provided for @themeModeSystemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow system'**
+  String get themeModeSystemTitle;
+
+  /// No description provided for @themeModeSystemDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the device system appearance setting'**
+  String get themeModeSystemDescription;
+
   /// No description provided for @themePreviewTitle.
   ///
   /// In en, this message translates to:
@@ -4250,6 +4262,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Primary flow preview close to the legacy product style'**
   String get themePreviewMessage;
+
+  /// No description provided for @themePreviewApplyBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Immediately'**
+  String get themePreviewApplyBtn;
 
   /// No description provided for @languageSettingsTitle.
   ///

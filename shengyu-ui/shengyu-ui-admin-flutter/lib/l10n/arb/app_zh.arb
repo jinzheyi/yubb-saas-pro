@@ -1317,8 +1317,11 @@
   "themeModeLightDescription": "始终使用浅色页面与聊天背景",
   "themeModeDarkTitle": "深色模式",
   "themeModeDarkDescription": "始终使用深色页面与聊天背景",
+  "themeModeSystemTitle": "跟随系统",
+  "themeModeSystemDescription": "跟随设备系统外观设置",
   "themePreviewTitle": "当前预览",
   "themePreviewMessage": "接近老项目风格的主链路页面预览",
+  "themePreviewApplyBtn": "立即生效",
 
   "@@@LANGUAGE": "Section: Language",
   "languageSettingsTitle": "语言设置",

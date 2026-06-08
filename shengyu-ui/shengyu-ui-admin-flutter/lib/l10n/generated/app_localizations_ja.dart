@@ -2398,11 +2398,21 @@ class AppLocalizationsJa extends AppLocalizations {
       'Always use dark pages and chat backgrounds';
 
   @override
+  String get themeModeSystemTitle => 'Follow system';
+
+  @override
+  String get themeModeSystemDescription =>
+      'Follow the device system appearance setting';
+
+  @override
   String get themePreviewTitle => 'Preview';
 
   @override
   String get themePreviewMessage =>
       'Primary flow preview close to the legacy product style';
+
+  @override
+  String get themePreviewApplyBtn => 'Apply Immediately';
 
   @override
   String get languageSettingsTitle => 'Language';

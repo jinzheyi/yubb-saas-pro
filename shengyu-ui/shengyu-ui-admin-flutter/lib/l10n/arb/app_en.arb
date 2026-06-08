@@ -1323,8 +1323,11 @@
   "themeModeLightDescription": "Always use light pages and chat backgrounds",
   "themeModeDarkTitle": "Dark mode",
   "themeModeDarkDescription": "Always use dark pages and chat backgrounds",
+  "themeModeSystemTitle": "Follow system",
+  "themeModeSystemDescription": "Follow the device system appearance setting",
   "themePreviewTitle": "Preview",
   "themePreviewMessage": "Primary flow preview close to the legacy product style",
+  "themePreviewApplyBtn": "Apply Immediately",
 
   "@@@LANGUAGE": "Section: Language",
   "languageSettingsTitle": "Language",

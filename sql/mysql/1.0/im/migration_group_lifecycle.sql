@@ -92,3 +92,9 @@ WHERE c.chat_type = 2
 -- ALTER TABLE `im_conversation_user_state` DROP COLUMN `left_at`;
 -- ALTER TABLE `im_conversation_user_state` DROP COLUMN `snapshot_data`;
 -- ALTER TABLE `im_conversation_user_state` DROP INDEX `idx_user_group_status`;
+
+-- ========================================
+-- 主题模式改为设备本地存储，不再持久化到数据库
+-- 说明：主题模式与国际化作用域一致，存储在 SharedPreferences，不跟随账号
+-- ========================================
+ALTER TABLE `system_users` DROP COLUMN `theme_mode`;

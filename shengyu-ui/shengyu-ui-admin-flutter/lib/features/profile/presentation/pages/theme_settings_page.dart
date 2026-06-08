@@ -3,16 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_mode_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
-class ThemeSettingsPage extends ConsumerWidget {
+class ThemeSettingsPage extends ConsumerStatefulWidget {
   const ThemeSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
+}
+
+class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
+  ThemeMode? _pendingMode;
+
+  @override
+  Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final state = ref.watch(appThemeControllerProvider);
     final controller = ref.read(appThemeControllerProvider.notifier);
     final brightness = MediaQuery.platformBrightnessOf(context);
-    final effectiveBrightness = switch (state.themeMode) {
+
+    final displayMode = _pendingMode ?? state.themeMode;
+    final effectiveBrightness = switch (displayMode) {
       ThemeMode.light => Brightness.light,
       ThemeMode.dark => Brightness.dark,
       ThemeMode.system => brightness,
@@ -21,8 +30,8 @@ class ThemeSettingsPage extends ConsumerWidget {
     final options = [
       (
         mode: ThemeMode.system,
-        title: strings.languageModeSystemTitle,
-        description: strings.languageModeSystemDescription,
+        title: strings.themeModeSystemTitle,
+        description: strings.themeModeSystemDescription,
       ),
       (
         mode: ThemeMode.light,
@@ -36,15 +45,38 @@ class ThemeSettingsPage extends ConsumerWidget {
       ),
     ];
 
+    final hasChanges = _pendingMode != null && _pendingMode != state.themeMode;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            if (hasChanges) {
+              _showCancelConfirm(context);
+            } else {
+              Navigator.of(context).maybePop();
+            }
+          },
         ),
         centerTitle: true,
         title: Text(strings.settingsThemeMode),
+        actions: [
+          TextButton(
+            onPressed: hasChanges
+                ? () async {
+                    await controller.selectThemeMode(_pendingMode!);
+                    if (mounted) {
+                      setState(() {
+                        _pendingMode = null;
+                      });
+                    }
+                  }
+                : null,
+            child: Text(strings.confirmAction),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
@@ -60,9 +92,12 @@ class ThemeSettingsPage extends ConsumerWidget {
                   _ThemeOptionTile(
                     title: options[index].title,
                     description: options[index].description,
-                    selected: state.themeMode == options[index].mode,
-                    onTap: () =>
-                        controller.selectThemeMode(options[index].mode),
+                    selected: displayMode == options[index].mode,
+                    onTap: () {
+                      setState(() {
+                        _pendingMode = options[index].mode;
+                      });
+                    },
                   ),
                   if (index != options.length - 1)
                     const Divider(
@@ -77,6 +112,33 @@ class ThemeSettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _ThemePreviewCard(brightness: effectiveBrightness),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelConfirm(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.cancelAction),
+        content: Text(strings.discardChangesConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.continueEditAction),
+          ),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                _pendingMode = null;
+              });
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).maybePop();
+            },
+            child: Text(strings.discardAction),
+          ),
         ],
       ),
     );
@@ -234,9 +296,9 @@ class _ThemePreviewCard extends StatelessWidget {
                       color: const Color(0xFF246BFD),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      '立即生效',
-                      style: TextStyle(fontSize: 13, color: Colors.white),
+                    child: Text(
+                      strings.themePreviewApplyBtn,
+                      style: const TextStyle(fontSize: 13, color: Colors.white),
                     ),
                   ),
                 ),
