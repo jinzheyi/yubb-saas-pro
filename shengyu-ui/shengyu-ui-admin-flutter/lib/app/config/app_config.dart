@@ -20,10 +20,14 @@ abstract final class AppConfig {
   /// App 端 HTTP 地址。
   ///
   /// 当前移动端统一走 `/app-api` 前缀。
-  static const String apiBaseUrl = 'http://127.0.0.1:48080/app-api';
+  /// 使用 mDNS 局域网域名，手机在同一 WiFi 下自动解析，DHCP 变更无需手动修改。
+  /// 格式：<电脑名>.local，可通过 `hostname` 命令查看本机名称。
+  static const String apiBaseUrl = 'http://MacBook-Pro-3.local:48080/app-api';
 
   /// IM WebSocket 地址。
-  static const String socketUrl = 'ws://127.0.0.1:9000/ws';
+  ///
+  /// 同上，使用 mDNS 局域网域名。
+  static const String socketUrl = 'ws://MacBook-Pro-3.local:9000/ws';
 
   /// 文件上传与预览相关接口路径。
   ///
