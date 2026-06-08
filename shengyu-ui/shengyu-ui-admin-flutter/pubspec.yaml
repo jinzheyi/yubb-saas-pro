@@ -51,7 +51,8 @@ dependencies:
   just_audio: ^0.10.5
   video_player: ^2.9.2
   webview_flutter: ^4.10.0
-  extended_text_field: ^16.0.2
+  extended_text_field:
+    path: ../../../../extended_text_field_patched
   qr_flutter: ^4.1.0
 
 dev_dependencies:

@@ -987,7 +987,7 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Material(
       color: Colors.white,
       child: Column(children: children),
     );

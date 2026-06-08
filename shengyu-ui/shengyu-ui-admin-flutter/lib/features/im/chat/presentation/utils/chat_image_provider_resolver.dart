@@ -30,8 +30,21 @@ ImageProvider? resolveChatImageProvider({
     }
   }
   final normalizedRemote = remoteUrl?.trim() ?? '';
-  if (normalizedRemote.isNotEmpty) {
+  if (normalizedRemote.isNotEmpty && _isValidImageUrl(normalizedRemote)) {
     return NetworkImage(normalizedRemote);
   }
   return null;
+}
+
+/// 校验是否为合法图片URL，拒绝纯文本、预览文本等无效值。
+bool _isValidImageUrl(String url) {
+  if (url.startsWith('[') && url.endsWith(']')) {
+    return false;
+  }
+  final uri = Uri.tryParse(url);
+  if (uri == null || !uri.hasScheme) {
+    return false;
+  }
+  final scheme = uri.scheme.toLowerCase();
+  return scheme == 'http' || scheme == 'https' || scheme == 'data' || scheme == 'blob';
 }
