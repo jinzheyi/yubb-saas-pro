@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_a
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_file_item.dart';
@@ -66,7 +67,7 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: ThemeColors.searchBarBg(context),
               borderRadius: BorderRadius.circular(10),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -74,20 +75,28 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
               controller: _searchController,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _loadFiles(),
+              style: TextStyle(
+                fontSize: 14,
+                color: ThemeColors.searchText(context),
+              ),
               decoration: InputDecoration(
-                icon: const Icon(
+                icon: Icon(
                   Icons.search_rounded,
                   size: 19,
-                  color: Color(0xFF98A1B2),
+                  color: ThemeColors.searchIcon(context),
                 ),
                 hintText: strings.groupFilesSearch,
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: ThemeColors.searchHint(context),
+                ),
                 border: InputBorder.none,
                 suffixIcon: IconButton(
                   onPressed: _loadFiles,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_forward_rounded,
                     size: 18,
-                    color: Color(0xFF98A1B2),
+                    color: ThemeColors.searchIcon(context),
                   ),
                 ),
               ),
@@ -226,9 +235,11 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
       context: context,
       builder: (dialogContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          child: Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               ListTile(
                 leading: const Icon(Icons.download_rounded),
                 title: Text(strings.groupFilesActionDownload),
@@ -245,6 +256,7 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
                 onTap: () => Navigator.of(dialogContext).pop('delete'),
               ),
             ],
+            ),
           ),
         );
       },

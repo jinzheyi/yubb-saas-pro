@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -19,7 +20,7 @@ class SettingsPage extends ConsumerWidget {
     final profileAsync = ref.watch(currentUserProfileProvider);
     final profile = profileAsync.valueOrNull;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
@@ -41,7 +42,7 @@ class SettingsPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Text(
                 profileAsync.error.toString(),
-                style: const TextStyle(fontSize: 13, color: Color(0xFFE54D4F)),
+                style: TextStyle(fontSize: 13, color: ThemeColors.errorText(context)),
               ),
             ),
           if (profileAsync.isLoading)
@@ -81,9 +82,9 @@ class SettingsPage extends ConsumerWidget {
                 title: strings.settingsAboutApp,
                 trailing: Text(
                   strings.settingsVersionValue,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF8F96A3),
+                    color: ThemeColors.textSecondary(context),
                   ),
                 ),
               ),
@@ -104,32 +105,35 @@ class SettingsPage extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
-              title: Text(hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAndUploadAvatar(context, ref);
-              },
-            ),
-            if (hasAvatar) ...[
-              const Divider(height: 1),
+        child: Material(
+          color: ThemeColors.scaffoldBg(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
-                title: Text(
-                  strings.profileRemoveCustomAvatar,
-                  style: const TextStyle(color: Color(0xFFFF4B4B)),
-                ),
+                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
+                title: Text(hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar),
                 onTap: () {
                   Navigator.pop(context);
-                  _confirmRemoveAvatar(context, ref);
+                  _pickAndUploadAvatar(context, ref);
                 },
               ),
+              if (hasAvatar) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                  title: Text(
+                    strings.profileRemoveCustomAvatar,
+                    style: const TextStyle(color: Color(0xFFFF4B4B)),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmRemoveAvatar(context, ref);
+                  },
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -160,7 +164,7 @@ class SettingsPage extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: ThemeColors.surface(dialogContext),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -273,18 +277,18 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
+    return Material(
+      color: ThemeColors.surface(context),
       child: Column(
         children: [
           for (var index = 0; index < children.length; index++) ...[
             children[index],
             if (index != children.length - 1)
-              const Divider(
+              Divider(
                 height: 1,
                 indent: 64,
                 endIndent: 16,
-                color: Color(0xFFF0F2F6),
+                color: ThemeColors.divider(context),
               ),
           ],
         ],
@@ -310,65 +314,75 @@ class _SettingsProfileCard extends StatelessWidget {
       if (profile.postName.trim().isNotEmpty) profile.postName.trim(),
       if (profile.mobile.trim().isNotEmpty) profile.mobile.trim(),
     ];
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onTapAvatar,
-            child: Stack(
-              children: [
-                AppAvatar(
-                  name: profile.nickname,
-                  avatarUrl: profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
-                  size: 56,
-                  borderRadius: 14,
-                  fontSize: 18,
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3D6FF5),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: ThemeColors.surface(context),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: onTapAvatar,
+                child: Stack(
+                  children: [
+                    AppAvatar(
+                      name: profile.nickname,
+                      avatarUrl:
+                          profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
+                      size: 56,
+                      borderRadius: 14,
+                      fontSize: 18,
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      size: 12,
-                      color: Colors.white,
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3D6FF5),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.nickname.trim().isEmpty
+                          ? '--'
+                          : profile.nickname.trim(),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: ThemeColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      parts.isEmpty ? '--' : parts.join(' · '),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: ThemeColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.nickname.trim().isEmpty ? '--' : profile.nickname.trim(),
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF202531),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  parts.isEmpty ? '--' : parts.join(' · '),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -416,19 +430,19 @@ class _SettingsNavTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF202531),
+                      color: ThemeColors.textPrimary(context),
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 3),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8F96A3),
+                        color: ThemeColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -437,7 +451,10 @@ class _SettingsNavTile extends StatelessWidget {
             ),
             if (trailing != null) ...[trailing!, const SizedBox(width: 6)],
             if (onTap != null)
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFB8C0CC)),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: ThemeColors.chevronColor(context),
+              ),
           ],
         ),
       ),

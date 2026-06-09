@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_payload.dart';
@@ -38,10 +39,10 @@ class ChatPageHeader extends StatelessWidget {
       toolbarHeight: 44,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      shape: const Border(
-        bottom: BorderSide(color: Color(0xFFE8ECF3), width: 0.5),
+      backgroundColor: ThemeColors.scaffoldBg(context),
+      surfaceTintColor: ThemeColors.scaffoldBg(context),
+      shape: Border(
+        bottom: BorderSide(color: ThemeColors.divider(context), width: 0.5),
       ),
       leadingWidth: 74,
       leading: GestureDetector(
@@ -52,18 +53,18 @@ class ChatPageHeader extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const AppIcon(
+              AppIcon(
                 AppIconKind.chevronLeft,
                 size: 18,
-                color: Color(0xFF202531),
+                color: ThemeColors.headerIcon(context),
               ),
               const SizedBox(width: 2),
               Text(
                 AppLocalizations.of(context).backAction,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF202531),
+                  color: ThemeColors.headerIcon(context),
                 ),
               ),
             ],
@@ -79,10 +80,10 @@ class ChatPageHeader extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF202531),
+              color: ThemeColors.textPrimary(context),
             ),
           ),
           if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
@@ -91,7 +92,7 @@ class ChatPageHeader extends StatelessWidget {
               subtitle!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF98A1B2)),
+              style: TextStyle(fontSize: 10, color: ThemeColors.textSecondary(context)),
             ),
           ],
         ],
@@ -102,10 +103,10 @@ class ChatPageHeader extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           splashRadius: 17,
           onPressed: onInitiateGroup,
-          icon: const Icon(
+          icon: Icon(
             ShengyuIconFont.duihua,
             size: 21,
-            color: Color(0xFF202531),
+            color: ThemeColors.headerIcon(context),
           ),
         ),
         if (onOpenSettings != null)
@@ -115,10 +116,10 @@ class ChatPageHeader extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               splashRadius: 17,
               onPressed: onOpenSettings,
-              icon: const AppIcon(
+              icon: AppIcon(
                 AppIconKind.more,
                 size: 21,
-                color: Color(0xFF202531),
+                color: ThemeColors.headerIcon(context),
               ),
             ),
           ),
@@ -267,7 +268,7 @@ class ChatMorePanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF5F5F5),
+      color: ThemeColors.surfaceDim(context),
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
       child: Wrap(
         spacing: 0,
@@ -309,7 +310,7 @@ class ChatMessageActionSheet extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: ThemeColors.dialogBg(context),
           borderRadius: compact
               ? BorderRadius.zero
               : const BorderRadius.vertical(top: Radius.circular(12)),
@@ -329,9 +330,9 @@ class ChatMessageActionSheet extends StatelessWidget {
                   decoration: const BoxDecoration(),
                   child: InkWell(
                     onTap: () => onSelectAction(actions[index].action),
-                    hoverColor: const Color(0x0F1F2329),
-                    splashColor: const Color(0x0F1F2329),
-                    highlightColor: const Color(0x0F1F2329),
+                    hoverColor: ThemeColors.textPrimary(context).withValues(alpha: 0.06),
+                    splashColor: ThemeColors.textPrimary(context).withValues(alpha: 0.06),
+                    highlightColor: ThemeColors.textPrimary(context).withValues(alpha: 0.06),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -340,8 +341,8 @@ class ChatMessageActionSheet extends StatelessWidget {
                           size: 22,
                           color:
                               actions[index].action == ChatMessageAction.delete
-                              ? const Color(0xFFFF4D4F)
-                              : const Color(0xFF202531),
+                              ? ThemeColors.errorText(context)
+                              : ThemeColors.textPrimary(context),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -352,8 +353,8 @@ class ChatMessageActionSheet extends StatelessWidget {
                             color:
                                 actions[index].action ==
                                     ChatMessageAction.delete
-                                ? const Color(0xFFFF4D4F)
-                                : const Color(0xFF202531),
+                                ? ThemeColors.errorText(context)
+                                : ThemeColors.textPrimary(context),
                           ),
                         ),
                       ],
@@ -385,10 +386,10 @@ class ChatMultiSelectToolbar extends StatelessWidget {
       top: false,
       child: Container(
         height: 60,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
-          boxShadow: [
+        decoration: BoxDecoration(
+          color: ThemeColors.surface(context),
+          border: Border(top: BorderSide(color: ThemeColors.divider(context))),
+          boxShadow: const [
             BoxShadow(
               color: Color(0x0D000000),
               blurRadius: 8,
@@ -431,14 +432,14 @@ class ChatReadonlyFooter extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+        decoration: BoxDecoration(
+          color: ThemeColors.surface(context),
+          border: Border(top: BorderSide(color: ThemeColors.divider(context))),
         ),
         child: Text(
           hintText,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF98A1B2)),
+          style: TextStyle(fontSize: 13, color: ThemeColors.textSecondary(context)),
         ),
       ),
     );
@@ -472,9 +473,9 @@ class ChatMentionPanel extends StatelessWidget {
     final strings = AppLocalizations.of(context);
     return Container(
       constraints: const BoxConstraints(maxHeight: 280),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+      decoration: BoxDecoration(
+        color: ThemeColors.surface(context),
+        border: Border(top: BorderSide(color: ThemeColors.divider(context))),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -487,17 +488,17 @@ class ChatMentionPanel extends StatelessWidget {
                   child: Container(
                     height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3F5F9),
+                      color: ThemeColors.inputFill(context),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     alignment: Alignment.center,
                     child: Row(
                       children: [
-                        const AppIcon(
+                        AppIcon(
                           AppIconKind.search,
                           size: 18,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.searchIcon(context),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -508,14 +509,14 @@ class ChatMentionPanel extends StatelessWidget {
                               isCollapsed: true,
                               border: InputBorder.none,
                               hintText: strings.chatMentionSearchPlaceholder,
-                              hintStyle: const TextStyle(
-                                color: Color(0xFF98A1B2),
+                              hintStyle: TextStyle(
+                                color: ThemeColors.searchHint(context),
                                 fontSize: 14,
                               ),
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF202531),
+                              color: ThemeColors.searchText(context),
                             ),
                           ),
                         ),
@@ -528,9 +529,9 @@ class ChatMentionPanel extends StatelessWidget {
                   onTap: onClose,
                   child: Text(
                     strings.chatMentionClose,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF3370FF),
+                      color: ThemeColors.noticeText(context),
                     ),
                   ),
                 ),
@@ -544,9 +545,9 @@ class ChatMentionPanel extends StatelessWidget {
                       padding: const EdgeInsets.all(20),
                       child: Text(
                         strings.chatMentionLoading,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.textSecondary(context),
                         ),
                       ),
                     ),
@@ -567,9 +568,9 @@ class ChatMentionPanel extends StatelessWidget {
                           child: Center(
                             child: Text(
                               strings.chatMentionEmpty,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF98A1B2),
+                                color: ThemeColors.textSecondary(context),
                               ),
                             ),
                           ),
@@ -808,9 +809,9 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
     return Container(
       height: 260,
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF6F8FC),
-        border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+      decoration: BoxDecoration(
+        color: ThemeColors.surfaceDim(context),
+        border: Border(top: BorderSide(color: ThemeColors.divider(context))),
       ),
       child: Stack(
         children: [
@@ -826,9 +827,9 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                             if (_recentEmojis.isNotEmpty) ...[
                               Text(
                                 strings.chatEmojiRecent,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF98A1B2),
+                                  color: ThemeColors.textSecondary(context),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -843,9 +844,9 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                             ],
                             Text(
                               strings.chatEmojiAll,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF98A1B2),
+                                color: ThemeColors.textSecondary(context),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -875,8 +876,8 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                                 child: Text(
                                   _error!,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Color(0xFF98A1B2),
+                                  style: TextStyle(
+                                    color: ThemeColors.textSecondary(context),
                                   ),
                                 ),
                               ),
@@ -926,11 +927,11 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                                       fit: BoxFit.contain,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                            return const Center(
+                                            return Center(
                                               child: AppIcon(
                                                 AppIconKind.smile,
                                                 size: 28,
-                                                color: Color(0xFF98A1B2),
+                                                color: ThemeColors.textSecondary(context),
                                               ),
                                             );
                                           },
@@ -946,9 +947,9 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
               Container(
                 height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+                decoration: BoxDecoration(
+                  color: ThemeColors.surface(context),
+                  border: Border(top: BorderSide(color: ThemeColors.divider(context))),
                 ),
                 child: Row(
                   children: [
@@ -979,9 +980,9 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                   width: 42,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A212A),
+                    color: ThemeColors.textPrimary(context).withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: const Color(0x14000000)),
+                    border: Border.all(color: ThemeColors.divider(context).withValues(alpha: 0.08)),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x14000000),
@@ -990,10 +991,10 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                       ),
                     ],
                   ),
-                  child: const AppIcon(
+                  child: AppIcon(
                     AppIconKind.backspace,
                     size: 18,
-                    color: Color(0xFFB8BFCC),
+                    color: ThemeColors.chevronColor(context),
                   ),
                 ),
               ),
@@ -1050,7 +1051,7 @@ class _BottomTabIcon extends StatelessWidget {
         child: _chatPanelIconWidget(
           icon,
           size: 20,
-          color: active ? const Color(0xFF246BFD) : const Color(0xFF98A1B2),
+          color: active ? const Color(0xFF246BFD) : ThemeColors.textSecondary(context),
         ),
       ),
     );
@@ -1082,13 +1083,13 @@ class _StickerActionTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE8ECF3)),
+              border: Border.all(color: ThemeColors.divider(context)),
             ),
             alignment: Alignment.center,
             child: _chatPanelIconWidget(
               icon,
               size: 30,
-              color: const Color(0xFF98A1B2),
+              color: ThemeColors.textSecondary(context),
             ),
           ),
           const SizedBox(height: 6),
@@ -1099,7 +1100,7 @@ class _StickerActionTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF98A1B2)),
+              style: TextStyle(fontSize: 14, color: ThemeColors.textSecondary(context)),
             ),
           ),
         ],
@@ -1204,7 +1205,7 @@ class _MentionMemberTile extends StatelessWidget {
         : getUserAvatarColor(item!.userId);
 
     return Material(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -1247,9 +1248,9 @@ class _MentionMemberTile extends StatelessWidget {
                       displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF202531),
+                        color: ThemeColors.textPrimary(context),
                       ),
                     ),
                     if (desc != null) ...[
@@ -1258,9 +1259,9 @@ class _MentionMemberTile extends StatelessWidget {
                         desc,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.textSecondary(context),
                         ),
                       ),
                     ],
@@ -1298,12 +1299,12 @@ class _BottomToolbarAction extends StatelessWidget {
             _chatPanelIconWidget(
               icon,
               size: 22,
-              color: const Color(0xFF202531),
+              color: ThemeColors.textPrimary(context),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7380)),
+              style: TextStyle(fontSize: 12, color: ThemeColors.textSecondary(context)),
             ),
           ],
         ),
@@ -1331,7 +1332,7 @@ class _AttachmentActionButton extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: ThemeColors.surface(context),
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
@@ -1345,7 +1346,7 @@ class _AttachmentActionButton extends StatelessWidget {
             Text(
               action.label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF4E5666)),
+              style: TextStyle(fontSize: 12, color: ThemeColors.textSecondary(context)),
             ),
           ],
         ),

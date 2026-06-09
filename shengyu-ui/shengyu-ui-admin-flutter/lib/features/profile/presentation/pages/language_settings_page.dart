@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 class LanguageSettingsPage extends ConsumerStatefulWidget {
@@ -44,7 +45,7 @@ class _LanguageSettingsPageState
     final hasChanges = _pendingMode != null && _pendingMode != state.languageMode;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
@@ -79,7 +80,7 @@ class _LanguageSettingsPageState
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: ThemeColors.surface(context),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
@@ -96,11 +97,11 @@ class _LanguageSettingsPageState
                     },
                   ),
                   if (index != options.length - 1)
-                    const Divider(
+                    Divider(
                       height: 1,
                       indent: 16,
                       endIndent: 16,
-                      color: Color(0xFFF0F2F6),
+                      color: ThemeColors.divider(context),
                     ),
                 ],
               ],
@@ -109,7 +110,7 @@ class _LanguageSettingsPageState
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: ThemeColors.surface(context),
               borderRadius: BorderRadius.circular(14),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -120,15 +121,15 @@ class _LanguageSettingsPageState
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   state.resolvedTag,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF8F96A3),
+                    color: ThemeColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -194,18 +195,18 @@ class _LanguageOptionTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF202531),
+                      color: ThemeColors.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF8F96A3),
+                      color: ThemeColors.textSecondary(context),
                     ),
                   ),
                 ],

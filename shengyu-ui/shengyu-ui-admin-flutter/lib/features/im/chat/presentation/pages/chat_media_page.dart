@@ -7,6 +7,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_arg
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_media_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
@@ -392,28 +393,31 @@ class _ChatMediaPageState extends ConsumerState<ChatMediaPage> {
       context: context,
       builder: (dialogContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.download,
-                  size: 20,
-                  color: Color(0xFF202531),
+          child: Material(
+            color: ThemeColors.scaffoldBg(context),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: AppIcon(
+                    AppIconKind.download,
+                    size: 20,
+                    color: ThemeColors.textPrimary(context),
+                  ),
+                  title: Text(strings.groupFilesActionDownload),
+                  onTap: () => Navigator.of(dialogContext).pop('download'),
                 ),
-                title: Text(strings.groupFilesActionDownload),
-                onTap: () => Navigator.of(dialogContext).pop('download'),
-              ),
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.arrowForward,
-                  size: 20,
-                  color: Color(0xFF202531),
+                ListTile(
+                  leading: AppIcon(
+                    AppIconKind.arrowForward,
+                    size: 20,
+                    color: ThemeColors.textPrimary(context),
+                  ),
+                  title: Text(strings.groupFilesActionForward),
+                  onTap: () => Navigator.of(dialogContext).pop('forward'),
                 ),
-                title: Text(strings.groupFilesActionForward),
-                onTap: () => Navigator.of(dialogContext).pop('forward'),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

@@ -1,5 +1,6 @@
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_composer_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -58,22 +59,11 @@ class ChatComposer extends StatelessWidget {
   final QuoteInfo? quoteInfo;
   final VoidCallback? onClearQuote;
 
-  static const TextStyle _composerTextStyle = TextStyle(
-    fontSize: 15,
-    height: 22 / 15,
-    color: Color(0xFF202531),
-  );
   static const StrutStyle _composerStrutStyle = StrutStyle(
     fontSize: 15,
     height: 22 / 15,
     leading: 0,
     forceStrutHeight: true,
-  );
-  static const Color _composerFillColor = Color(0xFFF1F3F7);
-  static const Color _composerBorderColor = Color(0xFFE1E6EF);
-  static const OutlineInputBorder _composerEnabledBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.all(Radius.circular(4)),
-    borderSide: BorderSide(color: _composerBorderColor, width: 1),
   );
   @override
   Widget build(BuildContext context) {
@@ -88,6 +78,26 @@ class ChatComposer extends StatelessWidget {
       emojiSize: 18,
       horizontalMargin: 0.5,
     );
+    final composerFillColor = ThemeColors.inputFill(context);
+    final composerBorder = OutlineInputBorder(
+      borderRadius: const BorderRadius.all(Radius.circular(4)),
+      borderSide: BorderSide(color: ThemeColors.divider(context), width: 1),
+    );
+    final composerHintStyle = TextStyle(
+      color: ThemeColors.searchHint(context),
+      fontSize: 15,
+      height: 22 / 15,
+    );
+    final composerInputStyle = TextStyle(
+      fontSize: 15,
+      height: 22 / 15,
+      color: ThemeColors.textPrimary(context),
+    );
+    final fullExpandedInputStyle = TextStyle(
+      fontSize: 16,
+      height: 24 / 16,
+      color: ThemeColors.textPrimary(context),
+    );
     if (fullExpanded) {
       return SafeArea(
         top: false,
@@ -99,17 +109,17 @@ class ChatComposer extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(color: Color(0xFFE8ECF3), width: 0.5),
+                    bottom: BorderSide(color: ThemeColors.divider(context), width: 0.5),
                   ),
                 ),
                 child: GestureDetector(
                   onTap: onToggleExpand,
-                  child: const AppIcon(
+                  child: AppIcon(
                     AppIconKind.expandMore,
                     size: 24,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
               ),
@@ -138,26 +148,22 @@ class ChatComposer extends StatelessWidget {
                             forceStrutHeight: true,
                           ),
                           onTap: onTapInput,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             filled: true,
-                            fillColor: _composerFillColor,
+                            fillColor: composerFillColor,
                             hintText: '',
-                            contentPadding: EdgeInsets.fromLTRB(
+                            contentPadding: const EdgeInsets.fromLTRB(
                               12,
                               12,
                               12,
                               12,
                             ),
-                            enabledBorder: _composerEnabledBorder,
-                            focusedBorder: _composerEnabledBorder,
-                            border: _composerEnabledBorder,
-                            hintStyle: TextStyle(color: Color(0xFF98A1B2)),
+                            enabledBorder: composerBorder,
+                            focusedBorder: composerBorder,
+                            border: composerBorder,
+                            hintStyle: composerHintStyle,
                           ).copyWith(hintText: hintText),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 24 / 16,
-                            color: Color(0xFF202531),
-                          ),
+                          style: fullExpandedInputStyle,
                           inputFormatters: composer.inputFormatters,
                           onChanged: onChanged,
                         ),
@@ -237,9 +243,9 @@ class ChatComposer extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE8ECF3), width: 1)),
+        decoration: BoxDecoration(
+          color: ThemeColors.surface(context),
+          border: Border(top: BorderSide(color: ThemeColors.divider(context), width: 1)),
         ),
         padding: const EdgeInsets.only(bottom: 2),
         child: Column(
@@ -288,25 +294,21 @@ class ChatComposer extends StatelessWidget {
                               textAlignVertical: TextAlignVertical.top,
                               strutStyle: _composerStrutStyle,
                               onTap: onTapInput,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 filled: true,
-                                fillColor: _composerFillColor,
-                                contentPadding: EdgeInsets.fromLTRB(
+                                fillColor: composerFillColor,
+                                contentPadding: const EdgeInsets.fromLTRB(
                                   12,
                                   8,
                                   12,
                                   8,
                                 ),
-                                enabledBorder: _composerEnabledBorder,
-                                focusedBorder: _composerEnabledBorder,
-                                border: _composerEnabledBorder,
-                                hintStyle: TextStyle(
-                                  color: Color(0xFF98A1B2),
-                                  fontSize: 15,
-                                  height: 22 / 15,
-                                ),
+                                enabledBorder: composerBorder,
+                                focusedBorder: composerBorder,
+                                border: composerBorder,
+                                hintStyle: composerHintStyle,
                               ).copyWith(hintText: hintText),
-                              style: _composerTextStyle,
+                              style: composerInputStyle,
                               inputFormatters: composer.inputFormatters,
                               onChanged: onChanged,
                               onSubmitted: isSending ? null : onSend,
@@ -410,13 +412,13 @@ class _HoldToTalkButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isRecording
-              ? const Color(0xFF2B3541)
-              : const Color(0xFFF1F3F7),
+              ? ThemeColors.textPrimary(context).withValues(alpha: 0.83)
+              : ThemeColors.inputFill(context),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: isCancelReady
-                ? const Color(0xFFFFC6C6)
-                : const Color(0xFFE1E6EF),
+                ? ThemeColors.errorText(context).withValues(alpha: 0.8)
+                : ThemeColors.divider(context),
           ),
         ),
         child: Text(
@@ -425,8 +427,8 @@ class _HoldToTalkButton extends StatelessWidget {
             fontSize: 15,
             fontWeight: FontWeight.w500,
             color: !enabled
-                ? const Color(0xFF98A1B2)
-                : (isRecording ? Colors.white : const Color(0xFF202531)),
+                ? ThemeColors.textSecondary(context)
+                : (isRecording ? Colors.white : ThemeColors.textPrimary(context)),
           ),
         ),
       ),
@@ -447,9 +449,9 @@ class _QuoteReplyBar extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F8FC),
-        border: const Border(
-          top: BorderSide(color: Color(0xFFE5E6EB), width: 0.5),
+        color: ThemeColors.surfaceDim(context),
+        border: Border(
+          top: BorderSide(color: ThemeColors.divider(context), width: 0.5),
         ),
       ),
       child: Row(
@@ -490,9 +492,9 @@ class _QuoteReplyBar extends StatelessWidget {
                           : strings.chatPreviewMessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6B7380),
+                        color: ThemeColors.textSecondary(context),
                       ),
                     ),
                   ),
@@ -504,12 +506,12 @@ class _QuoteReplyBar extends StatelessWidget {
           InkWell(
             onTap: onClear,
             borderRadius: BorderRadius.circular(999),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
               child: AppIcon(
                 AppIconKind.close,
                 size: 20,
-                color: Color(0xFF98A1B2),
+                color: ThemeColors.textSecondary(context),
               ),
             ),
           ),
@@ -524,11 +526,12 @@ class _PlainToolButton extends StatelessWidget {
 
   final Object icon;
   final VoidCallback? onTap;
-  static const Color _actionColor = Color(0xFF1F2329);
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = onTap == null ? const Color(0xFFC4C9D4) : _actionColor;
+    final iconColor = onTap == null
+        ? ThemeColors.textSecondary(context).withValues(alpha: 0.6)
+        : ThemeColors.textPrimary(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),

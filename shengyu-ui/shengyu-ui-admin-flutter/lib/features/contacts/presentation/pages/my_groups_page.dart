@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/contact_group_members_
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/group_summary.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/pages/contact_group_members_page.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
@@ -53,7 +54,7 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
               .where((item) => item.name.toLowerCase().contains(keyword))
               .toList();
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: const ContactsBackButton(),
         centerTitle: true,
@@ -62,15 +63,18 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: '搜索我的群组',
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: ThemeColors.searchIcon(context),
+                ),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F8),
+                fillColor: ThemeColors.searchBarBg(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -131,11 +135,11 @@ class _MyGroupsPageState extends ConsumerState<MyGroupsPage> {
                               visibleGroups[index].pendingJoinRequestCount,
                         ),
                         if (index != visibleGroups.length - 1)
-                          const Divider(
+                          Divider(
                             height: 1,
                             indent: 70,
                             endIndent: 16,
-                            color: Color(0xFFF0F2F6),
+                            color: ThemeColors.divider(context),
                           ),
                       ],
                     ],
@@ -264,7 +268,10 @@ class _GroupTile extends StatelessWidget {
             )
           : Text(
               roleLabel,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8F96A3)),
+              style: TextStyle(
+                fontSize: 12,
+                color: ThemeColors.textSecondary(context),
+              ),
             ),
     );
   }
@@ -347,7 +354,10 @@ class _GroupsEmptyCard extends StatelessWidget {
             child: Center(
               child: Text(
                 message,
-                style: const TextStyle(fontSize: 15, color: Color(0xFF8F96A3)),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ThemeColors.textSecondary(context),
+                ),
               ),
             ),
           ),

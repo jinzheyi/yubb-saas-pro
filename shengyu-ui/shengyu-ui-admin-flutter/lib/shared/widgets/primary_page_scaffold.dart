@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class PrimaryPageScaffold extends StatelessWidget {
@@ -34,7 +35,7 @@ class PrimaryPageScaffold extends StatelessWidget {
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF202531),
+                      color: ThemeColors.textPrimary(context),
                     ),
                   ),
                 ),
@@ -74,22 +75,22 @@ class PrimarySearchBar extends StatelessWidget {
         child: Container(
           height: 38,
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F3F8),
+            color: ThemeColors.searchBarBg(context),
             borderRadius: BorderRadius.circular(10),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
-              const AppIcon(
+              AppIcon(
                 AppIconKind.search,
                 size: 19,
-                color: Color(0xFF98A1B2),
+                color: ThemeColors.searchIcon(context),
               ),
               const SizedBox(width: 8),
               Text(
                 hintText,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF98A1B2),
+                  color: ThemeColors.textSecondary(context),
                 ),
               ),
             ],
@@ -115,7 +116,7 @@ class PrimaryActionButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(left: 10),
       child: Material(
-        color: const Color(0xFFF3F5F9),
+        color: ThemeColors.surface(context),
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
@@ -123,7 +124,11 @@ class PrimaryActionButton extends StatelessWidget {
           child: SizedBox(
             width: 32,
             height: 32,
-            child: AppIcon(icon, size: 19, color: const Color(0xFF202531)),
+            child: AppIcon(
+              icon,
+              size: 19,
+              color: ThemeColors.textPrimary(context),
+            ),
           ),
         ),
       ),
@@ -145,18 +150,21 @@ class PrimarySectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeColors.surface(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A162033),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
+        boxShadow: theme.brightness == Brightness.dark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0A162033),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
+                ),
+              ],
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -219,7 +227,8 @@ class PrimaryShortcutStrip extends StatelessWidget {
                     child: _buildIconWidget(
                       item.icon,
                       size: 23,
-                      color: item.iconColor ?? const Color(0xFF697386),
+                      color: item.iconColor ??
+                          ThemeColors.textSecondary(context),
                     ),
                   ),
                   const SizedBox(height: 9),
@@ -230,7 +239,7 @@ class PrimaryShortcutStrip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 12,
-                      color: const Color(0xFF697386),
+                      color: ThemeColors.textSecondary(context),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -260,8 +269,8 @@ class PrimaryMenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
+    return Material(
+      color: ThemeColors.surface(context),
       child: Column(
         children: [
           for (var index = 0; index < children.length; index++) ...[
@@ -271,7 +280,7 @@ class PrimaryMenuSection extends StatelessWidget {
                 height: 1,
                 indent: indent,
                 endIndent: endIndent,
-                color: const Color(0xFFF0F2F6),
+                color: ThemeColors.divider(context),
               ),
           ],
         ],
@@ -333,16 +342,16 @@ class PrimaryMenuTile extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF202531),
+                  color: ThemeColors.textPrimary(context),
                 ),
               ),
             ),
-            const AppIcon(
+            AppIcon(
               AppIconKind.chevronRight,
-              color: Color(0xFFB8C0CC),
+              color: ThemeColors.chevronColor(context),
               size: 16,
             ),
           ],
@@ -407,14 +416,14 @@ class PrimaryIndexedSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF5F7FB),
+      color: ThemeColors.indexedHeaderBg(context),
       padding: padding,
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF8F96A3),
+          color: ThemeColors.textSecondary(context),
         ),
       ),
     );
@@ -475,9 +484,9 @@ class PrimaryInfoBanner extends StatelessWidget {
               message,
               maxLines: messageMaxLines,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF6B7380),
+                color: ThemeColors.textSecondary(context),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -513,10 +522,10 @@ class PrimarySectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF202531),
+              color: ThemeColors.textPrimary(context),
             ),
           ),
         ),
@@ -604,11 +613,11 @@ class _PrimaryIconGridTile extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.2,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF202531),
+              color: ThemeColors.textPrimary(context),
             ),
           ),
         ],

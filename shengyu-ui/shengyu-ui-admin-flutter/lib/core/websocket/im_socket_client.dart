@@ -421,7 +421,9 @@ class ImSocketClient {
 
   void _handleTransportClosed() {
     _clearHeartbeatTimers();
-    _completeAuthWithError(StateError('Socket transport closed'));
+    if (_authCompleter != null) {
+      _completeAuthWithError(StateError('Socket transport closed'));
+    }
     if (_manualDisconnect || _disposed) {
       return;
     }

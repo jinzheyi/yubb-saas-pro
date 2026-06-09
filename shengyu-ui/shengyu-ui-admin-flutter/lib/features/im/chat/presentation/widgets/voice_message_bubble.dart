@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -51,30 +52,30 @@ class VoiceMessageBubble extends ConsumerWidget {
     final unread = message.isOutgoing
         ? false
         : !(message.extra.voicePlayed ?? false);
-    final bubbleBackground = _bubbleBackground();
-    final borderColor = _borderColor();
+    final bubbleBackground = _bubbleBackground(context);
+    final borderColor = _borderColor(context);
     final primaryTextColor = message.isOutgoing
-        ? const Color(0xFF0F4AA3)
-        : const Color(0xFF202531);
+        ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
+        : ThemeColors.chatBubbleIncomingText(context);
     final waveColor = isPlaying || isPaused
         ? (message.isOutgoing
-              ? const Color(0xFF0F4AA3)
-              : const Color(0xFF1677FF))
-        : const Color(0xFF606973);
+              ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
+              : ThemeColors.activeBg(context))
+        : ThemeColors.textSecondary(context);
     final progressColor = message.isOutgoing
-        ? const Color(0xFF0F4AA3)
-        : const Color(0xFF1677FF);
+        ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
+        : ThemeColors.activeBg(context);
     final progressTrackColor = message.isOutgoing
-        ? const Color(0x290F4AA3)
-        : const Color(0x1F1F2329);
+        ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.16)
+        : ThemeColors.textSecondary(context).withValues(alpha: 0.12);
     final bars = _waveHeights();
     final bubbleWidth = _bubbleWidth(durationMs);
     final unreadDot = !message.isOutgoing && unread;
     final canControlPlayback = !_hasSendErrorOrLoading();
     final controlIcon = isPlaying ? AppIconKind.pause : AppIconKind.play;
     final controlColor = message.isOutgoing
-        ? const Color(0xFF0F4AA3)
-        : const Color(0xFF1677FF);
+        ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
+        : ThemeColors.activeBg(context);
     final canReplay =
         canControlPlayback &&
         (message.extra.fileUrl?.trim().isNotEmpty == true ||
@@ -132,6 +133,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                       children: [
                         if (canControlPlayback) ...[
                           _buildIconButton(
+                            context: context,
                             icon: controlIcon,
                             color: controlColor,
                             filled: isPlaying || isPaused,
@@ -224,6 +226,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                         if (canReplay) ...[
                           const SizedBox(width: 8),
                           _buildIconButton(
+                            context: context,
                             icon: AppIconKind.refresh,
                             color: controlColor,
                             filled: isPlaying || isPaused,
@@ -241,11 +244,11 @@ class VoiceMessageBubble extends ConsumerWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF5B5B),
+                decoration: BoxDecoration(
+                  color: ThemeColors.errorText(context),
                   shape: BoxShape.circle,
                   border: Border.fromBorderSide(
-                    BorderSide(color: Colors.white, width: 1),
+                    BorderSide(color: ThemeColors.scaffoldBg(context), width: 1),
                   ),
                 ),
               ),
@@ -266,7 +269,7 @@ class VoiceMessageBubble extends ConsumerWidget {
               outgoingFooterLabel ?? _statusLabel(strings),
               style: theme.textTheme.labelSmall?.copyWith(
                 fontSize: 10,
-                color: _statusColor(theme),
+                color: _statusColor(theme, context),
               ),
             ),
           ),
@@ -312,6 +315,7 @@ class VoiceMessageBubble extends ConsumerWidget {
   }
 
   Widget _buildIconButton({
+    required BuildContext context,
     required AppIconKind icon,
     required Color color,
     required bool filled,
@@ -327,8 +331,8 @@ class VoiceMessageBubble extends ConsumerWidget {
         decoration: BoxDecoration(
           color: filled
               ? (message.isOutgoing
-                    ? const Color(0x30FFFFFF)
-                    : const Color(0xFFEAF2FF))
+                    ? ThemeColors.scaffoldBg(context).withValues(alpha: 0.19)
+                    : ThemeColors.noticeBg(context))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
         ),
@@ -368,7 +372,7 @@ class VoiceMessageBubble extends ConsumerWidget {
         message.status == MessageStatus.failed;
   }
 
-  Color _bubbleBackground() {
+  Color _bubbleBackground(BuildContext context) {
     if (isPlaying) {
       return message.isOutgoing
           ? const Color(0xFFC8DCF8)
@@ -377,19 +381,21 @@ class VoiceMessageBubble extends ConsumerWidget {
     if (isPaused) {
       return message.isOutgoing
           ? const Color(0xFFD2E3FC)
-          : const Color(0xFFF4F6FA);
+          : ThemeColors.surfaceDim(context);
     }
-    return message.isOutgoing ? const Color(0xFFD2E3FC) : Colors.white;
+    return message.isOutgoing
+        ? const Color(0xFFD2E3FC)
+        : ThemeColors.chatBubbleIncoming(context);
   }
 
-  Color? _borderColor() {
+  Color? _borderColor(BuildContext context) {
     if (message.status == MessageStatus.failed) {
-      return const Color(0x59F54A45);
+      return ThemeColors.errorText(context).withValues(alpha: 0.35);
     }
     if (message.isOutgoing) {
       return const Color(0xFFB2CFFB);
     }
-    return const Color(0xFFEFF2F6);
+    return ThemeColors.divider(context).withValues(alpha: 0.5);
   }
 
   String _statusLabel(AppLocalizations strings) {
@@ -409,15 +415,15 @@ class VoiceMessageBubble extends ConsumerWidget {
     }
   }
 
-  Color _statusColor(ThemeData theme) {
+  Color _statusColor(ThemeData theme, BuildContext context) {
     if (outgoingFooterLabel != null) {
-      return const Color(0xFF98A1B2);
+      return ThemeColors.textSecondary(context);
     }
     return switch (message.status) {
       MessageStatus.failed => theme.colorScheme.error,
       MessageStatus.read => theme.colorScheme.primary,
-      MessageStatus.recalled => const Color(0xFF98A1B2),
-      _ => const Color(0xFF98A1B2),
+      MessageStatus.recalled => ThemeColors.textSecondary(context),
+      _ => ThemeColors.textSecondary(context),
     };
   }
 }
@@ -442,8 +448,8 @@ class _OutgoingStatusRow extends StatelessWidget {
             height: 10,
             child: CircularProgressIndicator(
               strokeWidth: 1.2,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF98A1B2),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                ThemeColors.textSecondary(context),
               ),
             ),
           ),
@@ -451,12 +457,12 @@ class _OutgoingStatusRow extends StatelessWidget {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => onRetryMessage(message),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
               child: AppIcon(
                 AppIconKind.error,
                 size: 14,
-                color: Color(0xFFF54A45),
+                color: ThemeColors.errorText(context),
               ),
             ),
           ),

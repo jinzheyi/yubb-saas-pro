@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
@@ -80,13 +81,13 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const AppIcon(
+          icon: AppIcon(
             AppIconKind.chevronLeft,
             size: 22,
-            color: Color(0xFF202531),
+            color: ThemeColors.headerIcon(context),
           ),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -107,7 +108,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   Widget _buildSearchBar() {
     final strings = AppLocalizations.of(context);
     return Container(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
@@ -115,16 +116,16 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
             child: Container(
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F8),
+                color: ThemeColors.searchBarBg(context),
                 borderRadius: BorderRadius.circular(18),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     ShengyuIconFont.chaxun,
                     size: 16,
-                    color: Color(0xFF98A1B2),
+                    color: ThemeColors.searchIcon(context),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -132,9 +133,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                       controller: _searchController,
                       textInputAction: TextInputAction.search,
                       onChanged: (_) => setState(() {}),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF202531),
+                        color: ThemeColors.searchText(context),
                       ),
                       onSubmitted: (_) => _search(reset: true),
                       decoration: InputDecoration(
@@ -144,9 +145,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                         enabledBorder: InputBorder.none,
                         disabledBorder: InputBorder.none,
                         isCollapsed: true,
-                        hintStyle: const TextStyle(
+                        hintStyle: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.searchHint(context),
                         ),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -155,10 +156,10 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                   if (_searchController.text.trim().isNotEmpty)
                     InkWell(
                       onTap: () => _search(reset: true),
-                      child: const Icon(
+                      child: Icon(
                         ShengyuIconFont.fasong,
                         size: 16,
-                        color: Color(0xFF98A1B2),
+                        color: ThemeColors.searchIcon(context),
                       ),
                     ),
                 ],
@@ -172,7 +173,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   Widget _buildFilterBar() {
     return Container(
-      color: const Color(0xFFF5F7FB),
+      color: ThemeColors.scaffoldBg(context),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Wrap(
         spacing: 8,
@@ -192,7 +193,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   Widget _buildDateFilter() {
     final strings = AppLocalizations.of(context);
     return Container(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
         children: [
@@ -217,7 +218,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               side: BorderSide.none,
-              backgroundColor: const Color(0xFFF5F7FB),
+              backgroundColor: ThemeColors.scaffoldBg(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -253,9 +254,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                 _loading
                     ? strings.chatHistoryLoading
                     : (_hasMore ? '' : strings.chatHistoryNoMore),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF98A1B2),
+                  color: ThemeColors.emptyText(context),
                 ),
               ),
             ),
@@ -267,7 +268,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -293,18 +294,18 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                               : (item.senderName.trim().isEmpty
                                   ? strings.chatHistoryUnknownUser
                                   : item.senderName.trim()),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF202531),
+                            color: ThemeColors.textPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _formatTime(strings, item.sentAt),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF98A1B2),
+                            color: ThemeColors.textSecondary(context),
                           ),
                         ),
                       ],
@@ -333,14 +334,14 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F8),
+        color: ThemeColors.surface(context),
         borderRadius: BorderRadius.circular(8),
       ),
       alignment: Alignment.center,
       child: Icon(
         iconData,
         size: 16,
-        color: const Color(0xFF98A1B2),
+        color: ThemeColors.textSecondary(context),
       ),
     );
   }
@@ -1089,9 +1090,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       context: context,
       builder: (dialogContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: menuItems,
+          child: Material(
+            color: ThemeColors.scaffoldBg(context),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: menuItems,
+            ),
           ),
         );
       },
@@ -1271,7 +1275,7 @@ class _DateFilterButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FB),
+          color: ThemeColors.surfaceDim(context),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -1281,13 +1285,13 @@ class _DateFilterButton extends StatelessWidget {
                 '$label $value',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF202531)),
+                style: TextStyle(fontSize: 13, color: ThemeColors.textPrimary(context)),
               ),
             ),
-            const AppIcon(
+            AppIcon(
               AppIconKind.chevronDown,
               size: 16,
-              color: Color(0xFF98A1B2),
+              color: ThemeColors.chevronColor(context),
             ),
           ],
         ),
@@ -1318,7 +1322,7 @@ class _HistoryEmptyState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, color: Color(0xFF98A1B2)),
+              style: TextStyle(fontSize: 15, color: ThemeColors.emptyText(context)),
             ),
           ],
         ),
@@ -1340,10 +1344,10 @@ class _HighlightedContent extends StatelessWidget {
         text: TextSpan(
           children: buildEmojiInlineSpans(
             text: text,
-            textStyle: const TextStyle(
+            textStyle: TextStyle(
               fontSize: 14,
               height: 1.6,
-              color: Color(0xFF4E5666),
+              color: ThemeColors.textPrimary(context),
             ),
           ),
         ),
@@ -1351,15 +1355,16 @@ class _HighlightedContent extends StatelessWidget {
     }
     return RichText(
       text: TextSpan(
-        children: _buildHighlightedEmojiSpans(),
+        children: _buildHighlightedEmojiSpans(context),
       ),
     );
   }
 
-  List<InlineSpan> _buildHighlightedEmojiSpans() {
+  List<InlineSpan> _buildHighlightedEmojiSpans(BuildContext context) {
     final normalized = normalizeEmojiDisplayText(text);
     final spans = <InlineSpan>[];
     final lowerKeyword = keyword.toLowerCase();
+    final defaultTextColor = ThemeColors.textPrimary(context);
 
     final segments = <_EmojiSegment>[];
     var lastEnd = 0;
@@ -1399,10 +1404,10 @@ class _HighlightedContent extends StatelessWidget {
         } else {
           spans.add(TextSpan(
               text: segment.text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.6,
-                color: Color(0xFF4E5666),
+                color: defaultTextColor,
               )));
         }
       } else {
@@ -1414,10 +1419,10 @@ class _HighlightedContent extends StatelessWidget {
             if (searchStart < segment.text.length) {
               spans.add(TextSpan(
                   text: segment.text.substring(searchStart),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.6,
-                    color: Color(0xFF4E5666),
+                    color: defaultTextColor,
                   )));
             }
             break;
@@ -1425,10 +1430,10 @@ class _HighlightedContent extends StatelessWidget {
           if (idx > searchStart) {
             spans.add(TextSpan(
                 text: segment.text.substring(searchStart, idx),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   height: 1.6,
-                  color: Color(0xFF4E5666),
+                  color: defaultTextColor,
                 )));
           }
           spans.add(TextSpan(
@@ -1470,7 +1475,7 @@ class _CustomTextMessageBubble extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isOutgoing ? const Color(0xFF246BFD) : const Color(0xFFF3F5F9),
+            color: isOutgoing ? const Color(0xFF246BFD) : ThemeColors.chatBubbleIncoming(context),
             borderRadius: BorderRadius.circular(16),
           ),
           child: _HighlightedContent(
@@ -1545,7 +1550,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? Colors.white : const Color(0xFF6B7280),
+              color: selected ? Colors.white : ThemeColors.categoryInactiveText(context),
             ),
           ),
         ),

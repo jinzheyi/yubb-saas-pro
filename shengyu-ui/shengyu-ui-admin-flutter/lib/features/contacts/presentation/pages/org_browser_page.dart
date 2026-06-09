@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/department_summary.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
@@ -63,7 +64,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       (sum, node) => sum + node.department.memberCount,
     );
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: const ContactsBackButton(),
         centerTitle: true,
@@ -73,15 +74,18 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: '搜索组织架构',
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: ThemeColors.searchIcon(context),
+                ),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F8),
+                fillColor: ThemeColors.searchBarBg(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -133,14 +137,17 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       ),
       bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
-              color: Colors.white,
+              color: ThemeColors.surface(context),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       '已选择 ${selectionState.count} 人',
-                      style: const TextStyle(fontSize: 15),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: ThemeColors.textPrimary(context),
+                      ),
                     ),
                   ),
                   FilledButton(
@@ -586,10 +593,10 @@ class _RootHeader extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF202531),
+                  color: ThemeColors.textPrimary(context),
                 ),
               ),
             ),
@@ -597,7 +604,7 @@ class _RootHeader extends StatelessWidget {
               expanded
                   ? Icons.keyboard_arrow_down_rounded
                   : Icons.keyboard_arrow_right_rounded,
-              color: const Color(0xFF8F96A3),
+              color: ThemeColors.chevronColor(context),
             ),
           ],
         ),
@@ -653,7 +660,7 @@ class _OrgDeptTile extends StatelessWidget {
                             ? Icons.keyboard_arrow_down_rounded
                             : Icons.keyboard_arrow_right_rounded,
                         size: 18,
-                        color: const Color(0xFF8F96A3),
+                        color: ThemeColors.chevronColor(context),
                       ),
                     )
                   : const Icon(
@@ -669,7 +676,7 @@ class _OrgDeptTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: expanded ? FontWeight.w600 : FontWeight.w500,
-                  color: const Color(0xFF202531),
+                  color: ThemeColors.textPrimary(context),
                 ),
               ),
             ),
@@ -729,14 +736,20 @@ class _OrgMemberTile extends StatelessWidget {
             Expanded(
               child: Text(
                 member.name,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF202531)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ThemeColors.textPrimary(context),
+                ),
               ),
             ),
             Text(
               member.postName.trim().isEmpty
                   ? member.departmentName
                   : member.postName,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8F96A3)),
+              style: TextStyle(
+                fontSize: 12,
+                color: ThemeColors.textSecondary(context),
+              ),
             ),
           ],
         ),
@@ -800,7 +813,10 @@ class _OrgEmptyCard extends StatelessWidget {
             child: Center(
               child: Text(
                 message,
-                style: const TextStyle(fontSize: 15, color: Color(0xFF8F96A3)),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ThemeColors.textSecondary(context),
+                ),
               ),
             ),
           ),

@@ -18,6 +18,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/stat
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
@@ -145,8 +146,8 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
 
     if (state.status == GroupSettingsStatus.loading ||
         state.status == GroupSettingsStatus.initial) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF5F7FB),
+      return Scaffold(
+        backgroundColor: ThemeColors.scaffoldBg(context),
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -154,7 +155,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     if (state.status == GroupSettingsStatus.failed) {
       final errorMessage = state.error?.message ?? strings.unknownError;
       return Scaffold(
-        backgroundColor: const Color(0xFFF5F7FB),
+        backgroundColor: ThemeColors.scaffoldBg(context),
         appBar: _buildAppBar(context, strings),
         body: Center(
           child: Column(
@@ -162,7 +163,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
             children: [
               Text(
                 errorMessage,
-                style: const TextStyle(color: Color(0xFF8F96A3)),
+                style: TextStyle(color: ThemeColors.textSecondary(context)),
               ),
               const SizedBox(height: 12),
               FilledButton(
@@ -176,7 +177,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: _buildAppBar(context, strings, isReadOnly: isReadOnly),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
@@ -185,7 +186,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
           if (isReadOnly) _buildReadOnlyBanner(context, state),
 
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,10 +210,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                       Text(
                         title,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF202531),
+                          color: ThemeColors.textPrimary(context),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -223,9 +224,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                             strings.groupSettingsMembersCount(
                               state.memberCount,
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF8F96A3),
+                              color: ThemeColors.textSecondary(context),
                             ),
                           ),
                           if (!isMembershipBlocked) ...[
@@ -238,9 +239,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         const SizedBox(height: 6),
                         Text(
                           '离群时间：${_formatDateTime(state.leftAt!)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFFB8C0CC),
+                            color: ThemeColors.chevronColor(context),
                           ),
                         ),
                       ],
@@ -250,10 +251,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 const SizedBox(height: 20),
                 Text(
                   strings.groupMembersTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -339,9 +340,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                   },
                   child: Container(
                     height: 44,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       border: Border(
-                        top: BorderSide(color: Color(0xFFE8ECF3), width: 1),
+                        top: BorderSide(color: ThemeColors.divider(context), width: 1),
                       ),
                     ),
                     child: Row(
@@ -356,10 +357,10 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right_rounded,
                           size: 18,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.chevronColor(context),
                         ),
                       ],
                     ),
@@ -502,7 +503,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                         : strings.groupSettingsPendingEmpty,
                     valueColor: state.pendingRequestCount > 0
                         ? const Color(0xFFF54A45)
-                        : const Color(0xFF8F96A3),
+                        : ThemeColors.textSecondary(context),
                     onTap: () async {
                       await context.pushNamed(
                         RouteNames.groupJoinRequests,
@@ -663,9 +664,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                   ),
                   Text(
                     '${inputController.text.length}/$maxLength',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF98A1B2),
+                      color: ThemeColors.textSecondary(context),
                     ),
                   ),
                 ],
@@ -892,7 +893,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     String hintMessage,
   ) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -903,23 +904,23 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF2F4F7),
+                  decoration: BoxDecoration(
+                    color: ThemeColors.surfaceDim(context),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.group_off_rounded,
                     size: 40,
-                    color: Color(0xFF8F96A3),
+                    color: ThemeColors.textSecondary(context),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
                   hintMessage,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF4E5666),
+                    color: ThemeColors.textSecondary(context),
                     height: 1.6,
                   ),
                 ),
@@ -988,7 +989,7 @@ class _SettingsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       child: Column(children: children),
     );
   }
@@ -1015,10 +1016,10 @@ class _NavSettingTile extends StatelessWidget {
       onTap: enabled ? onTap : null,
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
       trailing: Row(
@@ -1033,13 +1034,13 @@ class _NavSettingTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 14,
-                  color: valueColor ?? const Color(0xFF8F96A3),
+                  color: valueColor ?? ThemeColors.textSecondary(context),
                 ),
               ),
             ),
           if (enabled) ...[
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB8C0CC)),
+            Icon(Icons.chevron_right_rounded, color: ThemeColors.chevronColor(context)),
           ],
         ],
       ),
@@ -1063,10 +1064,10 @@ class _SwitchSettingTile extends StatelessWidget {
     return ListTile(
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
       trailing: Switch(
@@ -1133,7 +1134,7 @@ class _MemberGridItem extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF4E5666)),
+            style: TextStyle(fontSize: 12, color: ThemeColors.textSecondary(context)),
           ),
         ],
       ),
@@ -1190,10 +1191,10 @@ class _MemberActionGridItem extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFF4F6FA),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE8ECF3)),
+              border: Border.all(color: ThemeColors.divider(context)),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: const Color(0xFF8F96A3)),
+            child: Icon(icon, color: ThemeColors.textSecondary(context)),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1201,7 +1202,7 @@ class _MemberActionGridItem extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF4E5666)),
+            style: TextStyle(fontSize: 12, color: ThemeColors.textSecondary(context)),
           ),
         ],
       ),

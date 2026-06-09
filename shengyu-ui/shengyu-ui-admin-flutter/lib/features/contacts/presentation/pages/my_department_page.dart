@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/department_summary.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/controllers/contact_selection_controller.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
@@ -86,7 +87,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: const ContactsBackButton(),
         centerTitle: true,
@@ -96,7 +97,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,10 +106,10 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                   activeDept?.name ??
                       widget.args.initialDeptName ??
                       strings.contactsDepartments,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -116,9 +117,12 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: '搜索部门成员',
-                    prefixIcon: const Icon(Icons.search_rounded),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: ThemeColors.searchIcon(context),
+                    ),
                     filled: true,
-                    fillColor: const Color(0xFFF3F4F8),
+                    fillColor: ThemeColors.searchBarBg(context),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
@@ -162,16 +166,16 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
       ),
       bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
-              color: Colors.white,
+              color: ThemeColors.surface(context),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       '已选择 ${selectionState.count} 人',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF202531),
+                        color: ThemeColors.textPrimary(context),
                       ),
                     ),
                   ),
@@ -278,11 +282,11 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                   : _openProfile(context, members[index]),
             ),
             if (index != members.length - 1)
-              const Divider(
+              Divider(
                 height: 1,
                 indent: 70,
                 endIndent: 16,
-                color: Color(0xFFF0F2F6),
+                color: ThemeColors.divider(context),
               ),
           ],
         ],
@@ -386,7 +390,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                               ? Icons.keyboard_arrow_down_rounded
                               : Icons.keyboard_arrow_right_rounded,
                           size: 18,
-                          color: const Color(0xFF8F96A3),
+                          color: ThemeColors.chevronColor(context),
                         ),
                 ),
                 Expanded(
@@ -397,7 +401,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
                           ? const Color(0xFF3D75F6)
-                          : const Color(0xFF202531),
+                          : ThemeColors.textPrimary(context),
                     ),
                   ),
                 ),
@@ -683,15 +687,18 @@ class _DepartmentEmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ContactsSectionCard(
         children: [
           Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Center(
               child: Text(
                 message,
-                style: TextStyle(fontSize: 15, color: Color(0xFF8F96A3)),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ThemeColors.textSecondary(context),
+                ),
               ),
             ),
           ),

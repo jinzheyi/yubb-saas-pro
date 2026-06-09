@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
@@ -22,7 +23,10 @@ class ContactPickerSearchField extends StatelessWidget {
       controller: controller,
       decoration: InputDecoration(
         hintText: hintText,
-        prefixIcon: const Icon(Icons.search_rounded),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: ThemeColors.searchIcon(context),
+        ),
         suffixIcon: controller.text.trim().isEmpty
             ? null
             : IconButton(
@@ -30,10 +34,13 @@ class ContactPickerSearchField extends StatelessWidget {
                   controller.clear();
                   onChanged?.call('');
                 },
-                icon: const Icon(Icons.close_rounded),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: ThemeColors.searchIcon(context),
+                ),
               ),
         filled: true,
-        fillColor: const Color(0xFFF3F4F8),
+        fillColor: ThemeColors.searchBarBg(context),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
@@ -74,7 +81,7 @@ class ContactPickerCategoryPanel extends StatelessWidget {
       padding: margin,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: ThemeColors.surface(context),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -102,24 +109,24 @@ class ContactPickerCategoryPanel extends StatelessWidget {
                 ),
                 title: Text(
                   items[index].label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
-                trailing: const AppIcon(
+                trailing: AppIcon(
                   AppIconKind.chevronRight,
                   size: 18,
-                  color: Color(0xFFB8C0CC),
+                  color: ThemeColors.chevronColor(context),
                 ),
               ),
               if (index != items.length - 1)
-                const Divider(
+                Divider(
                   height: 1,
                   indent: 72,
                   endIndent: 16,
-                  color: Color(0xFFF0F2F6),
+                  color: ThemeColors.divider(context),
                 ),
             ],
           ],
@@ -160,10 +167,10 @@ class ContactPickerSelectableTile extends StatelessWidget {
         item.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
       subtitle: subtitle.trim().isEmpty
@@ -172,9 +179,9 @@ class ContactPickerSelectableTile extends StatelessWidget {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF8F96A3),
+                color: ThemeColors.textSecondary(context),
               ),
             ),
       trailing: Checkbox(

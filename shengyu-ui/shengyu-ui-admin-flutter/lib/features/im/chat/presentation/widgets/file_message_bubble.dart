@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -38,7 +39,7 @@ class FileMessageBubble extends ConsumerWidget {
     final strings = ref.watch(appStringsProvider);
     final bubbleColor = message.isOutgoing
         ? const Color(0xFFD2E3FC)
-        : Colors.white;
+        : ThemeColors.chatBubbleIncoming(context);
     final displayName = _displayName(strings);
     final fileIconSpec = _resolveFileIconSpec();
 
@@ -65,7 +66,7 @@ class FileMessageBubble extends ConsumerWidget {
                 color: bubbleColor,
                 border: message.isOutgoing
                     ? null
-                    : Border.all(color: const Color(0xFFEFF2F6)),
+                    : Border.all(color: ThemeColors.divider(context)),
                 boxShadow: message.isOutgoing
                     ? null
                     : const [
@@ -90,6 +91,7 @@ class FileMessageBubble extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildFileNameText(
+                          context: context,
                           displayName: displayName,
                           isOutgoing: message.isOutgoing,
                           keyword: highlightKeyword,
@@ -188,6 +190,7 @@ class FileMessageBubble extends ConsumerWidget {
   }
 
   Widget _buildFileNameText({
+    required BuildContext context,
     required String displayName,
     required bool isOutgoing,
     required String? keyword,
@@ -200,14 +203,14 @@ class FileMessageBubble extends ConsumerWidget {
         style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531),
+          color: isOutgoing ? ThemeColors.textPrimary(context) : ThemeColors.chatBubbleIncomingText(context),
         ),
       );
     }
     final spans = _buildHighlightedSpans(
       text: displayName,
       keyword: keyword,
-      defaultColor: isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531),
+      defaultColor: isOutgoing ? ThemeColors.textPrimary(context) : ThemeColors.chatBubbleIncomingText(context),
       isOutgoing: isOutgoing,
     );
     return RichText(

@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_arg
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/initiate_group_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contact_selection_providers.dart';
@@ -92,7 +93,11 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                               icon: const Icon(Icons.close_rounded),
                             ),
                       filled: true,
-                      fillColor: const Color(0xFFF3F4F8),
+                      fillColor: ThemeColors.searchBarBg(context),
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: ThemeColors.searchHint(context),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,

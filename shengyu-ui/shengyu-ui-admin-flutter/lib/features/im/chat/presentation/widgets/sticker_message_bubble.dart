@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
@@ -75,16 +76,16 @@ class StickerMessageBubble extends StatelessWidget {
               child: imageProvider == null
                   ? DecoratedBox(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F4FA),
+                        color: ThemeColors.surfaceDim(context),
                         borderRadius: BorderRadius.all(
                           Radius.circular(isEmoji ? 0 : 4),
                         ),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: AppIcon(
                           AppIconKind.smile,
                           size: 28,
-                          color: Color(0xFF98A1B2),
+                          color: ThemeColors.textSecondary(context),
                         ),
                       ),
                     )
@@ -109,7 +110,7 @@ class StickerMessageBubble extends StatelessWidget {
                 : null,
             child: Text(
               outgoingFooterLabel ?? _statusLabel(strings),
-              style: const TextStyle(fontSize: 10, color: Color(0xFF98A1B2)),
+              style: TextStyle(fontSize: 10, color: ThemeColors.textSecondary(context)),
             ),
           ),
         ],

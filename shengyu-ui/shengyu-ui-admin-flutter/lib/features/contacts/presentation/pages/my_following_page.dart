@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_picker_args.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/controllers/contact_selection_controller.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_directory_item.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/models/contact_selection_entry.dart';
@@ -42,20 +43,23 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
     final keyword = _searchController.text.trim().toLowerCase();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(title: const Text('我的关注')),
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: '搜索关注联系人',
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: ThemeColors.searchIcon(context),
+                ),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F8),
+                fillColor: ThemeColors.searchBarBg(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -76,10 +80,13 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
                       item.postName.toLowerCase().contains(keyword);
                 }).toList();
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
                       '暂无关注联系人',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF8F96A3)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ThemeColors.textSecondary(context),
+                      ),
                     ),
                   );
                 }
@@ -116,7 +123,10 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
                                     onChanged: (_) =>
                                         _handleTap(selectionController, item),
                                   )
-                          : const Icon(Icons.chevron_right_rounded),
+                          : Icon(
+                              Icons.chevron_right_rounded,
+                              color: ThemeColors.chevronColor(context),
+                            ),
                     );
                   },
                 );
@@ -129,14 +139,17 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
       ),
       bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
-              color: Colors.white,
+              color: ThemeColors.surface(context),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       '已选择 ${selectionState.count} 人',
-                      style: const TextStyle(fontSize: 15),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: ThemeColors.textPrimary(context),
+                      ),
                     ),
                   ),
                   FilledButton(

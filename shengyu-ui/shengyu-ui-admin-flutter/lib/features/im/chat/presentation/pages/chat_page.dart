@@ -76,6 +76,7 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -652,7 +653,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                     ),
                   Expanded(
                     child: DecoratedBox(
-                      decoration: const BoxDecoration(color: Color(0xFFF2F5FA)),
+                      decoration: BoxDecoration(color: ThemeColors.surfaceDim(context)),
                       child: switch (timelineState.status) {
                         ChatTimelineStatus.failed => AppErrorView(
                           error: timelineState.error,
@@ -2006,8 +2007,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
       scrolledUnderElevation: 0,
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
-      shape: const Border(
-        bottom: BorderSide(color: Color(0xFFE8ECF3), width: 0.5),
+      shape: Border(
+        bottom: BorderSide(color: ThemeColors.divider(context), width: 0.5),
       ),
       leadingWidth: 80,
       leading: InkWell(
@@ -2018,10 +2019,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
             alignment: Alignment.centerLeft,
             child: Text(
               strings.cancelAction,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF202531),
+                color: ThemeColors.textPrimary(context),
               ),
             ),
           ),
@@ -2031,10 +2032,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
       centerTitle: true,
       title: Text(
         strings.chatSelectedCount(_selectedMessageIds.length),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
     );
@@ -6173,10 +6174,10 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                     Expanded(
                       child: Text(
                         strings.chatReadReceiptTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF202531),
+                          color: ThemeColors.textPrimary(context),
                         ),
                       ),
                     ),
@@ -6187,9 +6188,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           strings.chatReadReceiptClose,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF98A1B2),
+                            color: ThemeColors.textSecondary(context),
                           ),
                         ),
                       ),
@@ -6197,7 +6198,7 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                   ],
                 ),
               ),
-              Container(height: 0.5, color: const Color(0xFFE8ECF3)),
+              Container(height: 0.5, color: ThemeColors.divider(context)),
               if (widget.isVoiceMessage)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -6205,10 +6206,10 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       strings.chatReadReceiptVoiceHint,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         height: 16 / 11,
-                        color: Color(0xFF98A1B2),
+                        color: ThemeColors.textSecondary(context),
                       ),
                     ),
                   ),
@@ -6236,7 +6237,7 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                     Container(
                       width: 1,
                       height: 28,
-                      color: const Color(0xFFE8ECF3),
+                      color: ThemeColors.divider(context),
                     ),
                     SizedBox(
                       width: 120,
@@ -6258,9 +6259,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                       return Center(
                         child: Text(
                           strings.chatReadReceiptLoading,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF98A1B2),
+                            color: ThemeColors.textSecondary(context),
                           ),
                         ),
                       );
@@ -6272,7 +6273,7 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                           child: Text(
                             _error!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFF98A1B2)),
+                            style: TextStyle(color: ThemeColors.textSecondary(context)),
                           ),
                         ),
                       );
@@ -6283,7 +6284,7 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                           _selectedTab == 'read'
                               ? strings.chatReadReceiptEmptyRead
                               : strings.chatReadReceiptEmptyUnread,
-                          style: const TextStyle(color: Color(0xFF98A1B2)),
+                          style: TextStyle(color: ThemeColors.textSecondary(context)),
                         ),
                       );
                     }
@@ -6299,9 +6300,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                 _loadingMore
                                     ? strings.chatReadReceiptLoading
                                     : strings.chatReadReceiptNoMore,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF98A1B2),
+                                  color: ThemeColors.textSecondary(context),
                                 ),
                               ),
                             ),
@@ -6355,9 +6356,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                       item.userName.trim().isEmpty
                                           ? item.userId
                                           : item.userName,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
-                                        color: Color(0xFF202531),
+                                        color: ThemeColors.textPrimary(context),
                                       ),
                                     ),
                                     if (_selectedTab == 'read' &&
@@ -6365,9 +6366,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                       const SizedBox(height: 2),
                                       Text(
                                         _buildReadTime(item),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
-                                          color: Color(0xFF98A1B2),
+                                          color: ThemeColors.textSecondary(context),
                                         ),
                                       ),
                                     ],
@@ -6450,10 +6451,10 @@ class _ReadReceiptTabSummary extends StatelessWidget {
         children: [
           Text(
             '$count',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF202531),
+              color: ThemeColors.textPrimary(context),
             ),
           ),
           const SizedBox(height: 4),
@@ -6462,7 +6463,7 @@ class _ReadReceiptTabSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? const Color(0xFF246BFD) : const Color(0xFF98A1B2),
+              color: active ? const Color(0xFF246BFD) : ThemeColors.textSecondary(context),
             ),
           ),
         ],
@@ -6687,9 +6688,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
       top: false,
       child: Container(
         height: 252,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE8ECF3), width: 1)),
+          border: Border(top: BorderSide(color: ThemeColors.divider(context), width: 1)),
         ),
         child: Column(
           children: [
@@ -6701,9 +6702,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                         if (_recentEmojis.isNotEmpty) ...[
                           Text(
                             strings.chatEmojiRecent,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF98A1B2),
+                              color: ThemeColors.textSecondary(context),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -6718,9 +6719,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                         ],
                         Text(
                           strings.chatEmojiAll,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF98A1B2),
+                            color: ThemeColors.textSecondary(context),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -6743,10 +6744,10 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                 onPressed: _uploadingSticker
                                     ? null
                                     : _uploadSticker,
-                                icon: const AppIcon(
+                                icon: AppIcon(
                                   AppIconKind.add,
                                   size: 18,
-                                  color: Color(0xFF202531),
+                                  color: ThemeColors.textPrimary(context),
                                 ),
                                 label: Text(
                                   _uploadingSticker
@@ -6782,8 +6783,8 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                     child: Text(
                                       _error!,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Color(0xFF98A1B2),
+                                      style: TextStyle(
+                                        color: ThemeColors.textSecondary(context),
                                       ),
                                     ),
                                   ),
@@ -6793,8 +6794,8 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                 return Center(
                                   child: Text(
                                     strings.chatMediaEmpty,
-                                    style: const TextStyle(
-                                      color: Color(0xFF98A1B2),
+                                    style: TextStyle(
+                                      color: ThemeColors.textSecondary(context),
                                     ),
                                   ),
                                 );
@@ -6830,11 +6831,11 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                           fit: BoxFit.contain,
                                           errorBuilder:
                                               (context, error, stackTrace) {
-                                                return const Center(
+                                                return Center(
                                                   child: Icon(
                                                     Icons
                                                         .emoji_emotions_outlined,
-                                                    color: Color(0xFF98A1B2),
+                                                    color: ThemeColors.textSecondary(context),
                                                   ),
                                                 );
                                               },
@@ -6852,8 +6853,8 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
             ),
             Container(
               height: 44,
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: ThemeColors.divider(context))),
               ),
               child: Row(
                 children: [
@@ -6957,9 +6958,9 @@ class _EmojiGrid extends StatelessWidget {
                   ? Text(
                       item,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF202531),
+                        color: ThemeColors.textPrimary(context),
                       ),
                     )
                   : ChatEmojiAssetImage(
@@ -7002,7 +7003,7 @@ class _PickerIconTab extends StatelessWidget {
           child: AppIcon(
             icon,
             size: 22,
-            color: active ? const Color(0xFF2F6BFF) : const Color(0xFF98A1B2),
+            color: active ? const Color(0xFF2F6BFF) : ThemeColors.textSecondary(context),
           ),
         ),
       ),

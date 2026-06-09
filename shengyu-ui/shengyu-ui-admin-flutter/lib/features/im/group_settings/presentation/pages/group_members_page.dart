@@ -13,6 +13,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/stat
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
 class GroupMembersPage extends ConsumerStatefulWidget {
@@ -69,7 +70,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
     final isReadOnly = widget.args.isViewMode && isTrulyNotInGroup;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
@@ -117,7 +118,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
               ),
             ),
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(
               children: [
@@ -125,26 +126,26 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                   displayGroupName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 12),
                 Container(
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F8),
+                    color: ThemeColors.searchBarBg(context),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         ShengyuIconFont.chaxun,
                         size: 16,
-                        color: Color(0xFF98A1B2),
+                        color: ThemeColors.searchIcon(context),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -153,9 +154,9 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                           focusNode: _searchFocusNode,
                           textInputAction: TextInputAction.search,
                           enabled: !isReadOnly,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF202531),
+                            color: ThemeColors.textPrimary(context),
                           ),
                           decoration: InputDecoration(
                             hintText: strings.groupSettingsSearchMembers,
@@ -164,9 +165,9 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                             enabledBorder: InputBorder.none,
                             disabledBorder: InputBorder.none,
                             isCollapsed: true,
-                            hintStyle: const TextStyle(
+                            hintStyle: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF98A1B2),
+                              color: ThemeColors.searchHint(context),
                             ),
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -179,10 +180,10 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                             _searchController.clear();
                             controller.updateKeyword('');
                           },
-                          child: const Icon(
+                          child: Icon(
                             Icons.close,
                             size: 16,
-                            color: Color(0xFF98A1B2),
+                            color: ThemeColors.searchIcon(context),
                           ),
                         ),
                     ],
@@ -242,7 +243,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
             children: [
               Text(
                 state.error?.message ?? strings.unknownError,
-                style: const TextStyle(color: Color(0xFF8F96A3)),
+                style: TextStyle(color: ThemeColors.textSecondary(context)),
               ),
               const SizedBox(height: 12),
               FilledButton(
@@ -257,7 +258,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
           return Center(
             child: Text(
               strings.groupSettingsPendingEmpty,
-              style: const TextStyle(color: Color(0xFF8F96A3)),
+              style: TextStyle(color: ThemeColors.textSecondary(context)),
             ),
           );
         }
@@ -274,15 +275,15 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Text(
                     group.letter,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF8F96A3),
+                      color: ThemeColors.textSecondary(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 Container(
-                  color: Colors.white,
+                  color: ThemeColors.surface(context),
                   child: Column(
                     children: [
                       for (
@@ -318,11 +319,11 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                               : null,
                         ),
                         if (memberIndex != group.members.length - 1)
-                          const Divider(
+                          Divider(
                             height: 1,
                             indent: 66,
                             endIndent: 16,
-                            color: Color(0xFFF0F2F6),
+                            color: ThemeColors.divider(context),
                           ),
                       ],
                     ],
@@ -540,13 +541,15 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
+          child: Material(
+            color: ThemeColors.dialogBg(context),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (var index = 0; index < actions.length; index++) ...[
@@ -554,21 +557,30 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
                     title: Center(
                       child: Text(
                         actions[index].label,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: ThemeColors.textPrimary(context),
+                        ),
                       ),
                     ),
                     onTap: () =>
                         Navigator.of(sheetContext).pop(actions[index].key),
                   ),
                   if (index != actions.length - 1)
-                    const Divider(height: 1, color: Color(0xFFF0F2F6)),
+                    Divider(height: 1, color: ThemeColors.divider(context)),
                 ],
-                const Divider(height: 8, color: Color(0xFFF5F7FB)),
+                Divider(height: 8, color: ThemeColors.divider(context)),
                 ListTile(
-                  title: Center(child: Text(strings.cancelAction)),
+                  title: Center(
+                    child: Text(
+                      strings.cancelAction,
+                      style: TextStyle(color: ThemeColors.textPrimary(context)),
+                    ),
+                  ),
                   onTap: () => Navigator.of(sheetContext).pop(),
                 ),
               ],
+              ),
             ),
           ),
         );
@@ -745,7 +757,7 @@ class _MemberTile extends StatelessWidget {
         member.id != currentUserId;
 
     return Material(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       child: InkWell(
         onTap: onTap,
         onLongPress: canManage ? onManageTap : null,
@@ -775,19 +787,19 @@ class _MemberTile extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF202531),
+                        color: ThemeColors.textPrimary(context),
                       ),
                     ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF8F96A3),
+                          color: ThemeColors.textSecondary(context),
                         ),
                       ),
                     ],
@@ -804,9 +816,9 @@ class _MemberTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: onManageTap,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_horiz_rounded,
-                    color: Color(0xFF98A1B2),
+                    color: ThemeColors.searchIcon(context),
                   ),
                 ),
               ],
@@ -892,9 +904,9 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
-          color: Color(0xFF7F8794),
+          color: ThemeColors.textSecondary(context),
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -920,9 +932,9 @@ class _LetterIndex extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
                 child: Text(
                   letter,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF8F96A3),
+                    color: ThemeColors.textSecondary(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

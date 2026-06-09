@@ -7,6 +7,10 @@ abstract final class AppTheme {
       seedColor: const Color(0xFF246BFD),
       brightness: Brightness.light,
       surface: Colors.white,
+      onSurface: const Color(0xFF202531),
+      onSurfaceVariant: const Color(0xFF8F96A3),
+      primaryContainer: const Color(0xFFEAF2FF),
+      onPrimaryContainer: const Color(0xFF246BFD),
     ),
     scaffoldBackgroundColor: const Color(0xFFF5F7FB),
     dividerColor: const Color(0xFFE9EDF3),
@@ -47,6 +51,17 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
     ),
+    listTileTheme: const ListTileThemeData(
+      iconColor: Color(0xFF8F96A3),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF202531),
+      ),
+    ),
   );
 
   static ThemeData get dark => ThemeData(
@@ -55,6 +70,10 @@ abstract final class AppTheme {
       brightness: Brightness.dark,
       seedColor: const Color(0xFF246BFD),
       surface: const Color(0xFF1E2430),
+      onSurface: const Color(0xFFE8EAED),
+      onSurfaceVariant: const Color(0xFF8F96A3),
+      primaryContainer: const Color(0xFF1A3A6B),
+      onPrimaryContainer: const Color(0xFF6BA4FF),
     ),
     scaffoldBackgroundColor: const Color(0xFF121620),
     dividerColor: const Color(0xFF2A3140),
@@ -64,11 +83,11 @@ abstract final class AppTheme {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      iconTheme: IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: Color(0xFFE8EAED)),
       titleTextStyle: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        color: Colors.white,
+        color: Color(0xFFE8EAED),
       ),
     ),
     cardColor: const Color(0xFF1E2430),
@@ -93,6 +112,17 @@ abstract final class AppTheme {
       backgroundColor: Color(0xFF1E2430),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+    listTileTheme: const ListTileThemeData(
+      iconColor: Color(0xFF8F96A3),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: const Color(0xFF1E2430),
+      titleTextStyle: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFFE8EAED),
       ),
     ),
   );

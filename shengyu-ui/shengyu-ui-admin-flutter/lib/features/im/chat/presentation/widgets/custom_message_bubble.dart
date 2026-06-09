@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -58,10 +59,10 @@ class CustomMessageBubble extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: message.isOutgoing
                     ? const Color(0xFFD2E3FC)
-                    : Colors.white,
+                    : ThemeColors.chatBubbleIncoming(context),
                 border: message.isOutgoing
                     ? null
-                    : Border.all(color: const Color(0xFFEFF2F6)),
+                    : Border.all(color: ThemeColors.divider(context)),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(10),
                   topRight: const Radius.circular(10),
@@ -288,10 +289,10 @@ class _ForwardCombineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOutgoing = message.isOutgoing;
-    final titleColor = isOutgoing ? Colors.white : const Color(0xFF202531);
+    final titleColor = isOutgoing ? Colors.white : ThemeColors.textPrimary(context);
     final secondaryColor = isOutgoing
         ? const Color(0xFFD7E3FF)
-        : const Color(0xFF8F96A3);
+        : ThemeColors.textSecondary(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

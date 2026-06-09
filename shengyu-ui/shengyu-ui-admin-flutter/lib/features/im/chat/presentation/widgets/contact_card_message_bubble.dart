@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -49,11 +50,11 @@ class ContactCardMessageBubble extends ConsumerWidget {
     // 气泡颜色
     final cardBgColor = isOutgoing
         ? const Color(0xFFD2E3FC)
-        : Colors.white;
-    final cardTextColor = isOutgoing ? const Color(0xFF1F2329) : const Color(0xFF202531);
+        : ThemeColors.chatBubbleIncoming(context);
+    final cardTextColor = isOutgoing ? const Color(0xFF1F2329) : ThemeColors.chatBubbleIncomingText(context);
     final cardSubtitleColor = isOutgoing
         ? const Color(0xFF6B7380)
-        : const Color(0xFF8F96A3);
+        : ThemeColors.textSecondary(context);
 
     return Column(
       crossAxisAlignment:
@@ -79,7 +80,7 @@ class ContactCardMessageBubble extends ConsumerWidget {
                 color: cardBgColor,
                 border: isOutgoing
                     ? null
-                    : Border.all(color: const Color(0xFFF0F0F0)),
+                    : Border.all(color: ThemeColors.divider(context)),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(12),
                   topRight: const Radius.circular(12),

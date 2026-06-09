@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -11,10 +12,10 @@ class ContactsBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
-      icon: const AppIcon(
+      icon: AppIcon(
         AppIconKind.chevronLeft,
         size: 20,
-        color: Color(0xFF202531),
+        color: ThemeColors.headerIcon(context),
       ),
       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
     );
@@ -35,26 +36,28 @@ class ContactsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-              child: Text(
-                title!,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF202531),
+    return Material(
+      color: ThemeColors.surface(context),
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: Text(
+                  title!,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: ThemeColors.textPrimary(context),
+                  ),
                 ),
               ),
-            ),
-          ...children,
-        ],
+            ...children,
+          ],
+        ),
       ),
     );
   }
@@ -92,19 +95,19 @@ class ContactsChevronTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF202531),
+                      color: ThemeColors.textPrimary(context),
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8F96A3),
+                        color: ThemeColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -112,9 +115,9 @@ class ContactsChevronTile extends StatelessWidget {
               ),
             ),
             if (trailing != null) ...[trailing!, const SizedBox(width: 6)],
-            const AppIcon(
+            AppIcon(
               AppIconKind.chevronRight,
-              color: Color(0xFFB8C0CC),
+              color: ThemeColors.chevronColor(context),
               size: 16,
             ),
           ],
@@ -144,17 +147,17 @@ class ContactsLabelValueTile extends StatelessWidget {
             width: 76,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF8F96A3)),
+              style: TextStyle(fontSize: 14, color: ThemeColors.textSecondary(context)),
             ),
           ),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF202531),
+                color: ThemeColors.textPrimary(context),
               ),
             ),
           ),

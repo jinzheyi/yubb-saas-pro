@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
@@ -50,23 +51,23 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
         widget.userId.trim() == session.userId.trim();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const AppIcon(
+          icon: AppIcon(
             AppIconKind.chevronLeft,
             size: 20,
-            color: Color(0xFF202531),
+            color: ThemeColors.headerIcon(context),
           ),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
         title: Text(
           displayName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF202531),
+            color: ThemeColors.textPrimary(context),
           ),
         ),
         actions: [
@@ -74,10 +75,10 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
             onPressed: _loading ? null : _showMoreMenu,
             child: Text(
               strings.contactsDetailMore,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF202531),
+                color: ThemeColors.textPrimary(context),
               ),
             ),
           ),
@@ -106,7 +107,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                         margin: const EdgeInsets.fromLTRB(16, 24, 16, 24),
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: ThemeColors.surface(context),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [
                             BoxShadow(
@@ -121,10 +122,10 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                             Flexible(
                               child: Text(
                                 displayName,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF202531),
+                                  color: ThemeColors.textPrimary(context),
                                 ),
                               ),
                             ),
@@ -185,10 +186,13 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                     top: false,
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(32, 12, 32, 12),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: ThemeColors.surface(context),
                         border: Border(
-                          top: BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
+                          top: BorderSide(
+                            color: ThemeColors.divider(context),
+                            width: 0.5,
+                          ),
                         ),
                       ),
                       child: Row(
@@ -425,7 +429,10 @@ class _InfoRow extends StatelessWidget {
         border: Border(
           bottom: isLast
               ? BorderSide.none
-              : const BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
+              : BorderSide(
+                  color: ThemeColors.divider(context),
+                  width: 0.5,
+                ),
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -434,7 +441,10 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF8F96A3)),
+            style: TextStyle(
+              fontSize: 14,
+              color: ThemeColors.textSecondary(context),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -443,8 +453,8 @@ class _InfoRow extends StatelessWidget {
               fontSize: 18,
               fontWeight: FontWeight.w500,
               color: hasValue
-                  ? const Color(0xFF202531)
-                  : const Color(0xFF8F96A3),
+                  ? ThemeColors.textPrimary(context)
+                  : ThemeColors.textSecondary(context),
             ),
           ),
         ],

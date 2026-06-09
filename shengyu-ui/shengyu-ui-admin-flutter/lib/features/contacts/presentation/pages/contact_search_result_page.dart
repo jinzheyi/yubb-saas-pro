@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_search_result.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
@@ -23,7 +24,7 @@ class ContactSearchResultPage extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: const ContactsBackButton(),
         centerTitle: true,
@@ -33,14 +34,14 @@ class ContactSearchResultPage extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Text(
               strings.contactsSearchKeyword(keyword),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF202531),
+                color: ThemeColors.textPrimary(context),
               ),
             ),
           ),
@@ -90,7 +91,10 @@ class _ContactResultBlock extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: Text(
               AppLocalizations.of(context).contactsSearchEmpty,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
+              style: TextStyle(
+                fontSize: 13,
+                color: ThemeColors.textSecondary(context),
+              ),
             ),
           ),
         for (var index = 0; index < items.length; index++) ...[
@@ -113,11 +117,11 @@ class _ContactResultBlock extends StatelessWidget {
             subtitle: items[index].departmentName,
           ),
           if (index != items.length - 1)
-            const Divider(
+            Divider(
               height: 1,
               indent: 16,
               endIndent: 16,
-              color: Color(0xFFF0F2F6),
+              color: ThemeColors.divider(context),
             ),
         ],
       ],
@@ -143,7 +147,10 @@ class _DepartmentResultBlock extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: Text(
               AppLocalizations.of(context).contactsSearchEmpty,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
+              style: TextStyle(
+                fontSize: 13,
+                color: ThemeColors.textSecondary(context),
+              ),
             ),
           ),
         for (var index = 0; index < items.length; index++) ...[
@@ -174,11 +181,11 @@ class _DepartmentResultBlock extends StatelessWidget {
             ).contactsCountPeople(items[index].memberCount),
           ),
           if (index != items.length - 1)
-            const Divider(
+            Divider(
               height: 1,
               indent: 16,
               endIndent: 16,
-              color: Color(0xFFF0F2F6),
+              color: ThemeColors.divider(context),
             ),
         ],
       ],

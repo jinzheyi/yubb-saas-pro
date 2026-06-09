@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
@@ -69,27 +70,22 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     _ConversationCategoryItem(
       category: _ConversationCategory.latest,
       icon: ShengyuIconFont.zuixingengxin,
-      color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.direct,
       icon: ShengyuIconFont.yonghu,
-      color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.group,
       icon: ShengyuIconFont.yonghu1,
-      color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.atMe,
       icon: ShengyuIconFont.aite,
-      color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.muted,
       icon: ShengyuIconFont.miandarao,
-      color: Color(0xFF666666),
     ),
   ];
 
@@ -151,7 +147,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
         : pinnedConversations;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       body: Stack(
         children: [
           SafeArea(
@@ -159,7 +155,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
             child: Column(
               children: [
                 Container(
-                  color: Colors.white,
+                  color: ThemeColors.surface(context),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Column(
                     children: [
@@ -168,10 +164,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                           Expanded(
                             child: Text(
                               strings.conversationTitle,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF202531),
+                                color: ThemeColors.textPrimary(context),
                               ),
                             ),
                           ),
@@ -195,7 +191,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                       Container(
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F8),
+                          color: ThemeColors.searchBarBg(context),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -203,10 +199,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                           children: [
                             InkWell(
                               onTap: _handleSearch,
-                              child: const Icon(
+                              child: Icon(
                                 ShengyuIconFont.chaxun,
                                 size: 16,
-                                color: Color(0xFF98A1B2),
+                                color: ThemeColors.searchIcon(context),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -215,9 +211,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                                 controller: _searchController,
                                 focusNode: _searchFocusNode,
                                 textInputAction: TextInputAction.search,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xFF202531),
+                                  color: ThemeColors.searchText(context),
                                 ),
                                 decoration: InputDecoration(
                                   hintText: strings.searchHint,
@@ -226,9 +222,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                                   enabledBorder: InputBorder.none,
                                   disabledBorder: InputBorder.none,
                                   isCollapsed: true,
-                                  hintStyle: const TextStyle(
+                                  hintStyle: TextStyle(
                                     fontSize: 14,
-                                    color: Color(0xFF98A1B2),
+                                    color: ThemeColors.searchHint(context),
                                   ),
                                   contentPadding: EdgeInsets.zero,
                                 ),
@@ -239,10 +235,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                             if (_searchController.text.trim().isNotEmpty)
                               InkWell(
                                 onTap: _handleSearch,
-                                child: const Icon(
+                                child: Icon(
                                   ShengyuIconFont.fasong,
                                   size: 16,
-                                  color: Color(0xFF98A1B2),
+                                  color: ThemeColors.searchIcon(context),
                                 ),
                               ),
                           ],
@@ -252,7 +248,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                   ),
                 ),
                 Container(
-                  color: Colors.white,
+                  color: ThemeColors.surface(context),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -274,7 +270,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                 const SizedBox(height: 8),
                 if (_inlineNoticeVisible)
                   Container(
-                    color: const Color(0xFFEAF2FF),
+                    color: ThemeColors.noticeBg(context),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -284,10 +280,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                         Expanded(
                           child: Text(
                             _inlineNoticeText,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF246BFD),
+                              color: ThemeColors.noticeText(context),
                             ),
                           ),
                         ),
@@ -391,7 +387,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       children: [
         if (pinnedConversations.isNotEmpty) ...[
           Container(
-            color: const Color(0xFFF7F8FB),
+            color: ThemeColors.surfaceDim(context),
             child: Column(
               children: [
                 for (var index = 0; index < pinnedConversations.length; index++)
@@ -403,7 +399,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                               index == pinnedConversations.length - 1 &&
                                   allPinnedCount <= 5
                               ? Colors.transparent
-                              : const Color(0xFFF0F2F6),
+                              : ThemeColors.divider(context),
                         ),
                       ),
                     ),
@@ -444,9 +440,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                         children: [
                           Text(
                             _isPinnedFolded ? '查看更多' : '收起',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF697386),
+                              color: ThemeColors.categoryInactiveText(context),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -455,7 +451,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                                 ? ShengyuIconFont.zhankaishouqiZhankai
                                 : ShengyuIconFont.shouqi,
                             size: 12,
-                            color: const Color(0xFF98A1B2),
+                            color: ThemeColors.searchIcon(context),
                           ),
                         ],
                       ),
@@ -466,7 +462,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
           ),
         ],
         Container(
-          color: Colors.white,
+          color: ThemeColors.surface(context),
           child: normalConversations.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
@@ -485,7 +481,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                             bottom: BorderSide(
                               color: index == normalConversations.length - 1
                                   ? Colors.transparent
-                                  : const Color(0xFFF0F2F6),
+                                  : ThemeColors.divider(context),
                             ),
                           ),
                         ),
@@ -947,12 +943,10 @@ class _ConversationCategoryItem {
   const _ConversationCategoryItem({
     required this.category,
     required this.icon,
-    required this.color,
   });
 
   final _ConversationCategory category;
   final IconData icon;
-  final Color color;
 }
 
 class _HeaderGlyphButton extends StatelessWidget {
@@ -966,7 +960,7 @@ class _HeaderGlyphButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Icon(icon, size: 22, color: const Color(0xFF202531)),
+      child: Icon(icon, size: 22, color: ThemeColors.headerIcon(context)),
     );
   }
 }
@@ -998,15 +992,15 @@ class _CategoryButton extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: active
-                    ? const Color(0xFFEAF2FF)
-                    : const Color(0xFFF3F4F8),
+                    ? ThemeColors.activeBg(context)
+                    : ThemeColors.categoryInactiveBg(context),
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
               child: Icon(
                 item.icon,
                 size: 22,
-                color: active ? const Color(0xFF3370FF) : item.color,
+                color: active ? ThemeColors.categoryActiveText(context) : ThemeColors.categoryInactiveText(context),
               ),
             ),
             const SizedBox(height: 6),
@@ -1018,8 +1012,8 @@ class _CategoryButton extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                 color: active
-                    ? const Color(0xFF246BFD)
-                    : const Color(0xFF697386),
+                    ? ThemeColors.categoryActiveText(context)
+                    : ThemeColors.categoryInactiveText(context),
               ),
             ),
           ],
@@ -1056,9 +1050,9 @@ class _ConversationContextMenu extends StatelessWidget {
       child: Container(
         width: 160,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: ThemeColors.popupMenuBg(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF0F2F6), width: 0.5),
+          border: Border.all(color: ThemeColors.popupMenuBorder(context), width: 0.5),
           boxShadow: const [
             BoxShadow(
               color: Color(0x26000000),
@@ -1073,16 +1067,16 @@ class _ConversationContextMenu extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              color: const Color(0xFFF7F8FB),
+              color: ThemeColors.menuItemBg(context),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF697386),
+                  color: ThemeColors.menuText(context),
                 ),
               ),
             ),
@@ -1109,12 +1103,12 @@ class _MenuTextButton extends StatelessWidget {
   const _MenuTextButton({
     required this.label,
     required this.onTap,
-    this.color = const Color(0xFF202531),
+    this.color,
   });
 
   final String label;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -1122,7 +1116,7 @@ class _MenuTextButton extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Text(label, style: TextStyle(fontSize: 15, color: color)),
+        child: Text(label, style: TextStyle(fontSize: 15, color: color ?? ThemeColors.textPrimary(context))),
       ),
     );
   }

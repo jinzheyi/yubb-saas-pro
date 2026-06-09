@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/states/contacts_page_state.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
@@ -57,7 +58,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
     _syncKeyword(state.keyword);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -74,10 +75,10 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             strings.contactsTitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF202531),
+                              color: ThemeColors.textPrimary(context),
                             ),
                           ),
                         ),
@@ -186,9 +187,9 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
                               child: Center(
                                 child: Text(
                                   strings.contactsListEmpty,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
-                                    color: Color(0xFF8F96A3),
+                                    color: ThemeColors.emptyText(context),
                                   ),
                                 ),
                               ),
@@ -329,7 +330,7 @@ class _ContactsSearchBar extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F8),
+        color: ThemeColors.searchBarBg(context),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -337,10 +338,10 @@ class _ContactsSearchBar extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onSearch,
-            child: const Icon(
+            child: Icon(
               ShengyuIconFont.chaxun,
               size: 16,
-              color: Color(0xFF98A1B2),
+              color: ThemeColors.searchIcon(context),
             ),
           ),
           const SizedBox(width: 8),
@@ -357,12 +358,15 @@ class _ContactsSearchBar extends StatelessWidget {
                 disabledBorder: InputBorder.none,
                 isCollapsed: true,
                 contentPadding: EdgeInsets.zero,
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF98A1B2),
+                  color: ThemeColors.searchHint(context),
                 ),
               ),
-              style: const TextStyle(fontSize: 14, color: Color(0xFF202531)),
+              style: TextStyle(
+                fontSize: 14,
+                color: ThemeColors.searchText(context),
+              ),
             ),
           ),
           ValueListenableBuilder<TextEditingValue>(
@@ -373,12 +377,12 @@ class _ContactsSearchBar extends StatelessWidget {
               }
               return GestureDetector(
                 onTap: onSearch,
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 8),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
                   child: Icon(
                     ShengyuIconFont.fasong,
                     size: 16,
-                    color: Color(0xFF98A1B2),
+                    color: ThemeColors.searchIcon(context),
                   ),
                 ),
               );
@@ -398,17 +402,17 @@ class _CategoryGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       child: Column(
         children: [
           for (var index = 0; index < items.length; index++) ...[
             _CategoryTile(item: items[index]),
             if (index != items.length - 1)
-              const Divider(
+              Divider(
                 height: 1,
                 indent: 64,
                 endIndent: 0,
-                color: Color(0xFFF0F0F0),
+                color: ThemeColors.divider(context),
               ),
           ],
         ],
@@ -453,7 +457,7 @@ class _CategoryTile extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF04438),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: ThemeColors.surface(context), width: 1.5),
                       ),
                     ),
                   ),
@@ -463,7 +467,10 @@ class _CategoryTile extends StatelessWidget {
             Expanded(
               child: Text(
                 item.title,
-                style: const TextStyle(fontSize: 16, color: Color(0xFF202531)),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: ThemeColors.textPrimary(context),
+                ),
               ),
             ),
           ],
@@ -483,14 +490,14 @@ class _ContactsErrorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     return Container(
-      color: Colors.white,
+      color: ThemeColors.surface(context),
       padding: const EdgeInsets.all(18),
       child: Column(
         children: [
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: Color(0xFFE54D4F)),
+            style: TextStyle(fontSize: 13, color: ThemeColors.errorText(context)),
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(onPressed: onRetry, child: Text(strings.retry)),
@@ -517,19 +524,19 @@ class _ContactSectionBlock extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          color: const Color(0xFFF5F7FB),
+          color: ThemeColors.scaffoldBg(context),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Text(
             section.indexLabel,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8F96A3),
+              color: ThemeColors.textSecondary(context),
             ),
           ),
         ),
         Container(
-          color: Colors.white,
+          color: ThemeColors.surface(context),
           child: Column(
             children: [
               for (var index = 0; index < section.contacts.length; index++) ...[
@@ -538,11 +545,11 @@ class _ContactSectionBlock extends StatelessWidget {
                   onTap: () => onOpenContact(section.contacts[index]),
                 ),
                 if (index != section.contacts.length - 1)
-                  const Divider(
+                  Divider(
                     height: 1,
                     indent: 64,
                     endIndent: 0,
-                    color: Color(0xFFF0F0F0),
+                    color: ThemeColors.divider(context),
                   ),
               ],
             ],
@@ -582,19 +589,19 @@ class _ContactTile extends StatelessWidget {
                 children: [
                   Text(
                     contact.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF202531),
+                      color: ThemeColors.textPrimary(context),
                     ),
                   ),
                   if (contact.departmentName.trim().isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       contact.departmentName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF8F96A3),
+                        color: ThemeColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -666,10 +673,10 @@ class _IndexRail extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 1),
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.indexRailText(context),
                   ),
                 ),
               ),

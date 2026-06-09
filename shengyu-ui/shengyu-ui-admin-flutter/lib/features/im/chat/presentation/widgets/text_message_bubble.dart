@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -59,10 +60,10 @@ class TextMessageBubble extends ConsumerWidget {
     final strings = ref.watch(appStringsProvider);
     final bubbleColor = message.isOutgoing
         ? const Color(0xFFD2E3FC)
-        : Colors.white;
+        : ThemeColors.chatBubbleIncoming(context);
     final textColor = message.isOutgoing
         ? const Color(0xFF1F2329)
-        : const Color(0xFF202531);
+        : ThemeColors.chatBubbleIncomingText(context);
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -87,7 +88,7 @@ class TextMessageBubble extends ConsumerWidget {
                 color: bubbleColor,
                 border: message.isOutgoing
                     ? null
-                    : Border.all(color: const Color(0xFFEFF2F6)),
+                    : Border.all(color: ThemeColors.divider(context)),
                 boxShadow: message.isOutgoing
                     ? null
                     : const [

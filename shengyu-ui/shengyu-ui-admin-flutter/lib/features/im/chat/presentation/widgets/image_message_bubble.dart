@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
@@ -76,7 +77,7 @@ class ImageMessageBubble extends ConsumerWidget {
                     : aspectRatio.clamp(0.6, 1.6).toDouble(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F4FA),
+                    color: ThemeColors.surfaceDim(context),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(8),
                       topRight: const Radius.circular(8),
@@ -121,6 +122,7 @@ class ImageMessageBubble extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: _buildFileNameText(
+              context: context,
               fileName: fileName,
               keyword: highlightKeyword,
             ),
@@ -148,6 +150,7 @@ class ImageMessageBubble extends ConsumerWidget {
   }
 
   Widget _buildFileNameText({
+    required BuildContext context,
     required String fileName,
     required String? keyword,
   }) {
@@ -156,13 +159,14 @@ class ImageMessageBubble extends ConsumerWidget {
         fileName,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: Color(0xFF6B7280),
+          color: ThemeColors.textSecondary(context),
         ),
       );
     }
     final spans = _buildHighlightedSpans(
+      context: context,
       text: fileName,
       keyword: keyword,
     );
@@ -177,6 +181,7 @@ class ImageMessageBubble extends ConsumerWidget {
   }
 
   List<InlineSpan> _buildHighlightedSpans({
+    required BuildContext context,
     required String text,
     required String keyword,
   }) {
@@ -185,7 +190,7 @@ class ImageMessageBubble extends ConsumerWidget {
     final lowerKeyword = keyword.toLowerCase();
     var lastEnd = 0;
     var startIndex = lowerText.indexOf(lowerKeyword);
-    const defaultColor = Color(0xFF6B7280);
+    final defaultColor = ThemeColors.textSecondary(context);
     const highlightColor = Color(0xFF246BFD);
 
     while (startIndex >= 0) {
@@ -193,7 +198,7 @@ class ImageMessageBubble extends ConsumerWidget {
         spans.add(
           TextSpan(
             text: text.substring(lastEnd, startIndex),
-            style: const TextStyle(color: defaultColor),
+            style: TextStyle(color: defaultColor),
           ),
         );
       }
@@ -214,13 +219,13 @@ class ImageMessageBubble extends ConsumerWidget {
       spans.add(
         TextSpan(
           text: text.substring(lastEnd),
-          style: const TextStyle(color: defaultColor),
+          style: TextStyle(color: defaultColor),
         ),
       );
     }
 
     if (spans.isEmpty) {
-      spans.add(const TextSpan(text: '', style: TextStyle(color: defaultColor)));
+      spans.add(TextSpan(text: '', style: TextStyle(color: defaultColor)));
     }
     return spans;
   }

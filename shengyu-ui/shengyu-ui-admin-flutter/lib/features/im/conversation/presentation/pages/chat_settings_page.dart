@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
@@ -75,10 +76,10 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
         : getUserAvatarColor(targetId ?? '');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          icon: Icon(Icons.chevron_left_rounded, size: 22, color: ThemeColors.headerIcon(context)),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -88,7 +89,7 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Container(
-            color: Colors.white,
+            color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
             child: Column(
               children: [
@@ -117,19 +118,19 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
                 Text(
                   displayName,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF202531),
+                    color: ThemeColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   displayDept,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF8F96A3),
+                    color: ThemeColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -174,10 +175,10 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: Text(
               strings.chatSettingsSubordinateTip,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
-                color: Color(0xFF98A1B2),
+                color: ThemeColors.textSecondary(context),
               ),
             ),
           ),
@@ -409,10 +410,10 @@ class _SwitchTile extends StatelessWidget {
     return ListTile(
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
       trailing: Switch(
@@ -445,7 +446,7 @@ class _DangerTile extends StatelessWidget {
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: busy ? const Color(0xFFB8C0CC) : const Color(0xFFE54D4F),
+          color: busy ? ThemeColors.textSecondary(context) : ThemeColors.errorText(context),
         ),
       ),
     );
@@ -464,15 +465,15 @@ class _ActionTile extends StatelessWidget {
       onTap: onTap,
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF202531),
+          color: ThemeColors.textPrimary(context),
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_right_rounded,
-        color: Color(0xFFB8C0CC),
+        color: ThemeColors.chevronColor(context),
       ),
     );
   }

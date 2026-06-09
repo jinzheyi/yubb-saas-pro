@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
@@ -91,8 +92,8 @@ class _AppBottomNavigationBar extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: const Color(0xFFE2E7EF))),
+        color: ThemeColors.bottomNavBg(context),
+        border: Border(top: BorderSide(color: ThemeColors.bottomNavBorder(context))),
       ),
       child: SafeArea(
         top: false,
@@ -126,7 +127,7 @@ class _BottomNavButton extends StatelessWidget {
     final theme = Theme.of(context);
     final color = selected
         ? theme.colorScheme.primary
-        : const Color(0xFF8F96A3);
+        : ThemeColors.bottomNavInactiveText(context);
     return InkWell(
       onTap: () => context.goNamed(item.routeName),
       child: Column(

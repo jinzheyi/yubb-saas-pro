@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
@@ -68,7 +69,9 @@ class _ConversationTileState extends State<ConversationTile> {
             conversation.isGroupDisbanded);
 
     return Material(
-      color: widget.highlightPinned ? const Color(0xFFF7F8FB) : Colors.white,
+      color: widget.highlightPinned
+          ? ThemeColors.tilePinnedBg(context)
+          : ThemeColors.tileBg(context),
       child: Listener(
         onPointerDown: _handlePointerDown,
         onPointerUp: (_) => _cancelMouseLongPress(),
@@ -109,8 +112,8 @@ class _ConversationTileState extends State<ConversationTile> {
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
                                             color: isLeftGroup
-                                                ? const Color(0xFFB1B7C5)
-                                                : const Color(0xFF202531),
+                                                ? ThemeColors.leftGroupText(context)
+                                                : ThemeColors.textPrimary(context),
                                           ),
                                     ),
                                   ),
@@ -120,7 +123,7 @@ class _ConversationTileState extends State<ConversationTile> {
                                       '(${conversation.groupMemberCount})',
                                       style: theme.textTheme.bodySmall?.copyWith(
                                         fontSize: 13,
-                                        color: const Color(0xFFB1B7C5),
+                                        color: ThemeColors.leftGroupText(context),
                                       ),
                                     ),
                                   ],
@@ -138,8 +141,8 @@ class _ConversationTileState extends State<ConversationTile> {
                               _formatUpdatedAt(context, conversation.updatedAt),
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: isLeftGroup
-                                    ? const Color(0xFFC1C4C9)
-                                    : const Color(0xFF9AA2AF),
+                                    ? ThemeColors.leftGroupTimeText(context)
+                                    : ThemeColors.textSecondary(context),
                               ),
                             ),
                           ],
@@ -149,13 +152,13 @@ class _ConversationTileState extends State<ConversationTile> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             if (conversation.lastMessageHasAtMe && !isLeftGroup)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
                                 child: Text(
                                   '[@我]',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Color(0xFFF97316),
+                                    color: ThemeColors.atMeText(context),
                                   ),
                                 ),
                               ),
@@ -163,7 +166,7 @@ class _ConversationTileState extends State<ConversationTile> {
                               child: Text.rich(
                                 TextSpan(
                                   children: _buildMessageSpans(
-                                    theme,
+                                    context,
                                     isLeftGroup,
                                     conversation,
                                     previewTokens,
@@ -174,12 +177,12 @@ class _ConversationTileState extends State<ConversationTile> {
                               ),
                             ),
                             if (conversation.isMuted)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
                                 child: AppIcon(
                                   AppIconKind.muteOff,
                                   size: 14,
-                                  color: Color(0xFFC1C4C9),
+                                  color: ThemeColors.mutedIcon(context),
                                 ),
                               ),
                           ],
@@ -197,11 +200,12 @@ class _ConversationTileState extends State<ConversationTile> {
   }
 
   List<InlineSpan> _buildMessageSpans(
-    ThemeData theme,
+    BuildContext context,
     bool isLeftGroup,
     Conversation conversation,
     List<_PreviewToken> previewTokens,
   ) {
+    final theme = Theme.of(context);
     if (isLeftGroup) {
       final statusText = conversation.isGroupKicked
           ? '你已被移出群聊'
@@ -214,7 +218,7 @@ class _ConversationTileState extends State<ConversationTile> {
           style: theme.textTheme.bodyMedium!.copyWith(
             fontSize: 13,
             height: 18 / 13,
-            color: const Color(0xFF9AA2AF),
+            color: ThemeColors.textSecondary(context),
           ),
         ),
       ];
@@ -229,8 +233,8 @@ class _ConversationTileState extends State<ConversationTile> {
             fontSize: 13,
             height: 18 / 13,
             color: token.isNotice
-                ? const Color(0xFF99A0AF)
-                : const Color(0xFF697386),
+                ? ThemeColors.chatTimeText(context)
+                : ThemeColors.textSecondary(context),
           ),
           emojiSize: 14,
           emojiPadding: const EdgeInsets.symmetric(horizontal: 1),
@@ -510,9 +514,9 @@ class _ConversationAvatar extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF54A45),
+                      color: ThemeColors.unreadBadgeBg(context),
                       borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: ThemeColors.scaffoldBg(context), width: 2),
                     ),
                   )
                 : Container(
@@ -520,9 +524,9 @@ class _ConversationAvatar extends StatelessWidget {
                     height: 18,
                     padding: const EdgeInsets.symmetric(horizontal: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF54A45),
+                      color: ThemeColors.unreadBadgeBg(context),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: ThemeColors.scaffoldBg(context), width: 2),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -569,9 +573,9 @@ class _GroupStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      1 => ('已退出', const Color(0xFF9AA2AF)),
-      2 => ('已被踢', const Color(0xFFFF9500)),
-      3 => ('已解散', const Color(0xFFFF3B30)),
+      1 => ('已退出', ThemeColors.groupLeftStatusColor(context)),
+      2 => ('已被踢', ThemeColors.groupKickedStatusColor(context)),
+      3 => ('已解散', ThemeColors.groupDisbandedStatusColor(context)),
       _ => ('', Colors.transparent),
     };
     if (label.isEmpty) {

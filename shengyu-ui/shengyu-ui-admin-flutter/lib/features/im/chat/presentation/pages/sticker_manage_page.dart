@@ -302,28 +302,31 @@ class _StickerManagePageState extends ConsumerState<StickerManagePage> {
       showDragHandle: true,
       builder: (sheetContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.delete,
-                  size: 20,
-                  color: Color(0xFF202531),
+          child: Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const AppIcon(
+                    AppIconKind.delete,
+                    size: 20,
+                    color: Color(0xFF202531),
+                  ),
+                  title: Text(strings.deleteStickerAction),
+                  onTap: () => Navigator.of(sheetContext).pop(true),
                 ),
-                title: Text(strings.deleteStickerAction),
-                onTap: () => Navigator.of(sheetContext).pop(true),
-              ),
-              ListTile(
-                leading: const AppIcon(
-                  AppIconKind.close,
-                  size: 20,
-                  color: Color(0xFF202531),
+                ListTile(
+                  leading: const AppIcon(
+                    AppIconKind.close,
+                    size: 20,
+                    color: Color(0xFF202531),
+                  ),
+                  title: Text(strings.cancelAction),
+                  onTap: () => Navigator.of(sheetContext).pop(false),
                 ),
-                title: Text(strings.cancelAction),
-                onTap: () => Navigator.of(sheetContext).pop(false),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

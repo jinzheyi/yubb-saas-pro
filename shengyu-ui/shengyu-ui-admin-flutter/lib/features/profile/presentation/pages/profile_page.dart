@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
@@ -48,7 +49,7 @@ class ProfilePage extends ConsumerWidget {
     final secondaryLine = _buildSecondaryLine(profile);
 
     return ColoredBox(
-      color: const Color(0xFFF5F7FB),
+      color: ThemeColors.scaffoldBg(context),
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(currentUserProfileProvider);
@@ -105,7 +106,7 @@ class ProfilePage extends ConsumerWidget {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: ThemeColors.surface(context),
                     side: BorderSide.none,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -113,10 +114,10 @@ class ProfilePage extends ConsumerWidget {
                   ),
                   child: Text(
                     strings.profileLogout,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFFF4B4B),
+                      color: ThemeColors.errorText(context),
                     ),
                   ),
                 ),
@@ -138,34 +139,37 @@ class ProfilePage extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
-              title: Text(
-                hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAndUploadAvatar(context, ref);
-              },
-            ),
-            if (hasAvatar) ...[
-              const Divider(height: 1),
+        child: Material(
+          color: ThemeColors.scaffoldBg(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
                 title: Text(
-                  strings.profileRemoveCustomAvatar,
-                  style: const TextStyle(color: Color(0xFFFF4B4B)),
+                  hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar,
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _confirmRemoveAvatar(context, ref);
+                  _pickAndUploadAvatar(context, ref);
                 },
               ),
+              if (hasAvatar) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                  title: Text(
+                    strings.profileRemoveCustomAvatar,
+                    style: const TextStyle(color: Color(0xFFFF4B4B)),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmRemoveAvatar(context, ref);
+                  },
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -202,7 +206,7 @@ class ProfilePage extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: ThemeColors.surface(dialogContext),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -337,7 +341,7 @@ class ProfilePage extends ConsumerWidget {
     AuthSession session,
   ) {
     return ColoredBox(
-      color: const Color(0xFFF5F7FB),
+      color: ThemeColors.scaffoldBg(context),
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(currentUserProfileProvider);
@@ -360,9 +364,9 @@ class ProfilePage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
                 strings.profileLoadError,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFFE54D4F),
+                  color: ThemeColors.errorText(context),
                 ),
               ),
             ),
@@ -405,7 +409,7 @@ class ProfilePage extends ConsumerWidget {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: ThemeColors.surface(context),
                     side: BorderSide.none,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -413,10 +417,10 @@ class ProfilePage extends ConsumerWidget {
                   ),
                   child: Text(
                     strings.profileLogout,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFFF4B4B),
+                      color: ThemeColors.errorText(context),
                     ),
                   ),
                 ),
@@ -433,19 +437,19 @@ class ProfilePage extends ConsumerWidget {
     dynamic strings,
   ) {
     return ColoredBox(
-      color: const Color(0xFFF5F7FB),
+      color: ThemeColors.scaffoldBg(context),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.account_circle, size: 64, color: Color(0xFFB0B0B0)),
+            const Icon(Icons.account_circle, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               strings.profileUnknownUser,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF666666),
+                color: ThemeColors.textSecondary(context),
               ),
             ),
             const SizedBox(height: 24),
@@ -512,7 +516,7 @@ class _CenterToastState extends State<_CenterToast> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xCC1F2329),
+            color: Colors.black.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -520,7 +524,9 @@ class _CenterToastState extends State<_CenterToast> {
             children: [
               Icon(
                 widget.success ? Icons.check_circle : Icons.error_outline,
-                color: widget.success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+                color: widget.success
+                    ? const Color(0xFF07C160)
+                    : const Color(0xFFFF4B4B),
                 size: 18,
               ),
               const SizedBox(width: 8),
