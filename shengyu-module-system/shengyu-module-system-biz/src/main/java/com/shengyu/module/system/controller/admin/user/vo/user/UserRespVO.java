@@ -62,12 +62,6 @@ public class UserRespVO{
     @Schema(description = "用户头像", example = "https://www.iocoder.cn/xxx.png")
     private String avatar;
 
-    @Schema(description = "聊天气泡颜色", example = "#D2E3FC")
-    private String chatBubbleColor;
-
-    @Schema(description = "聊天气泡模式", example = "preset")
-    private String chatBubbleMode;
-
     @Schema(description = "状态，参见 CommonStatusEnum 枚举类", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @ExcelProperty(value = "帐号状态", converter = DictConvert.class)
     @DictFormat(DictTypeConstants.COMMON_STATUS)

@@ -415,16 +415,6 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public void updateUserChatBubblePreference(Long id, String chatBubbleColor, String chatBubbleMode) {
-        validateAdminUserExists(id);
-        AdminUserDO updateObj = new AdminUserDO();
-        updateObj.setId(id);
-        updateObj.setChatBubbleColor(chatBubbleColor != null ? chatBubbleColor.toUpperCase() : null);
-        updateObj.setChatBubbleMode(chatBubbleMode);
-        userMapper.updateById(updateObj);
-    }
-
-    @Override
     public void updateUserPassword(Long id, String password) {
         // 校验用户存在
         validateUserExists(id);

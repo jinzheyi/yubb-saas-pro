@@ -3,9 +3,8 @@ import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
-import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
-import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -13,6 +12,7 @@ class StickerMessageBubble extends StatelessWidget {
   const StickerMessageBubble({
     super.key,
     required this.message,
+    required this.onRetryMessage,
     this.onLongPressMessage,
     this.onOpenReadReceipt,
     this.enableReadReceiptEntry = false,
@@ -21,6 +21,7 @@ class StickerMessageBubble extends StatelessWidget {
   });
 
   final Message message;
+  final ValueChanged<Message> onRetryMessage;
   final void Function(Message, Offset globalPosition)? onLongPressMessage;
   final ValueChanged<Message>? onOpenReadReceipt;
   final bool enableReadReceiptEntry;
@@ -29,7 +30,6 @@ class StickerMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
     final isEmoji = message.type == MessageType.emoji;
     final normalizedEmojiToken = isEmoji
         ? ChatEmojiCatalog.normalizeTokenContent(message.content)
@@ -99,39 +99,15 @@ class StickerMessageBubble extends StatelessWidget {
             ),
           ),
         ),
-        if (message.isOutgoing && showOutgoingStatusFooter) ...[
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap:
-                enableReadReceiptEntry &&
-                    message.status != MessageStatus.sending &&
-                    message.status != MessageStatus.failed
-                ? () => onOpenReadReceipt?.call(message)
-                : null,
-            child: Text(
-              outgoingFooterLabel ?? _statusLabel(strings),
-              style: TextStyle(fontSize: 10, color: ThemeColors.textSecondary(context)),
-            ),
-          ),
-        ],
+        MessageStatusFooter(
+          message: message,
+          onRetryMessage: onRetryMessage,
+          onOpenReadReceipt: onOpenReadReceipt,
+          enableReadReceiptEntry: enableReadReceiptEntry,
+          showOutgoingStatusFooter: showOutgoingStatusFooter,
+          outgoingFooterLabel: outgoingFooterLabel,
+        ),
       ],
     );
-  }
-
-  String _statusLabel(AppLocalizations strings) {
-    switch (message.status) {
-      case MessageStatus.sending:
-        return strings.messageSending;
-      case MessageStatus.sent:
-        return strings.messageSent;
-      case MessageStatus.delivered:
-        return strings.messageDelivered;
-      case MessageStatus.read:
-        return strings.messageRead;
-      case MessageStatus.recalled:
-        return strings.chatPreviewRecalled;
-      case MessageStatus.failed:
-        return strings.messageFailed;
-    }
   }
 }

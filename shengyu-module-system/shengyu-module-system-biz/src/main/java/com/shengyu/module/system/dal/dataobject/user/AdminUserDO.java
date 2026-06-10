@@ -63,14 +63,6 @@ public class AdminUserDO extends TenantBaseDO {
      */
     private String avatar;
     /**
-     * 聊天气泡颜色
-     */
-    private String chatBubbleColor;
-    /**
-     * 聊天气泡模式
-     */
-    private String chatBubbleMode;
-    /**
      * 最后登录IP
      */
     private String loginIp;

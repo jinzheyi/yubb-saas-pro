@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
-import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -87,9 +87,6 @@ class VoiceMessageBubble extends ConsumerWidget {
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       children: [
-        if (message.isOutgoing)
-          _OutgoingStatusRow(message: message, onRetryMessage: onRetryMessage),
-        const SizedBox(height: 4),
         Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -255,24 +252,14 @@ class VoiceMessageBubble extends ConsumerWidget {
             ],
           ],
         ),
-        if (message.isOutgoing && showOutgoingStatusFooter)
-          const SizedBox(height: 4),
-        if (message.isOutgoing && showOutgoingStatusFooter)
-          GestureDetector(
-            onTap:
-                enableReadReceiptEntry &&
-                    message.status != MessageStatus.sending &&
-                    message.status != MessageStatus.failed
-                ? () => onOpenReadReceipt?.call(message)
-                : null,
-            child: Text(
-              outgoingFooterLabel ?? _statusLabel(strings),
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                color: _statusColor(theme, context),
-              ),
-            ),
-          ),
+        MessageStatusFooter(
+          message: message,
+          onRetryMessage: onRetryMessage,
+          onOpenReadReceipt: onOpenReadReceipt,
+          enableReadReceiptEntry: enableReadReceiptEntry,
+          showOutgoingStatusFooter: showOutgoingStatusFooter,
+          outgoingFooterLabel: outgoingFooterLabel,
+        ),
       ],
     );
   }
@@ -396,77 +383,5 @@ class VoiceMessageBubble extends ConsumerWidget {
       return const Color(0xFFB2CFFB);
     }
     return ThemeColors.divider(context).withValues(alpha: 0.5);
-  }
-
-  String _statusLabel(AppLocalizations strings) {
-    switch (message.status) {
-      case MessageStatus.sending:
-        return strings.messageSending;
-      case MessageStatus.sent:
-        return strings.messageSent;
-      case MessageStatus.delivered:
-        return strings.messageDelivered;
-      case MessageStatus.read:
-        return strings.messageRead;
-      case MessageStatus.recalled:
-        return strings.chatPreviewRecalled;
-      case MessageStatus.failed:
-        return strings.messageFailed;
-    }
-  }
-
-  Color _statusColor(ThemeData theme, BuildContext context) {
-    if (outgoingFooterLabel != null) {
-      return ThemeColors.textSecondary(context);
-    }
-    return switch (message.status) {
-      MessageStatus.failed => theme.colorScheme.error,
-      MessageStatus.read => theme.colorScheme.primary,
-      MessageStatus.recalled => ThemeColors.textSecondary(context),
-      _ => ThemeColors.textSecondary(context),
-    };
-  }
-}
-
-class _OutgoingStatusRow extends StatelessWidget {
-  const _OutgoingStatusRow({
-    required this.message,
-    required this.onRetryMessage,
-  });
-
-  final Message message;
-  final ValueChanged<Message> onRetryMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (message.status == MessageStatus.sending)
-          SizedBox(
-            width: 10,
-            height: 10,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                ThemeColors.textSecondary(context),
-              ),
-            ),
-          ),
-        if (message.status == MessageStatus.failed)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onRetryMessage(message),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              child: AppIcon(
-                AppIconKind.error,
-                size: 14,
-                color: ThemeColors.errorText(context),
-              ),
-            ),
-          ),
-      ],
-    );
   }
 }

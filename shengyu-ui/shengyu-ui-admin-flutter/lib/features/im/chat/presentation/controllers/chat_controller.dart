@@ -13,7 +13,6 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/mention_seg
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_payload.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_receipt_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_timeline_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_page_state.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -31,7 +30,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     this._messagePreviewFormatter,
     this._conversationListController,
     this._timelineController,
-    this._receiptController,
   ) : super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
 
   final OpenChatUseCase _openChatUseCase;
@@ -41,7 +39,6 @@ class ChatController extends StateNotifier<ChatPageState> {
   final ConversationPreviewFormatter _messagePreviewFormatter;
   final ConversationListController _conversationListController;
   final ChatTimelineController _timelineController;
-  final ChatReceiptController _receiptController;
 
   void updateChatTitle(String title) {
     if (state.chatTitle == title) {
@@ -60,7 +57,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     try {
       final result = await _openChatUseCase(OpenChatCommand.fromArgs(args));
       _timelineController.applyWindow(result.window);
-      _receiptController.markVisible(args.chatId);
       final readSequence = _resolveLatestReadableSequence(
         result.window.messages,
       );

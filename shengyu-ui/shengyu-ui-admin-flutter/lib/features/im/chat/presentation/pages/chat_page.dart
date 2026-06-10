@@ -47,7 +47,6 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/sticker_pay
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_scope.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_composer_controller.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_more_panel_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_message_action.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/models/chat_more_panel_action.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
@@ -62,6 +61,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_p
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_timeline.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/sticker_repository.dart';
@@ -182,6 +182,16 @@ class _ChatPageState extends ConsumerState<ChatPage>
         _handleTimelineStateChanged(previous, next);
       },
     );
+    // 激活当前对话（用于角标智能处理）
+    // 延迟到构建完成后，避免在 initState 中修改 provider 状态
+    Future.microtask(() {
+      final conversationState = ref.read(conversationListControllerProvider);
+      final conversationUnread = conversationState.conversations
+          .where((c) => c.chatId == widget.args.chatId)
+          .fold<int>(0, (_, c) => c.unreadCount);
+      ref.read(conversationListControllerProvider.notifier).activateChat(widget.args.chatId);
+      ref.read(activeConversationServiceProvider.notifier).updateActiveChatUnreadCount(conversationUnread);
+    });
     Future.microtask(() {
       unawaited(_initializeChatPage());
       unawaited(_warmupStickerCatalog());
@@ -196,6 +206,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   @override
   void dispose() {
+    // 注销当前对话（释放活跃状态）
+    ref.read(activeConversationServiceProvider.notifier).deactivateChat();
     WidgetsBinding.instance.removeObserver(this);
     _highlightClearTimer?.cancel();
     _recordingTimer?.cancel();
@@ -231,6 +243,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   Future<void> _initializeChatPage() async {
     await ref.read(chatControllerProvider.notifier).initialize(widget.args);
+    // 记录当前会话为已读可见（替代 ChatReceiptController）
+    ref.read(chatReceiptLastVisibleChatIdProvider.notifier).state = widget.args.chatId;
     await _rehydrateReeditHints();
     if (!mounted) {
       return;
@@ -346,7 +360,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final readReceiptSummaryState = ref.watch(readReceiptSummaryStoreProvider);
     final composer = ref.watch(chatComposerControllerProvider);
     final mediaState = ref.watch(chatMediaControllerProvider);
-    final morePanelController = ref.watch(chatMorePanelControllerProvider);
     final chatTitle = pageState.chatTitle ?? strings.chatTitle;
     final isBusy =
         pageState.pendingAction == ChatPendingAction.sendingMessage ||
@@ -609,7 +622,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 action: action,
                 pageState: pageState,
                 chatTitle: chatTitle,
-                morePanelController: morePanelController,
               );
             },
           )
@@ -2573,7 +2585,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final pendingVoiceIds = await _collectUnplayedVoiceMessageIds(
       _voicePlayedCompensateMaxIds,
     );
-    if (pendingVoiceIds.isEmpty) {
+    if (!mounted || pendingVoiceIds.isEmpty) {
       return;
     }
     _voicePlayedCompensateInFlight = true;
@@ -2581,6 +2593,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       final repository = ref.read(messageRepositoryProvider);
       var offset = 0;
       while (offset < pendingVoiceIds.length) {
+        if (!mounted) break;
         final batch = pendingVoiceIds
             .skip(offset)
             .take(_voicePlayedCompensateBatchSize)
@@ -2597,6 +2610,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           continue;
         }
         for (final playedId in playedIds) {
+          if (!mounted) break;
           _voicePlayedPendingSync.remove(playedId);
           await _persistVoicePlayed(playedId);
           ref
@@ -2612,9 +2626,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<List<String>> _collectUnplayedVoiceMessageIds(int limit) async {
+    if (!mounted) return <String>[];
     final result = <String>[];
     final seen = <String>{};
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final List<Message> messages;
+    try {
+      messages = ref.read(chatTimelineControllerProvider).messages;
+    } catch (_) {
+      return <String>[];
+    }
     for (final item in messages.reversed) {
       if (item.isOutgoing || item.type != MessageType.voice) {
         continue;
@@ -2805,7 +2825,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
     required ChatMorePanelAction action,
     required ChatPageState pageState,
     required String chatTitle,
-    required ChatMorePanelController morePanelController,
   }) async {
     if (action != ChatMorePanelAction.favorite &&
         !_ensureConversationWritable(context)) {
@@ -2819,11 +2838,47 @@ class _ChatPageState extends ConsumerState<ChatPage>
       context.pushNamed(RouteNames.favorites);
       return;
     }
-    final result = await morePanelController.handleAction(
-      action: action,
-      entryArgs: pageState.entryArgs,
-      chatTitle: chatTitle,
-    );
+
+    final mediaController = ref.read(chatMediaControllerProvider.notifier);
+    ChatMorePanelResult result;
+    switch (action) {
+      case ChatMorePanelAction.album:
+        await mediaController.pickAndUploadImage(
+          entryArgs: pageState.entryArgs,
+          chatTitle: chatTitle,
+        );
+        result = const ChatMorePanelResult();
+      case ChatMorePanelAction.camera:
+        await mediaController.captureAndUploadImage(
+          entryArgs: pageState.entryArgs,
+          chatTitle: chatTitle,
+        );
+        result = const ChatMorePanelResult();
+      case ChatMorePanelAction.video:
+        await mediaController.pickAndUploadVideo(
+          entryArgs: pageState.entryArgs,
+          chatTitle: chatTitle,
+        );
+        result = const ChatMorePanelResult();
+      case ChatMorePanelAction.file:
+        await mediaController.pickAndUploadFile(
+          entryArgs: pageState.entryArgs,
+          chatTitle: chatTitle,
+        );
+        result = const ChatMorePanelResult();
+      case ChatMorePanelAction.location:
+        result = const ChatMorePanelResult(
+          followUpAction: ChatMorePanelFollowUpAction.openLocationPicker,
+        );
+      case ChatMorePanelAction.contact:
+        result = const ChatMorePanelResult(
+          followUpAction: ChatMorePanelFollowUpAction.openContactPicker,
+        );
+      case ChatMorePanelAction.favorite:
+      case ChatMorePanelAction.call:
+        result = const ChatMorePanelResult();
+    }
+
     final error = ref.read(chatMediaControllerProvider).error;
     if (error != null && mounted) {
       if (_handleGroupLifecycleRequestError(
@@ -4792,11 +4847,20 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _reeditTicker?.cancel();
     _reeditTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) {
+        _reeditTicker?.cancel();
         return;
       }
-      setState(() {
-        _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
-      });
+      // 双重检查：确保在 setState 时仍然有效
+      try {
+        if (mounted) {
+          setState(() {
+            _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
+          });
+        }
+      } catch (_) {
+        // 忽略 widget 已被销毁时的 setState 异常
+        _reeditTicker?.cancel();
+      }
     });
   }
 

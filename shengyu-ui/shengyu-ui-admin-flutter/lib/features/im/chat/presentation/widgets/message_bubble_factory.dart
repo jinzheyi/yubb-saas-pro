@@ -135,6 +135,7 @@ abstract final class MessageBubbleFactory {
       case MessageType.sticker:
         return StickerMessageBubble(
           message: normalizedMessage,
+          onRetryMessage: onRetryMessage,
           onLongPressMessage: onLongPressMessage,
           onOpenReadReceipt: onOpenReadReceipt,
           enableReadReceiptEntry: enableReadReceiptEntry,

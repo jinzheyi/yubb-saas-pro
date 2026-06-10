@@ -37,10 +37,4 @@ public class AppUserDetailRespVO {
     @Schema(description = "备注", example = "这是一个备注")
     private String remark;
 
-    @Schema(description = "聊天气泡颜色", example = "#D2E3FC")
-    private String chatBubbleColor;
-
-    @Schema(description = "聊天气泡模式", example = "preset")
-    private String chatBubbleMode;
-
 }

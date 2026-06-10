@@ -31,8 +31,6 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/ch
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_message_action_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_media_controller.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_more_panel_controller.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_receipt_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_timeline_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_media_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_page_state.dart';
@@ -72,27 +70,11 @@ class ChatRealtimeSignal {
   final int token;
 }
 
-final messageRemoteDataSourceProvider = Provider<MessageRemoteDataSource>((
-  ref,
-) {
-  return MessageRemoteDataSource(dio: ref.read(dioProvider));
-});
-
-final fileHttpDataSourceProvider = Provider<FileHttpDataSource>((ref) {
-  return FileHttpDataSource(dio: ref.read(dioProvider));
-});
-
-final stickerRemoteDataSourceProvider = Provider<StickerRemoteDataSource>((
-  ref,
-) {
-  return StickerRemoteDataSource(dio: ref.read(dioProvider));
-});
-
 final mediaPickerServiceProvider = Provider<MediaPickerService>((ref) {
   return const FilePickerMediaPickerService();
 });
 
-final audioRecordingServiceProvider = Provider<AudioRecordingService>((ref) {
+final audioRecordingServiceProvider = Provider.autoDispose<AudioRecordingService>((ref) {
   final service = AudioRecordingService();
   ref.onDispose(() {
     unawaited(service.dispose());
@@ -100,7 +82,7 @@ final audioRecordingServiceProvider = Provider<AudioRecordingService>((ref) {
   return service;
 });
 
-final audioPlaybackServiceProvider = Provider<AudioPlaybackService>((ref) {
+final audioPlaybackServiceProvider = Provider.autoDispose<AudioPlaybackService>((ref) {
   final service = AudioPlaybackService();
   ref.onDispose(() {
     unawaited(service.dispose());
@@ -118,24 +100,24 @@ final reeditHintLocalStoreProvider = Provider<ReeditHintLocalStore>((ref) {
   return const ReeditHintLocalStore(StorageKeyRegistry.reeditHintPrefix);
 });
 
-final chatRuntimeNoticeProvider = StateProvider<ChatRuntimeNotice?>((ref) {
+final chatRuntimeNoticeProvider = StateProvider.autoDispose<ChatRuntimeNotice?>((ref) {
   return null;
 });
 
-final chatRealtimeSignalProvider = StateProvider<ChatRealtimeSignal?>((ref) {
+final chatRealtimeSignalProvider = StateProvider.autoDispose<ChatRealtimeSignal?>((ref) {
   return null;
 });
 
 final messageRepositoryProvider = Provider<MessageRepository>((ref) {
-  return MessageRepositoryImpl(ref.read(messageRemoteDataSourceProvider));
+  return MessageRepositoryImpl(MessageRemoteDataSource(dio: ref.read(dioProvider)));
 });
 
 final fileRepositoryProvider = Provider<FileRepository>((ref) {
-  return FileRepositoryImpl(ref.read(fileHttpDataSourceProvider));
+  return FileRepositoryImpl(FileHttpDataSource(dio: ref.read(dioProvider)));
 });
 
 final stickerRepositoryProvider = Provider<StickerRepository>((ref) {
-  return StickerRepositoryImpl(ref.read(stickerRemoteDataSourceProvider));
+  return StickerRepositoryImpl(StickerRemoteDataSource(dio: ref.read(dioProvider)));
 });
 
 final loadChatWindowUseCaseProvider = Provider<LoadChatWindowUseCase>((ref) {
@@ -197,19 +179,13 @@ final chatMediaControllerProvider =
       );
     });
 
-final chatReceiptControllerProvider = Provider<ChatReceiptController>((ref) {
-  return ChatReceiptController();
+// ChatReceiptController 已替换为轻量 StateProvider，避免过度封装
+final chatReceiptLastVisibleChatIdProvider = StateProvider<String?>((ref) {
+  return null;
 });
 
-final chatMorePanelControllerProvider =
-    Provider.autoDispose<ChatMorePanelController>((ref) {
-      return ChatMorePanelController(
-        ref.read(chatMediaControllerProvider.notifier),
-      );
-    });
-
 final chatMessageActionControllerProvider =
-    Provider<ChatMessageActionController>((ref) {
+    Provider.autoDispose<ChatMessageActionController>((ref) {
       return ChatMessageActionController(
         ref.read(messageRepositoryProvider),
         ref.read(chatTimelineControllerProvider.notifier),
@@ -224,7 +200,7 @@ final chatComposerControllerProvider =
     });
 
 final chatTimelineControllerProvider =
-    StateNotifierProvider<ChatTimelineController, ChatTimelineState>((ref) {
+    StateNotifierProvider.autoDispose<ChatTimelineController, ChatTimelineState>((ref) {
       return ChatTimelineController(
         ref.read(loadChatWindowUseCaseProvider),
         ref.read(loadOlderMessagesUseCaseProvider),
@@ -232,7 +208,7 @@ final chatTimelineControllerProvider =
     });
 
 final chatControllerProvider =
-    StateNotifierProvider<ChatController, ChatPageState>((ref) {
+    StateNotifierProvider.autoDispose<ChatController, ChatPageState>((ref) {
       return ChatController(
         ref.read(openChatUseCaseProvider),
         ref.read(sendMessageUseCaseProvider),
@@ -241,6 +217,5 @@ final chatControllerProvider =
         createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
         ref.read(chatTimelineControllerProvider.notifier),
-        ref.read(chatReceiptControllerProvider),
       );
     });

@@ -15,6 +15,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dar
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/read_receipt_summary.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/read_receipt_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';

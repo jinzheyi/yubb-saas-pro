@@ -9,19 +9,15 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/data
 import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/repositories/conversation_repository_impl.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
-
-final conversationRemoteDataSourceProvider =
-    Provider<ConversationRemoteDataSource>((ref) {
-      final currentUserId = ref.read(authSessionProvider).userId;
-      return ConversationRemoteDataSource(
-        dio: ref.read(dioProvider),
-        currentUserId: currentUserId,
-      );
-    });
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
+  final currentUserId = ref.read(authSessionProvider).userId;
   return ConversationRepositoryImpl(
-    ref.read(conversationRemoteDataSourceProvider),
+    ConversationRemoteDataSource(
+      dio: ref.read(dioProvider),
+      currentUserId: currentUserId,
+    ),
   );
 });
 
@@ -55,19 +51,36 @@ final conversationListControllerProvider =
         ref.read(conversationSyncCoordinatorProvider),
         ref.read(syncConversationsIncrementallyUseCaseProvider),
         ref.read(conversationRepositoryProvider),
+        ref.read(activeConversationServiceProvider.notifier),
       );
     });
 
-/// 所有会话的未读消息总数
-final totalUnreadCountProvider = Provider<int>((ref) {
+/// 未读消息统计汇总（一次遍历，避免重复计算）
+class UnreadCountSummary {
+  final int total;
+  final int mutedTotal;
+  const UnreadCountSummary({required this.total, required this.mutedTotal});
+}
+
+final unreadCountSummaryProvider = Provider<UnreadCountSummary>((ref) {
   final conversations = ref.watch(conversationListControllerProvider).conversations;
-  return conversations.fold<int>(0, (sum, c) => sum + c.unreadCount);
+  int total = 0;
+  int mutedTotal = 0;
+  for (final c in conversations) {
+    total += c.unreadCount;
+    if (c.isMuted) mutedTotal += c.unreadCount;
+  }
+  return UnreadCountSummary(total: total, mutedTotal: mutedTotal);
 });
 
-/// 仅免打扰会话的未读消息总数
+/// @deprecated 使用 unreadCountSummaryProvider 替代
+@Deprecated('Use unreadCountSummaryProvider instead')
+final totalUnreadCountProvider = Provider<int>((ref) {
+  return ref.watch(unreadCountSummaryProvider).total;
+});
+
+/// @deprecated 使用 unreadCountSummaryProvider 替代
+@Deprecated('Use unreadCountSummaryProvider instead')
 final totalMutedUnreadCountProvider = Provider<int>((ref) {
-  final conversations = ref.watch(conversationListControllerProvider).conversations;
-  return conversations
-      .where((c) => c.isMuted)
-      .fold<int>(0, (sum, c) => sum + c.unreadCount);
+  return ref.watch(unreadCountSummaryProvider).mutedTotal;
 });

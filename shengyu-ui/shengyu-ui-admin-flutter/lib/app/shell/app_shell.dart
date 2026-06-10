@@ -5,6 +5,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -54,6 +55,7 @@ class _AppBottomNavigationBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final badgeState = ref.watch(badgeServiceProvider);
+    final messagesTabBadge = ref.watch(effectiveMessagesTabBadgeProvider);
 
     final items = <_ShellNavItem>[
       _ShellNavItem(
@@ -62,7 +64,7 @@ class _AppBottomNavigationBar extends ConsumerWidget {
         icon: AppIconKind.chatOutline,
         activeIcon: AppIconKind.chatFill,
         label: strings.tabConversations,
-        badgeCount: badgeState.conversationsTabBadge,
+        badgeCount: messagesTabBadge,
       ),
       _ShellNavItem(
         location: RoutePaths.contacts,

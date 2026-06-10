@@ -13,18 +13,21 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/coordinators/conversation_sync_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 
 class ConversationListController extends StateNotifier<ConversationListState> {
   ConversationListController(
     this._conversationSyncCoordinator,
     this._syncConversationsIncrementallyUseCase,
     this._conversationRepository,
+    this.activeConversationService,
   ) : super(const ConversationListState());
 
   final ConversationSyncCoordinator _conversationSyncCoordinator;
   final SyncConversationsIncrementallyUseCase
   _syncConversationsIncrementallyUseCase;
   final ConversationRepository _conversationRepository;
+  final ActiveConversationService activeConversationService;
 
   Future<AppError?> load() async {
     // Skip API call if data already exists - prevents data loss on tab switch
@@ -382,6 +385,21 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
   }
 
+  /// 激活对话（进入对话页时调用）
+  void activateChat(String chatId) {
+    final items = state.conversations;
+    final index = items.indexWhere((item) => item.chatId == chatId);
+    final unreadCount = index >= 0 ? items[index].unreadCount : 0;
+    activeConversationService.activateChat(chatId, unreadCount: unreadCount);
+  }
+
+  /// 注销对话（离开对话页时调用）
+  void deactivateChat(String chatId) {
+    if (activeConversationService.isActive(chatId)) {
+      activeConversationService.deactivateChat();
+    }
+  }
+
   void patchPresence({
     required String chatId,
     required bool online,
@@ -524,8 +542,11 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       final item = items[index];
       final serverUnread = conversationBadges[item.chatId] ?? 0;
       if (serverUnread > 0) {
-        if (item.unreadCount != serverUnread) {
-          items[index] = item.copyWith(unreadCount: serverUnread);
+        // 对正在查看的对话，强制清零角标
+        final isActive = activeConversationService.isActive(item.chatId);
+        final expectedUnread = isActive ? 0 : serverUnread;
+        if (item.unreadCount != expectedUnread) {
+          items[index] = item.copyWith(unreadCount: expectedUnread);
           changed = true;
         }
         continue;

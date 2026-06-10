@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 
 // ============================================================
 // 类型定义
@@ -281,6 +282,11 @@ class BadgeService extends StateNotifier<BadgeState> {
       }
     }
 
+    // 性能优化：仅当数据真正变化时才更新状态
+    if (next == state) {
+      return;
+    }
+
     state = next;
     _debouncedNotify();
     _throttledPersist();
@@ -358,4 +364,21 @@ final badgeServiceProvider = StateNotifierProvider<BadgeService, BadgeState>((
   ref,
 ) {
   return BadgeService();
+});
+
+/// 计算后的Tab消息角标（扣除活跃对话未读数）
+///
+/// 当用户正在查看某个对话时，该对话的未读数不应计入Tab栏总角标。
+/// 这样用户在对话页收到新消息时，Tab角标不会增加（因为用户正在阅读）。
+final effectiveMessagesTabBadgeProvider = Provider<int>((ref) {
+  final badgeState = ref.watch(badgeServiceProvider);
+  final activeState = ref.watch(activeConversationServiceProvider);
+
+  if (!activeState.isViewing || activeState.currentChatId == null) {
+    return badgeState.conversationsTabBadge;
+  }
+
+  final activeChatUnread = badgeState.conversationBadges[activeState.currentChatId!] ?? 0;
+  final totalUnread = badgeState.totalUnreadCount;
+  return (totalUnread - activeChatUnread).clamp(0, totalUnread);
 });
