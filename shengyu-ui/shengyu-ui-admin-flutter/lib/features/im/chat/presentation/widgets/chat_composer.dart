@@ -65,19 +65,10 @@ class ChatComposer extends StatelessWidget {
     leading: 0,
     forceStrutHeight: true,
   );
+
   @override
   Widget build(BuildContext context) {
     final controller = composer.textController;
-    final fullExpandedEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
-      fontSize: 16,
-      emojiSize: 20,
-      horizontalMargin: 0.5,
-    );
-    final composerEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
-      fontSize: 15,
-      emojiSize: 18,
-      horizontalMargin: 0.5,
-    );
     final composerFillColor = ThemeColors.inputFill(context);
     final composerBorder = OutlineInputBorder(
       borderRadius: const BorderRadius.all(Radius.circular(4)),
@@ -98,6 +89,18 @@ class ChatComposer extends StatelessWidget {
       height: 24 / 16,
       color: ThemeColors.textPrimary(context),
     );
+
+    final fullExpandedEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
+      fontSize: 16,
+      emojiSize: 20,
+      horizontalMargin: 0.5,
+    );
+    final composerEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
+      fontSize: 15,
+      emojiSize: 18,
+      horizontalMargin: 0.5,
+    );
+
     if (fullExpanded) {
       return SafeArea(
         top: false,
@@ -111,7 +114,10 @@ class ChatComposer extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(color: ThemeColors.divider(context), width: 0.5),
+                    bottom: BorderSide(
+                      color: ThemeColors.divider(context),
+                      width: 0.5,
+                    ),
                   ),
                 ),
                 child: GestureDetector(
@@ -134,39 +140,39 @@ class ChatComposer extends StatelessWidget {
                         child: SizedBox(
                           width: double.infinity,
                           child: ExtendedTextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          specialTextSpanBuilder: fullExpandedEmojiBuilder,
-                          expands: true,
-                          maxLines: null,
-                          minLines: null,
-                          textAlignVertical: TextAlignVertical.top,
-                          strutStyle: const StrutStyle(
-                            fontSize: 16,
-                            height: 24 / 16,
-                            leading: 0,
-                            forceStrutHeight: true,
-                          ),
-                          onTap: onTapInput,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: composerFillColor,
-                            hintText: '',
-                            contentPadding: const EdgeInsets.fromLTRB(
-                              12,
-                              12,
-                              12,
-                              12,
+                            controller: controller,
+                            focusNode: focusNode,
+                            specialTextSpanBuilder: fullExpandedEmojiBuilder,
+                            expands: true,
+                            maxLines: null,
+                            minLines: null,
+                            textAlignVertical: TextAlignVertical.top,
+                            strutStyle: const StrutStyle(
+                              fontSize: 16,
+                              height: 24 / 16,
+                              leading: 0,
+                              forceStrutHeight: true,
                             ),
-                            enabledBorder: composerBorder,
-                            focusedBorder: composerBorder,
-                            border: composerBorder,
-                            hintStyle: composerHintStyle,
-                          ).copyWith(hintText: hintText),
-                          style: fullExpandedInputStyle,
-                          inputFormatters: composer.inputFormatters,
-                          onChanged: onChanged,
-                        ),
+                            onTap: onTapInput,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: composerFillColor,
+                              hintText: '',
+                              contentPadding: const EdgeInsets.fromLTRB(
+                                12,
+                                12,
+                                12,
+                                12,
+                              ),
+                              enabledBorder: composerBorder,
+                              focusedBorder: composerBorder,
+                              border: composerBorder,
+                              hintStyle: composerHintStyle,
+                            ).copyWith(hintText: hintText),
+                            style: fullExpandedInputStyle,
+                            inputFormatters: composer.inputFormatters,
+                            onChanged: onChanged,
+                          ),
                         ),
                       ),
                       SizedBox(
@@ -182,49 +188,50 @@ class ChatComposer extends StatelessWidget {
                             ValueListenableBuilder<TextEditingValue>(
                               valueListenable: controller,
                               builder: (context, value, child) {
-                                final canSend =
-                                    value.text.trim().isNotEmpty && !isSending;
-                                if (!canSend) {
-                                  return _PlainToolButton(
-                                    icon: AppIconKind.add,
-                                    onTap: isSending
-                                        ? null
-                                        : onOpenAttachmentMenu,
+                                final hasText = value.text.trim().isNotEmpty;
+                                if (isSending || hasText) {
+                                  // During sending or when text exists, always show green button
+                                  return SizedBox(
+                                    height: 32,
+                                    child: FilledButton(
+                                      onPressed:
+                                          (hasText && !isSending)
+                                              ? () => onSend(value.text)
+                                              : null,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFF07C160),
+                                        minimumSize: const Size(56, 32),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                      ),
+                                      child: isSending
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              ).chatForwardDialogSend,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                    ),
                                   );
                                 }
-                                return SizedBox(
-                                  height: 32,
-                                  child: FilledButton(
-                                    onPressed: () => onSend(value.text),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF07C160),
-                                      minimumSize: const Size(56, 32),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                    child: isSending
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            AppLocalizations.of(
-                                              context,
-                                            ).chatForwardDialogSend,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                  ),
+                                return _PlainToolButton(
+                                  icon: AppIconKind.add,
+                                  onTap: onOpenAttachmentMenu,
                                 );
                               },
                             ),
@@ -240,12 +247,18 @@ class ChatComposer extends StatelessWidget {
         ),
       );
     }
+
     return SafeArea(
       top: false,
       child: Container(
         decoration: BoxDecoration(
           color: ThemeColors.surface(context),
-          border: Border(top: BorderSide(color: ThemeColors.divider(context), width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: ThemeColors.divider(context),
+              width: 1,
+            ),
+          ),
         ),
         padding: const EdgeInsets.only(bottom: 2),
         child: Column(
@@ -400,7 +413,9 @@ class _HoldToTalkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = isRecording ? (isCancelReady ? '松开取消' : '松开发送') : '按住说话';
+    final label = isRecording
+        ? (isCancelReady ? '松开取消' : '松开发送')
+        : '按住说话';
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: enabled ? (event) => onPressStart(event.position) : null,
@@ -428,7 +443,9 @@ class _HoldToTalkButton extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: !enabled
                 ? ThemeColors.textSecondary(context)
-                : (isRecording ? Colors.white : ThemeColors.textPrimary(context)),
+                : (isRecording
+                    ? Colors.white
+                    : ThemeColors.textPrimary(context)),
           ),
         ),
       ),
@@ -451,7 +468,10 @@ class _QuoteReplyBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: ThemeColors.surfaceDim(context),
         border: Border(
-          top: BorderSide(color: ThemeColors.divider(context), width: 0.5),
+          top: BorderSide(
+            color: ThemeColors.divider(context),
+            width: 0.5,
+          ),
         ),
       ),
       child: Row(
@@ -540,9 +560,15 @@ class _PlainToolButton extends StatelessWidget {
         height: 40,
         child: icon is AppIconKind
             ? Center(
-                child: AppIcon(icon as AppIconKind, size: 24, color: iconColor),
+                child: AppIcon(
+                  icon as AppIconKind,
+                  size: 24,
+                  color: iconColor,
+                ),
               )
-            : Center(child: Icon(icon as IconData, size: 24, color: iconColor)),
+            : Center(
+                child: Icon(icon as IconData, size: 24, color: iconColor),
+              ),
       ),
     );
   }

@@ -422,10 +422,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       quoteInfo: _quoteInfo,
       onClearQuote: _clearQuoteReply,
       onTapInput: () {
-        if (_isMorePanelVisible || _isEmojiPanelVisible) {
+        if (_isMorePanelVisible) {
           setState(() {
             _isMorePanelVisible = false;
-            _isEmojiPanelVisible = false;
           });
         }
       },
@@ -490,11 +489,28 @@ class _ChatPageState extends ConsumerState<ChatPage>
         if (!_ensureConversationWritable(context)) {
           return;
         }
-        final mentionPayload = _buildMentionPayload(value);
+        // Clear composer synchronously before sending to avoid text overlap
+        // with the optimistic message in the timeline.
+        final trimmedValue = value.trim();
+        if (trimmedValue.isEmpty) {
+          return;
+        }
+        composer.clear();
+        _updateComposerLineCount('');
+        _clearQuoteReply();
+        _resetMentionState();
+        if (_isMorePanelVisible || _isEmojiPanelVisible || _isFullExpanded) {
+          setState(() {
+            _isMorePanelVisible = false;
+            _isEmojiPanelVisible = false;
+            _isFullExpanded = false;
+          });
+        }
+        final mentionPayload = _buildMentionPayload(trimmedValue);
         final sent = await ref
             .read(chatControllerProvider.notifier)
             .sendText(
-              value,
+              trimmedValue,
               quoteInfo: _quoteInfo,
               atUserIds: mentionPayload.atUserIds,
               mentions: mentionPayload.mentions,
@@ -517,17 +533,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
             errorMessage.isNotEmpty ? errorMessage : strings.messageFailed,
           );
           return;
-        }
-        composer.clear();
-        _updateComposerLineCount('');
-        _clearQuoteReply();
-        _resetMentionState();
-        if (_isMorePanelVisible || _isEmojiPanelVisible || _isFullExpanded) {
-          setState(() {
-            _isMorePanelVisible = false;
-            _isEmojiPanelVisible = false;
-            _isFullExpanded = false;
-          });
         }
       },
       onOpenAttachmentMenu: () {
