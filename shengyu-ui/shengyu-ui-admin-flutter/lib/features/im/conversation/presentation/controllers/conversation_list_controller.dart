@@ -48,6 +48,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       final result = await _conversationSyncCoordinator.bootstrap(
         cursorVersion: state.cursorVersion,
       );
+      if (!mounted) return null;
       // When bootstrap returns empty items, it means the cursor is already up-to-date.
       // Preserve existing conversations instead of replacing them with an empty list.
       final nextConversations = result.items.isEmpty
@@ -60,6 +61,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       );
       return null;
     } catch (error, stackTrace) {
+      if (!mounted) return null;
       final appError = AppErrorMapper.map(error, stackTrace);
       state = state.copyWith(
         status: ConversationListStatus.failed,
@@ -74,6 +76,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       final result = await _syncConversationsIncrementallyUseCase(
         cursorVersion: state.cursorVersion,
       );
+      if (!mounted) return null;
       // Only update conversations if server returns new data
       // When cursorVersion is up-to-date, server returns empty items
       // We should preserve existing conversations instead of clearing them
@@ -90,6 +93,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       );
       return null;
     } catch (error, stackTrace) {
+      if (!mounted) return null;
       final appError = AppErrorMapper.map(error, stackTrace);
       state = state.copyWith(
         status: ConversationListStatus.failed,
