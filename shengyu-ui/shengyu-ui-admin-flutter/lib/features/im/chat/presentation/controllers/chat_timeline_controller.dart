@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/services/message_sem
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/load_chat_window_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/load_older_messages_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_timeline_state.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -216,12 +217,19 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   void applyReadReceipt({required String messageId}) {
-    final nextMessages = state.messages.map((item) {
-      if (item.messageId != messageId) {
-        return item;
-      }
-      return item.copyWith(status: MessageStatus.read);
-    }).toList();
+    final index = state.messages.indexWhere(
+      (item) =>
+          item.messageId == messageId || item.clientMessageId == messageId,
+    );
+    if (index < 0) {
+      return;
+    }
+    final target = state.messages[index];
+    if (target.status == MessageStatus.read) {
+      return;
+    }
+    final nextMessages = [...state.messages];
+    nextMessages[index] = target.copyWith(status: MessageStatus.read);
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
@@ -385,12 +393,25 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     if (existing.isEmpty || incoming.isEmpty) {
       return incoming;
     }
-    return incoming
-        .map((message) {
-          final matched = _findMatchingMessage(existing, message);
-          return matched == null ? message : _mergeMessage(matched, message);
-        })
-        .toList(growable: false);
+
+    // 构建哈希索引表，将查找复杂度从 O(n) 降至 O(1)
+    final existingIndex = <String, Message>{};
+    for (final item in existing) {
+      if (item.messageId.isNotEmpty) {
+        existingIndex[item.messageId] = item;
+      }
+      final cid = item.clientMessageId;
+      if (cid != null && cid.isNotEmpty) {
+        existingIndex[cid] = item;
+      }
+    }
+
+    final result = <Message>[];
+    for (final message in incoming) {
+      final matched = _findMatchedByHash(message, existingIndex);
+      result.add(matched == null ? message : _mergeMessage(matched, message));
+    }
+    return result;
   }
 
   List<Message> _mergeOlderMessages({
@@ -400,13 +421,41 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     if (older.isEmpty) {
       return existing;
     }
-    final mergedOlder = _mergeWindowMessages(
-      existing: existing,
-      incoming: older,
-    );
+
+    // 构建 older 消息的哈希索引
+    final olderIndex = <String, Message>{};
+    for (final item in older) {
+      if (item.messageId.isNotEmpty) {
+        olderIndex[item.messageId] = item;
+      }
+      final cid = item.clientMessageId;
+      if (cid != null && cid.isNotEmpty) {
+        olderIndex[cid] = item;
+      }
+    }
+
+    // 1. 合并 older 消息（用 existing 中的匹配项增强）
+    final existingIndex = <String, Message>{};
+    for (final item in existing) {
+      if (item.messageId.isNotEmpty) {
+        existingIndex[item.messageId] = item;
+      }
+      final cid = item.clientMessageId;
+      if (cid != null && cid.isNotEmpty) {
+        existingIndex[cid] = item;
+      }
+    }
+
+    final mergedOlder = <Message>[];
+    for (final message in older) {
+      final matched = _findMatchedByHash(message, existingIndex);
+      mergedOlder.add(matched == null ? message : _mergeMessage(matched, message));
+    }
+
+    // 2. 追加 existing 中未匹配的消息（使用 olderIndex O(1) 查找）
     final nextMessages = <Message>[...mergedOlder];
     for (final message in existing) {
-      if (_findMatchingMessage(nextMessages, message) != null) {
+      if (_findMatchedByHash(message, olderIndex) != null) {
         continue;
       }
       nextMessages.add(message);
@@ -414,10 +463,30 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     return nextMessages;
   }
 
-  Message? _findMatchingMessage(List<Message> items, Message target) {
-    for (final item in items) {
-      if (_isSameMessage(item, target)) {
-        return item;
+  /// 通过哈希索引表快速查找匹配消息（O(1) 复杂度）
+  Message? _findMatchedByHash(
+    Message target,
+    Map<String, Message> index,
+  ) {
+    if (target.messageId.isNotEmpty) {
+      final matched = index[target.messageId];
+      if (matched != null && _isSameMessage(matched, target)) {
+        return matched;
+      }
+    }
+    final cid = target.clientMessageId;
+    if (cid != null && cid.isNotEmpty) {
+      final matched = index[cid];
+      if (matched != null && _isSameMessage(matched, target)) {
+        return matched;
+      }
+    }
+    // 序列号匹配（兜底）
+    final seq = target.sequence;
+    if (seq != null && seq.isNotEmpty) {
+      final matched = index[seq];
+      if (matched != null && _isSameMessage(matched, target)) {
+        return matched;
       }
     }
     return null;
@@ -650,22 +719,20 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     return preferred;
   }
 
-  dynamic _pickMeaningful(dynamic preferred, dynamic fallback) {
+  String? _pickMeaningfulString(String? preferred, String? fallback) {
     if (preferred == null) {
       return fallback;
     }
-    if (preferred is String) {
-      final normalized = preferred.trim();
-      if (normalized.isEmpty || normalized == '0' || normalized == 'null') {
-        return fallback;
-      }
+    final normalized = preferred.trim();
+    if (normalized.isEmpty || normalized == '0' || normalized == 'null') {
+      return fallback;
     }
     return preferred;
   }
 
-  dynamic _preferTrue(dynamic preferred, dynamic fallback) {
+  T? _preferTrue<T>(T? preferred, T? fallback) {
     if (preferred == true) {
-      return true;
+      return preferred;
     }
     if (preferred != null) {
       return preferred;
@@ -673,7 +740,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     return fallback;
   }
 
-  dynamic _preferPositive(dynamic preferred, dynamic fallback) {
+  T? _preferPositive<T>(T? preferred, T? fallback) {
     if (preferred is num && preferred > 0) {
       return preferred;
     }
@@ -683,147 +750,79 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     return fallback;
   }
 
-  dynamic _preferList(dynamic preferred, dynamic fallback) {
-    if (preferred is List && preferred.isNotEmpty) {
+  List<T>? _preferList<T>(List<T>? preferred, List<T>? fallback) {
+    if (preferred != null && preferred.isNotEmpty) {
       return preferred;
     }
     return fallback ?? preferred;
   }
 
-  dynamic _preferMentions(dynamic preferred, dynamic fallback) {
-    if (preferred is List && preferred.isNotEmpty) {
+  List<T>? _preferMentions<T>(List<T>? preferred, List<T>? fallback) {
+    if (preferred != null && preferred.isNotEmpty) {
       return preferred;
     }
     return fallback ?? preferred;
   }
 
-  dynamic _mergeExtra(Message previous, Message next) {
-    return previous.extra.copyWith(
-      revision: _pickNonEmpty(next.extra.revision, previous.extra.revision),
-      localId: _pickNonEmpty(next.extra.localId, previous.extra.localId),
-      localPath: _pickNonEmpty(next.extra.localPath, previous.extra.localPath),
-      fileId: _pickNonEmpty(next.extra.fileId, previous.extra.fileId),
-      fileUrl: _pickNonEmpty(next.extra.fileUrl, previous.extra.fileUrl),
-      thumbnailUrl: _pickNonEmpty(
-        next.extra.thumbnailUrl,
-        previous.extra.thumbnailUrl,
-      ),
-      mimeType: _pickNonEmpty(next.extra.mimeType, previous.extra.mimeType),
-      fileName: _pickNonEmpty(next.extra.fileName, previous.extra.fileName),
-      fileType: _pickNonEmpty(next.extra.fileType, previous.extra.fileType),
-      fileSize:
-          _preferPositive(next.extra.fileSize, previous.extra.fileSize) as int?,
-      width: _preferPositive(next.extra.width, previous.extra.width) as int?,
-      height: _preferPositive(next.extra.height, previous.extra.height) as int?,
-      duration:
-          _preferPositive(next.extra.duration, previous.extra.duration) as int?,
-      durationMs:
-          _preferPositive(next.extra.durationMs, previous.extra.durationMs)
-              as int?,
-      voicePlayed:
-          _preferTrue(next.extra.voicePlayed, previous.extra.voicePlayed)
-              as bool?,
-      md5: _pickNonEmpty(next.extra.md5, previous.extra.md5),
-      customType: _pickNonEmpty(
-        next.extra.customType,
-        previous.extra.customType,
-      ),
-      contactUserId: _pickNonEmpty(
-        next.extra.contactUserId,
-        previous.extra.contactUserId,
-      ),
+  MessageExtra _mergeExtra(Message previous, Message next) {
+    final p = previous.extra;
+    final n = next.extra;
+    return p.copyWith(
+      revision: _pickNonEmpty(n.revision, p.revision),
+      localId: _pickNonEmpty(n.localId, p.localId),
+      localPath: _pickNonEmpty(n.localPath, p.localPath),
+      fileId: _pickNonEmpty(n.fileId, p.fileId),
+      fileUrl: _pickNonEmpty(n.fileUrl, p.fileUrl),
+      thumbnailUrl: _pickNonEmpty(n.thumbnailUrl, p.thumbnailUrl),
+      mimeType: _pickNonEmpty(n.mimeType, p.mimeType),
+      fileName: _pickNonEmpty(n.fileName, p.fileName),
+      fileType: _pickNonEmpty(n.fileType, p.fileType),
+      fileSize: _preferPositive(n.fileSize, p.fileSize),
+      width: _preferPositive(n.width, p.width),
+      height: _preferPositive(n.height, p.height),
+      duration: _preferPositive(n.duration, p.duration),
+      durationMs: _preferPositive(n.durationMs, p.durationMs),
+      voicePlayed: _preferTrue(n.voicePlayed, p.voicePlayed),
+      md5: _pickNonEmpty(n.md5, p.md5),
+      customType: _pickNonEmpty(n.customType, p.customType),
+      contactUserId: _pickNonEmpty(n.contactUserId, p.contactUserId),
       contactDisplayName: _pickNonEmpty(
-        next.extra.contactDisplayName,
-        previous.extra.contactDisplayName,
+        n.contactDisplayName,
+        p.contactDisplayName,
       ),
       contactDepartmentName: _pickNonEmpty(
-        next.extra.contactDepartmentName,
-        previous.extra.contactDepartmentName,
+        n.contactDepartmentName,
+        p.contactDepartmentName,
       ),
-      contactPostName: _pickNonEmpty(
-        next.extra.contactPostName,
-        previous.extra.contactPostName,
+      contactPostName: _pickNonEmpty(n.contactPostName, p.contactPostName),
+      contactAvatar: _pickNonEmpty(n.contactAvatar, p.contactAvatar),
+      locationName: _pickNonEmpty(n.locationName, p.locationName),
+      locationAddress: _pickNonEmpty(n.locationAddress, p.locationAddress),
+      locationLatitude: _preferPositive(n.locationLatitude, p.locationLatitude),
+      locationLongitude: _preferPositive(
+        n.locationLongitude,
+        p.locationLongitude,
       ),
-      contactAvatar: _pickNonEmpty(
-        next.extra.contactAvatar,
-        previous.extra.contactAvatar,
+      locationProvider: _pickNonEmpty(n.locationProvider, p.locationProvider),
+      locationPoiId: _pickNonEmpty(n.locationPoiId, p.locationPoiId),
+      quoteMessageId: _pickMeaningfulString(
+        n.quoteMessageId,
+        p.quoteMessageId,
       ),
-      locationName: _pickNonEmpty(
-        next.extra.locationName,
-        previous.extra.locationName,
+      quoteContent: _pickMeaningfulString(n.quoteContent, p.quoteContent),
+      quoteSenderName: _pickMeaningfulString(
+        n.quoteSenderName,
+        p.quoteSenderName,
       ),
-      locationAddress: _pickNonEmpty(
-        next.extra.locationAddress,
-        previous.extra.locationAddress,
+      forwardedFrom: _pickMeaningfulString(n.forwardedFrom, p.forwardedFrom),
+      atUserIds: _preferList(n.atUserIds, p.atUserIds) ?? const <String>[],
+      mentions: _preferMentions(n.mentions, p.mentions) ?? const [],
+      reeditContent: _pickMeaningfulString(n.reeditContent, p.reeditContent),
+      reeditDeadlineTs: _preferPositive(
+        n.reeditDeadlineTs,
+        p.reeditDeadlineTs,
       ),
-      locationLatitude:
-          _preferPositive(
-                next.extra.locationLatitude,
-                previous.extra.locationLatitude,
-              )
-              as double?,
-      locationLongitude:
-          _preferPositive(
-                next.extra.locationLongitude,
-                previous.extra.locationLongitude,
-              )
-              as double?,
-      locationProvider: _pickNonEmpty(
-        next.extra.locationProvider,
-        previous.extra.locationProvider,
-      ),
-      locationPoiId: _pickNonEmpty(
-        next.extra.locationPoiId,
-        previous.extra.locationPoiId,
-      ),
-      quoteMessageId:
-          _pickMeaningful(
-                next.extra.quoteMessageId,
-                previous.extra.quoteMessageId,
-              )
-              as String?,
-      quoteContent:
-          _pickMeaningful(next.extra.quoteContent, previous.extra.quoteContent)
-              as String?,
-      quoteSenderName:
-          _pickMeaningful(
-                next.extra.quoteSenderName,
-                previous.extra.quoteSenderName,
-              )
-              as String?,
-      forwardedFrom:
-          _pickMeaningful(
-                next.extra.forwardedFrom,
-                previous.extra.forwardedFrom,
-              )
-              as String?,
-      atUserIds:
-          (_preferList(next.extra.atUserIds, previous.extra.atUserIds)
-              as List<String>?) ??
-          const <String>[],
-      mentions:
-          (_preferMentions(next.extra.mentions, previous.extra.mentions)
-                  as List?)
-              ?.cast() ??
-          const [],
-      reeditContent:
-          _pickMeaningful(
-                next.extra.reeditContent,
-                previous.extra.reeditContent,
-              )
-              as String?,
-      reeditDeadlineTs:
-          _preferPositive(
-                next.extra.reeditDeadlineTs,
-                previous.extra.reeditDeadlineTs,
-              )
-              as int?,
-      systemEventKey:
-          _pickMeaningful(
-                next.extra.systemEventKey,
-                previous.extra.systemEventKey,
-              )
-              as String?,
+      systemEventKey: _pickMeaningfulString(n.systemEventKey, p.systemEventKey),
     );
   }
 }

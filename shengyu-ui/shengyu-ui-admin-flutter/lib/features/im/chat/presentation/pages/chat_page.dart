@@ -102,6 +102,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
   static const int _voiceDurationOverflowToleranceMs = 1500;
   static const double _voiceCancelThreshold = 60;
   static const Duration _voicePlayedSyncDebounce = Duration(milliseconds: 300);
+  static final _directUrlPattern = RegExp(r'^https?:\/\/\S+$', caseSensitive: false);
+  static final _wwwUrlPattern = RegExp(r'^www\.\S+$', caseSensitive: false);
   static const Duration _voicePlayedCompensateInterval = Duration(seconds: 12);
   static const int _voicePlayedSyncBatchSize = 30;
   static const int _voicePlayedCompensateMaxIds = 80;
@@ -160,6 +162,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   double _lastViewInsetsBottom = 0;
   late final ScrollController _timelineScrollController;
   final Map<String, GlobalKey> _messageItemKeys = <String, GlobalKey>{};
+  int _lastSyncedMessageCount = 0;
   final Set<String> _transientSystemNotifyKeys = <String>{};
   double _lastTimelineScrollTop = 0;
   int _lastHistoryLoadTriggerAt = 0;
@@ -394,15 +397,20 @@ class _ChatPageState extends ConsumerState<ChatPage>
       members: groupMembers,
       currentUserId: currentUserId,
     );
-    final timelineMessageKeys = <String, GlobalKey>{
-      for (var index = 0; index < timelineState.messages.length; index++)
-        _messageRenderKey(
-          timelineState.messages[index],
-          index,
-        ): _ensureMessageItemKey(
-          _messageRenderKey(timelineState.messages[index], index),
-        ),
-    };
+    // 增量同步消息 Key：仅处理新增消息，避免每次 build 遍历全量消息
+    final currentCount = timelineState.messages.length;
+    if (currentCount != _lastSyncedMessageCount) {
+      final start = _lastSyncedMessageCount > 0 && currentCount > _lastSyncedMessageCount
+          ? _lastSyncedMessageCount
+          : 0;
+      for (var index = start; index < currentCount; index++) {
+        final msg = timelineState.messages[index];
+        final renderKey = _messageRenderKey(msg, index);
+        _messageItemKeys.putIfAbsent(renderKey, GlobalKey.new);
+      }
+      _lastSyncedMessageCount = currentCount;
+    }
+    final timelineMessageKeys = _messageItemKeys;
     final filteredMentionMembers = _filterMentionMembers(
       members: groupMembers,
       keyword: _mentionKeyword,
@@ -2257,7 +2265,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
             .read(fileRepositoryProvider)
             .getPresignedGetUrl(fileId: fileId);
         url = signed.toString();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[ChatPage] get presigned url failed: $e');
+      }
     }
     if (url.trim().isEmpty) {
       if (context.mounted) {
@@ -3631,9 +3641,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (value.isEmpty) {
       return false;
     }
-    final directUrl = RegExp(r'^https?:\/\/\S+$', caseSensitive: false);
-    final wwwUrl = RegExp(r'^www\.\S+$', caseSensitive: false);
-    return directUrl.hasMatch(value) || wwwUrl.hasMatch(value);
+    return _directUrlPattern.hasMatch(value) || _wwwUrlPattern.hasMatch(value);
   }
 
   Map<String, dynamic>? _tryParseJsonObject(String raw) {
@@ -3651,7 +3659,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (decoded is Map) {
         return decoded.map((key, value) => MapEntry(key.toString(), value));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ChatPage] jsonDecode failed: $e');
+    }
     return null;
   }
 
@@ -4713,16 +4723,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
     return null;
   }
 
-  GlobalKey _ensureMessageItemKey(String messageKey) {
-    final normalized = messageKey.trim();
-    return _messageItemKeys.putIfAbsent(normalized, GlobalKey.new);
-  }
-
   String _messageRenderKey(Message message, int index) {
     final messageId = message.messageId.trim();
     final clientMessageId = message.clientMessageId?.trim() ?? '';
     final sequence = message.sequence?.trim() ?? '';
-    // 使用稳定标识符，不依赖索引，避免加载历史消息后 key 失效
+    // 优先使用稳定标识符（sequence > messageId > clientMessageId），
+    // 避免加载历史消息后 key 失效导致滚动位置错乱。
     if (sequence.isNotEmpty) {
       return 'seq:$sequence';
     }
@@ -4735,7 +4741,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (clientMessageId.isNotEmpty) {
       return 'cid:$clientMessageId';
     }
-    return 'idx:$index@${message.sentAt.microsecondsSinceEpoch}';
+    // 兜底：使用 content hash + sentAt 生成稳定 key，避免索引漂移
+    final contentHash = message.content.hashCode;
+    return 'hash:${contentHash}_${message.sentAt.microsecondsSinceEpoch}';
   }
 
   bool _handleGroupLifecycleRequestError(

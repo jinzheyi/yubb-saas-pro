@@ -204,14 +204,37 @@ class ConversationListController extends StateNotifier<ConversationListState> {
           );
 
     if (index >= 0) {
+      // 已存在会话：增量更新，避免全量排序+去重
+      final previous = items[index];
       items[index] = next;
+      final needsResort =
+          previous.isPinned != next.isPinned ||
+          !previous.updatedAt.isAtSameMomentAs(next.updatedAt);
+
+      if (needsResort) {
+        // 置顶状态或时间变更，使用插入排序代替全量排序
+        items.removeAt(index);
+        final newIndex = _findInsertionIndex(items, next);
+        items.insert(newIndex, next);
+        state = state.copyWith(
+          status: ConversationListStatus.ready,
+          conversations: items,
+        );
+      } else {
+        // 仅更新消息预览，不触发重排
+        state = state.copyWith(
+          status: ConversationListStatus.ready,
+          conversations: items,
+        );
+      }
     } else {
+      // 新会话：需要排序去重
       items.add(next);
+      state = state.copyWith(
+        status: ConversationListStatus.ready,
+        conversations: _sortConversations(_dedupeConversations(items)),
+      );
     }
-    state = state.copyWith(
-      status: ConversationListStatus.ready,
-      conversations: _sortConversations(_dedupeConversations(items)),
-    );
   }
 
   void upsertFromSnapshot({
@@ -584,6 +607,24 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       return right.updatedAt.compareTo(left.updatedAt);
     });
     return items;
+  }
+
+  /// 查找插入位置（假设列表已按置顶+时间排序）
+  int _findInsertionIndex(List<Conversation> items, Conversation item) {
+    for (var i = 0; i < items.length; i++) {
+      final existing = items[i];
+      if (item.isPinned != existing.isPinned) {
+        if (item.isPinned && !existing.isPinned) {
+          return i; // 置顶项插入到非置顶项之前
+        }
+        continue;
+      }
+      // 同为置顶或非置顶，按时间降序
+      if (item.updatedAt.isAfter(existing.updatedAt)) {
+        return i;
+      }
+    }
+    return items.length; // 插到末尾
   }
 
   List<Conversation> _replaceSyncedConversations(List<Conversation> incoming) {

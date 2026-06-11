@@ -247,7 +247,9 @@ class _FavoriteDetailPageState extends ConsumerState<FavoriteDetailPage> {
         if (opened || !mounted) {
           return;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[FavoriteDetail] open failed: $e');
+      }
     }
     if (!mounted) {
       return;

@@ -2993,17 +2993,86 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (searchReqVO == null) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
+        Long chatId = searchReqVO.getChatId();
+        if (chatId == null) {
+            // 无 chatId 时走原有 JOIN 逻辑（全局搜索场景较少）
+            return searchMessagesWithJoin(userId, searchReqVO);
+        }
+        // 有 chatId 时：先做权限校验，再用简化 SQL 避免 JOIN
+        ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+        if (chatUser == null) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        int pageNo = searchReqVO.getPageNo() != null && searchReqVO.getPageNo() > 0 ? searchReqVO.getPageNo() : 1;
+        int pageSize = searchReqVO.getPageSize() != null && searchReqVO.getPageSize() > 0 ? searchReqVO.getPageSize() : 20;
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        String keyword = StrUtil.trimToNull(searchReqVO.getKeyword());
+        String category = StrUtil.trimToNull(searchReqVO.getCategory());
+        List<Integer> messageTypeList = resolveSearchMessageTypeList(searchReqVO);
+        boolean onlyLink = "link".equalsIgnoreCase(category);
+        long offset = (long) (pageNo - 1) * pageSize;
+
+        // 获取清空水位和离群时间（单表查询，走索引）
+        Long clearSequence = chatClearWatermarkMapper.selectClearSequence(tenantId, userId, chatId);
+        if (clearSequence == null) {
+            clearSequence = 0L;
+        }
+        java.time.LocalDateTime leftAt = chatUser.getLeftAt();
+
+        // 简化 SQL：仅查 im_chat_message 单表，无 JOIN
+        Long total = chatMessageMapper.countSearchPageByChat(tenantId, chatId, clearSequence, leftAt, keyword,
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), onlyLink);
+        if (total == null || total <= 0) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByChat(tenantId, chatId, clearSequence, leftAt, keyword,
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize, onlyLink);
+
+        // 过滤被删除的消息（tombstone 检查在内存中做，避免 LEFT JOIN）
+        if (!messages.isEmpty()) {
+            Set<Long> deletedMessageIds = chatMessageTombstoneMapper.selectMessageIdsByUserAndChat(tenantId, userId, chatId);
+            if (!deletedMessageIds.isEmpty()) {
+                messages = messages.stream()
+                        .filter(m -> !deletedMessageIds.contains(m.getId()))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        List<AppImMessageRespVO> respVOList = messages.stream()
+                .filter(Objects::nonNull)
+                .map(message -> {
+                    AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+                    respVO.setChatId(message.getChatId());
+                    respVO.setSequence(message.getSequence());
+                    respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
+                    fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
+                    respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+                    fillChatTargetFields(respVO, userId);
+                    fillConversationInfo(respVO, userId);
+                    applyLocalizedSystemMessageContent(respVO, message);
+                    applyReeditFieldsForCurrentUser(respVO, message, userId);
+                    sanitizeRecalledMessage(respVO, message, userId);
+                    return respVO;
+                }).collect(Collectors.toList());
+        fillVoicePlayedFlags(userId, respVOList, chatId);
+        return new PageResult<>(respVOList, total);
+    }
+
+    /**
+     * 全局搜索（无 chatId），走原有 JOIN 逻辑
+     */
+    private PageResult<AppImMessageRespVO> searchMessagesWithJoin(Long userId, AppImMessageSearchReqVO searchReqVO) {
         String keyword = StrUtil.trimToNull(searchReqVO.getKeyword());
         String category = StrUtil.trimToNull(searchReqVO.getCategory());
         Long tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
             tenantId = 0L;
-        }
-        if (searchReqVO.getChatId() != null) {
-            ImChatUserDO chatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, searchReqVO.getChatId());
-            if (chatUser == null) {
-                return new PageResult<>(Collections.emptyList(), 0L);
-            }
         }
         int pageNo = searchReqVO.getPageNo() != null && searchReqVO.getPageNo() > 0 ? searchReqVO.getPageNo() : 1;
         int pageSize = searchReqVO.getPageSize() != null && searchReqVO.getPageSize() > 0 ? searchReqVO.getPageSize() : 20;

@@ -6,6 +6,10 @@ import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
+// 预编译正则表达式，避免 DTO 解析循环内重复构造
+final _quoteMsgIdPattern = RegExp(r'"quotedMessageId"\s*:\s*"?([^",}]*)"?');
+final _quoteMsgIdPattern2 = RegExp(r'"quoteMessageId"\s*:\s*"?([^",}]*)"?');
+
 class MessageDto {
   static const String _systemSenderId = '0';
   static const String _systemSenderName = 'System';
@@ -622,10 +626,7 @@ class MessageDto {
     if (text.isEmpty) {
       return null;
     }
-    final patterns = <RegExp>[
-      RegExp(r'"quotedMessageId"\s*:\s*"?(.*?)"?(,|\})'),
-      RegExp(r'"quoteMessageId"\s*:\s*"?(.*?)"?(,|\})'),
-    ];
+    final patterns = [_quoteMsgIdPattern, _quoteMsgIdPattern2];
     for (final pattern in patterns) {
       final matched = pattern.firstMatch(text);
       final value = matched?.group(1)?.trim() ?? '';

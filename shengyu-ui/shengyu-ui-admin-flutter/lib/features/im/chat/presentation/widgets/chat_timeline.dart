@@ -76,6 +76,13 @@ class ChatTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+    // 构建消息 ID → Message 的哈希索引表，供引用链查找使用 O(1)
+    final messageIndex = <String, Message>{};
+    for (final msg in messages) {
+      if (msg.messageId.isNotEmpty) {
+        messageIndex[msg.messageId] = msg;
+      }
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -86,6 +93,8 @@ class ChatTimeline extends StatelessWidget {
           },
           child: ListView.builder(
             controller: controller,
+            // ignore: deprecated_member_use
+            cacheExtent: 500.0,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
             itemCount: messages.length + 1,
@@ -101,8 +110,8 @@ class ChatTimeline extends StatelessWidget {
                 );
               }
 
-              final messageIndex = index - 1;
-              final message = messages[messageIndex];
+              final messageIndex2 = index - 1;
+              final message = messages[messageIndex2];
               final isSelected = selectedMessageIds.contains(
                 _messageSelectionKey(message),
               );
@@ -111,13 +120,13 @@ class ChatTimeline extends StatelessWidget {
                   highlightedMessageId!.isNotEmpty &&
                   highlightedMessageId == message.messageId;
               final shouldShowTime =
-                  messageIndex == 0 ||
+                  messageIndex2 == 0 ||
                   message.sentAt
-                          .difference(messages[messageIndex - 1].sentAt)
+                          .difference(messages[messageIndex2 - 1].sentAt)
                           .inMinutes
                           .abs() >=
                       5;
-              final renderKey = _messageRenderKey(message, messageIndex);
+              final renderKey = _messageRenderKey(message, messageIndex2);
 
               return Column(
                 key: messageItemKeys[renderKey],
@@ -131,10 +140,10 @@ class ChatTimeline extends StatelessWidget {
                     ),
                   Padding(
                     padding: EdgeInsets.only(
-                      bottom: messageIndex == messages.length - 1 ? 0 : 16,
+                      bottom: messageIndex2 == messages.length - 1 ? 0 : 16,
                     ),
                     child: _MessageRow(
-                      messages: messages,
+                      messageIndex: messageIndex,
                       message: message,
                       strings: strings,
                       isSelected: isSelected,
@@ -196,7 +205,7 @@ class ChatTimeline extends StatelessWidget {
 
 class _MessageRow extends StatelessWidget {
   const _MessageRow({
-    required this.messages,
+    required this.messageIndex,
     required this.message,
     required this.strings,
     required this.isSelected,
@@ -223,7 +232,7 @@ class _MessageRow extends StatelessWidget {
     required this.showSenderNamesForIncoming,
   });
 
-  final List<Message> messages;
+  final Map<String, Message> messageIndex;
   final Message message;
   final AppLocalizations strings;
   final bool isSelected;
@@ -251,12 +260,6 @@ class _MessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    final quotePreviewChain = _buildQuotePreviewChain(
-      messages,
-      message,
-      context,
-    );
     if (message.type == MessageType.system) {
       return _SystemMessage(
         message: message,
@@ -265,72 +268,173 @@ class _MessageRow extends StatelessWidget {
       );
     }
 
-    final bubble = AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: (isSelected || isHighlighted) ? 4 : 3,
-      ),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? const Color(0x0D07C160)
-            : (isHighlighted ? const Color(0x26FFC107) : Colors.transparent),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: IgnorePointer(
-        ignoring: selectionMode,
-        child: MessageBubbleFactory.build(
-          message,
-          onRetryMessage: onRetryMessage,
-          onOpenMessage: onOpenMessage,
-          onPauseMessage: onPauseVoiceMessage,
-          onResumeMessage: onResumeVoiceMessage,
-          onReplayMessage: onReplayVoiceMessage,
-          onOpenMentionUser: onOpenMentionUser,
-          onOpenQuotedMessage: onOpenQuotedMessage,
-          onOpenLink: onOpenLink,
-          quotePreviewChain: quotePreviewChain,
-          voiceIsPlaying:
-              activePlayingVoiceMessageId != null &&
-              (message.messageId == activePlayingVoiceMessageId ||
-                  message.clientMessageId == activePlayingVoiceMessageId),
-          voiceIsPaused:
-              activePausedVoiceMessageId != null &&
-              (message.messageId == activePausedVoiceMessageId ||
-                  message.clientMessageId == activePausedVoiceMessageId),
-          voicePlaybackProgressMs:
-              (activePlayingVoiceMessageId != null &&
-                      (message.messageId == activePlayingVoiceMessageId ||
-                          message.clientMessageId ==
-                              activePlayingVoiceMessageId)) ||
-                  (activePausedVoiceMessageId != null &&
-                      (message.messageId == activePausedVoiceMessageId ||
-                          message.clientMessageId ==
-                              activePausedVoiceMessageId))
-              ? activeVoicePlaybackProgressMs
-              : 0,
-          voicePlaybackDurationMs:
-              (activePlayingVoiceMessageId != null &&
-                      (message.messageId == activePlayingVoiceMessageId ||
-                          message.clientMessageId ==
-                              activePlayingVoiceMessageId)) ||
-                  (activePausedVoiceMessageId != null &&
-                      (message.messageId == activePausedVoiceMessageId ||
-                          message.clientMessageId ==
-                              activePausedVoiceMessageId))
-              ? activeVoicePlaybackDurationMs
-              : 0,
-          onLongPressMessage: onLongPressMessage,
-          onOpenReadReceipt: onOpenReadReceipt,
-          enableReadReceiptEntry: message.isOutgoing,
-          showOutgoingStatusFooter: message.isOutgoing,
-          outgoingFooterLabel: message.isOutgoing
-              ? outgoingFooterLabelBuilder?.call(message)
-              : null,
+    final voiceState = _computeVoiceState();
+    final quotePreviewChain = _buildQuotePreviewChain(
+      messageIndex,
+      message,
+      context,
+    );
+    final senderDisplayName = _senderDisplayName(message);
+
+    // 使用 RepaintBoundary 隔离头像渲染，避免气泡变化触发头像重绘
+    final avatar = RepaintBoundary(
+      child: ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
+    );
+
+    final bubble = _ChatMessageBubble(
+      message: message,
+      isSelected: isSelected,
+      isHighlighted: isHighlighted,
+      selectionMode: selectionMode,
+      onRetryMessage: onRetryMessage,
+      onOpenMessage: onOpenMessage,
+      onPauseVoiceMessage: onPauseVoiceMessage,
+      onResumeVoiceMessage: onResumeVoiceMessage,
+      onReplayVoiceMessage: onReplayVoiceMessage,
+      onOpenMentionUser: onOpenMentionUser,
+      onOpenQuotedMessage: onOpenQuotedMessage,
+      onOpenLink: onOpenLink,
+      quotePreviewChain: quotePreviewChain,
+      voiceState: voiceState,
+      onLongPressMessage: onLongPressMessage,
+      onOpenReadReceipt: onOpenReadReceipt,
+      onToggleSelection: onToggleSelection,
+      outgoingFooterLabelBuilder: outgoingFooterLabelBuilder,
+    );
+
+    if (message.isOutgoing) {
+      return _OutgoingMessageLayout(
+        avatar: avatar,
+        bubble: bubble,
+      );
+    }
+
+    return _IncomingMessageLayout(
+      avatar: avatar,
+      bubble: bubble,
+      senderDisplayName: senderDisplayName,
+      showSenderNamesForIncoming: showSenderNamesForIncoming,
+    );
+  }
+
+  _VoicePlaybackState _computeVoiceState() {
+    final isPlaying = activePlayingVoiceMessageId != null &&
+        (message.messageId == activePlayingVoiceMessageId ||
+            message.clientMessageId == activePlayingVoiceMessageId);
+    final isPaused = activePausedVoiceMessageId != null &&
+        (message.messageId == activePausedVoiceMessageId ||
+            message.clientMessageId == activePausedVoiceMessageId);
+    return _VoicePlaybackState(
+      isPlaying: isPlaying,
+      isPaused: isPaused,
+      progressMs: (isPlaying || isPaused) ? activeVoicePlaybackProgressMs : 0,
+      durationMs: (isPlaying || isPaused) ? activeVoicePlaybackDurationMs : 0,
+    );
+  }
+}
+
+/// 语音播放状态（提取为独立类，避免重复计算）
+class _VoicePlaybackState {
+  const _VoicePlaybackState({
+    required this.isPlaying,
+    required this.isPaused,
+    required this.progressMs,
+    required this.durationMs,
+  });
+
+  final bool isPlaying;
+  final bool isPaused;
+  final int progressMs;
+  final int durationMs;
+}
+
+/// 消息气泡组件（RepaintBoundary 隔离，避免外部变化触发重绘）
+class _ChatMessageBubble extends StatelessWidget {
+  const _ChatMessageBubble({
+    required this.message,
+    required this.isSelected,
+    required this.isHighlighted,
+    required this.selectionMode,
+    required this.onRetryMessage,
+    required this.onOpenMessage,
+    required this.onPauseVoiceMessage,
+    required this.onResumeVoiceMessage,
+    required this.onReplayVoiceMessage,
+    required this.onOpenMentionUser,
+    required this.onOpenQuotedMessage,
+    this.onOpenLink,
+    required this.quotePreviewChain,
+    required this.voiceState,
+    required this.onLongPressMessage,
+    required this.onOpenReadReceipt,
+    required this.onToggleSelection,
+    required this.outgoingFooterLabelBuilder,
+  });
+
+  final Message message;
+  final bool isSelected;
+  final bool isHighlighted;
+  final bool selectionMode;
+  final ValueChanged<Message> onRetryMessage;
+  final ValueChanged<Message> onOpenMessage;
+  final ValueChanged<Message>? onPauseVoiceMessage;
+  final ValueChanged<Message>? onResumeVoiceMessage;
+  final ValueChanged<Message>? onReplayVoiceMessage;
+  final void Function(String userId, String displayName)? onOpenMentionUser;
+  final ValueChanged<String>? onOpenQuotedMessage;
+  final ValueChanged<String>? onOpenLink;
+  final List<QuotePreviewEntry> quotePreviewChain;
+  final _VoicePlaybackState voiceState;
+  final void Function(Message, Offset globalPosition)? onLongPressMessage;
+  final ValueChanged<Message>? onOpenReadReceipt;
+  final ValueChanged<Message>? onToggleSelection;
+  final String Function(Message message)? outgoingFooterLabelBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final bubbleContent = RepaintBoundary(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: 4,
+          vertical: (isSelected || isHighlighted) ? 4 : 3,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0x0D07C160)
+              : (isHighlighted ? const Color(0x26FFC107) : Colors.transparent),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: IgnorePointer(
+          ignoring: selectionMode,
+          child: MessageBubbleFactory.build(
+            message,
+            onRetryMessage: onRetryMessage,
+            onOpenMessage: onOpenMessage,
+            onPauseMessage: onPauseVoiceMessage,
+            onResumeMessage: onResumeVoiceMessage,
+            onReplayMessage: onReplayVoiceMessage,
+            onOpenMentionUser: onOpenMentionUser,
+            onOpenQuotedMessage: onOpenQuotedMessage,
+            onOpenLink: onOpenLink,
+            quotePreviewChain: quotePreviewChain,
+            voiceIsPlaying: voiceState.isPlaying,
+            voiceIsPaused: voiceState.isPaused,
+            voicePlaybackProgressMs: voiceState.progressMs,
+            voicePlaybackDurationMs: voiceState.durationMs,
+            onLongPressMessage: onLongPressMessage,
+            onOpenReadReceipt: onOpenReadReceipt,
+            enableReadReceiptEntry: message.isOutgoing,
+            showOutgoingStatusFooter: message.isOutgoing,
+            outgoingFooterLabel: message.isOutgoing
+                ? outgoingFooterLabelBuilder?.call(message)
+                : null,
+          ),
         ),
       ),
     );
+
     final canSelect =
         message.type != MessageType.voice &&
         message.type != MessageType.location;
@@ -343,35 +447,65 @@ class _MessageRow extends StatelessWidget {
                 ? _SelectionWrapper(
                     isOutgoing: message.isOutgoing,
                     isSelected: isSelected,
-                    child: bubble,
+                    child: bubbleContent,
                   )
-                : bubble,
+                : bubbleContent,
           )
-        : bubble;
+        : bubbleContent;
 
-    final senderDisplayName = _senderDisplayName(message);
+    return messageBody;
+  }
+}
 
-    if (message.isOutgoing) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [messageBody],
-            ),
+/// 出消息布局（右侧头像 + 气泡）
+class _OutgoingMessageLayout extends StatelessWidget {
+  const _OutgoingMessageLayout({
+    required this.avatar,
+    required this.bubble,
+  });
+
+  final Widget avatar;
+  final Widget bubble;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [bubble],
           ),
-          const SizedBox(width: 12),
-          ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
-        ],
-      );
-    }
+        ),
+        const SizedBox(width: 12),
+        avatar,
+      ],
+    );
+  }
+}
 
+/// 入消息布局（左侧头像 + 气泡 + 可选的发送者名称）
+class _IncomingMessageLayout extends StatelessWidget {
+  const _IncomingMessageLayout({
+    required this.avatar,
+    required this.bubble,
+    required this.senderDisplayName,
+    required this.showSenderNamesForIncoming,
+  });
+
+  final Widget avatar;
+  final Widget bubble;
+  final String senderDisplayName;
+  final bool showSenderNamesForIncoming;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
+        avatar,
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -388,7 +522,7 @@ class _MessageRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              messageBody,
+              bubble,
             ],
           ),
         ),
@@ -398,7 +532,7 @@ class _MessageRow extends StatelessWidget {
 }
 
 List<QuotePreviewEntry> _buildQuotePreviewChain(
-  List<Message> messages,
+  Map<String, Message> messageIndex,
   Message message,
   BuildContext context,
 ) {
@@ -416,9 +550,7 @@ List<QuotePreviewEntry> _buildQuotePreviewChain(
   const maxDepth = 5;
 
   while (currentId.isNotEmpty && depth < maxDepth) {
-    final referenced = messages
-        .where((item) => item.messageId == currentId)
-        .firstOrNull;
+    final referenced = messageIndex[currentId];
     if (referenced != null) {
       chain.add(
         QuotePreviewEntry(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,9 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
+
+// 预编译正则表达式，避免循环内重复构造
+final _quoteCharPattern = RegExp(r'''["']''');
 
 class FavoritesPage extends ConsumerStatefulWidget {
   const FavoritesPage({super.key});
@@ -625,7 +629,9 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           if (url.isNotEmpty) {
             return true;
           }
-        } catch (_) {}
+        } catch (e) {
+        debugPrint('[Favorites] operation failed: $e');
+      }
       }
     }
     return false;
@@ -639,7 +645,9 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       try {
         final map = jsonDecode(content) as Map<String, dynamic>;
         rawUrl = map['url']?.toString().trim() ?? '';
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Favorites] operation failed: $e');
+      }
     }
     if (rawUrl.isEmpty && !content.startsWith('{')) {
       rawUrl = content;
@@ -1011,13 +1019,15 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
         for (final pair in pairs) {
           final parts = pair.split(':');
           if (parts.length >= 2) {
-            final key = parts[0].trim().replaceAll(RegExp(r'''["']'''), '');
-            final value = parts.sublist(1).join(':').trim().replaceAll(RegExp(r'''["']'''), '');
+            final key = parts[0].trim().replaceAll(_quoteCharPattern, '');
+            final value = parts.sublist(1).join(':').trim().replaceAll(_quoteCharPattern, '');
             map[key] = value;
           }
         }
         return map;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Favorites] operation failed: $e');
+      }
     }
     return {};
   }
@@ -1061,7 +1071,9 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           );
         },
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[Favorites] show menu failed: $e');
+    }
   }
 
   Future<void> _showItemMenu(ChatHistoryItem historyItem, FavoriteItem item) async {

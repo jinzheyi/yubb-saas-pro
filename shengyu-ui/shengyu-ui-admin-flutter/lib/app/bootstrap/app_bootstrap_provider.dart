@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/bootstrap/auth_bootstrap_coordinator.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
@@ -18,11 +19,17 @@ final appBootstrapProvider = FutureProvider<void>((ref) async {
   ref.watch(globalBadgeSocketBindingProvider);
   try {
     await ref.read(authBootstrapCoordinatorProvider).bootstrap();
-  } catch (_) {}
+  } catch (e, stack) {
+    debugPrint('[Bootstrap] auth bootstrap error: $e\n$stack');
+  }
   try {
     await ref.read(appLocaleControllerProvider.notifier).load();
-  } catch (_) {}
+  } catch (e, stack) {
+    debugPrint('[Bootstrap] locale load error: $e\n$stack');
+  }
   try {
     await ref.read(appThemeControllerProvider.notifier).load();
-  } catch (_) {}
+  } catch (e, stack) {
+    debugPrint('[Bootstrap] theme load error: $e\n$stack');
+  }
 });

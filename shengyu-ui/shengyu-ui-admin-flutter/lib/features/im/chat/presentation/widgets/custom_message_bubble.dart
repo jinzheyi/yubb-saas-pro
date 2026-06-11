@@ -209,7 +209,9 @@ class CustomMessageBubble extends ConsumerWidget {
       if (decoded is Map) {
         return decoded.map((key, value) => MapEntry(key.toString(), value));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[CustomBubble] jsonDecode failed: $e');
+    }
     return null;
   }
 }

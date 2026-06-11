@@ -16,6 +16,9 @@ import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
+// 预编译正则表达式，避免循环内重复构造
+final _alphabetPattern = RegExp(r'[A-Z]');
+
 class GroupMembersPage extends ConsumerStatefulWidget {
   const GroupMembersPage({super.key, required this.args});
 
@@ -709,7 +712,7 @@ class _GroupMembersPageState extends ConsumerState<GroupMembersPage> {
       final index = (code - 19968) % 26;
       return String.fromCharCode(65 + index);
     }
-    final isAlphabet = RegExp(r'[A-Z]').hasMatch(first);
+    final isAlphabet = _alphabetPattern.hasMatch(first);
     if (isAlphabet) {
       return first;
     }

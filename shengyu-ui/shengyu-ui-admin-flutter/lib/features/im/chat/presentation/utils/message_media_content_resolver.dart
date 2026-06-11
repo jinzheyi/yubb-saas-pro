@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 String extractMediaUrlFromRawContent(
   String raw, {
@@ -73,7 +74,9 @@ Map<String, dynamic>? _tryParseJsonObject(String raw) {
     if (decoded is Map) {
       return decoded.map((key, value) => MapEntry(key.toString(), value));
     }
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('[MediaResolver] extract failed: $e');
+  }
   return null;
 }
 

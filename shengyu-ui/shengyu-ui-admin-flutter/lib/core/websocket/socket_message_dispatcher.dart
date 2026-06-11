@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
 
 class SocketMessageDispatcher {
@@ -10,6 +11,9 @@ class SocketMessageDispatcher {
 
   void dispatch(ImSocketEvent event) {
     if (!_controller.isClosed) {
+      if (!_controller.hasListener) {
+        debugPrint('SocketMessageDispatcher: event dispatched with no listener: ${event.type}');
+      }
       _controller.add(event);
     }
   }

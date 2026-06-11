@@ -91,6 +91,58 @@ END $$
 CALL AddIndex6() $$
 DROP PROCEDURE IF EXISTS AddIndex6 $$
 
+-- ============================================================
+-- v1.2 新增 — 消息搜索接口性能优化（2026-06-11）
+-- ============================================================
+
+-- 7. im_chat_message: 搜索接口覆盖索引（tenant_id + chat_id + send_time）
+-- 用途: /system/im/message/search 接口的 WHERE + ORDER BY 覆盖索引
+-- 效果: 避免全表扫描，索引可直接返回所需列（chat_id, send_time, message_type, id）
+DROP PROCEDURE IF EXISTS AddIndex7 $$
+CREATE PROCEDURE AddIndex7()
+BEGIN
+    DECLARE idx_cnt INT;
+    SELECT COUNT(*) INTO idx_cnt FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = 'im_chat_message' AND index_name = 'idx_tenant_chat_sendtime';
+    IF idx_cnt = 0 THEN
+        ALTER TABLE im_chat_message ADD INDEX idx_tenant_chat_sendtime (tenant_id, chat_id, send_time DESC);
+    END IF;
+END $$
+CALL AddIndex7() $$
+DROP PROCEDURE IF EXISTS AddIndex7 $$
+
+-- 8. im_chat_message: 消息类型 + 发送时间复合索引（无 chatId 时的全局搜索）
+-- 用途: 不带 chatId 的全局消息搜索，按类型 + 时间过滤
+DROP PROCEDURE IF EXISTS AddIndex8 $$
+CREATE PROCEDURE AddIndex8()
+BEGIN
+    DECLARE idx_cnt INT;
+    SELECT COUNT(*) INTO idx_cnt FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = 'im_chat_message' AND index_name = 'idx_tenant_type_sendtime';
+    IF idx_cnt = 0 THEN
+        ALTER TABLE im_chat_message ADD INDEX idx_tenant_type_sendtime (tenant_id, deleted, message_type, send_time DESC);
+    END IF;
+END $$
+CALL AddIndex8() $$
+DROP PROCEDURE IF EXISTS AddIndex8 $$
+
+-- 9. im_chat_user: 会话权限校验覆盖索引
+-- 用途: JOIN im_chat_user 验证用户是否有权访问该会话
+-- 现有索引: PRIMARY KEY (id), UNIQUE KEY uk_tenant_user_chat
+-- 新增: 将 chat_id + deleted_by_user + deleted 作为覆盖列，避免回表
+DROP PROCEDURE IF EXISTS AddIndex9 $$
+CREATE PROCEDURE AddIndex9()
+BEGIN
+    DECLARE idx_cnt INT;
+    SELECT COUNT(*) INTO idx_cnt FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = 'im_chat_user' AND index_name = 'idx_chat_user_deleted';
+    IF idx_cnt = 0 THEN
+        ALTER TABLE im_chat_user ADD INDEX idx_chat_user_deleted (tenant_id, chat_id, user_id, deleted, deleted_by_user);
+    END IF;
+END $$
+CALL AddIndex9() $$
+DROP PROCEDURE IF EXISTS AddIndex9 $$
+
 DELIMITER ;
 
 -- ========================================

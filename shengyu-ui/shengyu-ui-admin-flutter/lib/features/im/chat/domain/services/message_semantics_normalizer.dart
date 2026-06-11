@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:flutter/foundation.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
@@ -82,7 +82,9 @@ abstract final class MessageSemanticsNormalizer {
       if (decoded is Map) {
         return decoded.map((key, value) => MapEntry(key.toString(), value));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[SemanticsNormalizer] normalize failed: $e');
+    }
     return null;
   }
 

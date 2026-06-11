@@ -9,6 +9,10 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/messag
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 
+// 预编译正则表达式，避免在 build 热路径重复解析
+final _linkPattern = RegExp(r'''https?://[^\s<>"']+''', caseSensitive: false);
+final _wwwPattern = RegExp(r'''www\.[^\s<>"']+''', caseSensitive: false);
+
 class QuotePreviewEntry {
   const QuotePreviewEntry({
     required this.messageId,
@@ -263,10 +267,7 @@ class TextMessageBubble extends ConsumerWidget {
 
   List<_LinkRange> _extractLinkRanges(String text) {
     final ranges = <_LinkRange>[];
-    final patterns = [
-      RegExp(r'''https?://[^\s<>"']+''', caseSensitive: false),
-      RegExp(r'''www\.[^\s<>"']+''', caseSensitive: false),
-    ];
+    final patterns = [_linkPattern, _wwwPattern];
     for (final pattern in patterns) {
       for (final match in pattern.allMatches(text)) {
         var url = match.group(0)!;

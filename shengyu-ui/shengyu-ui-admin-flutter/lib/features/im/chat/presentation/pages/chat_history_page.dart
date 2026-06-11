@@ -30,6 +30,9 @@ import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
+// 预编译正则表达式，避免循环内重复构造
+final _historyQuoteCharPattern = RegExp(r'''["']''');
+
 class ChatHistoryPage extends ConsumerStatefulWidget {
   const ChatHistoryPage({
     super.key,
@@ -568,7 +571,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           if (url.isNotEmpty) {
             return true;
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[ChatHistory] parse link message failed: $e');
+        }
       }
     }
     return false;
@@ -582,7 +587,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       try {
         final map = jsonDecode(content) as Map<String, dynamic>;
         rawUrl = map['url']?.toString().trim() ?? '';
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[ChatHistory] parse json failed: $e');
+      }
     }
     if (rawUrl.isEmpty && !content.startsWith('{')) {
       rawUrl = content;
@@ -988,13 +995,15 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         for (final pair in pairs) {
           final parts = pair.split(':');
           if (parts.length >= 2) {
-            final key = parts[0].trim().replaceAll(RegExp(r'''["']'''), '');
-            final value = parts.sublist(1).join(':').trim().replaceAll(RegExp(r'''["']'''), '');
+            final key = parts[0].trim().replaceAll(_historyQuoteCharPattern, '');
+            final value = parts.sublist(1).join(':').trim().replaceAll(_historyQuoteCharPattern, '');
             map[key] = value;
           }
         }
         return map;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[ChatHistory] parse json failed: $e');
+      }
     }
     return {};
   }
@@ -1038,7 +1047,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
           );
         },
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ChatHistory] show menu failed: $e');
+    }
   }
 
   Future<void> _showItemMenu(ChatHistoryItem item) async {

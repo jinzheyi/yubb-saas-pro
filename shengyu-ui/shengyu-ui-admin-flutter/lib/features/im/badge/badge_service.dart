@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
@@ -326,12 +327,16 @@ class BadgeService extends StateNotifier<BadgeState> {
         jsonEncode(state.toJson()),
       );
       _hasPendingSave = false;
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('BadgeService._doPersist failed: $e\n$st');
+    }
   }
 
   Future<void> _loadPersisted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // 异步等待后检查是否已被 dispose
+      if (!mounted) return;
       final raw = prefs.getString(StorageKeyRegistry.imBadgeSnapshot);
       if (raw != null && raw.isNotEmpty) {
         final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -349,9 +354,12 @@ class BadgeService extends StateNotifier<BadgeState> {
           // 数据过期，不恢复
           return;
         }
+        if (!mounted) return;
         state = persisted;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('BadgeService._loadPersisted failed: $e\n$st');
+    }
   }
 }
 

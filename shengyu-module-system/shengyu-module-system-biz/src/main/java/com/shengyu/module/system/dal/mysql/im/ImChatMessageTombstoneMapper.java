@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Set;
 
 @Mapper
 public interface ImChatMessageTombstoneMapper extends BaseMapperX<ImChatMessageTombstoneDO> {
@@ -48,5 +49,14 @@ public interface ImChatMessageTombstoneMapper extends BaseMapperX<ImChatMessageT
         Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
         return existsByUserIdAndMessageId(tenantId != null ? tenantId : 0L, userId, messageId);
     }
+
+    /**
+     * 批量查询用户在某会话中已删除的消息ID（用于搜索时过滤墓碑消息）
+     */
+    @Select("SELECT message_id FROM im_chat_message_tombstone " +
+            "WHERE tenant_id = #{tenantId} AND user_id = #{userId} AND chat_id = #{chatId} AND deleted = 0")
+    Set<Long> selectMessageIdsByUserAndChat(@Param("tenantId") Long tenantId,
+                                            @Param("userId") Long userId,
+                                            @Param("chatId") Long chatId);
 
 }

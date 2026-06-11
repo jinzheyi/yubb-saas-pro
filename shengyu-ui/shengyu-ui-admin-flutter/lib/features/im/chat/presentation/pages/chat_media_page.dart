@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -517,7 +518,9 @@ class _ChatMediaPageState extends ConsumerState<ChatMediaPage> {
             .read(fileRepositoryProvider)
             .getPresignedGetUrl(fileId: fileId);
         return signed.toString();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[ChatMedia] get presigned url failed: $e');
+      }
     }
     return item.fileUrl.trim();
   }

@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:flutter/foundation.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 class ChatHistoryItemDto {
@@ -91,7 +91,9 @@ class ChatHistoryItemDto {
         return Map<String, dynamic>.from(
           jsonDecode(raw) as Map<dynamic, dynamic>,
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[ChatHistoryItemDto] parse failed: $e');
+      }
     }
     return const <String, dynamic>{};
   }

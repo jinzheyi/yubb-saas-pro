@@ -81,4 +81,11 @@ class MockCallRepository implements CallRepository {
   Stream<CallSocketEvent> watchSocketEvents() {
     return _socketController.stream;
   }
+
+  /// Release resources to prevent memory leak
+  void dispose() {
+    if (!_socketController.isClosed) {
+      _socketController.close();
+    }
+  }
 }

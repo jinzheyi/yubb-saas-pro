@@ -38,6 +38,11 @@ class ConversationTile extends StatefulWidget {
   State<ConversationTile> createState() => _ConversationTileState();
 }
 
+// 模块级缓存：预编译正则表达式，避免每次 build 重新解析
+final _previewTokenPattern = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
+final _newlinePattern = RegExp(r'\r?\n+');
+final _groupSplitPattern = RegExp(r'[、，, ]+');
+
 class _ConversationTileState extends State<ConversationTile> {
   Timer? _mouseLongPressTimer;
   Offset? _mouseLongPressPosition;
@@ -288,7 +293,7 @@ List<_PreviewToken> _buildPreviewTokens(
   if (preview.isEmpty) {
     return const <_PreviewToken>[];
   }
-  final matches = RegExp(r'\[[\u4e00-\u9fa5\w]+\]').allMatches(preview);
+  final matches = _previewTokenPattern.allMatches(preview);
   if (matches.isEmpty) {
     return <_PreviewToken>[
       _PreviewToken(
@@ -353,7 +358,7 @@ bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
 
 String _previewText(AppLocalizations strings, Conversation conversation) {
   final rawPreview = conversation.lastMessagePreview.trim().replaceAll(
-    RegExp(r'\r?\n+'),
+    _newlinePattern,
     ' ',
   );
   final canFormatGroupPreview =
@@ -378,7 +383,7 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
               )
               : rawPreview)
           .trim()
-          .replaceAll(RegExp(r'\r?\n+'), ' ');
+          .replaceAll(_newlinePattern, ' ');
   if (preview.isNotEmpty) {
     return preview.length > 100 ? '${preview.substring(0, 100)}...' : preview;
   }
@@ -555,7 +560,7 @@ class _ConversationAvatar extends StatelessWidget {
 
   List<GroupAvatarMember> _fallbackGroupMembersFromTitle(String title) {
     final names = title
-        .split(RegExp(r'[、，, ]+'))
+        .split(_groupSplitPattern)
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
