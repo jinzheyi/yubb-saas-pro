@@ -67,9 +67,10 @@ public interface ImGroupService {
      * 获取用户的群组列表
      *
      * @param userId 用户ID
+     * @param limit 返回上限
      * @return 群组列表
      */
-    List<AppImGroupRespVO> getGroupList(Long userId);
+    List<AppImGroupRespVO> getGroupList(Long userId, Integer limit);
 
     /**
      * 添加群成员
@@ -116,13 +117,15 @@ public interface ImGroupService {
     }
 
     /**
-     * 获取群成员列表
+     * 获取群成员列表（支持分页）
      *
      * @param userId 用户ID
      * @param groupId 群组ID
+     * @param pageNo 页码
+     * @param pageSize 每页数量
      * @return 群成员列表
      */
-    List<AppImGroupMemberRespVO> getGroupMembers(Long userId, Long groupId);
+    List<AppImGroupMemberRespVO> getGroupMembers(Long userId, Long groupId, Integer pageNo, Integer pageSize);
 
     /**
      * 设置群成员角色
@@ -304,9 +307,10 @@ public interface ImGroupService {
      * @param userId 用户ID
      * @param groupId 群组ID
      * @param status 状态(可空)
+     * @param limit 返回上限
      * @return 申请列表
      */
-    List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status);
+    List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status, Integer limit);
 
     /**
      * 获取群待审批申请数量

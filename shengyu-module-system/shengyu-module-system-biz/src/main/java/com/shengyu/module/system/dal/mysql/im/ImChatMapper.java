@@ -62,7 +62,7 @@ public interface ImChatMapper extends BaseMapperX<ImChatDO> {
             "WHEN single_user2 = #{userId} THEN single_user1 " +
             "END AS peerUserId " +
             "FROM im_chat " +
-            "WHERE deleted = 0 AND chat_type = 1 AND (single_user1 = #{userId} OR single_user2 = #{userId})")
+            "WHERE deleted = 0 AND chat_type = ${@com.shengyu.module.system.enums.im.ImConversationTypeEnum@SINGLE.getType()} AND (single_user1 = #{userId} OR single_user2 = #{userId})")
     List<Long> selectSingleChatPeerUserIds(@Param("userId") Long userId);
 
     default Long nextSequence(Long chatId) {

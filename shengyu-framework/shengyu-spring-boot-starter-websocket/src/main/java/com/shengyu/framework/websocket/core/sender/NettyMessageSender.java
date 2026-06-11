@@ -12,6 +12,7 @@ import com.shengyu.framework.websocket.core.service.ConversationSnapshotService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.number.IdGenerator;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.google.protobuf.ByteString;
@@ -108,13 +109,13 @@ public class NettyMessageSender {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
-                log.info("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
+                log.debug("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId);
                 return;
             }
 
-            if (log.isInfoEnabled()) {
-                log.info("[MessageSender] sendToUser begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
+            if (log.isDebugEnabled()) {
+                log.debug("[MessageSender] sendToUser begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
             }
 
@@ -128,8 +129,8 @@ public class NettyMessageSender {
                     Channel channel = session.getChannel();
                     if (channel != null) {
                         boolean ws = isWebSocketChannel(channel);
-                        if (log.isInfoEnabled()) {
-                            log.info("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
+                        if (log.isDebugEnabled()) {
+                            log.debug("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
                                     userId,
                                     session.getUserId(),
                                     session.getDeviceType(),
@@ -148,6 +149,13 @@ public class NettyMessageSender {
                                 codec = null;
                             }
 
+                            // 背压控制：检查 Channel 是否可写（防止 OOM）
+                            if (!channel.isWritable()) {
+                                log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
+                                        userId, session.getDeviceType(), messageId);
+                                continue;
+                            }
+
                             if ("pb".equalsIgnoreCase(codec)) {
                                 channel.writeAndFlush(protobufMessage).addListener(f -> {
                                     if (!f.isSuccess()) {
@@ -164,6 +172,12 @@ public class NettyMessageSender {
                                 });
                             }
                         } else {
+                            // 背压控制：检查 Channel 是否可写（防止 OOM）
+                            if (!channel.isWritable()) {
+                                log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
+                                        userId, session.getDeviceType(), messageId);
+                                continue;
+                            }
                             channel.writeAndFlush(protobufMessage).addListener(f -> {
                                 if (!f.isSuccess()) {
                                     log.warn("[MessageSender] protobuf write failed: userId={}, channelId={}, messageId={}, type={}",
@@ -174,14 +188,14 @@ public class NettyMessageSender {
                     }
                     successCount++;
                 } else {
-                    if (log.isInfoEnabled()) {
-                        log.info("[MessageSender] session inactive skip: targetUserId={}, sessionUserId={}, deviceType={}, messageId={}, type={}",
+                if (log.isDebugEnabled()) {
+                        log.debug("[MessageSender] session inactive skip: targetUserId={}, sessionUserId={}, deviceType={}, messageId={}, type={}",
                                 userId, session.getUserId(), session.getDeviceType(), messageId, messageType);
                     }
                 }
             }
 
-            log.info("[MessageSender] sendToUser done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
+            log.debug("[MessageSender] sendToUser done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
                     userId, messageType, messageId, sessions.size(), successCount);
         });
     }
@@ -206,13 +220,13 @@ public class NettyMessageSender {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
-                log.info("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
+                log.debug("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId);
                 return;
             }
 
-            if (log.isInfoEnabled()) {
-                log.info("[MessageSender] sendToUserWithFullInfo begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
+            if (log.isDebugEnabled()) {
+                log.debug("[MessageSender] sendToUserWithFullInfo begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
             }
 
@@ -226,8 +240,8 @@ public class NettyMessageSender {
                     Channel channel = session.getChannel();
                     if (channel != null) {
                         boolean ws = isWebSocketChannel(channel);
-                        if (log.isInfoEnabled()) {
-                            log.info("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
+                        if (log.isDebugEnabled()) {
+                            log.debug("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
                                     userId,
                                     session.getUserId(),
                                     session.getDeviceType(),
@@ -239,6 +253,12 @@ public class NettyMessageSender {
                         }
 
                         if (ws) {
+                            // 背压控制：检查 Channel 是否可写（防止 OOM）
+                            if (!channel.isWritable()) {
+                                log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
+                                        userId, session.getDeviceType(), messageId);
+                                continue;
+                            }
                             channel.writeAndFlush(new TextWebSocketFrame(jsonPayload)).addListener(f -> {
                                 if (!f.isSuccess()) {
                                     log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
@@ -246,6 +266,12 @@ public class NettyMessageSender {
                                 }
                             });
                         } else {
+                            // 背压控制：检查 Channel 是否可写（防止 OOM）
+                            if (!channel.isWritable()) {
+                                log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
+                                        userId, session.getDeviceType(), messageId);
+                                continue;
+                            }
                             channel.writeAndFlush(protobufMessage).addListener(f -> {
                                 if (!f.isSuccess()) {
                                     log.warn("[MessageSender] protobuf write failed: userId={}, channelId={}, messageId={}, type={}",
@@ -258,7 +284,7 @@ public class NettyMessageSender {
                 }
             }
 
-            log.info("[MessageSender] sendToUserWithFullInfo done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
+            log.debug("[MessageSender] sendToUserWithFullInfo done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
                     userId, messageType, messageId, sessions.size(), successCount);
         });
     }
@@ -759,10 +785,9 @@ public class NettyMessageSender {
     }
 
     /**
-     * 生成消息ID（雪花算法）
-     * TODO: 集成实际的ID生成器
+     * 生成消息ID（雪花算法，16位，JS安全）
      */
     private long generateMessageId() {
-        return System.currentTimeMillis();
+        return IdGenerator.generateId();
     }
 }

@@ -146,6 +146,9 @@ public class ImGroupServiceImpl implements ImGroupService {
     @Resource
     private MessageSource messageSource;
 
+    @Resource
+    private ImCacheService imCacheService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createGroup(Long userId, AppImGroupCreateReqVO createReqVO) {
@@ -182,14 +185,23 @@ public class ImGroupServiceImpl implements ImGroupService {
         
         log.info("[ImGroupService] 群组创建成功, groupId: {}, 开始添加成员和创建会话", group.getId());
 
-        // 添加群成员
+        // 添加群成员（批量插入优化）
+        List<ImGroupUserDO> newMembers = new ArrayList<>(memberIds.size());
         for (Long memberId : memberIds) {
             Integer role = memberId.equals(userId)
                     ? ImGroupMemberRoleEnum.OWNER.getRole()
                     : ImGroupMemberRoleEnum.MEMBER.getRole();
-            upsertGroupMember(group.getId(), memberId, role);
-            log.info("[ImGroupService] 添加群成员成功, groupId: {}, memberId: {}, role: {}", 
-                    group.getId(), memberId, role);
+            ImGroupUserDO memberDO = new ImGroupUserDO();
+            memberDO.setGroupId(group.getId());
+            memberDO.setUserId(memberId);
+            memberDO.setRole(role);
+            memberDO.setJoinTime(LocalDateTime.now());
+            newMembers.add(memberDO);
+        }
+        if (!newMembers.isEmpty()) {
+            groupUserMapper.insertBatch(newMembers);
+            log.info("[ImGroupService] 批量添加群成员完成, groupId: {}, memberCount: {}",
+                    group.getId(), newMembers.size());
         }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
@@ -303,6 +315,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
         }
 
+        // 事务提交后清除群缓存
+        final Long finalGroupIdForCache = group.getId();
+        runAfterCommit(() -> imCacheService.evictGroupCache(finalGroupIdForCache));
+
         log.info("[ImGroupService] 更新群组成功, groupId: {}, userId: {}, nameChanged: {}", group.getId(), userId, nameChanged);
     }
 
@@ -332,18 +348,19 @@ public class ImGroupServiceImpl implements ImGroupService {
         LocalDateTime now = LocalDateTime.now();
         String snapshotData = buildGroupSnapshot(group, members, 3, now);
         if (chatId != null) {
-            for (ImGroupUserDO member : members) {
-                saveGroupSnapshot(member.getUserId(), chatId, snapshotData);
+            chatUserMapper.batchSaveSnapshotData(memberIds, chatId, snapshotData);
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
             }
+            conversationUserStateMapper.batchSaveSnapshotData(tenantId, memberIds, chatId, snapshotData);
         }
 
         // 删除群组
         groupMapper.deleteById(groupId);
 
-        // 删除所有群成员
-        for (ImGroupUserDO member : members) {
-            deleteGroupMemberRelation(groupId, member.getUserId(), member.getId());
-        }
+        // 批量删除所有群成员关系
+        groupUserMapper.deleteByGroupId(groupId);
 
         // 批量更新所有群成员的群成员状态为3（群已解散）
         if (chatId != null) {
@@ -366,6 +383,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 ImSystemMessageI18nSupport.EVENT_GROUP_DISBANDED, null);
         runAfterCommit(() -> {
             pushGroupDisbandedNotify(groupId, memberIds, userId, tipContent, tipExtra);
+            imCacheService.evictGroupCache(groupId);
         });
 
         log.info("[ImGroupService] 解散群组成功, groupId: {}, ownerId: {}", groupId, userId);
@@ -424,8 +442,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                 Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
                 conversationUserStateMapper.upsertAfterDelete(tenantId, chatId, userId, cursorVersion, true);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 退出群聊时清理会话列表失败, userId: {}, chatId: {}, error: {}",
-                        userId, chatId, e.getMessage());
+                log.warn("[ImGroupService] 退出群聊时清理会话列表失败, userId: {}, chatId: {}",
+                        userId, chatId, e);
             }
         }
 
@@ -448,6 +466,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED, null);
         runAfterCommit(() -> {
             pushGroupQuitNotify(groupId, userId, tipContent, tipExtra);
+            imCacheService.evictGroupCache(groupId);
         });
 
         log.info("[ImGroupService] 退出群组成功, groupId: {}, userId: {}", groupId, userId);
@@ -595,11 +614,16 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     @Override
-    public List<AppImGroupRespVO> getGroupList(Long userId) {
+    public List<AppImGroupRespVO> getGroupList(Long userId, Integer limit) {
         // 查询用户的所有群组
         List<ImGroupUserDO> groupUsers = groupUserMapper.selectListByUserId(userId);
         if (CollUtil.isEmpty(groupUsers)) {
             return new ArrayList<>();
+        }
+
+        // 按 limit 截断
+        if (groupUsers.size() > limit) {
+            groupUsers = groupUsers.subList(0, limit);
         }
 
         // 查询群组详情
@@ -607,46 +631,31 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .map(ImGroupUserDO::getGroupId)
                 .collect(Collectors.toList());
 
-        // 获取群成员信息列表（最多4个，用于组合头像）
-        Map<Long, java.util.List<AppImGroupRespVO.GroupMemberItem>> groupMemberItemsMap = new HashMap<>();
+        // 1. 批量查询所有群的群成员（每个群最多4个）
+        Map<Long, List<ImGroupUserDO>> groupMembersMap = new HashMap<>();
         if (!groupIds.isEmpty()) {
-            for (Long groupId : groupIds) {
-                List<ImGroupUserDO> members = groupUserMapper.selectList(
-                        new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImGroupUserDO>()
-                                .eq(ImGroupUserDO::getGroupId, groupId)
-                                .orderByAsc(ImGroupUserDO::getJoinTime)
-                                .last("LIMIT 4"));
-                if (members != null && !members.isEmpty()) {
-                    List<Long> memberUserIds = members.stream()
-                            .map(ImGroupUserDO::getUserId)
-                            .collect(Collectors.toList());
-                    List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
-                    if (memberUsers != null) {
-                        List<AppImGroupRespVO.GroupMemberItem> items = new ArrayList<>();
-                        for (ImGroupUserDO member : members) {
-                            AdminUserDO user = memberUsers.stream()
-                                    .filter(u -> u != null && u.getId().equals(member.getUserId()))
-                                    .findFirst()
-                                    .orElse(null);
-                            if (user != null) {
-                                AppImGroupRespVO.GroupMemberItem item = new AppImGroupRespVO.GroupMemberItem();
-                                item.setUserId(user.getId());
-                                item.setName(user.getNickname());
-                                item.setAvatar(user.getAvatar());
-                                items.add(item);
-                            }
-                        }
-                        if (!items.isEmpty()) {
-                            groupMemberItemsMap.put(groupId, items);
-                        }
-                    }
-                }
-            }
+            groupMembersMap = groupUserMapper.selectBatchGroupMembersWithLimit(groupIds, 4);
         }
 
+        // 2. 收集所有群成员用户ID，批量查询用户信息
+        Set<Long> allMemberUserIds = groupMembersMap.values().stream()
+                .flatMap(List::stream)
+                .map(ImGroupUserDO::getUserId)
+                .collect(Collectors.toSet());
+        Map<Long, AdminUserDO> userMap = imCacheService.batchGetUserCache(new ArrayList<>(allMemberUserIds));
+
+        // 3. 批量查询群信息
+        Map<Long, ImGroupDO> groupMap = groupIds.stream()
+                .collect(Collectors.toMap(
+                        groupId -> groupId,
+                        imCacheService::getGroupCache,
+                        (v1, v2) -> v1
+                ));
+
+        // 4. 构建结果
         List<AppImGroupRespVO> result = new ArrayList<>();
         for (Long groupId : groupIds) {
-            ImGroupDO group = groupMapper.selectById(groupId);
+            ImGroupDO group = groupMap.get(groupId);
             if (group != null) {
                 AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
                 ImGroupUserDO currentMember = groupUsers.stream()
@@ -661,7 +670,24 @@ public class ImGroupServiceImpl implements ImGroupService {
                         respVO.setPendingJoinRequestCount(0L);
                     }
                 }
-                respVO.setGroupMemberItems(groupMemberItemsMap.get(groupId));
+                // 构建群成员头像项
+                List<ImGroupUserDO> members = groupMembersMap.get(groupId);
+                if (members != null && !members.isEmpty()) {
+                    List<AppImGroupRespVO.GroupMemberItem> items = new ArrayList<>();
+                    for (ImGroupUserDO member : members) {
+                        AdminUserDO user = userMap.get(member.getUserId());
+                        if (user != null) {
+                            AppImGroupRespVO.GroupMemberItem item = new AppImGroupRespVO.GroupMemberItem();
+                            item.setUserId(user.getId());
+                            item.setName(user.getNickname());
+                            item.setAvatar(user.getAvatar());
+                            items.add(item);
+                        }
+                    }
+                    if (!items.isEmpty()) {
+                        respVO.setGroupMemberItems(items);
+                    }
+                }
                 result.add(respVO);
             }
         }
@@ -734,6 +760,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             runAfterCommit(() -> {
                 persistGroupSystemTipConversationUpdate(addReqVO.getGroupId(), userId, tipContent, tipContent, tipExtra);
                 pushGroupMemberAddedNotify(addReqVO.getGroupId(), addedMemberIds, userId, tipContent, tipExtra);
+                imCacheService.evictGroupCache(addReqVO.getGroupId());
             });
         }
 
@@ -819,6 +846,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         runAfterCommit(() -> {
             persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent, tipExtra);
             pushGroupMemberRemovedNotify(groupId, memberUserId, userId, tipContent, tipExtra);
+            imCacheService.evictGroupCache(groupId);
         });
 
         log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}",
@@ -826,7 +854,7 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     @Override
-    public List<AppImGroupMemberRespVO> getGroupMembers(Long userId, Long groupId) {
+    public List<AppImGroupMemberRespVO> getGroupMembers(Long userId, Long groupId, Integer pageNo, Integer pageSize) {
         // 查询群组
         ImGroupDO group = groupMapper.selectById(groupId);
         if (group == null) {
@@ -848,15 +876,22 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
         }
 
-        // 正常查询所有群成员
-        List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
+        // SQL 分页查询群成员（替代全量加载+内存分页）
+        int finalPageNo = pageNo != null && pageNo > 0 ? pageNo : 1;
+        int finalPageSize = pageSize != null && pageSize > 0 ? Math.min(pageSize, 200) : 50;
+        int offset = (finalPageNo - 1) * finalPageSize;
+        List<ImGroupUserDO> pageMembers = groupUserMapper.selectPageByGroupId(groupId, offset, finalPageSize);
         
-        // 转换为VO并填充用户信息
-        return members.stream().map(member -> {
+        // 批量查询用户信息（使用缓存，替代循环逐条查询）
+        List<Long> memberUserIds = pageMembers.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
+        Map<Long, AdminUserDO> userMap = imCacheService.batchGetUserCache(memberUserIds);
+        
+        // 转换为VO
+        return pageMembers.stream().map(member -> {
             AppImGroupMemberRespVO respVO = BeanUtils.toBean(member, AppImGroupMemberRespVO.class);
             
-            // 填充用户信息
-            AdminUserDO user = userMapper.selectById(member.getUserId());
+            // 从缓存 Map 中获取用户信息
+            AdminUserDO user = userMap.get(member.getUserId());
             if (user != null) {
                 respVO.setUserNickname(user.getNickname());
                 respVO.setUserAvatar(user.getAvatar());
@@ -958,8 +993,8 @@ public class ImGroupServiceImpl implements ImGroupService {
             log.info("[ImGroupService] 角色变更通知已发送, groupId: {}, targetUserId: {}, newRole: {}", 
                     group.getId(), targetUserId, newRole);
         } catch (Exception e) {
-            log.warn("[ImGroupService] 发送角色变更通知失败, groupId: {}, targetUserId: {}, error: {}", 
-                    group.getId(), targetUserId, e.getMessage());
+            log.warn("[ImGroupService] 发送角色变更通知失败, groupId: {}, targetUserId: {}", 
+                    group.getId(), targetUserId, e);
         }
     }
 
@@ -1084,8 +1119,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群成员禁言状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群成员禁言状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -1116,8 +1151,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送全员禁言状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送全员禁言状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -1148,8 +1183,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群成员新增状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群成员新增状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -1183,8 +1218,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群成员移除状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群成员移除状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -1656,8 +1691,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         cursorVersion, null);
                 imBadgeService.pushBadgeUpdate(targetUserId);
             } catch (Exception e) {
-                log.warn("[ImGroupService] {}提交后通知失败, groupId: {}, targetUserId: {}, error: {}",
-                        logPrefix, groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] {}提交后通知失败, groupId: {}, targetUserId: {}",
+                        logPrefix, groupId, targetUserId, e);
             }
         }
     }
@@ -1750,8 +1785,8 @@ public class ImGroupServiceImpl implements ImGroupService {
 
                 userCursorVersionMap.put(targetUserId, cursorVersion);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群系统提示会话更新失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群系统提示会话更新失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
 
@@ -1781,11 +1816,14 @@ public class ImGroupServiceImpl implements ImGroupService {
     private String buildGroupMembersAddedTipContent(List<Long> addedMemberIds) {
         List<String> names = new ArrayList<>();
         if (CollUtil.isNotEmpty(addedMemberIds)) {
-            for (Long memberUserId : addedMemberIds) {
-                if (memberUserId == null) {
-                    continue;
-                }
-                AdminUserDO user = userMapper.selectById(memberUserId);
+            // 批量查询用户信息（替代循环逐条查询）
+            List<Long> validIds = addedMemberIds.stream()
+                    .filter(id -> id != null)
+                    .collect(Collectors.toList());
+            Map<Long, AdminUserDO> userMap = imCacheService.batchGetUserCache(validIds);
+
+            for (Long memberUserId : validIds) {
+                AdminUserDO user = userMap.get(memberUserId);
                 String nickname = user != null && user.getNickname() != null ? user.getNickname().trim() : "";
                 if (!nickname.isEmpty()) {
                     names.add(nickname);
@@ -1955,8 +1993,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群主转让状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群主转让状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -1985,8 +2023,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群解散状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群解散状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -2012,8 +2050,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群信息更新通知失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送群信息更新通知失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -2043,8 +2081,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送成员退群状态失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送成员退群状态失败, groupId: {}, targetUserId: {}",
+                        groupId, targetUserId, e);
             }
         }
     }
@@ -2177,9 +2215,13 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     @Override
-    public List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status) {
+    public List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status, Integer limit) {
         assertCanManageJoinRequests(userId, groupId);
         List<ImGroupJoinRequestDO> requests = groupJoinRequestMapper.selectListByGroupIdAndStatus(groupId, status);
+        // 按 limit 截断
+        if (requests.size() > limit) {
+            requests = requests.subList(0, limit);
+        }
         return requests.stream().map(this::buildJoinRequestRespVO).collect(Collectors.toList());
     }
 
@@ -2344,8 +2386,8 @@ public class ImGroupServiceImpl implements ImGroupService {
             try {
                 imNotifyService.sendCustomNotify(managerId, title, content, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 保存入群申请管理员通知失败, groupId: {}, managerId: {}, error: {}",
-                        group.getId(), managerId, e.getMessage(), e);
+                log.warn("[ImGroupService] 保存入群申请管理员通知失败, groupId: {}, managerId: {}",
+                        group.getId(), managerId, e);
             }
             try {
                 messageSender.sendToUserWithExtra(managerId, MessageType.SYSTEM_NOTIFY, body,
@@ -2353,14 +2395,14 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送入群申请管理员实时通知失败, groupId: {}, managerId: {}, error: {}",
-                        group.getId(), managerId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送入群申请管理员实时通知失败, groupId: {}, managerId: {}",
+                        group.getId(), managerId, e);
             }
             try {
                 imBadgeService.pushBadgeUpdate(managerId);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送入群申请管理员 badge 刷新失败, groupId: {}, managerId: {}, error: {}",
-                        group.getId(), managerId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送入群申请管理员 badge 刷新失败, groupId: {}, managerId: {}",
+                        group.getId(), managerId, e);
             }
         }
     }
@@ -2383,8 +2425,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         try {
             imNotifyService.sendCustomNotify(request.getApplicantUserId(), title, content, null, extra);
         } catch (Exception e) {
-            log.warn("[ImGroupService] 保存入群申请结果通知失败, groupId: {}, applicantUserId: {}, error: {}",
-                    group.getId(), request.getApplicantUserId(), e.getMessage(), e);
+            log.warn("[ImGroupService] 保存入群申请结果通知失败, groupId: {}, applicantUserId: {}",
+                    group.getId(), request.getApplicantUserId(), e);
         }
         try {
             messageSender.sendToUserWithExtra(request.getApplicantUserId(), MessageType.SYSTEM_NOTIFY, body,
@@ -2392,8 +2434,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                     null, null, null,
                     null, null, extra);
         } catch (Exception e) {
-            log.warn("[ImGroupService] 推送入群申请结果实时通知失败, groupId: {}, applicantUserId: {}, error: {}",
-                    group.getId(), request.getApplicantUserId(), e.getMessage(), e);
+            log.warn("[ImGroupService] 推送入群申请结果实时通知失败, groupId: {}, applicantUserId: {}",
+                    group.getId(), request.getApplicantUserId(), e);
         }
     }
 
@@ -2418,14 +2460,14 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, null,
                         null, null, extra);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送管理员审批刷新通知失败, groupId: {}, managerId: {}, error: {}",
-                        group.getId(), managerId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送管理员审批刷新通知失败, groupId: {}, managerId: {}",
+                        group.getId(), managerId, e);
             }
             try {
                 imBadgeService.pushBadgeUpdate(managerId);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 推送管理员审批 badge 刷新失败, groupId: {}, managerId: {}, error: {}",
-                        group.getId(), managerId, e.getMessage(), e);
+                log.warn("[ImGroupService] 推送管理员审批 badge 刷新失败, groupId: {}, managerId: {}",
+                        group.getId(), managerId, e);
             }
         }
     }
@@ -2581,7 +2623,7 @@ public class ImGroupServiceImpl implements ImGroupService {
 
             log.debug("[ImGroupService] 清理限流器过期数据完成");
         } catch (Exception e) {
-            log.warn("[ImGroupService] 清理限流器过期数据失败, error: {}", e.getMessage());
+            log.warn("[ImGroupService] 清理限流器过期数据失败", e);
         }
     }
 
@@ -2603,16 +2645,20 @@ public class ImGroupServiceImpl implements ImGroupService {
         snapshot.set("allowMemberInvite", group.getAllowMemberInvite() != null && group.getAllowMemberInvite());
         snapshot.set("needApproval", group.getNeedApproval() != null && group.getNeedApproval());
 
-        // 群主信息
+        // 群主信息（使用缓存）
         snapshot.set("ownerUserId", group.getOwnerId() != null ? String.valueOf(group.getOwnerId()) : "");
-        AdminUserDO owner = userMapper.selectById(group.getOwnerId());
+        AdminUserDO owner = imCacheService.getUserCache(group.getOwnerId());
         snapshot.set("ownerName", owner != null && owner.getNickname() != null ? owner.getNickname() : "");
 
-        // 成员快照列表（只存关键信息：userId、昵称、角色、头像）
+        // 成员快照列表（批量查询用户信息优化）
         if (CollUtil.isNotEmpty(members)) {
             List<JSONObject> memberSnapshots = new ArrayList<>();
             List<Long> memberIds = new ArrayList<>();
             List<Long> adminIds = new ArrayList<>();
+
+            // 批量查询所有成员的用户信息（替代循环逐条查询）
+            List<Long> userIds = members.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
+            Map<Long, AdminUserDO> userMap = imCacheService.batchGetUserCache(userIds);
 
             for (ImGroupUserDO member : members) {
                 JSONObject memberJson = JSONUtil.createObj();
@@ -2620,7 +2666,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 memberJson.set("role", member.getRole() != null ? member.getRole() : 0);
                 memberJson.set("nickname", member.getNickname() != null ? member.getNickname() : "");
 
-                AdminUserDO user = userMapper.selectById(member.getUserId());
+                AdminUserDO user = userMap.get(member.getUserId());
                 if (user != null) {
                     memberJson.set("userName", user.getNickname() != null ? user.getNickname() : "");
                     memberJson.set("avatarUrl", user.getAvatar() != null ? user.getAvatar() : "");
@@ -2661,7 +2707,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
             conversationUserStateMapper.saveSnapshotData(tenantId, userId, chatId, snapshotData);
         } catch (Exception e) {
-            log.warn("[ImGroupService] 保存群快照失败, userId: {}, chatId: {}, error: {}", userId, chatId, e.getMessage());
+            log.warn("[ImGroupService] 保存群快照失败, userId: {}, chatId: {}", userId, chatId, e);
         }
     }
 

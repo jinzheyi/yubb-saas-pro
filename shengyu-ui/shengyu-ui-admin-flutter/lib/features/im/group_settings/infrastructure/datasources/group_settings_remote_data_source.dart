@@ -34,7 +34,7 @@ class GroupSettingsRemoteDataSource {
   Future<List<GroupMemberDto>> getGroupMembers(String groupId) async {
     final response = await dio.get(
       '/system/im/group/member/list',
-      queryParameters: {'groupId': groupId},
+      queryParameters: {'groupId': groupId, 'pageNo': 1, 'pageSize': 200},
     );
     final result = ApiResult.fromJson<List<GroupMemberDto>>(
       response.data as Map<String, dynamic>,
@@ -123,7 +123,7 @@ class GroupSettingsRemoteDataSource {
   }) async {
     final response = await dio.get(
       '/system/im/group/join-request/list',
-      queryParameters: {'groupId': groupId, 'status': status},
+      queryParameters: {'groupId': groupId, 'status': status, 'limit': 100},
     );
     final result = ApiResult.fromJson<List<GroupJoinRequestItemDto>>(
       response.data as Map<String, dynamic>,

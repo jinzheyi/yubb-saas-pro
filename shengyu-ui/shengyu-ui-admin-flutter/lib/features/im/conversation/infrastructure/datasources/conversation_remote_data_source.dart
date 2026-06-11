@@ -10,7 +10,10 @@ class ConversationRemoteDataSource {
   final String currentUserId;
 
   Future<List<ConversationDto>> fetchConversationList() async {
-    final response = await dio.get('/system/im/conversation/list');
+    final response = await dio.get(
+      '/system/im/conversation/list',
+      queryParameters: {'pageNo': 1, 'pageSize': 100},
+    );
     final result = ApiResult.fromJson<List<ConversationDto>>(
       response.data as Map<String, dynamic>,
       dataParser: (raw) => _mapConversationList(raw),

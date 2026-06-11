@@ -31,6 +31,12 @@ import java.util.function.Consumer;
 public class JsonWebSocketMessageHandler extends TextWebSocketHandler {
 
     /**
+     * JSON 消息最大长度（字节），默认 256KB
+     * 防止超大 JSON 导致 GC 压力或 OOM
+     */
+    private static final int MAX_JSON_LENGTH = 256 * 1024;
+
+    /**
      * type 与 WebSocketMessageListener 的映射
      */
     private final Map<String, WebSocketMessageListener<Object>> listeners = new HashMap<>();
@@ -47,7 +53,13 @@ public class JsonWebSocketMessageHandler extends TextWebSocketHandler {
         if (message.getPayloadLength() == 0) {
             return;
         }
-        // 1.2 ping 心跳消息，直接返回 pong 消息。
+        // 1.2 大小限制检查（防止超大 JSON 导致 GC 压力或 OOM）
+        if (message.getPayloadLength() > MAX_JSON_LENGTH) {
+            log.warn("[handleTextMessage][session({}) message too large: {} bytes, max: {} bytes]",
+                    session.getId(), message.getPayloadLength(), MAX_JSON_LENGTH);
+            return;
+        }
+        // 1.3 ping 心跳消息，直接返回 pong 消息。
         if (message.getPayloadLength() == 4 && Objects.equals(message.getPayload(), "ping")) {
             session.sendMessage(new TextMessage("pong"));
             return;
@@ -76,7 +88,7 @@ public class JsonWebSocketMessageHandler extends TextWebSocketHandler {
             Long tenantId = WebSocketFrameworkUtils.getTenantId(session);
             TenantUtils.execute(tenantId, () -> messageListener.onMessage(session, messageObj));
         } catch (Throwable ex) {
-            log.error("[handleTextMessage][session({}) message({}) 处理异常]", session.getId(), message.getPayload());
+            log.error("[handleTextMessage][session({}) message({}) 处理异常]", session.getId(), message.getPayload(), ex);
         }
     }
 

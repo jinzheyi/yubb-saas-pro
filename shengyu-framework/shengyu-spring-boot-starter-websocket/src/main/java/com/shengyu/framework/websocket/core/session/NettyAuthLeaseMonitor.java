@@ -72,11 +72,23 @@ public class NettyAuthLeaseMonitor {
             long now = System.currentTimeMillis();
             long suggestWindowMs = Math.max(1L, nettyProperties.getAuthRenewSuggestSeconds()) * 1000L;
             long activeWindowMs = Math.max(1L, nettyProperties.getBizActiveWindowSeconds()) * 1000L;
+            int cleanedCount = 0;
 
             for (NettySession session : sessions) {
-                if (session == null || !session.isActive()) {
+                if (session == null) {
                     continue;
                 }
+
+                // 0) 僵尸连接清理：Channel 不再活跃，主动清理索引
+                if (!session.isActive()) {
+                    Channel ch = session.getChannel();
+                    if (ch != null) {
+                        sessionManager.removeSession(ch);
+                        cleanedCount++;
+                    }
+                    continue;
+                }
+
                 if (session.getLeaseExpireTime() == null || session.getLeaseExpireTime() <= 0) {
                     continue;
                 }
@@ -114,8 +126,12 @@ public class NettyAuthLeaseMonitor {
                     session.markRenewSuggested();
                 }
             }
+
+            if (cleanedCount > 0) {
+                log.info("[LeaseMonitor] scan done, total={}, zombieCleaned={}", sessions.size(), cleanedCount);
+            }
         } catch (Exception e) {
-            log.warn("[LeaseMonitor] scan error: {}", e.getMessage());
+            log.warn("[LeaseMonitor] scan error: {}", e.getMessage(), e);
         }
     }
 

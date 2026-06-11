@@ -88,10 +88,10 @@ public class NettySessionManager {
             try {
                 listener.onSessionAdded(session);
             } catch (Exception e) {
-                log.warn("[SessionManager] lifecycle onSessionAdded failed, userId: {}, deviceType: {}, error: {}",
+                log.warn("[SessionManager] lifecycle onSessionAdded failed, userId: {}, deviceType: {}",
                         session != null ? session.getUserId() : null,
                         session != null ? session.getDeviceType() : null,
-                        e.getMessage());
+                        e);
             }
         }
     }
@@ -101,10 +101,10 @@ public class NettySessionManager {
             try {
                 listener.onSessionRemoved(session);
             } catch (Exception e) {
-                log.warn("[SessionManager] lifecycle onSessionRemoved failed, userId: {}, deviceType: {}, error: {}",
+                log.warn("[SessionManager] lifecycle onSessionRemoved failed, userId: {}, deviceType: {}",
                         session != null ? session.getUserId() : null,
                         session != null ? session.getDeviceType() : null,
-                        e.getMessage());
+                        e);
             }
         }
     }
@@ -114,10 +114,10 @@ public class NettySessionManager {
             try {
                 listener.onSessionBizActive(session);
             } catch (Exception e) {
-                log.warn("[SessionManager] lifecycle onSessionBizActive failed, userId: {}, deviceType: {}, error: {}",
+                log.warn("[SessionManager] lifecycle onSessionBizActive failed, userId: {}, deviceType: {}",
                         session != null ? session.getUserId() : null,
                         session != null ? session.getDeviceType() : null,
-                        e.getMessage());
+                        e);
             }
         }
     }
@@ -182,7 +182,7 @@ public class NettySessionManager {
                 .add(channelId);
         }
 
-        log.info("[SessionManager] 添加会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+        log.debug("[SessionManager] 添加会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
             userId, tenantId, deviceType, channelId, channelSessionMap.size());
         notifySessionAdded(session);
     }
@@ -241,9 +241,73 @@ public class NettySessionManager {
                 }
             }
 
-            log.info("[SessionManager] 移除会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
-                userId, tenantId, deviceType, channelId, channelSessionMap.size());
+            log.debug("[SessionManager] 移除会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+            userId, tenantId, deviceType, channelId, channelSessionMap.size());
             notifySessionRemoved(session);
+        }
+    }
+
+    /**
+     * 根据 accessToken 撤销连接（Token 撤销联动，实时失效）
+     *
+     * 用于：用户修改密码、管理员踢人、Token 过期等场景
+     * 通过 O(1) 查找快速定位连接并关闭，避免权限残留窗口
+     */
+    public void revokeByAccessToken(String accessToken) {
+        if (StrUtil.isBlank(accessToken)) {
+            return;
+        }
+        String channelId = accessTokenChannelMap.get(accessToken);
+        if (channelId == null) {
+            log.debug("[SessionManager] Token 撤销但连接不存在, accessToken: {}", accessToken);
+            return;
+        }
+        NettySession session = channelSessionMap.get(channelId);
+        if (session == null || !session.isActive()) {
+            // 连接已失效，清理残留索引
+            if (session != null) {
+                removeSession(session.getChannel());
+            }
+            return;
+        }
+
+        log.info("[SessionManager] Token 撤销联动, userId: {}, tenantId: {}, deviceType: {}",
+                session.getUserId(), session.getTenantId(), session.getDeviceType());
+
+        Channel ch = session.getChannel();
+        removeSession(ch);
+
+        // 发送关闭通知
+        try {
+            if (isWebSocketChannel(ch)) {
+                String payload = JSONUtil.createObj()
+                    .set("header", JSONUtil.createObj()
+                        .set("messageId", System.currentTimeMillis())
+                        .set("messageType", MessageType.CLOSE_VALUE)
+                        .set("timestamp", System.currentTimeMillis()))
+                    .set("body", JSONUtil.createObj()
+                        .set("action", "TOKEN_REVOKED")
+                        .set("code", 401)
+                        .set("message", "认证已失效，请重新登录"))
+                    .toString();
+                ch.writeAndFlush(new TextWebSocketFrame(payload));
+            } else {
+                String extra = JSONUtil.createObj()
+                    .set("action", "TOKEN_REVOKED")
+                    .set("code", 401)
+                    .set("message", "认证已失效，请重新登录")
+                    .toString();
+                MessageHeader header = MessageHeader.newBuilder()
+                    .setMessageId(System.currentTimeMillis())
+                    .setMessageType(MessageType.CLOSE)
+                    .setTimestamp(System.currentTimeMillis())
+                    .setExtra(extra)
+                    .build();
+                ch.writeAndFlush(ImMessage.newBuilder().setHeader(header).build());
+            }
+            ch.close();
+        } catch (Exception e) {
+            log.warn("[SessionManager] Token 撤销关闭连接失败", e);
         }
     }
 

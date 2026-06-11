@@ -45,10 +45,16 @@ public class AppImContactController {
     private ImSearchRateLimitService searchRateLimitService;
 
     @GetMapping("/list")
-    @Operation(summary = "获取联系人列表")
-    public CommonResult<List<AppImContactRespVO>> getContactList() {
+    @Operation(summary = "获取联系人列表（默认最多返回500条）")
+    @Parameter(name = "limit", description = "返回上限（可选，默认500，最大1000）", required = false)
+    public CommonResult<List<AppImContactRespVO>> getContactList(
+            @RequestParam(value = "limit", required = false, defaultValue = "500") Integer limit) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(contactService.getContactList(userId));
+        // 限制最大 limit
+        if (limit > 1000) {
+            limit = 1000;
+        }
+        return success(contactService.getContactList(userId, limit));
     }
 
     @GetMapping("/search")
@@ -99,10 +105,11 @@ public class AppImContactController {
     }
 
     @GetMapping("/list-star")
-    @Operation(summary = "获取星标联系人列表")
+    @Operation(summary = "获取星标联系人列表（默认最多返回200条）")
     public CommonResult<List<AppImContactRespVO>> getStarContactList() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(contactService.getStarContacts(userId));
+        // 星标联系人通常数量较少，限制最多200条
+        return success(contactService.getStarContacts(userId, 200));
     }
 
 }

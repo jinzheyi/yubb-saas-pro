@@ -147,6 +147,19 @@ public interface ImMessageService {
     void batchUpdateMessageStatus(Long userId, java.util.List<Long> messageIds, Integer status);
 
     /**
+     * 批量标记消息已读（含权限校验）
+     * 
+     * 企业级设计：
+     * 1. 批量查询 chatId，避免循环内 DB 查询
+     * 2. 一次查出所有 chatUser 记录，用 Map 做权限校验
+     * 3. 仅标记当前用户可见的会话中的消息
+     *
+     * @param userId 用户ID
+     * @param messageIds 消息ID列表
+     */
+    void batchMarkMessagesRead(Long userId, java.util.List<Long> messageIds);
+
+    /**
      * 标记语音消息已播放（多端同步未听点）
      *
      * @param userId 用户ID

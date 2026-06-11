@@ -325,6 +325,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     private ImCursorVersionService cursorVersionService;
 
     @Resource
+    private ImCacheService imCacheService;
+
+    @Resource
     private NettyMessageSender messageSender;
 
     @Resource
@@ -493,6 +496,15 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         final List<Long> finalDeletedIds = deletedIds;
 
+        // 批量预加载发送者信息和会话信息，避免 N+1 查询
+        ImChatDO chat = chatMapper.selectById(pullReqVO.getChatId());
+        Set<Long> senderIds = list.stream()
+                .filter(m -> m != null && m.getSenderId() != null)
+                .map(ImChatMessageDO::getSenderId)
+                .collect(Collectors.toSet());
+        Map<Long, AdminUserDO> senderMap = imCacheService.batchGetUserCache(new ArrayList<>(senderIds));
+        Map<Long, String> groupNicknameMap = buildGroupNicknameMap(chat, senderIds);
+
         List<AppImMessageRespVO> respList = list.stream()
                 .filter(m -> m != null && m.getId() != null
                         && (finalClearSeq == null || finalClearSeq <= 0 || (m.getSequence() != null && m.getSequence() > finalClearSeq))
@@ -503,9 +515,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setSequence(message.getSequence());
             // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-            fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
+            fillSenderInfo(respVO, message.getSenderId(), chat, senderMap, groupNicknameMap);
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
-            fillChatTargetFields(respVO, userId);
+            fillChatTargetFields(respVO, userId, chat);
             applyLocalizedSystemMessageContent(respVO, message);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
             sanitizeRecalledMessage(respVO, message, userId);
@@ -552,6 +564,15 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         final List<Long> finalDeletedIds = deletedIds;
 
+        // 批量预加载发送者信息和会话信息，避免 N+1 查询
+        ImChatDO chat = chatMapper.selectById(pageReqVO.getChatId());
+        Set<Long> senderIds = pageResult.getList().stream()
+                .filter(m -> m != null && m.getSenderId() != null)
+                .map(ImChatMessageDO::getSenderId)
+                .collect(Collectors.toSet());
+        Map<Long, AdminUserDO> senderMap = imCacheService.batchGetUserCache(new ArrayList<>(senderIds));
+        Map<Long, String> groupNicknameMap = buildGroupNicknameMap(chat, senderIds);
+
         List<AppImMessageRespVO> respVOList = pageResult.getList().stream()
                 .filter(m -> m != null && m.getId() != null
                         && (finalClearSeq == null || finalClearSeq <= 0 || (m.getSequence() != null && m.getSequence() > finalClearSeq))
@@ -562,9 +583,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setSequence(message.getSequence());
             // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-            fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
+            fillSenderInfo(respVO, message.getSenderId(), chat, senderMap, groupNicknameMap);
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
-            fillChatTargetFields(respVO, userId);
+            fillChatTargetFields(respVO, userId, chat);
             applyLocalizedSystemMessageContent(respVO, message);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
             sanitizeRecalledMessage(respVO, message, userId);
@@ -1034,6 +1055,46 @@ public class ImMessageServiceImpl implements ImMessageService {
     }
 
     @Override
+    public void batchMarkMessagesRead(Long userId, List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        // 1. 批量查询消息
+        List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(messageIds);
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        // 2. 收集所有 chatId（去重）
+        Set<Long> chatIds = messages.stream()
+                .filter(m -> m != null && m.getChatId() != null)
+                .map(ImChatMessageDO::getChatId)
+                .collect(Collectors.toSet());
+        if (chatIds.isEmpty()) {
+            return;
+        }
+
+        // 3. 批量查询用户会话权限（一次查询替代 N 次）
+        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserAndChatIds(userId, new ArrayList<>(chatIds));
+        Set<Long> allowedChatIds = chatUsers.stream()
+                .map(ImChatUserDO::getChatId)
+                .collect(Collectors.toSet());
+
+        // 4. 过滤出当前用户有权限的消息ID
+        List<Long> filteredIds = messages.stream()
+                .filter(m -> allowedChatIds.contains(m.getChatId()))
+                .map(ImChatMessageDO::getId)
+                .collect(Collectors.toList());
+
+        if (filteredIds.isEmpty()) {
+            return;
+        }
+
+        // 5. 批量更新状态为已读
+        batchUpdateMessageStatus(userId, filteredIds, ImMessageStatusEnum.READ.getStatus());
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void markVoicePlayed(Long userId, Long messageId) {
         if (messageId == null || messageId <= 0) {
@@ -1075,7 +1136,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     null, null, extra.toString());
         } catch (Exception e) {
             log.warn("[ImMessageService] 推送语音已播放同步通知失败, userId: {}, messageId: {}, error: {}",
-                    userId, messageId, e.getMessage(), e);
+                    userId, messageId, e);
         }
     }
 
@@ -1166,7 +1227,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     null, null, extra.toString());
         } catch (Exception e) {
             log.warn("[ImMessageService] push voice-played notify failed, userId: {}, chatId: {}, messageCount: {}, error: {}",
-                    userId, chatId, messageIds.size(), e.getMessage(), e);
+                    userId, chatId, messageIds.size(), e);
         }
     }
 
@@ -1218,7 +1279,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
         } catch (Exception e) {
             log.warn("[ImMessageService] 查询语音播放状态失败, userId: {}, messageCount: {}, error: {}",
-                    userId, voiceMap.size(), e.getMessage(), e);
+                    userId, voiceMap.size(), e);
         }
 
         for (Map.Entry<Long, AppImMessageRespVO> entry : voiceMap.entrySet()) {
@@ -1254,8 +1315,8 @@ public class ImMessageServiceImpl implements ImMessageService {
                 cursorVerMap = cursorVersionService.allocateNextCursorVersions(tenantId, memberIds);
             } catch (Exception e) {
                 cursorVerMap = Collections.emptyMap();
-                log.warn("[ImMessageService] 批量分配 cursorVersion 失败(群消息), chatId: {}, groupId: {}, error: {}",
-                        chat.getId(), chat.getGroupId(), e.getMessage());
+                log.warn("[ImMessageService] 批量分配 cursorVersion 失败(群消息), chatId: {}, groupId: {}",
+                        chat.getId(), chat.getGroupId(), e);
             }
 
             for (Long memberId : memberIds) {
@@ -1307,7 +1368,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     }
                 } catch (Exception e) {
                     log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
-                            chat.getId(), memberId, e.getMessage());
+                            chat.getId(), memberId, e);
                 }
 
                 if (!isSender) {
@@ -1348,7 +1409,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             } catch (Exception e) {
                 cursorVerMap = Collections.emptyMap();
                 log.warn("[ImMessageService] 批量分配 cursorVersion 失败(单聊消息), chatId: {}, senderId: {}, error: {}",
-                        chat.getId(), senderId, e.getMessage());
+                        chat.getId(), senderId, e);
             }
             try {
                 Long senderCursorVer = cursorVerMap.get(senderId);
@@ -1361,7 +1422,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                         lastMessageId, lastMessageSequence, senderId, dbMessageType, senderPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",
-                        chat.getId(), senderId, e.getMessage());
+                        chat.getId(), senderId, e);
             }
 
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
@@ -1383,7 +1444,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                         lastMessageId, lastMessageSequence, senderId, dbMessageType, receiverPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊接收者), chatId: {}, receiverId: {}, error: {}",
-                        chat.getId(), receiverId, e.getMessage());
+                        chat.getId(), receiverId, e);
             }
 
             imBadgeService.pushBadgeUpdate(receiverId);
@@ -1872,7 +1933,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("[ImMessageService] 获取发送者信息失败, senderId: {}, error: {}", senderId, e.getMessage());
+                log.warn("[ImMessageService] 获取发送者信息失败, senderId: {}", senderId, e);
             }
             
             messageSender.sendToUserWithFullInfo(userId, messageType, messageBody,
@@ -1974,13 +2035,13 @@ public class ImMessageServiceImpl implements ImMessageService {
                     log.debug("[ImMessageService] @提及强提醒推送成功, mentionedUserId: {}, messageId: {}", 
                             mentionedUserId, messageId);
                 } catch (Exception e) {
-                    log.warn("[ImMessageService] @提及强提醒推送失败, mentionedUserId: {}, messageId: {}, error: {}", 
-                            mentionedUserId, messageId, e.getMessage());
+                    log.warn("[ImMessageService] @提及强提醒推送失败, mentionedUserId: {}, messageId: {}", 
+                            mentionedUserId, messageId, e);
                 }
             }
         } catch (Exception e) {
-            log.warn("[ImMessageService] 解析mentions字段失败, mentions: {}, error: {}", 
-                    mentionsJson, e.getMessage());
+            log.warn("[ImMessageService] 解析mentions字段失败, mentions: {}", 
+                    mentionsJson, e);
         }
     }
 
@@ -2701,7 +2762,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
         } catch (Exception e) {
             log.warn("[ImMessageService] 撤回预览落库/增量同步失败, userId: {}, messageId: {}, error: {}",
-                    userId, messageId, e.getMessage(), e);
+                    userId, messageId, e);
         }
 
         // 企业级一致性：撤回必须通过 WS 实时广播到会话参与方（对端/群成员）以及操作者的其他设备
@@ -2802,7 +2863,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
         } catch (Exception e) {
             log.warn("[ImMessageService] 推送撤回事件失败, userId: {}, messageId: {}, error: {}",
-                    userId, messageId, e.getMessage(), e);
+                    userId, messageId, e);
         }
     }
 
@@ -2847,18 +2908,18 @@ public class ImMessageServiceImpl implements ImMessageService {
                     cursorVersion, null, null);
             } catch (Exception e) {
                 log.warn("[IM][send] push failed userId={}, chatId={}, messageId={}, seq={}, rev={}, senderId={}, err={}",
-                    userId, message.getChatId(), messageId, message.getSequence(), message.getRev(), userId, e.getMessage(), e);
+                    userId, message.getChatId(), messageId, message.getSequence(), message.getRev(), userId, e);
             }
 
             try {
                 imBadgeService.pushBadgeUpdate(userId);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 推送删除消息角标更新失败, userId: {}, messageId: {}, error: {}",
-                        userId, messageId, e.getMessage(), e);
+                        userId, messageId, e);
             }
         } catch (Exception e) {
             log.warn("[ImMessageService] 删除消息写入会话用户态失败, userId: {}, messageId: {}, error: {}",
-                    userId, messageId, e.getMessage(), e);
+                    userId, messageId, e);
         }
     }
 
@@ -2912,14 +2973,14 @@ public class ImMessageServiceImpl implements ImMessageService {
                         cursorVersion, null);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 推送清空聊天记录增量同步通知失败, userId: {}, chatId: {}, error: {}",
-                        userId, chatId, e.getMessage(), e);
+                        userId, chatId, e);
             }
 
             try {
                 imBadgeService.pushBadgeUpdate(userId);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 推送清空聊天记录角标更新失败, userId: {}, chatId: {}, error: {}",
-                        userId, chatId, e.getMessage(), e);
+                        userId, chatId, e);
             }
         } catch (Exception e) {
             log.warn("[ImMessageService] 清空聊天记录写入会话用户态失败, userId: {}, chatId: {}, error: {}",

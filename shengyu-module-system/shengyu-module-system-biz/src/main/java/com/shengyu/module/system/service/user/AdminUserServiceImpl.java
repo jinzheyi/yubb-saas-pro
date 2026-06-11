@@ -110,6 +110,10 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Lazy // 懒加载，避免循环依赖
     private com.shengyu.framework.websocket.core.sender.NettyMessageSender nettyMessageSender;
 
+    @Resource
+    @Lazy // 懒加载，避免循环依赖
+    private com.shengyu.module.system.service.im.ImCacheService imCacheService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createUser(UserSaveReqVO createReqVO) {
@@ -293,6 +297,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         updateUserDept(updateReqVO.getId(), updateReqVO.getDeptIdList());
         // 更新岗位
         updateUserPost(updateReqVO.getId(), updateObj, updateReqVO);
+
+        // 清除 IM 用户缓存（昵称/头像可能变更）
+        imCacheService.evictUserCache(updateReqVO.getId());
     }
 
     private void updateUserDept(Long userId, Set<Long> deptIds) {
@@ -348,6 +355,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         SaasUserDO updateObj = new SaasUserDO().setId(adminUserDO.getSaasUserId());
         updateObj.setSex(reqVO.getSex());
         saasUserMapper.updateById(updateObj);
+
+        // 清除 IM 用户缓存（昵称/头像可能变更）
+        imCacheService.evictUserCache(id);
     }
 
     @Override
@@ -373,6 +383,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         sysUserDO.setAvatar(avatar);
         userMapper.updateById(sysUserDO);
 
+        // 清除 IM 用户缓存
+        imCacheService.evictUserCache(id);
+
         // 广播头像变更事件到该用户的所有在线端（多端同步）
         broadcastAvatarChanged(id, avatar);
 
@@ -386,6 +399,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         sysUserDO.setId(id);
         sysUserDO.setAvatar("");
         userMapper.updateById(sysUserDO);
+
+        // 清除 IM 用户缓存
+        imCacheService.evictUserCache(id);
 
         // 广播头像变更事件到该用户的所有在线端
         broadcastAvatarChanged(id, "");

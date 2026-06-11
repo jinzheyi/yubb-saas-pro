@@ -5,12 +5,16 @@ import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
 import com.shengyu.framework.websocket.core.protocol.MenuBadge;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImBadgeRespVO;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImConversationBadgeRespVO;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImMenuBadgeRespVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * IM 角标 Service 实现类
@@ -91,6 +95,38 @@ public class ImBadgeServiceImpl implements ImBadgeService {
 
         // 工作台等业务角标继续预留扩展位，当前不返回伪数据。
         return badges;
+    }
+
+    @Override
+    public AppImBadgeRespVO getBadgeDataVO(Long userId) {
+        BadgeUpdateMessage badgeUpdateMessage = getBadgeData(userId);
+
+        AppImBadgeRespVO respVO = new AppImBadgeRespVO();
+        respVO.setUnreadCount(badgeUpdateMessage.getUnreadCount());
+
+        // 会话角标转换
+        List<AppImConversationBadgeRespVO> conversationBadges = badgeUpdateMessage.getConversationBadgesList().stream()
+                .map(item -> {
+                    AppImConversationBadgeRespVO badge = new AppImConversationBadgeRespVO();
+                    badge.setChatId(item.getConversationId());
+                    badge.setUnreadCount(item.getUnreadCount());
+                    return badge;
+                })
+                .collect(Collectors.toList());
+        respVO.setConversationBadges(conversationBadges);
+
+        // 菜单角标转换
+        List<AppImMenuBadgeRespVO> menuBadges = badgeUpdateMessage.getMenuBadgesList().stream()
+                .map(item -> {
+                    AppImMenuBadgeRespVO badge = new AppImMenuBadgeRespVO();
+                    badge.setMenuId(item.getMenuId());
+                    badge.setBadgeCount(item.getBadgeCount());
+                    return badge;
+                })
+                .collect(Collectors.toList());
+        respVO.setMenuBadges(menuBadges);
+
+        return respVO;
     }
 
 }

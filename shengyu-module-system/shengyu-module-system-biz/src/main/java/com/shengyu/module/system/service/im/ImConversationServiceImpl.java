@@ -91,15 +91,15 @@ public class ImConversationServiceImpl implements ImConversationService {
         try {
             chatUserMapper.softDelete(userId, chatId);
         } catch (Exception e) {
-            log.warn("[ImConversationService] soft delete invalid chat_user failed, source: {}, userId: {}, chatId: {}, error: {}",
-                    source, userId, chatId, e.getMessage());
+            log.warn("[ImConversationService] soft delete invalid chat_user failed, source: {}, userId: {}, chatId: {}",
+                    source, userId, chatId, e);
         }
         try {
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
             conversationUserStateMapper.upsertAfterDelete(tenantId, chatId, userId, cursorVersion, true);
         } catch (Exception e) {
-            log.warn("[ImConversationService] cleanup invalid conversation state failed, source: {}, userId: {}, chatId: {}, error: {}",
-                    source, userId, chatId, e.getMessage());
+            log.warn("[ImConversationService] cleanup invalid conversation state failed, source: {}, userId: {}, chatId: {}",
+                    source, userId, chatId, e);
         }
     }
 
@@ -142,9 +142,13 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Resource
     private ImSystemMessageI18nSupport imSystemMessageI18nSupport;
 
+    @Resource
+    private ImCacheService imCacheService;
+
     @Override
-    public List<AppImConversationRespVO> getConversationList(Long userId) {
-        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
+    public List<AppImConversationRespVO> getConversationList(Long userId, Integer pageNo, Integer pageSize) {
+        int offset = (pageNo - 1) * pageSize;
+        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserIdWithPage(userId, offset, pageSize);
         return toConversationRespVOList(userId, chatUsers);
     }
 
@@ -247,24 +251,10 @@ public class ImConversationServiceImpl implements ImConversationService {
                 }
 
                 if (!groupIds.isEmpty()) {
-                    List<ImGroupDO> groups = groupMapper.selectBatchIds(new ArrayList<>(groupIds));
-                    if (groups != null) {
-                        for (ImGroupDO g : groups) {
-                            if (g != null && g.getId() != null) {
-                                groupMap.put(g.getId(), g);
-                            }
-                        }
-                    }
+                    groupMap.putAll(imCacheService.batchGetGroupCache(new ArrayList<>(groupIds)));
                 }
                 if (!otherUserIds.isEmpty()) {
-                    List<AdminUserDO> users = userMapper.selectBatchIds(new ArrayList<>(otherUserIds));
-                    if (users != null) {
-                        for (AdminUserDO u : users) {
-                            if (u != null && u.getId() != null) {
-                                userMap.put(u.getId(), u);
-                            }
-                        }
-                    }
+                    userMap.putAll(imCacheService.batchGetUserCache(new ArrayList<>(otherUserIds)));
                 }
                 List<Long> lastMessageIds = states.stream()
                         .filter(s -> s != null && s.getLastMessageId() != null
@@ -284,41 +274,48 @@ public class ImConversationServiceImpl implements ImConversationService {
                     }
                 }
 
-                // 获取群成员完整信息列表（最多4个，用于组合头像）
+                // 批量获取群成员信息（一次性查询所有群的成员，替代 N+1 循环查询）
+                Map<Long, List<ImGroupUserDO>> syncBatchGroupMembersMap = groupUserMapper.selectBatchGroupMembersWithLimit(new ArrayList<>(groupIds), 4);
+
+                // 批量查询所有群成员的用户信息
+                Set<Long> syncAllMemberUserIds = syncBatchGroupMembersMap.values().stream()
+                        .flatMap(List::stream)
+                        .map(ImGroupUserDO::getUserId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+                Map<Long, AdminUserDO> syncMemberUserMap = new HashMap<>();
+                if (!syncAllMemberUserIds.isEmpty()) {
+                    Set<Long> existingIds = userMap.keySet();
+                    Set<Long> needQueryIds = syncAllMemberUserIds.stream()
+                            .filter(id -> !existingIds.contains(id))
+                            .collect(Collectors.toSet());
+                    if (!needQueryIds.isEmpty()) {
+                        syncMemberUserMap.putAll(imCacheService.batchGetUserCache(new ArrayList<>(needQueryIds)));
+                    }
+                }
+
+                // 构建同步项群成员列表
                 Map<Long, List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem>> syncGroupMemberItemsMap = new HashMap<>();
-                if (!groupIds.isEmpty()) {
-                    for (Long groupId : groupIds) {
-                        List<ImGroupUserDO> members = groupUserMapper.selectList(
-                                new LambdaQueryWrapperX<ImGroupUserDO>()
-                                        .eq(ImGroupUserDO::getGroupId, groupId)
-                                        .orderByAsc(ImGroupUserDO::getJoinTime)
-                                        .last("LIMIT 4"));
-                        if (members != null && !members.isEmpty()) {
-                            List<Long> memberUserIds = members.stream()
-                                    .map(ImGroupUserDO::getUserId)
-                                    .collect(Collectors.toList());
-                            List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
-                            if (memberUsers != null) {
-                                List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> syncItems = new ArrayList<>();
-                                for (ImGroupUserDO member : members) {
-                                    AdminUserDO user = memberUsers.stream()
-                                            .filter(u -> u != null && u.getId().equals(member.getUserId()))
-                                            .findFirst()
-                                            .orElse(null);
-                                    if (user != null) {
-                                        AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem syncItem =
-                                                new AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem();
-                                        syncItem.setUserId(user.getId());
-                                        syncItem.setName(user.getNickname());
-                                        syncItem.setAvatar(user.getAvatar());
-                                        syncItems.add(syncItem);
-                                    }
-                                }
-                                if (!syncItems.isEmpty()) {
-                                    syncGroupMemberItemsMap.put(groupId, syncItems);
-                                }
-                            }
+                for (Map.Entry<Long, List<ImGroupUserDO>> entry : syncBatchGroupMembersMap.entrySet()) {
+                    Long groupId = entry.getKey();
+                    List<ImGroupUserDO> members = entry.getValue();
+                    List<AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem> syncItems = new ArrayList<>();
+                    for (ImGroupUserDO member : members) {
+                        AdminUserDO user = syncMemberUserMap.get(member.getUserId());
+                        if (user == null) {
+                            user = userMap.get(member.getUserId());
                         }
+                        if (user != null) {
+                            AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem syncItem =
+                                    new AppImConversationSyncItemRespVO.AppImConversationSyncGroupMemberItem();
+                            syncItem.setUserId(user.getId());
+                            syncItem.setName(user.getNickname());
+                            syncItem.setAvatar(user.getAvatar());
+                            syncItems.add(syncItem);
+                        }
+                    }
+                    if (!syncItems.isEmpty()) {
+                        syncGroupMemberItemsMap.put(groupId, syncItems);
                     }
                 }
 
@@ -413,13 +410,13 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Override
     public List<AppImConversationRespVO> getConversationListByType(Long userId, Integer conversationType) {
-        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
         if (conversationType == null) {
+            List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
             return toConversationRespVOList(userId, chatUsers);
         }
-        return toConversationRespVOList(userId, chatUsers).stream()
-                .filter(vo -> conversationType.equals(vo.getConversationType()))
-                .collect(Collectors.toList());
+        // 使用 SQL 层过滤，避免先查出所有会话再内存过滤
+        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserIdAndType(userId, conversationType);
+        return toConversationRespVOList(userId, chatUsers);
     }
 
     @Override
@@ -489,18 +486,51 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public AppImConversationRespVO createOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
+        // 1. 先尝试获取已存在的会话（幂等查询，不在事务内）
+        AppImConversationRespVO existing = tryGetExistingConversation(userId, createReqVO);
+        if (existing != null) {
+            return existing;
+        }
+
+        // 2. 不存在则创建（在事务内）
         try {
             return doCreateOrGetConversation(userId, createReqVO);
         } catch (ServiceException ex) {
+            // 3. 如果创建失败（可能是并发导致），再次尝试获取（幂等）
             if (Objects.equals(ex.getCode(), CONVERSATION_CREATE_FAILED.getCode())) {
-                return doCreateOrGetConversation(userId, createReqVO);
+                AppImConversationRespVO retry = tryGetExistingConversation(userId, createReqVO);
+                if (retry != null) {
+                    return retry;
+                }
             }
             throw ex;
         }
     }
 
+    /**
+     * 尝试获取已存在的会话（幂等查询，不在事务内）
+     *
+     * @param userId 用户ID
+     * @param createReqVO 创建请求VO
+     * @return 如果存在则返回会话VO，否则返回null
+     */
+    private AppImConversationRespVO tryGetExistingConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
+        if (userId == null || createReqVO == null || createReqVO.getTargetId() == null || createReqVO.getConversationType() == null) {
+            return null;
+        }
+        ImChatDO chat = findChat(createReqVO.getConversationType(), userId, createReqVO.getTargetId());
+        if (chat == null || chat.getId() == null) {
+            return null;
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chat.getId());
+        if (chatUser == null) {
+            return null;
+        }
+        return toConversationRespVO(userId, chatUser);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     private AppImConversationRespVO doCreateOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
         log.info("[ImConversationService] 创建或获取会话, userId: {}, targetId: {}, type: {}", 
                 userId, createReqVO.getTargetId(), createReqVO.getConversationType());
@@ -594,7 +624,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             );
         } catch (Exception e) {
             log.warn("[ImConversationService] 初始化会话-用户态失败, userId: {}, chatId: {}, error: {}",
-                    userId, chat.getId(), e.getMessage(), e);
+                    userId, chat.getId(), e);
         }
         return toConversationRespVO(userId, chatUser);
     }
@@ -634,7 +664,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                     "设置变更", "[ImConversationService] 推送会话设置变更事件失败");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态设置变更失败, userId: {}, chatId: {}, error: {}",
-                    userId, updateReqVO.getChatId(), e.getMessage(), e);
+                    userId, updateReqVO.getChatId(), e);
         }
     }
 
@@ -653,7 +683,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             chatUserMapper.cleanGroupSnapshotAndStatus(userId, conversationId);
         } catch (Exception e) {
             log.warn("[ImConversationService] 清理群快照数据失败, userId: {}, chatId: {}, error: {}",
-                    userId, conversationId, e.getMessage());
+                    userId, conversationId, e);
         }
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
@@ -666,7 +696,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                 conversationUserStateMapper.cleanGroupSnapshotAndStatus(tenantId, userId, conversationId);
             } catch (Exception e) {
                 log.warn("[ImConversationService] 清理会话用户态快照数据失败, userId: {}, chatId: {}, error: {}",
-                        userId, conversationId, e.getMessage());
+                        userId, conversationId, e);
             }
 
             conversationUserStateMapper.upsertAfterDelete(
@@ -681,7 +711,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             pushBadgeUpdateSafely(userId, conversationId, "删除会话");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态删除失败, userId: {}, chatId: {}, error: {}",
-                    userId, conversationId, e.getMessage(), e);
+                    userId, conversationId, e);
         }
     }
 
@@ -731,22 +761,20 @@ public class ImConversationServiceImpl implements ImConversationService {
             pushBadgeUpdateSafely(userId, chatId, "已读水位变更");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态已读水位失败, userId: {}, chatId: {}, error: {}",
-                    userId, chatId, e.getMessage(), e);
+                    userId, chatId, e);
         }
     }
 
     @Override
     public Integer getUnreadCount(Long userId) {
-        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
-        return chatUsers.stream().mapToInt(cu -> {
-            Long lastMsgSeq = cu.getLastMessageSequence() != null ? cu.getLastMessageSequence() : 0L;
-            Long lastReadSeq = cu.getLastReadSequence() != null ? cu.getLastReadSequence() : 0L;
-            try {
-                return (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
-            } catch (Exception ignore) {
-                return cu.getUnreadCount() != null ? Math.max(cu.getUnreadCount(), 0) : 0;
-            }
-        }).sum();
+        // 使用 SQL 聚合查询，避免全表拉取后在内存中计算
+        return chatUserMapper.selectTotalUnreadCount(userId);
+    }
+
+    @Override
+    public Integer getConversationUnreadCount(Long userId, Long chatId) {
+        Integer unread = chatUserMapper.selectUnreadCountByUserIdAndChatId(userId, chatId);
+        return unread != null ? unread : 0;
     }
 
     @Override
@@ -803,7 +831,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             pushBadgeUpdateSafely(userId, chat.getId(), "按 target 删除会话");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态按 target 删除失败, userId: {}, chatId: {}, error: {}",
-                    userId, chat.getId(), e.getMessage(), e);
+                    userId, chat.getId(), e);
         }
     }
 
@@ -911,73 +939,55 @@ public class ImConversationServiceImpl implements ImConversationService {
 
         Map<Long, ImGroupDO> groupMap = new HashMap<>();
         if (!groupIds.isEmpty()) {
-            List<ImGroupDO> groups = groupMapper.selectBatchIds(new ArrayList<>(groupIds));
-            if (groups != null) {
-                for (ImGroupDO g : groups) {
-                    if (g != null && g.getId() != null) {
-                        groupMap.put(g.getId(), g);
+            groupMap.putAll(imCacheService.batchGetGroupCache(new ArrayList<>(groupIds)));
+        }
+
+        // 批量获取群成员信息（一次性查询所有群的成员，替代 N+1 循环查询）
+        Map<Long, List<ImGroupUserDO>> batchGroupMembersMap = groupUserMapper.selectBatchGroupMembersWithLimit(new ArrayList<>(groupIds), 4);
+
+        // 批量查询所有群成员的用户信息
+        Set<Long> allMemberUserIds = batchGroupMembersMap.values().stream()
+                .flatMap(List::stream)
+                .map(ImGroupUserDO::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, AdminUserDO> memberUserMap = new HashMap<>();
+        if (!allMemberUserIds.isEmpty()) {
+            memberUserMap.putAll(imCacheService.batchGetUserCache(new ArrayList<>(allMemberUserIds)));
+        }
+
+        // 构建群成员头像列表和完整信息列表
+        Map<Long, java.util.List<String>> groupMemberAvatarsMap = new HashMap<>();
+        Map<Long, java.util.List<AppImConversationRespVO.GroupMemberItem>> groupMemberItemsMap = new HashMap<>();
+        for (Map.Entry<Long, List<ImGroupUserDO>> entry : batchGroupMembersMap.entrySet()) {
+            Long groupId = entry.getKey();
+            List<ImGroupUserDO> members = entry.getValue();
+            List<String> avatars = new ArrayList<>();
+            List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
+            for (ImGroupUserDO member : members) {
+                AdminUserDO user = memberUserMap.get(member.getUserId());
+                if (user != null) {
+                    AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
+                    item.setUserId(user.getId());
+                    item.setName(user.getNickname());
+                    item.setAvatar(user.getAvatar());
+                    items.add(item);
+                    if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                        avatars.add(user.getAvatar());
                     }
                 }
             }
-        }
-
-        // 获取群成员头像列表（最多4个）
-        Map<Long, java.util.List<String>> groupMemberAvatarsMap = new HashMap<>();
-        // 获取群成员完整信息列表（最多4个，用于组合头像）
-        Map<Long, java.util.List<AppImConversationRespVO.GroupMemberItem>> groupMemberItemsMap = new HashMap<>();
-        if (!groupIds.isEmpty()) {
-            for (Long groupId : groupIds) {
-                List<ImGroupUserDO> members = groupUserMapper.selectList(
-                        new LambdaQueryWrapperX<ImGroupUserDO>()
-                                .eq(ImGroupUserDO::getGroupId, groupId)
-                                .orderByAsc(ImGroupUserDO::getJoinTime)
-                                .last("LIMIT 4"));
-                if (members != null && !members.isEmpty()) {
-                    List<Long> memberUserIds = members.stream()
-                            .map(ImGroupUserDO::getUserId)
-                            .collect(Collectors.toList());
-                    List<AdminUserDO> memberUsers = userMapper.selectBatchIds(memberUserIds);
-                    if (memberUsers != null) {
-                        // 按成员顺序映射用户信息
-                        List<AppImConversationRespVO.GroupMemberItem> items = new ArrayList<>();
-                        List<String> avatars = new ArrayList<>();
-                        for (ImGroupUserDO member : members) {
-                            AdminUserDO user = memberUsers.stream()
-                                    .filter(u -> u != null && u.getId().equals(member.getUserId()))
-                                    .findFirst()
-                                    .orElse(null);
-                            if (user != null) {
-                                AppImConversationRespVO.GroupMemberItem item = new AppImConversationRespVO.GroupMemberItem();
-                                item.setUserId(user.getId());
-                                item.setName(user.getNickname());
-                                item.setAvatar(user.getAvatar());
-                                items.add(item);
-                                if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
-                                    avatars.add(user.getAvatar());
-                                }
-                            }
-                        }
-                        if (!avatars.isEmpty()) {
-                            groupMemberAvatarsMap.put(groupId, avatars);
-                        }
-                        if (!items.isEmpty()) {
-                            groupMemberItemsMap.put(groupId, items);
-                        }
-                    }
-                }
+            if (!avatars.isEmpty()) {
+                groupMemberAvatarsMap.put(groupId, avatars);
+            }
+            if (!items.isEmpty()) {
+                groupMemberItemsMap.put(groupId, items);
             }
         }
 
         Map<Long, AdminUserDO> userMap = new HashMap<>();
         if (!otherUserIds.isEmpty()) {
-            List<AdminUserDO> users = userMapper.selectBatchIds(new ArrayList<>(otherUserIds));
-            if (users != null) {
-                for (AdminUserDO u : users) {
-                    if (u != null && u.getId() != null) {
-                        userMap.put(u.getId(), u);
-                    }
-                }
-            }
+            userMap.putAll(imCacheService.batchGetUserCache(new ArrayList<>(otherUserIds)));
         }
 
         Map<Long, ImChatMessageDO> lastMessageMap = new HashMap<>();
@@ -1103,104 +1113,15 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
      private AppImConversationRespVO toConversationRespVO(Long userId, ImChatUserDO chatUser) {
-         ImChatDO chat = chatMapper.selectById(chatUser.getChatId());
-         if (chat == null) {
+         if (chatUser == null) {
              throw exception(CONVERSATION_NOT_EXISTS);
          }
-         AppImConversationRespVO respVO = new AppImConversationRespVO();
-        respVO.setChatId(chatUser.getChatId());
-        respVO.setConversationType(chat.getChatType());
-
-		// cursorVersion/conversationVersion：用于 WS gap 检测 + 端侧幂等/乱序保护
-		try {
-			Long tenantId = TenantContextHolder.getTenantId();
-			if (tenantId == null) {
-				tenantId = 0L;
-			}
-			ImConversationUserStateDO state = conversationUserStateMapper.selectOne(new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImConversationUserStateDO>()
-					.eq(ImConversationUserStateDO::getTenantId, tenantId)
-					.eq(ImConversationUserStateDO::getUserId, userId)
-					.eq(ImConversationUserStateDO::getChatId, chatUser.getChatId())
-					.eq(ImConversationUserStateDO::getDeleted, false));
-			if (state != null) {
-				respVO.setCursorVersion(state.getCursorVersion());
-				respVO.setConversationVersion(state.getConversationVersion());
-			}
-		} catch (Exception ignore) {
-			// ignore
-		}
-        Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
-        Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
-        respVO.setLastMessageSequence(lastMsgSeq);
-        respVO.setLastReadSequence(lastReadSeq);
-        int unread = 0;
-        try {
-            unread = (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
-        } catch (Exception ignore) {
-            unread = chatUser.getUnreadCount() != null ? chatUser.getUnreadCount() : 0;
-        }
-        respVO.setUnreadCount(unread);
-
-        Integer lastType = chatUser.getLastMessageType();
-        ImChatMessageDO lastMsg = null;
-        if (chatUser.getLastMessageId() != null) {
-            lastMsg = chatMessageMapper.selectById(chatUser.getLastMessageId());
-            if (lastType == null && lastMsg != null) {
-                lastType = lastMsg.getMessageType();
-            }
-        }
-        respVO.setLastMessageType(lastType);
-        respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
-                lastMsg != null ? lastMsg.getExtra() : null));
-        Long senderId2 = lastMsg != null ? lastMsg.getSenderId() : null;
-        // 优先使用 im_chat_user 中的 lastMessageSenderId 冗余字段（避免消息表查不到导致 null）
-        if (senderId2 == null) {
-            senderId2 = chatUser.getLastMessageSenderId();
-        }
-        respVO.setLastMessageSenderId(senderId2);
-        respVO.setLastMessageIsSelf(senderId2 != null && Objects.equals(senderId2, userId));
-        respVO.setLastMessageSystemEventKey(extractSystemEventKey(lastMsg != null ? lastMsg.getExtra() : null));
-        // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
-        respVO.setLastMessageTime(chatUser.getLastMessageTime());
-        respVO.setIsPinned(chatUser.getIsPinned());
-        respVO.setNoDisturb(chatUser.getNoDisturb());
-
-         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
-             respVO.setTargetId(chat.getGroupId());
-             ImGroupDO group = groupMapper.selectById(chat.getGroupId());
-
-             boolean hasLeftGroup = chatUser.getGroupMemberStatus() != null && chatUser.getGroupMemberStatus() != 0;
-             if (hasLeftGroup) {
-                 String snapshotData = chatUser.getSnapshotData();
-                 if (snapshotData != null && !snapshotData.isEmpty()) {
-                     fillConversationFromSnapshot(respVO, snapshotData, chatUser);
-                 } else if (group != null) {
-                     fillConversationFromGroupSingle(respVO, group, chatUser);
-                 }
-             } else if (group != null) {
-                 fillConversationFromGroupSingle(respVO, group, chatUser);
-             }
-         } else {
-             Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
-             respVO.setTargetId(otherUserId);
-             AdminUserDO targetUser = userMapper.selectById(otherUserId);
-             if (targetUser != null) {
-                 respVO.setTargetName(targetUser.getNickname());
-                 respVO.setTargetAvatar(targetUser.getAvatar());
-             }
-         }
-         if (!shouldKeepConversationItem(respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName())) {
-             logInvalidConversationItem(userId, "detail", respVO.getChatId(),
-                     respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName());
-             Long tenantId = TenantContextHolder.getTenantId();
-             if (tenantId == null) {
-                 tenantId = 0L;
-             }
-             cleanupInvalidConversationState(tenantId, userId, respVO.getChatId(), "detail");
+         // 复用批量转换方法，避免 N+1 查询
+         List<AppImConversationRespVO> list = toConversationRespVOList(userId, Collections.singletonList(chatUser));
+         if (list == null || list.isEmpty()) {
              throw exception(CONVERSATION_NOT_EXISTS);
          }
-         fillConversationPresence(respVO);
-         return respVO;
+         return list.get(0);
     }
 
     /**
@@ -1392,7 +1313,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         if (imSystemMessageI18nSupport.isRecallPreviewFallback(raw)) {
             return imSystemMessageI18nSupport.renderRecallPreview(raw);
         }
-        if (Objects.equals(messageType, ImMessageTypeEnum.SYSTEM.getType())) {
+        if (ImMessageTypeEnum.isSystem(messageType)) {
             String localized = imSystemMessageI18nSupport.render(raw, extra);
             if (localized != null) {
                 String trimmedLocalized = localized.trim();
@@ -1418,28 +1339,32 @@ public class ImConversationServiceImpl implements ImConversationService {
         if (messageType == null) {
             return "";
         }
-        switch (messageType) {
-            case 1:
-                return "";
-            case 2:
-                return "[图片]";
-            case 3:
-                return "[语音]";
-            case 4:
-                return "[视频]";
-            case 5:
-                return "[文件]";
-            case 6:
-                return "[位置]";
-            case 7:
-                return "[表情]";
-            case 8:
-                return "[动画表情]";
-            case 10:
-                return "[系统消息]";
-            default:
-                return "[消息]";
+        // 使用枚举常量替代魔法值 switch
+        if (ImMessageTypeEnum.isText(messageType)) {
+            return "";
         }
+        if (ImMessageTypeEnum.isImage(messageType)) {
+            return "[图片]";
+        }
+        if (ImMessageTypeEnum.isVoice(messageType)) {
+            return "[语音]";
+        }
+        if (ImMessageTypeEnum.isVideo(messageType)) {
+            return "[视频]";
+        }
+        if (ImMessageTypeEnum.isFile(messageType)) {
+            return "[文件]";
+        }
+        if (ImMessageTypeEnum.isLocation(messageType)) {
+            return "[位置]";
+        }
+        if (ImMessageTypeEnum.isEmoji(messageType)) {
+            return "[表情]";
+        }
+        if (ImMessageTypeEnum.isSticker(messageType)) {
+            return "[动画表情]";
+        }
+        return "[消息]";
     }
 
     /**
@@ -1524,8 +1449,8 @@ public class ImConversationServiceImpl implements ImConversationService {
                  chatMapper.insert(newChat);
                  return newChat;
              } catch (Exception e) {
-                 log.warn("[ImConversationService] 兜底创建群聊会话失败, targetId: {}, tenantId: {}, error: {}",
-                         targetId, tenantId, e.getMessage());
+                 log.warn("[ImConversationService] 兜底创建群聊会话失败, targetId: {}, tenantId: {}",
+                         targetId, tenantId, e);
                  return chatMapper.selectGroupChat(targetId, conversationType);
              }
          }
@@ -1552,8 +1477,8 @@ public class ImConversationServiceImpl implements ImConversationService {
              chatMapper.insert(newChat);
              return newChat;
          } catch (Exception e) {
-             log.warn("[ImConversationService] 兜底创建单聊会话失败, user1: {}, user2: {}, tenantId: {}, error: {}",
-                     user1, user2, tenantId, e.getMessage());
+             log.warn("[ImConversationService] 兜底创建单聊会话失败, user1: {}, user2: {}, tenantId: {}",
+                     user1, user2, tenantId, e);
              return chatMapper.selectSingleChat(user1, user2, conversationType);
          }
      }
@@ -1674,8 +1599,8 @@ public class ImConversationServiceImpl implements ImConversationService {
                     null, null, chatId,
                     cursorVersion, null);
         } catch (Exception e) {
-            log.warn("{}, scene: {}, userId: {}, chatId: {}, error: {}",
-                    logPrefix, scene, userId, chatId, e.getMessage(), e);
+            log.warn("{}, scene: {}, userId: {}, chatId: {}",
+                    logPrefix, scene, userId, chatId, e);
         }
     }
 
@@ -1683,8 +1608,8 @@ public class ImConversationServiceImpl implements ImConversationService {
         try {
             imBadgeService.pushBadgeUpdate(userId);
         } catch (Exception e) {
-            log.warn("[ImConversationService] 推送角标更新失败, scene: {}, userId: {}, chatId: {}, error: {}",
-                    scene, userId, chatId, e.getMessage(), e);
+            log.warn("[ImConversationService] 推送角标更新失败, scene: {}, userId: {}, chatId: {}",
+                    scene, userId, chatId, e);
         }
     }
 

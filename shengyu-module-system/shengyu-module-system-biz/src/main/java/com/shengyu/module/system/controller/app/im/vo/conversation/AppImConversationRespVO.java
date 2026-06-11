@@ -1,5 +1,6 @@
 package com.shengyu.module.system.controller.app.im.vo.conversation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 
 @Schema(description = "移动端 - IM 会话 Response VO")
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AppImConversationRespVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

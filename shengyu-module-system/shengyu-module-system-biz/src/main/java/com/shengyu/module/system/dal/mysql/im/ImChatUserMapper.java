@@ -36,12 +36,56 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .orderByDesc(ImChatUserDO::getLastMessageTime));
     }
 
+    /**
+     * 分页查询用户的会话记录
+     */
+    default List<ImChatUserDO> selectListByUserIdWithPage(Long userId, int offset, int pageSize) {
+        return selectList(new LambdaQueryWrapperX<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getDeletedByUser, false)
+                .orderByDesc(ImChatUserDO::getIsPinned)
+                .orderByDesc(ImChatUserDO::getLastMessageTime)
+                .last("LIMIT " + offset + ", " + pageSize));
+    }
+
+    /**
+     * 按会话类型查询用户会话列表（SQL层过滤，避免内存过滤）
+     */
+    @Select({"<script>",
+            "SELECT cu.*",
+            "FROM im_chat_user cu",
+            "JOIN im_chat c ON c.id = cu.chat_id AND c.deleted = 0",
+            "WHERE cu.user_id = #{userId}",
+            "  AND cu.deleted_by_user = 0",
+            "<if test='conversationType != null'>",
+            "  AND c.chat_type = #{conversationType}",
+            "</if>",
+            "ORDER BY cu.is_pinned DESC, cu.last_message_time DESC, cu.id DESC",
+            "</script>"})
+    List<ImChatUserDO> selectListByUserIdAndType(@Param("userId") Long userId,
+                                                 @Param("conversationType") Integer conversationType);
+
     default List<ImChatUserDO> selectListByUserIdAndChatIds(Long userId, List<Long> chatIds) {
         return selectList(new LambdaQueryWrapperX<ImChatUserDO>()
                 .eq(ImChatUserDO::getUserId, userId)
                 .in(ImChatUserDO::getChatId, chatIds)
                 .eq(ImChatUserDO::getDeletedByUser, false));
     }
+
+    /**
+     * 批量查询用户的会话记录（用于权限校验，不区分删除状态）
+     */
+    default List<ImChatUserDO> selectListByUserAndChatIds(Long userId, List<Long> chatIds) {
+        return selectList(new LambdaQueryWrapperX<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .in(ImChatUserDO::getChatId, chatIds));
+    }
+
+    /**
+     * 获取单个会话的未读数（SQL 查询，不加载整个对象）
+     */
+    @Select("SELECT COALESCE(last_message_sequence - last_read_sequence, 0) FROM im_chat_user WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0 LIMIT 1")
+    Integer selectUnreadCountByUserIdAndChatId(@Param("userId") Long userId, @Param("chatId") Long chatId);
 
     @Select({"<script>",
             "SELECT COUNT(1)",
@@ -228,6 +272,11 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .set(ImChatUserDO::getLastMessageContent, lastMessageContent));
     }
 
+    @Select("SELECT COALESCE(SUM(GREATEST(IFNULL(last_message_sequence, 0) - IFNULL(last_read_sequence, 0), 0)), 0) " +
+            "FROM im_chat_user " +
+            "WHERE user_id = #{userId} AND deleted_by_user = 0 AND deleted = 0")
+    Integer selectTotalUnreadCount(@Param("userId") Long userId);
+
     @Update("UPDATE im_chat_user SET last_read_sequence = GREATEST(IFNULL(last_read_sequence, 0), #{readSequence}), unread_count = 0 " +
             "WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0")
     int markReadToSequence(@Param("userId") Long userId, @Param("chatId") Long chatId, @Param("readSequence") Long readSequence);
@@ -312,6 +361,23 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
     default int saveSnapshotData(Long userId, Long chatId, String snapshotData) {
         return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
                 .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId)
+                .set(ImChatUserDO::getSnapshotData, snapshotData));
+    }
+
+    /**
+     * 批量保存群组快照数据（用于群解散场景）
+     * @param userIds 用户ID列表
+     * @param chatId 会话ID
+     * @param snapshotData JSON格式的快照数据
+     * @return 更新行数
+     */
+    default int batchSaveSnapshotData(List<Long> userIds, Long chatId, String snapshotData) {
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .in(ImChatUserDO::getUserId, userIds)
                 .eq(ImChatUserDO::getChatId, chatId)
                 .set(ImChatUserDO::getSnapshotData, snapshotData));
     }

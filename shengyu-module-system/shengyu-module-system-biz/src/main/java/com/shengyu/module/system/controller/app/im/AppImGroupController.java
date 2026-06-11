@@ -84,10 +84,15 @@ public class AppImGroupController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "获取用户的群组列表")
-    public CommonResult<List<AppImGroupRespVO>> getGroupList() {
+    @Operation(summary = "获取用户的群组列表（默认最多返回200条）")
+    @Parameter(name = "limit", description = "返回上限（可选，默认200，最大500）", required = false)
+    public CommonResult<List<AppImGroupRespVO>> getGroupList(
+            @RequestParam(value = "limit", required = false, defaultValue = "200") Integer limit) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(groupService.getGroupList(userId));
+        if (limit > 500) {
+            limit = 500;
+        }
+        return success(groupService.getGroupList(userId, limit));
     }
 
     @PostMapping("/member/add")
@@ -111,11 +116,19 @@ public class AppImGroupController {
     }
 
     @GetMapping("/member/list")
-    @Operation(summary = "获取群成员列表")
+    @Operation(summary = "获取群成员列表（支持分页）")
     @Parameter(name = "groupId", description = "群组ID", required = true)
-    public CommonResult<List<AppImGroupMemberRespVO>> getGroupMembers(@RequestParam("groupId") Long groupId) {
+    @Parameter(name = "pageNo", description = "页码（可选，默认1）", required = false)
+    @Parameter(name = "pageSize", description = "每页数量（可选，默认50，最大200）", required = false)
+    public CommonResult<List<AppImGroupMemberRespVO>> getGroupMembers(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "50") Integer pageSize) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(groupService.getGroupMembers(userId, groupId));
+        if (pageSize > 200) {
+            pageSize = 200;
+        }
+        return success(groupService.getGroupMembers(userId, groupId, pageNo, pageSize));
     }
 
     @PutMapping("/member/set-role")
@@ -230,14 +243,19 @@ public class AppImGroupController {
     }
 
     @GetMapping("/join-request/list")
-    @Operation(summary = "获取群加群申请列表", description = "群主或管理员查看待审批/已处理的加群申请")
+    @Operation(summary = "获取群加群申请列表（默认最多返回100条）")
     @Parameter(name = "groupId", description = "群组ID", required = true)
     @Parameter(name = "status", description = "状态(1-待审批 2-已通过 3-已拒绝)", required = false)
+    @Parameter(name = "limit", description = "返回上限（可选，默认100，最大500）", required = false)
     public CommonResult<List<AppImGroupJoinRequestRespVO>> getJoinRequests(
             @RequestParam("groupId") Long groupId,
-            @RequestParam(value = "status", required = false) Integer status) {
+            @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "limit", required = false, defaultValue = "100") Integer limit) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(groupService.getJoinRequests(userId, groupId, status));
+        if (limit > 500) {
+            limit = 500;
+        }
+        return success(groupService.getJoinRequests(userId, groupId, status, limit));
     }
 
     @GetMapping("/join-request/pending-count")
@@ -294,23 +312,16 @@ public class AppImGroupController {
             @RequestParam(value = "tenantId", required = false) Long tenantId,
             HttpServletResponse response) throws IOException {
         if (tenantId != null) {
-            try {
-                TenantUtils.execute(tenantId, () -> {
-                    try {
-                        writeInviteQRCodeImage(code, groupId, baseUrl, response);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                return;
-            } catch (RuntimeException e) {
-                if (e.getCause() instanceof IOException) {
-                    throw (IOException) e.getCause();
+            TenantUtils.execute(tenantId, () -> {
+                try {
+                    writeInviteQRCodeImage(code, groupId, baseUrl, response);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                throw e;
-            }
+            });
+        } else {
+            writeInviteQRCodeImage(code, groupId, baseUrl, response);
         }
-        writeInviteQRCodeImage(code, groupId, baseUrl, response);
     }
 
     private void writeInviteQRCodeImage(String code, Long groupId, String baseUrl,

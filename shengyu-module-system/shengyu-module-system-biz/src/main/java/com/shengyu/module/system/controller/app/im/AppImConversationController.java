@@ -54,10 +54,18 @@ public class AppImConversationController {
     private ImSearchRateLimitService searchRateLimitService;
 
     @GetMapping("/list")
-    @Operation(summary = "获取会话列表")
-    public CommonResult<List<AppImConversationRespVO>> getConversationList() {
+    @Operation(summary = "获取会话列表（支持分页，默认最多返回100条）")
+    @Parameter(name = "pageNo", description = "页码（可选，默认1）", required = false)
+    @Parameter(name = "pageSize", description = "每页数量（可选，默认100，最大200）", required = false)
+    public CommonResult<List<AppImConversationRespVO>> getConversationList(
+            @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "100") Integer pageSize) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(conversationService.getConversationList(userId));
+        // 限制最大 pageSize
+        if (pageSize > 200) {
+            pageSize = 200;
+        }
+        return success(conversationService.getConversationList(userId, pageNo, pageSize));
     }
 
     @GetMapping("/search")

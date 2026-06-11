@@ -20,9 +20,10 @@ public interface ImContactService {
      * 说明: 企业内部IM,联系人直接来源于租户的用户表(system_users)
      *
      * @param userId 用户ID
+     * @param limit 返回上限
      * @return 联系人列表
      */
-    List<AppImContactRespVO> getContactList(Long userId);
+    List<AppImContactRespVO> getContactList(Long userId, Integer limit);
 
     /**
      * 搜索联系人
@@ -65,9 +66,10 @@ public interface ImContactService {
      * 获取星标联系人列表
      *
      * @param userId 用户ID
+     * @param limit 返回上限
      * @return 星标联系人列表
      */
-    List<AppImContactRespVO> getStarContacts(Long userId);
+    List<AppImContactRespVO> getStarContacts(Long userId, Integer limit);
 
     /**
      * 根据部门ID获取联系人列表

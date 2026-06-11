@@ -143,7 +143,8 @@ CREATE TABLE `im_chat_message` (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_chat_seq`(`tenant_id` ASC, `chat_id` ASC, `sequence` DESC) USING BTREE,
   INDEX `idx_sender_time`(`tenant_id` ASC, `sender_id` ASC, `send_time` DESC) USING BTREE,
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_client_message_id`(`client_message_id` ASC) USING BTREE COMMENT '客户端消息幂等唯一约束'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息表(全局会话单份存储)' ROW_FORMAT = DYNAMIC;
 
 DROP TABLE IF EXISTS `im_chat_message_tombstone`;

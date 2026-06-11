@@ -18,6 +18,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Netty 服务器
@@ -77,7 +78,7 @@ public class NettyServer implements ApplicationRunner, DisposableBean {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
                 .channel(useEpoll ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
-                .handler(new LoggingHandler(LogLevel.INFO))
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(channelInitializer)
                 // TCP 参数优化
                 .option(ChannelOption.SO_BACKLOG, nettyProperties.getSoBacklog())
@@ -124,11 +125,12 @@ public class NettyServer implements ApplicationRunner, DisposableBean {
             log.error("[Netty Server] 关闭 Channel 失败", e);
             Thread.currentThread().interrupt();
         } finally {
+            // 优雅关闭，设置 30 秒超时，避免僵尸进程
             if (bossGroup != null) {
-                bossGroup.shutdownGracefully();
+                bossGroup.shutdownGracefully(0, 30, TimeUnit.SECONDS);
             }
             if (workerGroup != null) {
-                workerGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully(0, 30, TimeUnit.SECONDS);
             }
             log.info("[Netty Server] 关闭完成");
         }

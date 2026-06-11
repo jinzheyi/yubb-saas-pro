@@ -147,4 +147,28 @@ public class NettyProperties {
      * Lease 扫描周期（秒）
      */
     private Long authLeaseMonitorIntervalSeconds = 10L;
+
+    /**
+     * 最大 WebSocket 帧大小（字节），默认 1MB
+     * 防止超大消息导致 OOM
+     */
+    private Integer maxFramePayloadLength = 1024 * 1024;
+
+    /**
+     * 最大连接数限制，默认 100000
+     * 防止连接风暴耗尽服务器资源
+     */
+    private Integer maxConnections = 100000;
+
+    /**
+     * 单 IP 最大连接数，默认 100
+     * 防止单 IP 连接耗尽
+     */
+    private Integer perIpMaxConnections = 100;
+
+    /**
+     * JSON 消息最大长度（字节），默认 256KB
+     * 防止超大 JSON 导致 GC 压力
+     */
+    private Integer maxJsonMessageLength = 256 * 1024;
 }

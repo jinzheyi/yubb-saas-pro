@@ -36,4 +36,12 @@ public interface ImBadgeService {
      */
     List<MenuBadge> getMenuBadges(Long userId);
 
+    /**
+     * 获取用户的角标数据（VO 版本，用于 HTTP 接口）
+     *
+     * @param userId 用户ID
+     * @return 角标数据 VO
+     */
+    com.shengyu.module.system.controller.app.im.vo.badge.AppImBadgeRespVO getBadgeDataVO(Long userId);
+
 }

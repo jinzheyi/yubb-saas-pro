@@ -62,7 +62,7 @@ public class ImContactServiceImpl implements ImContactService {
     private UserDeptMapper userDeptMapper;
 
     @Override
-    public List<AppImContactRespVO> getContactList(Long userId) {
+    public List<AppImContactRespVO> getContactList(Long userId, Integer limit) {
         // 查询同租户下的所有用户(企业内部IM,联系人直接来源于system_users)
         List<AdminUserDO> users = userMapper.selectList();
 
@@ -71,7 +71,7 @@ public class ImContactServiceImpl implements ImContactService {
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s));
 
-        // 转换为VO并填充设置信息
+        // 转换为VO并填充设置信息，按 limit 截断
         return users.stream()
                 .filter(user -> !user.getId().equals(userId)) // 排除自己
                 .map(user -> {
@@ -89,6 +89,7 @@ public class ImContactServiceImpl implements ImContactService {
                     
                     return respVO;
                 })
+                .limit(limit)
                 .collect(Collectors.toList());
     }
 
@@ -381,7 +382,7 @@ public class ImContactServiceImpl implements ImContactService {
     }
 
     @Override
-    public List<AppImContactRespVO> getStarContacts(Long userId) {
+    public List<AppImContactRespVO> getStarContacts(Long userId, Integer limit) {
         // 查询星标联系人设置
         List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserIdAndStar(userId);
         
@@ -392,6 +393,11 @@ public class ImContactServiceImpl implements ImContactService {
         
         if (contactIds.isEmpty()) {
             return new ArrayList<>();
+        }
+
+        // 按 limit 截断
+        if (contactIds.size() > limit) {
+            contactIds = contactIds.subList(0, limit);
         }
 
         List<AdminUserDO> users = userMapper.selectBatchIds(contactIds);

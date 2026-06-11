@@ -49,9 +49,13 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
             pipeline.addLast("http-aggregator", new HttpObjectAggregator(nettyProperties.getMaxContentLength()));
             // 支持大文件传输
             pipeline.addLast("http-chunked", new ChunkedWriteHandler());
-            // WebSocket 协议处理器
+            // WebSocket 协议处理器（限制最大帧大小，防止 OOM）
             pipeline.addLast("websocket-protocol", 
-                new WebSocketServerProtocolHandler(nettyProperties.getWebSocketPath(), nettyProperties.getWebSocketSubProtocols(), true));
+                new WebSocketServerProtocolHandler(
+                    nettyProperties.getWebSocketPath(), 
+                    nettyProperties.getWebSocketSubProtocols(), 
+                    true,
+                    nettyProperties.getMaxFramePayloadLength()));
             // WebSocket 帧处理器
             pipeline.addLast("websocket-frame-handler", webSocketFrameHandler);
 

@@ -18,10 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
@@ -99,7 +97,7 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
     @Override
     public List<AppImReadReceiptSummaryRespVO> getSummaryBatch(Long userId, List<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         Set<Long> normalizedIds = new LinkedHashSet<>();
         for (Long messageId : messageIds) {
@@ -111,20 +109,82 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
             }
         }
         if (normalizedIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
+        }
+
+        // 1. 批量查询消息
+        List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(normalizedIds);
+        if (messages == null || messages.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. 批量查询会话信息
+        Set<Long> chatIds = messages.stream()
+                .filter(m -> m != null && m.getChatId() != null)
+                .map(ImChatMessageDO::getChatId)
+                .collect(Collectors.toSet());
+        List<ImChatDO> chats = chatMapper.selectBatchIds(chatIds);
+        Map<Long, ImChatDO> chatMap = chats.stream()
+                .filter(c -> c != null)
+                .collect(Collectors.toMap(ImChatDO::getId, c -> c, (v1, v2) -> v1));
+
+        // 3. 批量处理每条消息的摘要
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
         }
 
         List<AppImReadReceiptSummaryRespVO> result = new ArrayList<>(normalizedIds.size());
-        for (Long messageId : normalizedIds) {
+        for (ImChatMessageDO message : messages) {
+            if (message == null || message.getId() == null) {
+                continue;
+            }
             try {
-                AppImReadReceiptSummaryRespVO summary = getSummary(userId, messageId);
-                if (summary != null) {
-                    result.add(summary);
+                ImChatDO chat = chatMap.get(message.getChatId());
+                if (chat == null) {
+                    continue;
                 }
+                if (!ImConversationTypeEnum.isGroup(chat.getChatType())) {
+                    continue;
+                }
+
+                ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(chat.getGroupId(), userId);
+                if (groupUser == null) {
+                    continue;
+                }
+
+                Long excludeUserId = message.getSenderId();
+                Long total = groupUserMapper.selectCountByGroupId(chat.getGroupId());
+                if (total == null) {
+                    total = 0L;
+                }
+                if (excludeUserId != null && excludeUserId > 0 && total > 0) {
+                    total = Math.max(total - 1, 0L);
+                }
+
+                Long seq = message.getSequence() != null ? message.getSequence() : 0L;
+                Long read = readReceiptMapper.countReadMembers(tenantId, chat.getGroupId(), chat.getId(), excludeUserId, seq);
+                if (read == null) {
+                    read = 0L;
+                }
+                Long unread = Math.max(total - read, 0L);
+
+                AppImReadReceiptSummaryRespVO summary = new AppImReadReceiptSummaryRespVO();
+                summary.setMessageId(message.getId());
+                summary.setChatId(chat.getId());
+                summary.setSequence(seq);
+                summary.setTotalCount(total);
+                summary.setReadCount(read);
+                summary.setUnreadCount(unread);
+                summary.setMessageType(message.getMessageType());
+                summary.setReadBasis("conversation_read_watermark");
+
+                result.add(summary);
             } catch (Exception e) {
-                log.warn("[ImReadReceiptService] 批量摘要跳过 messageId={}, reason={}", messageId, e.getMessage());
+                log.warn("[ImReadReceiptService] 批量摘要跳过 messageId={}", message.getId(), e);
             }
         }
+
         return result;
     }
 

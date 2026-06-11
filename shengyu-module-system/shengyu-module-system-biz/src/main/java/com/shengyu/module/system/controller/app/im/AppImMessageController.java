@@ -20,11 +20,6 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearch
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowRespVO;
-import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
-import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
-import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
-import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
-import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImConversationService;
 import com.shengyu.module.system.service.im.ImLocationService;
 import com.shengyu.module.system.service.im.ImMessageService;
@@ -41,7 +36,6 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.TOO_MANY_REQUESTS;
@@ -60,12 +54,6 @@ public class AppImMessageController {
 
     @Resource
     private ImMessageService messageService;
-
-    @Resource
-    private ImChatUserMapper chatUserMapper;
-
-    @Resource
-    private ImChatMessageMapper chatMessageMapper;
 
     @Resource
     private ImConversationService conversationService;
@@ -166,11 +154,7 @@ public class AppImMessageController {
         if (chatId == null) {
             return success(conversationService.getUnreadCount(userId));
         }
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
-        if (chatUser == null || chatUser.getUnreadCount() == null) {
-            return success(0);
-        }
-        return success(chatUser.getUnreadCount());
+        return success(conversationService.getConversationUnreadCount(userId, chatId));
     }
 
     @GetMapping("/search")
@@ -227,28 +211,7 @@ public class AppImMessageController {
         if (messageIds == null || messageIds.isEmpty()) {
             return success(true);
         }
-
-        // 仅允许标记自己可见的会话消息，避免越权/误更新
-        List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(messageIds);
-        if (messages == null || messages.isEmpty()) {
-            return success(true);
-        }
-        List<Long> filteredIds = new ArrayList<>();
-        for (ImChatMessageDO m : messages) {
-            if (m == null || m.getId() == null || m.getChatId() == null) {
-                continue;
-            }
-            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, m.getChatId());
-            if (chatUser == null) {
-                continue;
-            }
-            // 自己发送的消息无需标记为已读也可更新（幂等），这里不做强限制
-            filteredIds.add(m.getId());
-        }
-        if (filteredIds.isEmpty()) {
-            return success(true);
-        }
-        messageService.batchUpdateMessageStatus(userId, filteredIds, ImMessageStatusEnum.READ.getStatus());
+        messageService.batchMarkMessagesRead(userId, messageIds);
         return success(true);
     }
 

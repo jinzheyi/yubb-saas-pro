@@ -17,12 +17,14 @@ import java.util.List;
 public interface ImConversationService {
 
     /**
-     * 获取用户的会话列表
+     * 获取用户的会话列表（支持分页）
      *
      * @param userId 用户ID
+     * @param pageNo 页码
+     * @param pageSize 每页数量
      * @return 会话列表
      */
-    List<AppImConversationRespVO> getConversationList(Long userId);
+    List<AppImConversationRespVO> getConversationList(Long userId, Integer pageNo, Integer pageSize);
 
     /**
      * 获取用户的会话列表(按类型筛选)
@@ -75,6 +77,15 @@ public interface ImConversationService {
      * @param readSequence 已读 sequence 水位
      */
     void markConversationReadBySequence(Long userId, Long chatId, Long readSequence);
+
+    /**
+     * 获取单个会话的未读数
+     *
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @return 未读数
+     */
+    Integer getConversationUnreadCount(Long userId, Long chatId);
 
     /**
      * 获取用户未读消息总数

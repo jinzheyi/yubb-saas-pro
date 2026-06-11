@@ -13,7 +13,10 @@ class ContactsRemoteDataSource {
   final String currentUserId;
 
   Future<List<ContactDto>> getContacts() async {
-    final response = await dio.get('/system/im/contact/list');
+    final response = await dio.get(
+      '/system/im/contact/list',
+      queryParameters: {'limit': 500},
+    );
     final result = ApiResult.fromJson<List<ContactDto>>(
       response.data as Map<String, dynamic>,
       dataParser: (raw) => _mapList(raw, ContactDto.fromJson),
@@ -107,7 +110,10 @@ class ContactsRemoteDataSource {
   }
 
   Future<List<GroupSummaryDto>> getMyGroups() async {
-    final response = await dio.get('/system/im/group/list');
+    final response = await dio.get(
+      '/system/im/group/list',
+      queryParameters: {'limit': 200},
+    );
     final result = ApiResult.fromJson<List<GroupSummaryDto>>(
       response.data as Map<String, dynamic>,
       dataParser: (raw) => _mapList(raw, GroupSummaryDto.fromJson),

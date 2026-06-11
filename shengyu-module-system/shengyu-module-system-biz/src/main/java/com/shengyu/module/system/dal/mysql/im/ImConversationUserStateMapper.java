@@ -317,6 +317,26 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
     }
 
     /**
+     * 批量保存群组快照数据（用于群解散场景）
+     * @param tenantId 租户ID
+     * @param userIds 用户ID列表
+     * @param chatId 会话ID
+     * @param snapshotData JSON格式的快照数据
+     * @return 更新行数
+     */
+    default int batchSaveSnapshotData(Long tenantId, List<Long> userIds, Long chatId, String snapshotData) {
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+        return update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ImConversationUserStateDO>()
+                .eq(ImConversationUserStateDO::getTenantId, tenantId)
+                .in(ImConversationUserStateDO::getUserId, userIds)
+                .eq(ImConversationUserStateDO::getChatId, chatId)
+                .eq(ImConversationUserStateDO::getDeleted, false)
+                .set(ImConversationUserStateDO::getSnapshotData, snapshotData));
+    }
+
+    /**
      * 清理群组快照数据（用户主动删除会话时调用）
      * 清空 group_member_status、left_at、snapshot_data，恢复为干净状态
      * @param tenantId 租户ID

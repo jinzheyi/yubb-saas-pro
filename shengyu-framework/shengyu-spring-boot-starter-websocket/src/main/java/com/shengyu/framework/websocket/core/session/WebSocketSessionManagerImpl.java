@@ -102,7 +102,15 @@ public class WebSocketSessionManagerImpl implements WebSocketSessionManager {
             }
             // 特殊：如果租户不匹配，则直接排除
             if (contextTenantId != null) {
-                Long userTenantId = WebSocketFrameworkUtils.getTenantId(sessions.get(0));
+                // 并发安全：先获取元素再判空，避免 isEmpty() 与 get(0) 之间的时间窗口
+                if (sessions.isEmpty()) {
+                    continue;
+                }
+                WebSocketSession first = sessions.get(0);
+                if (first == null) {
+                    continue;
+                }
+                Long userTenantId = WebSocketFrameworkUtils.getTenantId(first);
                 if (!contextTenantId.equals(userTenantId)) {
                     continue;
                 }
