@@ -74,7 +74,7 @@ final mediaPickerServiceProvider = Provider<MediaPickerService>((ref) {
   return const FilePickerMediaPickerService();
 });
 
-final audioRecordingServiceProvider = Provider.autoDispose<AudioRecordingService>((ref) {
+final audioRecordingServiceProvider = Provider<AudioRecordingService>((ref) {
   final service = AudioRecordingService();
   ref.onDispose(() {
     unawaited(service.dispose());
@@ -82,7 +82,7 @@ final audioRecordingServiceProvider = Provider.autoDispose<AudioRecordingService
   return service;
 });
 
-final audioPlaybackServiceProvider = Provider.autoDispose<AudioPlaybackService>((ref) {
+final audioPlaybackServiceProvider = Provider<AudioPlaybackService>((ref) {
   final service = AudioPlaybackService();
   ref.onDispose(() {
     unawaited(service.dispose());

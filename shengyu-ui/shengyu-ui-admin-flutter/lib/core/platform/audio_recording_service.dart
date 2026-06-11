@@ -8,6 +8,8 @@ class AudioRecordingService {
 
   final AudioRecorder _recorder;
   _RecordingProfile? _preparedProfile;
+  bool _isDisposed = false;
+  bool _isRecordingActive = false;
 
   AudioEncoder get encoder => _preparedProfile?.encoder ?? AudioEncoder.aacLc;
 
@@ -17,11 +19,15 @@ class AudioRecordingService {
 
   String get formatLabel => fileExtension;
 
-  Future<bool> ensurePermission() {
+  bool get isRecordingActive => _isRecordingActive;
+
+  Future<bool> ensurePermission() async {
+    if (_isDisposed) return false;
     return _recorder.hasPermission();
   }
 
   Future<void> prepareProfile() async {
+    if (_isDisposed) return;
     if (!kIsWeb) {
       _preparedProfile ??= const _RecordingProfile(
         encoder: AudioEncoder.aacLc,
@@ -33,68 +39,127 @@ class AudioRecordingService {
     if (_preparedProfile != null) {
       return;
     }
-    final supportsAac = await _recorder.isEncoderSupported(AudioEncoder.aacLc);
-    _preparedProfile = supportsAac
-        ? const _RecordingProfile(
-            encoder: AudioEncoder.aacLc,
-            fileExtension: 'm4a',
-            mimeType: 'audio/mp4',
-          )
-        : const _RecordingProfile(
-            encoder: AudioEncoder.wav,
-            fileExtension: 'wav',
-            mimeType: 'audio/wav',
-          );
+    try {
+      final supportsAac = await _recorder.isEncoderSupported(AudioEncoder.aacLc);
+      if (_isDisposed) return;
+      _preparedProfile = supportsAac
+          ? const _RecordingProfile(
+              encoder: AudioEncoder.aacLc,
+              fileExtension: 'm4a',
+              mimeType: 'audio/mp4',
+            )
+          : const _RecordingProfile(
+              encoder: AudioEncoder.wav,
+              fileExtension: 'wav',
+              mimeType: 'audio/wav',
+            );
+    } catch (e) {
+      debugPrint('AudioRecordingService.prepareProfile failed: $e');
+      _preparedProfile = const _RecordingProfile(
+        encoder: AudioEncoder.wav,
+        fileExtension: 'wav',
+        mimeType: 'audio/wav',
+      );
+    }
   }
 
   Stream<Amplitude> onAmplitudeChanged(Duration interval) {
+    if (_isDisposed) return const Stream.empty();
     return _recorder.onAmplitudeChanged(interval);
   }
 
   Stream<RecordState> onStateChanged() {
+    if (_isDisposed) return const Stream.empty();
     return _recorder.onStateChanged();
   }
 
   Future<void> start({required String path}) async {
+    if (_isDisposed) return;
+    if (_isRecordingActive) {
+      debugPrint('AudioRecordingService.start: already recording, stopping first');
+      try {
+        await _recorder.stop();
+      } catch (e) {
+        debugPrint('AudioRecordingService.start: stop previous failed: $e');
+      }
+    }
     await prepareProfile();
+    if (_isDisposed) return;
     final profile = _preparedProfile!;
-    return _recorder.start(
-      RecordConfig(
-        encoder: profile.encoder,
-        sampleRate: 16000,
-        numChannels: 1,
-        bitRate: 48000,
-      ),
-      path: path,
-    );
+    try {
+      await _recorder.start(
+        RecordConfig(
+          encoder: profile.encoder,
+          sampleRate: 16000,
+          numChannels: 1,
+          bitRate: 48000,
+        ),
+        path: path,
+      );
+      _isRecordingActive = true;
+      debugPrint('AudioRecordingService.start: recording started, encoder=${profile.encoder.name}, path=$path');
+    } catch (e) {
+      debugPrint('AudioRecordingService.start failed: $e');
+      rethrow;
+    }
   }
 
-  Future<void> pause() {
+  Future<void> pause() async {
+    if (_isDisposed) return;
     return _recorder.pause();
   }
 
-  Future<void> resume() {
+  Future<void> resume() async {
+    if (_isDisposed) return;
     return _recorder.resume();
   }
 
-  Future<bool> isRecording() {
+  Future<bool> isRecording() async {
+    if (_isDisposed) return false;
     return _recorder.isRecording();
   }
 
-  Future<bool> isPaused() {
+  Future<bool> isPaused() async {
+    if (_isDisposed) return false;
     return _recorder.isPaused();
   }
 
-  Future<String?> stop() {
-    return _recorder.stop();
+  Future<String?> stop() async {
+    if (_isDisposed) {
+      debugPrint('AudioRecordingService.stop: already disposed');
+      return null;
+    }
+    if (!_isRecordingActive) {
+      debugPrint('AudioRecordingService.stop: not recording, returning null');
+      return null;
+    }
+    try {
+      final path = await _recorder.stop();
+      _isRecordingActive = false;
+      debugPrint('AudioRecordingService.stop: path=$path');
+      return path;
+    } catch (e) {
+      _isRecordingActive = false;
+      debugPrint('AudioRecordingService.stop failed: $e');
+      return null;
+    }
   }
 
-  Future<void> cancel() {
+  Future<void> cancel() async {
+    if (_isDisposed) return;
+    _isRecordingActive = false;
     return _recorder.cancel();
   }
 
-  Future<void> dispose() {
-    return _recorder.dispose();
+  Future<void> dispose() async {
+    if (_isDisposed) return;
+    _isDisposed = true;
+    _isRecordingActive = false;
+    try {
+      await _recorder.dispose();
+    } catch (e) {
+      debugPrint('AudioRecordingService.dispose error: $e');
+    }
   }
 }
 
