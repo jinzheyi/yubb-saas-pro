@@ -77,6 +77,50 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                           @Param("lastMessageHasAtMe") Boolean lastMessageHasAtMe,
                           @Param("lastMessageTime") LocalDateTime lastMessageTime);
 
+    /**
+     * 发送者专用：插入/更新消息后状态，发送者侧 unread_count 强制归零
+     * 与 upsertAfterMessage 的区别：unread_count = 0（发送者自己发的消息不应产生未读）
+     */
+    @Insert("INSERT INTO im_conversation_user_state(" +
+            "tenant_id, chat_id, user_id, cursor_version, conversation_version, " +
+            "unread_count, last_read_sequence, last_read_time, " +
+            "last_message_id, last_message_sequence, last_message_sender_id, last_message_type, last_message_content, last_message_has_at_me, last_message_time, " +
+            "is_pinned, no_disturb, draft, deleted_by_user, deleted) " +
+            "VALUES(" +
+            "#{tenantId}, #{chatId}, #{userId}, #{cursorVersion}, 1, " +
+            "0, IFNULL(#{lastReadSequence}, 0), #{lastReadTime}, " +
+            "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageSenderId}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageHasAtMe}, #{lastMessageTime}, " +
+            "0, 0, NULL, 0, 0) " +
+            "ON DUPLICATE KEY UPDATE " +
+            "cursor_version = VALUES(cursor_version), " +
+            "conversation_version = IFNULL(conversation_version, 0) + 1, " +
+            "unread_count = 0, " +
+            "last_read_sequence = CASE WHEN VALUES(last_read_sequence) IS NULL THEN last_read_sequence " +
+            "  ELSE GREATEST(IFNULL(last_read_sequence, 0), VALUES(last_read_sequence)) END, " +
+            "last_read_time = CASE WHEN VALUES(last_read_time) IS NULL THEN last_read_time ELSE VALUES(last_read_time) END, " +
+            "last_message_id = VALUES(last_message_id), " +
+            "last_message_sequence = VALUES(last_message_sequence), " +
+            "last_message_sender_id = VALUES(last_message_sender_id), " +
+            "last_message_type = VALUES(last_message_type), " +
+            "last_message_content = VALUES(last_message_content), " +
+            "last_message_has_at_me = COALESCE(VALUES(last_message_has_at_me), last_message_has_at_me), " +
+            "last_message_time = VALUES(last_message_time), " +
+            "deleted_by_user = 0, " +
+            "deleted = 0")
+    int upsertAfterMessageForSender(@Param("tenantId") Long tenantId,
+                                    @Param("chatId") Long chatId,
+                                    @Param("userId") Long userId,
+                                    @Param("cursorVersion") Long cursorVersion,
+                                    @Param("lastReadSequence") Long lastReadSequence,
+                                    @Param("lastReadTime") LocalDateTime lastReadTime,
+                                    @Param("lastMessageId") Long lastMessageId,
+                                    @Param("lastMessageSequence") Long lastMessageSequence,
+                                    @Param("lastMessageSenderId") Long lastMessageSenderId,
+                                    @Param("lastMessageType") Integer lastMessageType,
+                                    @Param("lastMessageContent") String lastMessageContent,
+                                    @Param("lastMessageHasAtMe") Boolean lastMessageHasAtMe,
+                                    @Param("lastMessageTime") LocalDateTime lastMessageTime);
+
     @Insert("INSERT INTO im_conversation_user_state(" +
             "tenant_id, chat_id, user_id, cursor_version, conversation_version, " +
             "unread_count, last_read_sequence, last_read_time, " +

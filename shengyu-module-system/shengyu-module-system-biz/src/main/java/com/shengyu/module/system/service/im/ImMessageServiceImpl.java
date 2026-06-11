@@ -1284,21 +1284,27 @@ public class ImMessageServiceImpl implements ImMessageService {
                     if (cursorVer == null) {
                         cursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
                     }
-                    int unreadDelta = isSender ? 0 : 1;
-                    Long lastReadSeq = isSender ? lastMessageSequence : null;
-                    LocalDateTime lastReadTime = isSender ? lastMessageTime : null;
-                    Boolean lastMessageHasAtMe = Boolean.FALSE;
-                    if (!isSender) {
+                    if (isSender) {
+                        // 发送者：unread_count 强制归零
+                        conversationUserStateMapper.upsertAfterMessageForSender(
+                                tenantId, chat.getId(), memberId, cursorVer,
+                                lastMessageSequence, lastMessageTime,
+                                lastMessageId, lastMessageSequence, senderId, dbMessageType, finalPreview, false, lastMessageTime);
+                    } else {
+                        int unreadDelta = 1;
+                        Long lastReadSeq = null;
+                        LocalDateTime lastReadTime = null;
+                        Boolean lastMessageHasAtMe = Boolean.FALSE;
                         if (mentionParsed.atAll) {
                             lastMessageHasAtMe = Boolean.TRUE;
                         } else if (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)) {
                             lastMessageHasAtMe = Boolean.TRUE;
                         }
+                        conversationUserStateMapper.upsertAfterMessage(
+                                tenantId, chat.getId(), memberId, cursorVer,
+                                unreadDelta, lastReadSeq, lastReadTime,
+                                lastMessageId, lastMessageSequence, senderId, dbMessageType, finalPreview, lastMessageHasAtMe, lastMessageTime);
                     }
-                    conversationUserStateMapper.upsertAfterMessage(
-                            tenantId, chat.getId(), memberId, cursorVer,
-                            unreadDelta, lastReadSeq, lastReadTime,
-                            lastMessageId, lastMessageSequence, senderId, dbMessageType, finalPreview, lastMessageHasAtMe, lastMessageTime);
                 } catch (Exception e) {
                     log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
                             chat.getId(), memberId, e.getMessage());
@@ -1349,9 +1355,9 @@ public class ImMessageServiceImpl implements ImMessageService {
                 if (senderCursorVer == null) {
                     senderCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, senderId);
                 }
-                conversationUserStateMapper.upsertAfterMessage(
+                conversationUserStateMapper.upsertAfterMessageForSender(
                         tenantId, chat.getId(), senderId, senderCursorVer,
-                        0, lastMessageSequence, lastMessageTime,
+                        lastMessageSequence, lastMessageTime,
                         lastMessageId, lastMessageSequence, senderId, dbMessageType, senderPreview, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",

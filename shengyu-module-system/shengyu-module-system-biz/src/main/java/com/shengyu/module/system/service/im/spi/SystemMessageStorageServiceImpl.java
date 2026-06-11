@@ -793,25 +793,45 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     );
 
                     Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
-                    Long lastReadSeqForUpsert = isSender ? messageDO.getSequence() : 0L;
-                    LocalDateTime lastReadTimeForUpsert = isSender ? messageDO.getSendTime() : null;
-                    conversationUserStateMapper.upsertAfterMessage(
-                            tenantId,
-                            chatId,
-                            memberId,
-                            cursorVersion,
-                            isSender ? 0 : 1,
-                            lastReadSeqForUpsert,
-                            lastReadTimeForUpsert,
-                            messageDO.getId(),
-                            messageDO.getSequence(),
-                            header.getSenderId(),
-                            messageDO.getMessageType(),
-                            finalPreview,
-                            (!isSender && mentionParsed != null && (mentionParsed.atAll
-                                    || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)))),
-                            messageDO.getSendTime()
-                    );
+                    if (isSender) {
+                        // 发送者：unread_count 强制归零
+                        conversationUserStateMapper.upsertAfterMessageForSender(
+                                tenantId,
+                                chatId,
+                                memberId,
+                                cursorVersion,
+                                messageDO.getSequence(),
+                                messageDO.getSendTime(),
+                                messageDO.getId(),
+                                messageDO.getSequence(),
+                                header.getSenderId(),
+                                messageDO.getMessageType(),
+                                finalPreview,
+                                false,
+                                messageDO.getSendTime()
+                        );
+                    } else {
+                        Long lastReadSeqForUpsert = 0L;
+                        LocalDateTime lastReadTimeForUpsert = null;
+                        boolean lastMessageHasAtMe = mentionParsed != null && (mentionParsed.atAll
+                                || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)));
+                        conversationUserStateMapper.upsertAfterMessage(
+                                tenantId,
+                                chatId,
+                                memberId,
+                                cursorVersion,
+                                1,
+                                lastReadSeqForUpsert,
+                                lastReadTimeForUpsert,
+                                messageDO.getId(),
+                                messageDO.getSequence(),
+                                header.getSenderId(),
+                                messageDO.getMessageType(),
+                                finalPreview,
+                                lastMessageHasAtMe,
+                                messageDO.getSendTime()
+                        );
+                    }
 
 					// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
 					if (isSender && messageDO.getSequence() != null) {
@@ -861,12 +881,11 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 );
 
                 Long senderCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, header.getSenderId());
-                conversationUserStateMapper.upsertAfterMessage(
+                conversationUserStateMapper.upsertAfterMessageForSender(
                         tenantId,
                         chatId,
                         header.getSenderId(),
                         senderCursorVersion,
-                        0,
                         messageDO.getSequence(),
                         messageDO.getSendTime(),
                         messageDO.getId(),

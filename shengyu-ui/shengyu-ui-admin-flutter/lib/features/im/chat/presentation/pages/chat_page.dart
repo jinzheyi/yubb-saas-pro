@@ -165,11 +165,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
   int _lastHistoryLoadTriggerAt = 0;
   bool _initialBottomAlignmentPending = true;
   final Map<String, _TypingEntry> _typingEntries = <String, _TypingEntry>{};
+  late final ActiveConversationService _activeConversationService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _activeConversationService = ref.read(activeConversationServiceProvider.notifier);
     _timelineScrollController = ScrollController()
       ..addListener(_handleTimelineScroll);
     _mentionSearchController = TextEditingController();
@@ -185,12 +187,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
     // 激活当前对话（用于角标智能处理）
     // 延迟到构建完成后，避免在 initState 中修改 provider 状态
     Future.microtask(() {
+      if (!mounted) return;
       final conversationState = ref.read(conversationListControllerProvider);
       final conversationUnread = conversationState.conversations
           .where((c) => c.chatId == widget.args.chatId)
           .fold<int>(0, (_, c) => c.unreadCount);
       ref.read(conversationListControllerProvider.notifier).activateChat(widget.args.chatId);
-      ref.read(activeConversationServiceProvider.notifier).updateActiveChatUnreadCount(conversationUnread);
+      _activeConversationService.updateActiveChatUnreadCount(conversationUnread);
     });
     Future.microtask(() {
       unawaited(_initializeChatPage());
@@ -207,7 +210,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
   @override
   void dispose() {
     // 注销当前对话（释放活跃状态）
-    ref.read(activeConversationServiceProvider.notifier).deactivateChat();
+    // 延迟到 widget 树 finalizing 完成后执行，避免 "Tried to modify a provider while the widget tree was building" 错误
+    Future.microtask(() => _activeConversationService.deactivateChat());
     WidgetsBinding.instance.removeObserver(this);
     _highlightClearTimer?.cancel();
     _recordingTimer?.cancel();

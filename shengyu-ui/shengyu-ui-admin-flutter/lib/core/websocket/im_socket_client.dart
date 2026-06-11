@@ -140,7 +140,10 @@ class ImSocketClient {
       ),
     );
     _sendEnvelope(_authPayloadBuilder.buildAuthEnvelope(session));
-    await _awaitAuthResult();
+    final success = await _awaitAuthResult();
+    if (!success) {
+      throw TimeoutException('Socket auth timeout', AppConfig.socketAuthTimeout);
+    }
   }
 
   void handleAuthResponse({
@@ -323,7 +326,10 @@ class ImSocketClient {
     );
     _authCompleter = Completer<void>();
     _sendEnvelope(_authPayloadBuilder.buildAuthEnvelope(session));
-    await _awaitAuthResult();
+    final success = await _awaitAuthResult();
+    if (!success) {
+      throw TimeoutException('Socket auth timeout', AppConfig.socketAuthTimeout);
+    }
   }
 
   Future<void> reconnect() async {
@@ -387,18 +393,21 @@ class ImSocketClient {
     }
   }
 
-  Future<void> _awaitAuthResult() async {
+  Future<bool> _awaitAuthResult() async {
     final completer = _authCompleter;
     if (completer == null) {
-      return;
+      return true;
     }
     try {
       await completer.future.timeout(AppConfig.socketAuthTimeout);
+      return true;
     } on TimeoutException {
       _completeAuthWithError(
         TimeoutException('Socket auth timeout', AppConfig.socketAuthTimeout),
       );
-      rethrow;
+      return false;
+    } catch (error) {
+      return false;
     }
   }
 
@@ -466,7 +475,12 @@ class ImSocketClient {
         return;
       }
       await connect();
-      await auth(session);
+      try {
+        await auth(session);
+      } catch (_) {
+        // Auth failed during reconnect, _completeAuthWithError already dispatched events
+        // Reconnect will be scheduled via _handleTransportError or notifyHeartbeatTimeout
+      }
     } finally {
       _reconnectFuture = null;
       if (!completer.isCompleted) {

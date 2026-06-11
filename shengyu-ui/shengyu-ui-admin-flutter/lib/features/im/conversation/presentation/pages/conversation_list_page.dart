@@ -94,13 +94,21 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() async {
+      // 先执行 load（有缓存时跳过 API）
       final error = await ref
           .read(conversationListControllerProvider.notifier)
           .load();
+      if (!mounted) return;
       if (error == null) {
         _markConversationSynced();
       }
+      // 无论 load 是否跳过 API，都执行一次增量同步，确保从聊天页返回时获取最新未读数
+      await ref
+          .read(conversationListControllerProvider.notifier)
+          .syncIncrementally();
+      if (!mounted) return;
       await _consumeGroupRemovalNotice();
+      if (!mounted) return;
       await _syncOnForegroundIfNeeded();
     });
   }

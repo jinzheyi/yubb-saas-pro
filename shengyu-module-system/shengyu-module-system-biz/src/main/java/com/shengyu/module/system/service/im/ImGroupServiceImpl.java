@@ -1704,22 +1704,41 @@ public class ImGroupServiceImpl implements ImGroupService {
                 }
 
                 Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, targetUserId);
-                conversationUserStateMapper.upsertAfterMessage(
-                        tenantId,
-                        chat.getId(),
-                        targetUserId,
-                        cursorVersion,
-                        unreadDelta,
-                        null,
-                        null,
-                        tipMessage.getId(),
-                        sequence,
-                        tipMessage.getSenderId(),
-                        10,
-                        preview,
-                        Boolean.FALSE,
-                        now
-                );
+                if (Objects.equals(targetUserId, operatorUserId)) {
+                    // 操作者：unread_count 强制归零（自己触发的系统消息不应产生未读）
+                    conversationUserStateMapper.upsertAfterMessageForSender(
+                            tenantId,
+                            chat.getId(),
+                            targetUserId,
+                            cursorVersion,
+                            null,
+                            null,
+                            tipMessage.getId(),
+                            sequence,
+                            tipMessage.getSenderId(),
+                            10,
+                            preview,
+                            Boolean.FALSE,
+                            now
+                    );
+                } else {
+                    conversationUserStateMapper.upsertAfterMessage(
+                            tenantId,
+                            chat.getId(),
+                            targetUserId,
+                            cursorVersion,
+                            unreadDelta,
+                            null,
+                            null,
+                            tipMessage.getId(),
+                            sequence,
+                            tipMessage.getSenderId(),
+                            10,
+                            preview,
+                            Boolean.FALSE,
+                            now
+                    );
+                }
                 // 操作者侧：推进已读水位，避免刷新后自己的操作出现未读角标
                 if (Objects.equals(targetUserId, operatorUserId) && sequence != null) {
                     try {
