@@ -60,11 +60,11 @@ class VoiceMessageBubble extends ConsumerWidget {
     final waveColor = isPlaying || isPaused
         ? (message.isOutgoing
               ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
-              : ThemeColors.activeBg(context))
+              : ThemeColors.chatBubbleIncomingText(context))
         : ThemeColors.textSecondary(context);
     final progressColor = message.isOutgoing
         ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
-        : ThemeColors.activeBg(context);
+        : ThemeColors.chatBubbleIncomingText(context);
     final progressTrackColor = message.isOutgoing
         ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.16)
         : ThemeColors.textSecondary(context).withValues(alpha: 0.12);
@@ -75,7 +75,7 @@ class VoiceMessageBubble extends ConsumerWidget {
     final controlIcon = isPlaying ? AppIconKind.pause : AppIconKind.play;
     final controlColor = message.isOutgoing
         ? ThemeColors.chatBubbleIncomingText(context).withValues(alpha: 0.7)
-        : ThemeColors.activeBg(context);
+        : ThemeColors.chatBubbleIncomingText(context);
     final canReplay =
         canControlPlayback &&
         (message.extra.fileUrl?.trim().isNotEmpty == true ||

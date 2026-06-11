@@ -5349,7 +5349,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
     try {
       final path = await service.stop();
       if (path == null || path.trim().isEmpty) {
-        debugPrint('_finishVoiceRecording: stop() returned null/empty, durationMs=$durationMs, isRecordingActive=${service.isRecordingActive}');
         _showAttachmentError(
           context,
           ref.read(appStringsProvider).chatRecordFileCreateFailed,
@@ -5362,10 +5361,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return;
       }
       final localPath = path.trim();
-      debugPrint('_finishVoiceRecording: path=$localPath, durationMs=$durationMs, isWeb=$kIsWeb');
       final uploadBytes = await _resolveVoiceUploadBytes(localPath);
       if (kIsWeb && (uploadBytes == null || uploadBytes.isEmpty)) {
-        debugPrint('_finishVoiceRecording: failed to resolve upload bytes from path=$localPath');
         _showAttachmentError(
           context,
           ref.read(appStringsProvider).chatRecordFileCreateFailed,
@@ -5389,8 +5386,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         uploadBytes: uploadBytes,
         sourceSize: sourceSize,
       );
-    } catch (error, st) {
-      debugPrint('_finishVoiceRecording error: $error\n$st');
+    } catch (error) {
       _resetVoiceRecordingUi();
       if (mounted) {
         _showAttachmentError(context, error.toString());

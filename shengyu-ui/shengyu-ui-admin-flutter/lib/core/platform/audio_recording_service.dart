@@ -76,7 +76,6 @@ class AudioRecordingService {
   Future<void> start({required String path}) async {
     if (_isDisposed) return;
     if (_isRecordingActive) {
-      debugPrint('AudioRecordingService.start: already recording, stopping first');
       try {
         await _recorder.stop();
       } catch (e) {
@@ -97,7 +96,6 @@ class AudioRecordingService {
         path: path,
       );
       _isRecordingActive = true;
-      debugPrint('AudioRecordingService.start: recording started, encoder=${profile.encoder.name}, path=$path');
     } catch (e) {
       debugPrint('AudioRecordingService.start failed: $e');
       rethrow;
@@ -125,18 +123,11 @@ class AudioRecordingService {
   }
 
   Future<String?> stop() async {
-    if (_isDisposed) {
-      debugPrint('AudioRecordingService.stop: already disposed');
-      return null;
-    }
-    if (!_isRecordingActive) {
-      debugPrint('AudioRecordingService.stop: not recording, returning null');
-      return null;
-    }
+    if (_isDisposed) return null;
+    if (!_isRecordingActive) return null;
     try {
       final path = await _recorder.stop();
       _isRecordingActive = false;
-      debugPrint('AudioRecordingService.stop: path=$path');
       return path;
     } catch (e) {
       _isRecordingActive = false;

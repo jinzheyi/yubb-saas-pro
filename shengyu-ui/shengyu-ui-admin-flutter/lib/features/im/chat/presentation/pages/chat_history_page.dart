@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
@@ -15,7 +17,6 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/conta
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_history_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
@@ -63,6 +64,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   String? _chatId;
   _HistoryFilter _filter = _HistoryFilter.all;
   String _currentKeyword = '';
+
+  // Voice playback state
+  String? _activePlayingVoiceMessageId;
+  String? _activePausedVoiceMessageId;
+  int _activeVoicePlaybackProgressMs = 0;
+  int _activeVoicePlaybackDurationMs = 0;
 
   @override
   void initState() {
@@ -328,27 +335,6 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     );
   }
 
-  Widget _buildMessageIcon(ChatHistoryItem item) {
-    final iconData = _messageTypeIcon(item.messageType);
-    if (iconData == null) {
-      return const SizedBox.shrink();
-    }
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: ThemeColors.surface(context),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        iconData,
-        size: 16,
-        color: ThemeColors.textSecondary(context),
-      ),
-    );
-  }
-
   IconData? _messageTypeIcon(MessageType type) {
     return switch (type) {
       MessageType.image => Icons.image_outlined,
@@ -406,6 +392,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         locationLatitude: double.tryParse(extraData['locationLatitude'] ?? ''),
         locationLongitude: double.tryParse(extraData['locationLongitude'] ?? ''),
         customType: extraData['customType'],
+        // 聊天记录页不显示未读红点
+        voicePlayed: true,
       );
     }
 
@@ -413,6 +401,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     if (content.isEmpty || !content.startsWith('{') || !content.endsWith('}')) {
       return MessageExtra(
         fileName: _extractPlainText(item),
+        voicePlayed: true,
       );
     }
     try {
@@ -439,10 +428,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         locationLatitude: double.tryParse(map['locationLatitude']?.toString() ?? ''),
         locationLongitude: double.tryParse(map['locationLongitude']?.toString() ?? ''),
         customType: map['customType']?.toString(),
+        voicePlayed: true,
       );
     } catch (_) {
       return MessageExtra(
         fileName: _extractPlainText(item),
+        voicePlayed: true,
       );
     }
   }
@@ -483,7 +474,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
   Widget _buildMessageBubble(Message message, ChatHistoryItem item) {
     final keyword = _getSearchKeyword();
     final isTextWithKeyword = message.type == MessageType.text && keyword.isNotEmpty;
-    
+    final isVoiceMessage = message.type == MessageType.voice;
+
     if (isTextWithKeyword) {
       return GestureDetector(
         onTap: () => _handleMessageTap(item),
@@ -495,7 +487,29 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         ),
       );
     }
-    
+
+    if (isVoiceMessage) {
+      final messageKey = message.messageId;
+      final isPlaying = messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey;
+      final isPaused = messageKey.isNotEmpty && _activePausedVoiceMessageId == messageKey;
+      final progressMs = (isPlaying || isPaused) ? _activeVoicePlaybackProgressMs : 0;
+      final durationMs = (isPlaying || isPaused) ? _activeVoicePlaybackDurationMs : 0;
+      return MessageBubbleFactory.build(
+        message,
+        onRetryMessage: (_) {},
+        onOpenMessage: (_) => _handleMessageTap(item),
+        onPauseMessage: (_) => _pauseVoiceMessage(message),
+        onResumeMessage: (_) => _resumeVoiceMessage(message),
+        onReplayMessage: (_) => _replayVoiceMessage(message),
+        voiceIsPlaying: isPlaying,
+        voiceIsPaused: isPaused,
+        voicePlaybackProgressMs: progressMs,
+        voicePlaybackDurationMs: durationMs,
+        onLongPressMessage: (_, __) => _showItemMenu(item),
+        showOutgoingStatusFooter: false,
+      );
+    }
+
     return GestureDetector(
       onTap: () => _handleMessageTap(item),
       onLongPress: () => _showItemMenu(item),
@@ -520,11 +534,133 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       _openMediaAnchor(item);
       return;
     }
+    if (item.messageType == MessageType.voice) {
+      final message = _toMessage(item);
+      _handleVoiceMessageTap(message);
+      return;
+    }
     final message = _toMessage(item);
     if (_isLinkMessage(message)) {
       _openLinkMessage(message);
       return;
     }
+  }
+
+  void _handleVoiceMessageTap(Message message) {
+    final messageKey = message.messageId;
+    if (messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey) {
+      _pauseVoiceMessage(message);
+    } else if (messageKey.isNotEmpty && _activePausedVoiceMessageId == messageKey) {
+      _resumeVoiceMessage(message);
+    } else {
+      _playVoiceMessage(message);
+    }
+  }
+
+  Future<void> _playVoiceMessage(Message message) async {
+    if (!mounted) return;
+    final playback = ref.read(audioPlaybackServiceProvider);
+    final messageKey = message.messageId;
+    StreamSubscription<Duration>? positionSub;
+    StreamSubscription<PlayerState>? stateSub;
+    try {
+      if (messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey) {
+        await playback.pause();
+      } else if (_activePlayingVoiceMessageId != null ||
+          _activePausedVoiceMessageId != null) {
+        await playback.stop();
+      }
+      final url = message.extra.fileUrl;
+      if (url == null || url.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).chatVoicePlayUrlFailed)),
+          );
+        }
+        return;
+      }
+      await playback.setUrl(url);
+      if (!mounted) return;
+      positionSub = playback.positionStream.listen((pos) {
+        if (!mounted) return;
+        setState(() {
+          _activeVoicePlaybackProgressMs = pos.inMilliseconds;
+        });
+      });
+      stateSub = playback.playerStateStream.listen((state) {
+        if (!mounted) return;
+        if (state.processingState == ProcessingState.completed ||
+            state.processingState == ProcessingState.idle) {
+          positionSub?.cancel();
+          stateSub?.cancel();
+          setState(() {
+            _activePlayingVoiceMessageId = null;
+            _activePausedVoiceMessageId = null;
+            _activeVoicePlaybackProgressMs = 0;
+          });
+        } else if (!state.playing && _activePlayingVoiceMessageId == messageKey) {
+          setState(() {
+            _activePlayingVoiceMessageId = null;
+            _activePausedVoiceMessageId = messageKey;
+          });
+        }
+      });
+      setState(() {
+        _activePlayingVoiceMessageId = messageKey;
+        _activePausedVoiceMessageId = null;
+        _activeVoicePlaybackProgressMs = 0;
+        _activeVoicePlaybackDurationMs =
+            message.extra.durationMs ??
+            ((message.extra.duration ?? 1).clamp(1, 60) * 1000);
+      });
+      await playback.play();
+    } catch (_) {
+      positionSub?.cancel();
+      stateSub?.cancel();
+      if (mounted) {
+        setState(() {
+          _activePlayingVoiceMessageId = null;
+          _activePausedVoiceMessageId = null;
+          _activeVoicePlaybackProgressMs = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _pauseVoiceMessage(Message message) async {
+    final messageKey = message.messageId;
+    if (messageKey.isEmpty || _activePlayingVoiceMessageId != messageKey) {
+      return;
+    }
+    final playback = ref.read(audioPlaybackServiceProvider);
+    await playback.pause();
+  }
+
+  Future<void> _resumeVoiceMessage(Message message) async {
+    final messageKey = message.messageId;
+    if (messageKey.isEmpty || _activePausedVoiceMessageId != messageKey) {
+      return;
+    }
+    final playback = ref.read(audioPlaybackServiceProvider);
+    await playback.play();
+    if (mounted) {
+      setState(() {
+        _activePlayingVoiceMessageId = messageKey;
+        _activePausedVoiceMessageId = null;
+      });
+    }
+  }
+
+  Future<void> _replayVoiceMessage(Message message) async {
+    final playback = ref.read(audioPlaybackServiceProvider);
+    await playback.stop();
+    if (!mounted) return;
+    setState(() {
+      _activePlayingVoiceMessageId = null;
+      _activePausedVoiceMessageId = null;
+      _activeVoicePlaybackProgressMs = 0;
+    });
+    await _playVoiceMessage(message);
   }
 
   void _handleLinkTap(String url) {
