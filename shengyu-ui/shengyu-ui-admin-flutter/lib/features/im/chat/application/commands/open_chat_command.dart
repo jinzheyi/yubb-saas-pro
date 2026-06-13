@@ -9,6 +9,8 @@ class OpenChatCommand {
     this.title,
     this.anchorSequence,
     this.anchorMessageId,
+    this.isPreload = false,
+    this.windowLimitOverride,
   });
 
   final String chatId;
@@ -17,6 +19,10 @@ class OpenChatCommand {
   final String? title;
   final String? anchorSequence;
   final String? anchorMessageId;
+  /// 是否为预加载模式（后台加载消息，不阻塞UI）
+  final bool isPreload;
+  /// windowLimit 覆盖值（用于 confirmPendingMessages 等场景，传入则优先使用此值）
+  final int? windowLimitOverride;
 
   String? get windowMode {
     return switch (entryMode) {
@@ -26,6 +32,10 @@ class OpenChatCommand {
   }
 
   int? get windowLimit {
+    // 优先使用覆盖值
+    if (windowLimitOverride != null && windowLimitOverride! > 0) {
+      return windowLimitOverride;
+    }
     return switch (entryMode) {
       ChatEntryMode.latest => 30,
       ChatEntryMode.anchor || ChatEntryMode.restore => null,

@@ -48,8 +48,9 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final conversationList = ref.watch(conversationListControllerProvider);
-    final conversation = conversationList.conversations
+    // 精确订阅：仅需要 conversations 字段
+    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final conversation = conversations
         .where((item) => item.chatId == widget.args.chatId)
         .firstOrNull;
     final targetId = _resolveTargetId(conversation);

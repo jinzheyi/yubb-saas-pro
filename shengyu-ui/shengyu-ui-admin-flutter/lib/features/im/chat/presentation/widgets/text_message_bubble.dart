@@ -5,6 +5,7 @@ import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_preview_entry.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
@@ -12,20 +13,6 @@ import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 // 预编译正则表达式，避免在 build 热路径重复解析
 final _linkPattern = RegExp(r'''https?://[^\s<>"']+''', caseSensitive: false);
 final _wwwPattern = RegExp(r'''www\.[^\s<>"']+''', caseSensitive: false);
-
-class QuotePreviewEntry {
-  const QuotePreviewEntry({
-    required this.messageId,
-    required this.senderName,
-    required this.preview,
-    required this.missing,
-  });
-
-  final String messageId;
-  final String senderName;
-  final String preview;
-  final bool missing;
-}
 
 class TextMessageBubble extends ConsumerWidget {
   const TextMessageBubble({

@@ -16,6 +16,7 @@ abstract class FileRepository {
     required String mimeType,
     Uint8List? bytes,
     int? maxSize,
+    void Function(int sent, int total)? onProgress,
   });
 
   Future<FilePreviewDescriptor> getFilePreviewDescriptor(FilePreviewArgs args);

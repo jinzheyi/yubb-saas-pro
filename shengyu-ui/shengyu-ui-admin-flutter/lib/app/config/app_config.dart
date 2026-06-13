@@ -39,6 +39,14 @@ abstract final class AppConfig {
   static const String fileUploadFieldName = 'file';
   static const int filePreviewExpirationSeconds = 600;
 
+  /// 分片上传相关接口路径。
+  static const String fileMultipartUploadInitPath = '/infra/file/upload-init';
+  static const String fileMultipartUploadChunkPath = '/infra/file/upload-chunk';
+  static const String fileMultipartUploadMergePath = '/infra/file/upload-merge';
+  static const String fileMultipartUploadAbortPath = '/infra/file/upload-abort';
+  static const String fileMultipartUploadStatusPath =
+      '/infra/file/upload-status';
+
   /// WebSocket 心跳与连接治理配置。
   ///
   /// 说明：

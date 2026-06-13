@@ -75,6 +75,7 @@ class _FakeFileRepository implements FileRepository {
     required String mimeType,
     Uint8List? bytes,
     int? maxSize,
+    void Function(int sent, int total)? onProgress,
   }) {
     throw UnimplementedError();
   }

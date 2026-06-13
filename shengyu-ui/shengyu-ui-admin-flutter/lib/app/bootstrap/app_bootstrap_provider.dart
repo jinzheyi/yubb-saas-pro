@@ -17,19 +17,23 @@ final appBootstrapProvider = FutureProvider<void>((ref) async {
   // 因为 appBootstrapProvider 被 AppBootstrap (根 widget) watch，
   // 保证整个应用生命周期内始终监听 badge 推送，不受页面导航影响。
   ref.watch(globalBadgeSocketBindingProvider);
-  try {
-    await ref.read(authBootstrapCoordinatorProvider).bootstrap();
-  } catch (e, stack) {
-    debugPrint('[Bootstrap] auth bootstrap error: $e\n$stack');
-  }
-  try {
-    await ref.read(appLocaleControllerProvider.notifier).load();
-  } catch (e, stack) {
-    debugPrint('[Bootstrap] locale load error: $e\n$stack');
-  }
-  try {
-    await ref.read(appThemeControllerProvider.notifier).load();
-  } catch (e, stack) {
-    debugPrint('[Bootstrap] theme load error: $e\n$stack');
-  }
+
+  // ===== P5-2: 并行初始化 auth/locale/theme，缩短启动等待时间 =====
+  await Future.wait<void>([
+    _safeBootstrap(ref, 'auth', () => ref.read(authBootstrapCoordinatorProvider).bootstrap()),
+    _safeBootstrap(ref, 'locale', () => ref.read(appLocaleControllerProvider.notifier).load()),
+    _safeBootstrap(ref, 'theme', () => ref.read(appThemeControllerProvider.notifier).load()),
+  ]);
 });
+
+Future<void> _safeBootstrap(
+  Ref ref,
+  String label,
+  Future<void> Function() task,
+) async {
+  try {
+    await task();
+  } catch (e, stack) {
+    debugPrint('[Bootstrap] $label error: $e\n$stack');
+  }
+}

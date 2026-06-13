@@ -79,11 +79,9 @@ class ContactPickerCategoryPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: margin,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ThemeColors.surface(context),
-          borderRadius: BorderRadius.circular(8),
-        ),
+      child: Material(
+        color: ThemeColors.surface(context),
+        borderRadius: BorderRadius.circular(8),
         child: Column(
           children: [
             for (var index = 0; index < items.length; index++) ...[

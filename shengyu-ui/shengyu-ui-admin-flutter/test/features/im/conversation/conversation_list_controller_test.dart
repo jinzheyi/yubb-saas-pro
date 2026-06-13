@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/application/usecase
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/repositories/conversation_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -13,9 +14,11 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 void main() {
   late ConversationListController controller;
   late _FakeConversationRepository repository;
+  late ActiveConversationService activeConversationService;
 
   setUp(() {
     repository = _FakeConversationRepository();
+    activeConversationService = ActiveConversationService();
     controller = ConversationListController(
       ConversationSyncCoordinator(
         _FakeLoadConversationListUseCase(repository),
@@ -23,6 +26,7 @@ void main() {
       ),
       _FakeSyncConversationsIncrementallyUseCase(repository),
       repository,
+      activeConversationService,
     );
   });
 

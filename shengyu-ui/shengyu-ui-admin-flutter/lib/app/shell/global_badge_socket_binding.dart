@@ -26,11 +26,20 @@ final globalBadgeSocketBindingProvider = Provider<StreamSubscription<ImSocketEve
   return subscription;
 });
 
+// 角标初始化冷却期：避免频繁请求
+int _lastBadgeInitAt = 0;
+const int _badgeInitCooldownMs = 10000; // 10秒冷却期
+
 void _handleGlobalBadgeEvent(Ref ref, ImSocketEvent event) {
   switch (event.type) {
     case SocketEventTypes.authSucceeded:
       // 认证成功：通过 HTTP API 初始化角标
-      _initBadgeFromServer(ref);
+      // 优化：添加10秒冷却期，配合本地缓存减少请求
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - _lastBadgeInitAt >= _badgeInitCooldownMs) {
+        _lastBadgeInitAt = now;
+        _initBadgeFromServer(ref);
+      }
       break;
     case SocketEventTypes.badgeUpdated:
       // WebSocket badge 推送：更新全局角标

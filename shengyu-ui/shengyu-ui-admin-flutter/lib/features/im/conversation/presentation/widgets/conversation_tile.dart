@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/conversation_preview_cache.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
@@ -14,7 +15,10 @@ import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.da
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
-class ConversationTile extends StatefulWidget {
+/// 会话列表项组件
+/// 已从 StatefulWidget 改为 StatelessWidget，消除不必要的 State 创建和销毁
+/// 鼠标长按使用 _MouseLongPressHandler 独立处理
+class ConversationTile extends StatelessWidget {
   const ConversationTile({
     super.key,
     required this.conversation,
@@ -35,29 +39,10 @@ class ConversationTile extends StatefulWidget {
   final bool highlightPinned;
 
   @override
-  State<ConversationTile> createState() => _ConversationTileState();
-}
-
-// 模块级缓存：预编译正则表达式，避免每次 build 重新解析
-final _previewTokenPattern = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
-final _newlinePattern = RegExp(r'\r?\n+');
-final _groupSplitPattern = RegExp(r'[、，, ]+');
-
-class _ConversationTileState extends State<ConversationTile> {
-  Timer? _mouseLongPressTimer;
-  Offset? _mouseLongPressPosition;
-
-  @override
-  void dispose() {
-    _mouseLongPressTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strings = AppLocalizations.of(context);
-    final conversation = widget.conversation;
+    final conversation = this.conversation;
     final displayTitle = _displayTitle(conversation);
     final previewTokens = _buildPreviewTokens(strings, conversation);
     final showGroupCount =
@@ -74,19 +59,17 @@ class _ConversationTileState extends State<ConversationTile> {
             conversation.isGroupDisbanded);
 
     return Material(
-      color: widget.highlightPinned
+      color: highlightPinned
           ? ThemeColors.tilePinnedBg(context)
           : ThemeColors.tileBg(context),
-      child: Listener(
-        onPointerDown: _handlePointerDown,
-        onPointerUp: (_) => _cancelMouseLongPress(),
-        onPointerCancel: (_) => _cancelMouseLongPress(),
+      child: _MouseLongPressHandler(
+        onLongPress: onMouseLongPress,
         child: GestureDetector(
-          onLongPress: widget.onLongPress,
-          onLongPressStart: widget.onLongPressStart,
-          onSecondaryTapDown: widget.onSecondaryTapDown,
+          onLongPress: onLongPress,
+          onLongPressStart: onLongPressStart,
+          onSecondaryTapDown: onSecondaryTapDown,
           child: InkWell(
-            onTap: widget.onTap,
+            onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -248,10 +231,48 @@ class _ConversationTileState extends State<ConversationTile> {
     }
     return spans;
   }
+}
+
+/// 鼠标长按处理器（提取为独立组件，避免 ConversationTile 持有 State）
+class _MouseLongPressHandler extends StatefulWidget {
+  const _MouseLongPressHandler({
+    required this.child,
+    this.onLongPress,
+  });
+
+  final Widget child;
+  final ValueChanged<Offset>? onLongPress;
+
+  @override
+  State<_MouseLongPressHandler> createState() => _MouseLongPressHandlerState();
+}
+
+class _MouseLongPressHandlerState extends State<_MouseLongPressHandler> {
+  Timer? _mouseLongPressTimer;
+  Offset? _mouseLongPressPosition;
+
+  @override
+  void dispose() {
+    _mouseLongPressTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.onLongPress == null) {
+      return widget.child;
+    }
+    return Listener(
+      onPointerDown: _handlePointerDown,
+      onPointerUp: (_) => _cancelMouseLongPress(),
+      onPointerCancel: (_) => _cancelMouseLongPress(),
+      child: widget.child,
+    );
+  }
 
   void _handlePointerDown(PointerDownEvent event) {
     if (event.kind != PointerDeviceKind.mouse ||
-        widget.onMouseLongPress == null ||
+        widget.onLongPress == null ||
         event.buttons != kPrimaryMouseButton) {
       return;
     }
@@ -261,7 +282,7 @@ class _ConversationTileState extends State<ConversationTile> {
       final position = _mouseLongPressPosition;
       _mouseLongPressTimer = null;
       if (position != null) {
-        widget.onMouseLongPress?.call(position);
+        widget.onLongPress?.call(position);
       }
     });
   }
@@ -272,6 +293,11 @@ class _ConversationTileState extends State<ConversationTile> {
     _mouseLongPressPosition = null;
   }
 }
+
+// 模块级缓存：预编译正则表达式，避免每次 build 重新解析
+final _previewTokenPattern = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
+final _newlinePattern = RegExp(r'\r?\n+');
+final _groupSplitPattern = RegExp(r'[、，, ]+');
 
 String _displayTitle(Conversation conversation) {
   final trimmedTitle = conversation.title.trim();
@@ -289,18 +315,44 @@ List<_PreviewToken> _buildPreviewTokens(
   AppLocalizations strings,
   Conversation conversation,
 ) {
+  // 构建缓存 key：chatId + previewVersion
+  final cacheKey = '${conversation.chatId}|${conversation.previewVersion}';
+
+  // 尝试从缓存获取（命中则直接返回，避免字符串处理）
+  final cached = ConversationPreviewCache.instance.get(cacheKey);
+  if (cached != null) {
+    final tokens = <_PreviewToken>[];
+    for (var i = 0; i < cached.tokens.length; i++) {
+      tokens.add(
+        _PreviewToken(
+          text: cached.tokens[i],
+          isNotice: cached.isNoticeFlags[i],
+        ),
+      );
+    }
+    return tokens;
+  }
+
+  // 缓存未命中：计算并缓存
   final preview = _previewText(strings, conversation);
   if (preview.isEmpty) {
+    // 缓存空结果，避免重复计算
+    ConversationPreviewCache.instance.put(
+      cacheKey,
+      const PreviewCacheEntry(tokens: [], isNoticeFlags: []),
+    );
     return const <_PreviewToken>[];
   }
   final matches = _previewTokenPattern.allMatches(preview);
   if (matches.isEmpty) {
-    return <_PreviewToken>[
+    final result = <_PreviewToken>[
       _PreviewToken(
         text: preview,
         isNotice: _shouldHighlightPreview(conversation, preview),
       ),
     ];
+    _cachePreview(cacheKey, result);
+    return result;
   }
 
   final tokens = <_PreviewToken>[];
@@ -335,7 +387,24 @@ List<_PreviewToken> _buildPreviewTokens(
       ),
     );
   }
+
+  // 写入缓存
+  _cachePreview(cacheKey, tokens);
   return tokens;
+}
+
+/// 将预览结果写入缓存
+void _cachePreview(String cacheKey, List<_PreviewToken> tokens) {
+  final texts = <String>[];
+  final flags = <bool>[];
+  for (final token in tokens) {
+    texts.add(token.text);
+    flags.add(token.isNotice);
+  }
+  ConversationPreviewCache.instance.put(
+    cacheKey,
+    PreviewCacheEntry(tokens: texts, isNoticeFlags: flags),
+  );
 }
 
 bool _isNoticePreview(String preview) {

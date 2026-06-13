@@ -1,5 +1,7 @@
 package com.shengyu.framework.file.core.client;
 
+import java.util.List;
+
 /**
  * 文件客户端
  *
@@ -60,6 +62,52 @@ public interface FileClient {
      * @return 文件预签名地址
      */
     default String presignGetUrl(String url, Integer expirationSeconds) {
+        throw new UnsupportedOperationException("不支持的操作");
+    }
+
+    // ========== 分片上传，目前仅 S3 支持 ==========
+
+    /**
+     * 创建分片上传任务
+     *
+     * @param path 相对路径
+     * @param type 文件类型（MIME 类型）
+     * @param totalSize 文件总大小（字节）
+     * @return 分片上传任务 ID（uploadId）
+     */
+    default String createMultipartUpload(String path, String type, Long totalSize) {
+        throw new UnsupportedOperationException("不支持的操作");
+    }
+
+    /**
+     * 上传分片
+     *
+     * @param uploadId 分片上传任务 ID
+     * @param partNumber 分片号，从 1 开始
+     * @param content 分片内容
+     * @return 分片 ETag
+     */
+    default String uploadPart(String uploadId, int partNumber, byte[] content) {
+        throw new UnsupportedOperationException("不支持的操作");
+    }
+
+    /**
+     * 完成分片上传，合并所有分片
+     *
+     * @param uploadId 分片上传任务 ID
+     * @param partETags 分片 ETag 列表
+     * @return 完整路径，即 HTTP 访问地址
+     */
+    default String completeMultipartUpload(String uploadId, List<PartETag> partETags) {
+        throw new UnsupportedOperationException("不支持的操作");
+    }
+
+    /**
+     * 取消分片上传，清理已上传的分片
+     *
+     * @param uploadId 分片上传任务 ID
+     */
+    default void abortMultipartUpload(String uploadId) {
         throw new UnsupportedOperationException("不支持的操作");
     }
 

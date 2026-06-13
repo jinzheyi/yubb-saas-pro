@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
@@ -37,17 +38,75 @@ final conversationRealtimeBindingProvider = Provider<void>((ref) {
   ref.onDispose(subscription.cancel);
 });
 
+/// 会话同步节流器：避免高频 WebSocket 事件触发频繁同步
+final Map<String, int> _syncThrottleTimestamps = <String, int>{};
+const int _syncThrottleIntervalMs = 1000;
+
+/// 本地会话更新时间记录：避免发送消息后 WebSocket 推送触发多余 sync
+/// key: chatId, value: 更新时间戳 (毫秒)
+final Map<String, int> _localConversationUpdateTimes = <String, int>{};
+const int _localUpdateCooldownMs = 3000; // 3 秒冷却期
+
+/// 记录本地更新（由 upsertLocalMessage 调用）
+void markLocalConversationUpdate(String chatId) {
+  _localConversationUpdateTimes[chatId] = DateTime.now().millisecondsSinceEpoch;
+}
+
+/// 检查是否应该跳过 sync（因为近期有本地更新）
+bool _isRecentlyUpdatedLocally(String chatId) {
+  final updateTime = _localConversationUpdateTimes[chatId] ?? 0;
+  final now = DateTime.now().millisecondsSinceEpoch;
+  return now - updateTime < _localUpdateCooldownMs;
+}
+
+bool _shouldThrottleSync(String key) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final lastSync = _syncThrottleTimestamps[key] ?? 0;
+  if (now - lastSync < _syncThrottleIntervalMs) {
+    return true;
+  }
+  _syncThrottleTimestamps[key] = now;
+  return false;
+}
+
 void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
   switch (event.type) {
     case SocketEventTypes.conversationHint:
     case SocketEventTypes.conversationUpdated:
     case SocketEventTypes.conversationDeleted:
+      // 优化：如果该会话近期有本地更新（如发送消息），跳过 sync
+      // 因为本地已通过 upsertLocalMessage 更新了会话列表
+      final chatId = event.chatId?.trim() ?? '';
+      if (chatId.isNotEmpty && _isRecentlyUpdatedLocally(chatId)) {
+        debugPrint('[ConversationRealtime] Skipping sync for recently updated chat: $chatId');
+        break;
+      }
+      
+      // 优化：如果用户当前正在查看该会话的聊天页面，跳过 sync
+      // 因为用户已在聊天页面，会话列表的更新不是关键路径
+      // 离开聊天页面时会重新加载会话列表
+      if (chatId.isNotEmpty && _isCurrentlyViewingChat(ref, chatId)) {
+        debugPrint('[ConversationRealtime] Skipping sync for active chat: $chatId');
+        break;
+      }
+      
+      // 严格节流：避免高频事件触发频繁同步
+      if (!_shouldThrottleSync('conversation_sync')) {
+        ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      }
+      break;
     case SocketEventTypes.reconnecting:
-      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      // 优化：重连事件不触发 sync，等待 authSucceeded 后再处理
+      // 避免在重连期间发送多余的请求
+      debugPrint('[ConversationRealtime] Skipping sync on reconnecting event');
       break;
     case SocketEventTypes.authSucceeded:
-      // 认证成功：同步会话列表 + 初始化角标（从后端 HTTP API）
-      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      // 认证成功：仅初始化角标，不触发会话列表同步
+      // 原因：
+      // 1. 发送消息 → 本地已通过 upsertLocalMessage 更新会话列表
+      // 2. 接收消息 → WebSocket 的 conversationHint/Updated 事件已处理 sync
+      // 3. 首次进入应用 → 初始化时已经 load 过完整列表
+      // 4. 避免每次 authSucceeded 都触发不必要的 sync 请求风暴
       _initBadgeFromServer(ref);
       break;
     case SocketEventTypes.badgeUpdated:
@@ -98,7 +157,9 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
   // 2. 同步到会话列表控制器（驱动会话列表中的角标）
   final rawBadges = payload['conversationBadges'];
   if (rawBadges is! List) {
-    ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    // 优化：不触发完整 sync，仅记录日志
+    // 原因：payload 格式异常时，应等待下一次正常推送，避免频繁请求
+    debugPrint('[ConversationRealtime] badgeUpdated: conversationBadges not a list, skipping sync');
     return;
   }
   final badges = <String, int>{};
@@ -122,6 +183,8 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
 void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
   final payload = event.payload;
   final action = payload['action']?.toString().trim() ?? '';
+  
+  // 优化：群生命周期事件需要特殊处理，不受当前查看状态影响
   if (_isGroupLifecycleAction(action)) {
     _handleGroupLifecycleAction(ref, action, payload);
     return;
@@ -181,6 +244,13 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
       content == 'GROUP_OWNER_TRANSFERRED' ||
       content == 'GROUP_DISBANDED' ||
       content == 'GROUP_INFO_UPDATED') {
+    // 优化：如果用户当前正在查看某个会话，跳过 sync
+    // 离开聊天页面时会重新加载会话列表
+    final activeState = ref.read(activeConversationServiceProvider);
+    if (activeState.isViewing) {
+      debugPrint('[ConversationRealtime] Skipping sync in systemNotify for active chat');
+      return;
+    }
     ref.read(conversationListControllerProvider.notifier).syncIncrementally();
   }
 }
@@ -329,4 +399,10 @@ DateTime? _parseDateTime(Object? raw) {
     return DateTime.fromMillisecondsSinceEpoch(millis);
   }
   return DateTime.tryParse(text);
+}
+
+/// 检查用户当前是否正在查看指定的会话
+bool _isCurrentlyViewingChat(Ref ref, String chatId) {
+  final activeState = ref.read(activeConversationServiceProvider);
+  return activeState.isViewing && activeState.currentChatId == chatId;
 }

@@ -88,6 +88,18 @@ class Conversation {
   bool get isGroupKicked => groupMemberStatus == 2;
   bool get isGroupDisbanded => groupMemberStatus == 3;
   bool get canSendMessageToGroup => groupMemberStatus == null || groupMemberStatus == 0;
+
+  /// 预览版本号，基于 lastMessageId + lastMessagePreview + unreadCount 计算
+  ///
+  /// 当这三个字段中任何一个发生变化时，版本号也会变化，
+  /// 从而保证缓存 key 的准确性。
+  String get previewVersion {
+    final msgId = lastMessageId ?? '';
+    final preview = lastMessagePreview;
+    final unread = unreadCount.toString();
+    return '$msgId|$preview|$unread';
+  }
+
   String get groupStatusText {
     switch (groupMemberStatus) {
       case 1:

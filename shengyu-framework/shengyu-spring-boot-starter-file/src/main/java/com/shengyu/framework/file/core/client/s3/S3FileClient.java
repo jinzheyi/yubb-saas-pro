@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.shengyu.framework.common.util.http.HttpUtils;
 import com.shengyu.framework.file.core.client.AbstractFileClient;
+import com.shengyu.framework.file.core.client.PartETag;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -13,9 +14,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -23,6 +22,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 基于 S3 协议的文件客户端，实现 MinIO、阿里云、腾讯云、七牛云、华为云等云服务
@@ -132,6 +133,100 @@ public class S3FileClient extends AbstractFileClient<S3FileClientConfig> {
                 .getObjectRequest(b -> b.bucket(config.getBucket()).key(finalPath)).build())
                 .url();
         return signedUrl.toString();
+    }
+
+    @Override
+    public String createMultipartUpload(String path, String type, Long totalSize) {
+        // 构造 CreateMultipartUploadRequest
+        CreateMultipartUploadRequest request = CreateMultipartUploadRequest.builder()
+                .bucket(config.getBucket())
+                .key(path)
+                .contentType(type)
+                .build();
+        // 创建分片上传任务
+        CreateMultipartUploadResponse response = client.createMultipartUpload(request);
+        // 返回复合 token：path::uploadId，用于后续操作关联文件路径
+        return path + "::" + response.uploadId();
+    }
+
+    @Override
+    public String uploadPart(String uploadId, int partNumber, byte[] content) {
+        // 构造 UploadPartRequest
+        UploadPartRequest request = UploadPartRequest.builder()
+                .bucket(config.getBucket())
+                .key(pathFromUploadId(uploadId))
+                .uploadId(s3UploadId(uploadId))
+                .partNumber(partNumber)
+                .contentLength((long) content.length)
+                .build();
+        // 上传分片
+        UploadPartResponse response = client.uploadPart(request, RequestBody.fromBytes(content));
+        return response.eTag();
+    }
+
+    @Override
+    public String completeMultipartUpload(String uploadId, List<PartETag> partETags) {
+        // 转换为 AWS SDK 的 CompletedPart 列表
+        List<CompletedPart> completedParts = partETags.stream()
+                .map(part -> CompletedPart.builder()
+                        .partNumber(part.getPartNumber())
+                        .eTag(part.getEtag())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 构造 CompleteMultipartUploadRequest
+        CompleteMultipartUploadRequest request = CompleteMultipartUploadRequest.builder()
+                .bucket(config.getBucket())
+                .key(pathFromUploadId(uploadId))
+                .uploadId(s3UploadId(uploadId))
+                .multipartUpload(multipart -> multipart.parts(completedParts))
+                .build();
+        // 完成分片合并
+        client.completeMultipartUpload(request);
+        // 拼接返回路径
+        return presignGetUrl(pathFromUploadId(uploadId), null);
+    }
+
+    @Override
+    public void abortMultipartUpload(String uploadId) {
+        // 构造 AbortMultipartUploadRequest
+        AbortMultipartUploadRequest request = AbortMultipartUploadRequest.builder()
+                .bucket(config.getBucket())
+                .key(pathFromUploadId(uploadId))
+                .uploadId(s3UploadId(uploadId))
+                .build();
+        // 取消分片上传
+        client.abortMultipartUpload(request);
+    }
+
+    /**
+     * 从复合 uploadId 中提取文件路径
+     * <p>
+     * 约定：uploadId 格式为 "{path}::{s3UploadId}"，用于在后续操作中关联文件路径
+     *
+     * @param compositeUploadId 分片上传任务 ID（格式：path::s3UploadId）
+     * @return 文件路径
+     */
+    private String pathFromUploadId(String compositeUploadId) {
+        int idx = compositeUploadId.indexOf("::");
+        if (idx >= 0) {
+            return compositeUploadId.substring(0, idx);
+        }
+        return compositeUploadId;
+    }
+
+    /**
+     * 从复合 uploadId 中提取 S3 原生 uploadId
+     *
+     * @param compositeUploadId 分片上传任务 ID（格式：path::s3UploadId）
+     * @return S3 原生 uploadId
+     */
+    private String s3UploadId(String compositeUploadId) {
+        int idx = compositeUploadId.indexOf("::");
+        if (idx >= 0) {
+            return compositeUploadId.substring(idx + 2);
+        }
+        return compositeUploadId;
     }
 
     /**

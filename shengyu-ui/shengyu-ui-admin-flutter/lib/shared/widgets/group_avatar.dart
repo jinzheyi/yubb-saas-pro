@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 /// 钉钉风格群组合头像组件
@@ -220,12 +222,13 @@ class GroupAvatarWidget extends StatelessWidget {
     final resolvedAvatar = normalizeAvatarUrl(avatarUrl);
 
     if (resolvedAvatar.isNotEmpty) {
-      return Image.network(
-        resolvedAvatar,
+      return CachedNetworkImage(
+        imageUrl: resolvedAvatar,
+        cacheManager: ImCacheManager.instance,
         width: cellWidth,
         height: cellHeight,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildFallbackAvatar(name, seed, cellWidth, cellHeight),
+        errorWidget: (_, _, _) => _buildFallbackAvatar(name, seed, cellWidth, cellHeight),
       );
     }
 
@@ -241,12 +244,13 @@ class GroupAvatarWidget extends StatelessWidget {
     final resolvedAvatar = normalizeAvatarUrl(avatarUrl);
 
     if (resolvedAvatar.isNotEmpty) {
-      return Image.network(
-        resolvedAvatar,
+      return CachedNetworkImage(
+        imageUrl: resolvedAvatar,
+        cacheManager: ImCacheManager.instance,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildFallbackAvatar(name, seed, size, size),
+        errorWidget: (_, _, _) => _buildFallbackAvatar(name, seed, size, size),
       );
     }
 

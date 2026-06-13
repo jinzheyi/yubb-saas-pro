@@ -10,21 +10,22 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
-import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_skeleton.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_tile.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_empty_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/app_loading_view.dart';
 
 class ConversationListPage extends ConsumerStatefulWidget {
   const ConversationListPage({super.key});
@@ -142,8 +143,12 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     ref.watch(conversationRealtimeBindingProvider);
     _listenGroupMemberRemovedSignal(ref, context);
     final strings = AppLocalizations.of(context);
-    final state = ref.watch(conversationListControllerProvider);
-    final filteredConversations = _applyFilter(state.conversations);
+    // 精确订阅：仅监听 status 和 error 字段，用于页面状态切换
+    final listStatus = ref.watch(conversationListControllerProvider.select((state) => state.status));
+    final listError = ref.watch(conversationListControllerProvider.select((state) => state.error));
+    // 精确订阅：仅监听 conversations 字段，避免 status/error 变化触发不必要的 rebuild
+    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final filteredConversations = _applyFilter(conversations);
     final pinnedConversations = filteredConversations
         .where((item) => item.isPinned)
         .toList();
@@ -178,10 +183,6 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                                 color: ThemeColors.textPrimary(context),
                               ),
                             ),
-                          ),
-                          _HeaderGlyphButton(
-                            icon: ShengyuIconFont.tongbujiaobiao,
-                            onTap: _handleSyncBadge,
                           ),
                           const SizedBox(width: 20),
                           _HeaderGlyphButton(
@@ -309,16 +310,16 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _handleRefresh,
-                    child: switch (state.status) {
+                    child: switch (listStatus) {
                       ConversationListStatus.initial ||
-                      ConversationListStatus.loading => const AppLoadingView(),
+                      ConversationListStatus.loading => const ConversationSkeleton(),
                       ConversationListStatus.failed => ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
                           SizedBox(
                             height: MediaQuery.sizeOf(context).height * 0.5,
                             child: AppErrorView(
-                              error: state.error,
+                              error: listError,
                               onRetry: _reloadConversations,
                             ),
                           ),
@@ -631,41 +632,6 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     context.pushNamed(RouteNames.scan);
   }
 
-  void _handleSyncBadge() {
-    unawaited(_syncBadgeSnapshot());
-  }
-
-  Future<void> _syncBadgeSnapshot() async {
-    try {
-      final response = await ref.read(dioProvider).get('/system/im/badge/get');
-      final result = response.data as Map<String, dynamic>? ?? const {};
-      final payload =
-          result['data'] as Map<String, dynamic>? ??
-          result['result'] as Map<String, dynamic>? ??
-          const {};
-      final rawBadges = payload['conversationBadges'];
-      final badges = <String, int>{};
-      if (rawBadges is List) {
-        for (final item in rawBadges) {
-          if (item is! Map) {
-            continue;
-          }
-          final chatId = item['chatId']?.toString().trim() ?? '';
-          if (chatId.isEmpty || chatId == '0') {
-            continue;
-          }
-          final unreadCount = int.tryParse('${item['unreadCount'] ?? 0}') ?? 0;
-          badges[chatId] = unreadCount < 0 ? 0 : unreadCount;
-        }
-      }
-      ref
-          .read(conversationListControllerProvider.notifier)
-          .applyBadgeSnapshot(badges);
-    } on DioException {
-      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
-    }
-  }
-
   void _handleInitiateGroup() {
     context.pushNamed(RouteNames.initiateGroup);
   }
@@ -707,6 +673,13 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
           .read(conversationListControllerProvider.notifier)
           .markConversationReadRemotely(conversation.chatId),
     );
+
+    // 后台预加载消息数据（不阻塞UI）
+    unawaited(_preloadChatWindow(conversation));
+
+    // 延迟 50ms 跳转，给预加载留出时间
+    await Future.delayed(const Duration(milliseconds: 50));
+
     if (!mounted) {
       return;
     }
@@ -719,6 +692,26 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
         title: conversation.title,
       ),
     );
+  }
+
+  /// 后台预加载聊天窗口数据
+  ///
+  /// 使用预加载模式从 Drift 数据库加载本地缓存的消息
+  /// 预加载失败不影响正常进入聊天页
+  Future<void> _preloadChatWindow(Conversation conversation) async {
+    try {
+      final loadChatWindowUseCase = ref.read(loadChatWindowUseCaseProvider);
+      await loadChatWindowUseCase.call(
+        OpenChatCommand(
+          chatId: conversation.chatId,
+          conversationType: conversation.conversationType,
+          entryMode: ChatEntryMode.latest,
+          isPreload: true,
+        ),
+      );
+    } catch (e) {
+      // 预加载失败静默忽略，不影响正常进入
+    }
   }
 
   void _openConversationContextMenu(

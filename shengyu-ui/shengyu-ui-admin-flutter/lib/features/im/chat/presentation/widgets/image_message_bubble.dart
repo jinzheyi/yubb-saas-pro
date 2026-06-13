@@ -1,11 +1,17 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ImageMessageBubble extends ConsumerWidget {
@@ -38,15 +44,6 @@ class ImageMessageBubble extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
-    final imageUrl = message.extra.thumbnailUrl?.trim().isNotEmpty == true
-        ? message.extra.thumbnailUrl!.trim()
-        : (message.extra.fileUrl?.trim().isNotEmpty == true
-              ? message.extra.fileUrl!.trim()
-              : extractMediaUrlFromRawContent(message.content));
-    final imageProvider = resolveChatImageProvider(
-      localPath: message.extra.localPath,
-      remoteUrl: imageUrl,
-    );
     final width = message.extra.width ?? 0;
     final height = message.extra.height ?? 0;
     final aspectRatio = width > 0 && height > 0 ? width / height : 1;
@@ -80,35 +77,14 @@ class ImageMessageBubble extends ConsumerWidget {
                       bottomLeft: Radius.circular(message.isOutgoing ? 8 : 4),
                       bottomRight: Radius.circular(message.isOutgoing ? 4 : 8),
                     ),
-                    image: imageProvider == null
-                        ? null
-                        : DecorationImage(
-                            image: imageProvider,
-                            fit: BoxFit.contain,
-                          ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   alignment: Alignment.center,
-                  child: imageProvider == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            AppIcon(
-                              AppIconKind.image,
-                              size: 30,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              strings.chatImagePlaceholder,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        )
-                      : null,
+                  child: _buildImageContent(
+                    context: context,
+                    theme: theme,
+                    strings: strings,
+                  ),
                 ),
               ),
             ),
@@ -130,6 +106,121 @@ class ImageMessageBubble extends ConsumerWidget {
           enableReadReceiptEntry: enableReadReceiptEntry,
           showOutgoingStatusFooter: showOutgoingStatusFooter,
           outgoingFooterLabel: outgoingFooterLabel,
+        ),
+      ],
+    );
+  }
+
+  /// 构建图片内容：优先使用缓存加载，支持本地路径和网络 URL
+  Widget _buildImageContent({
+    required BuildContext context,
+    required ThemeData theme,
+    required AppLocalizations strings,
+  }) {
+    final localPath = message.extra.localPath?.trim() ?? '';
+    final remoteUrl = _resolveImageUrl();
+
+    // 本地路径：使用 FileImage 或 MemoryImage
+    if (localPath.isNotEmpty) {
+      final imageProvider = _resolveLocalImageProvider(localPath);
+      if (imageProvider != null) {
+        return Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: imageProvider,
+              fit: BoxFit.contain,
+            ),
+          ),
+        );
+      }
+    }
+
+    // 远程 URL：使用 CachedNetworkImage（三级缓存）
+    if (remoteUrl != null) {
+      return CachedNetworkImage(
+        imageUrl: remoteUrl,
+        cacheManager: ImCacheManager.instance,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => _buildPlaceholder(context, theme, strings),
+        errorWidget: (context, url, error) => _buildPlaceholder(context, theme, strings),
+      );
+    }
+
+    // 无有效图片源：显示占位符
+    return _buildPlaceholder(context, theme, strings);
+  }
+
+  /// 解析图片 URL（优先缩略图，其次原图）
+  String? _resolveImageUrl() {
+    final thumbnailUrl = message.extra.thumbnailUrl?.trim() ?? '';
+    if (thumbnailUrl.isNotEmpty && _isValidRemoteUrl(thumbnailUrl)) {
+      return thumbnailUrl;
+    }
+    final fileUrl = message.extra.fileUrl?.trim() ?? '';
+    if (fileUrl.isNotEmpty && _isValidRemoteUrl(fileUrl)) {
+      return fileUrl;
+    }
+    final rawUrl = extractMediaUrlFromRawContent(message.content);
+    if (rawUrl.isNotEmpty && _isValidRemoteUrl(rawUrl)) {
+      return rawUrl;
+    }
+    return null;
+  }
+
+  /// 校验是否为有效的远程图片 URL
+  bool _isValidRemoteUrl(String url) {
+    if (url.startsWith('[') && url.endsWith(']')) {
+      return false;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) {
+      return false;
+    }
+    final scheme = uri.scheme.toLowerCase();
+    return scheme == 'http' || scheme == 'https';
+  }
+
+  /// 解析本地图片 Provider
+  ImageProvider? _resolveLocalImageProvider(String localPath) {
+    final uri = Uri.tryParse(localPath);
+    final scheme = (uri?.scheme ?? '').toLowerCase();
+
+    // data URI（base64 图片）
+    if (scheme == 'data') {
+      final commaIndex = localPath.indexOf(',');
+      if (commaIndex > 0 && localPath.substring(0, commaIndex).contains(';base64')) {
+        return MemoryImage(base64Decode(localPath.substring(commaIndex + 1)));
+      }
+      return NetworkImage(localPath);
+    }
+    // blob / http / https
+    if (scheme == 'blob' || scheme == 'http' || scheme == 'https') {
+      return NetworkImage(localPath);
+    }
+    // 本地文件路径（非 Web 平台）
+    if (!kIsWeb) {
+      return FileImage(File(localPath));
+    }
+    return null;
+  }
+
+  /// 构建占位符（加载中和无图片状态）
+  Widget _buildPlaceholder(BuildContext context, ThemeData theme, AppLocalizations strings) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AppIcon(
+          AppIconKind.image,
+          size: 30,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          strings.chatImagePlaceholder,
+          style: TextStyle(
+            fontSize: 13,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

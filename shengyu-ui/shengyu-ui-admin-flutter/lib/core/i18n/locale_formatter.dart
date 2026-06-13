@@ -136,8 +136,8 @@ final class LocaleFormatter {
     if (daysDiff < 30) {
       return l10n.chatHistoryDaysAgoAt(daysDiff, time);
     }
-    final month = dateTime.month.toString().padLeft(2, '0');
-    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month;
+    final day = dateTime.day;
     return l10n.chatHistoryMonthDayAt(month, day, time);
   }
 

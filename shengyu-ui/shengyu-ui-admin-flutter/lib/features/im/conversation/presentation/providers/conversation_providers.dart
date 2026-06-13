@@ -63,7 +63,8 @@ class UnreadCountSummary {
 }
 
 final unreadCountSummaryProvider = Provider<UnreadCountSummary>((ref) {
-  final conversations = ref.watch(conversationListControllerProvider).conversations;
+  // 精确订阅：仅监听 conversations 字段变化
+  final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
   int total = 0;
   int mutedTotal = 0;
   for (final c in conversations) {

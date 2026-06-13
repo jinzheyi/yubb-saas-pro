@@ -14,6 +14,8 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/coordinators/conversation_sync_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
+import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart'
+    show markLocalConversationUpdate;
 
 class ConversationListController extends StateNotifier<ConversationListState> {
   ConversationListController(
@@ -123,6 +125,9 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     bool resetUnread = false,
     bool incrementUnread = false,
   }) {
+    // 记录本地更新时间，避免 WebSocket 推送触发多余 sync
+    markLocalConversationUpdate(chatId);
+
     final items = [...state.conversations];
     final index = _findConversationIndex(
       items,

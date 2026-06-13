@@ -71,7 +71,7 @@ import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   ref.watch(authSessionProvider);
   return GoRouter(
-    initialLocation: RoutePaths.login,
+    initialLocation: RoutePaths.conversations,
     redirect: (context, state) {
       final session = ref.read(authSessionProvider);
       final isLoginRoute = state.matchedLocation == RoutePaths.login;

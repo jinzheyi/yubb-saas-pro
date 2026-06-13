@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
-import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
@@ -15,16 +14,22 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dar
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/read_receipt_summary.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/read_receipt_providers.dart';
-import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
-import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/utils/message_deduplicator.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 
+// 全局消息去重器，防止 WebSocket 重复推送导致界面重复渲染
+final _messageDeduplicator = MessageDeduplicator(maxSize: 1000);
+
 final Map<String, Timer> _singleChatPresenceRefreshTimers = <String, Timer>{};
+
+// 批量消息缓冲：key 为 chatId，用于节流高频 WebSocket 消息
+final Map<String, List<Map<String, dynamic>>> _messageBatchBuffers = <String, List<Map<String, dynamic>>>{};
+final Map<String, Timer> _messageBatchTimers = <String, Timer>{};
 
 final chatRealtimeBindingProvider = Provider.autoDispose.family<void, String>((
   ref,
@@ -37,6 +42,11 @@ final chatRealtimeBindingProvider = Provider.autoDispose.family<void, String>((
   ref.onDispose(() {
     subscription.cancel();
     _singleChatPresenceRefreshTimers.remove(chatId)?.cancel();
+    // 清理批量缓冲
+    _messageBatchBuffers.remove(chatId);
+    _messageBatchTimers.remove(chatId)?.cancel();
+    // 清理该聊天窗口的去重缓存，释放内存
+    _messageDeduplicator.clearByChatId(chatId);
   });
 });
 
@@ -66,78 +76,9 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             ? 'sent'
             : rawStatus;
       }
-      final message = MessageDtoMapper.toEntity(MessageDto.fromJson(raw));
-      final timelineController = ref.read(
-        chatTimelineControllerProvider.notifier,
-      );
-      timelineController.appendSingleMessage(message);
-      final effectiveMessage =
-          timelineController.findByAnyMessageId(message.messageId) ??
-          (message.clientMessageId?.trim().isNotEmpty == true
-              ? timelineController.findByAnyMessageId(
-                  message.clientMessageId!.trim(),
-                )
-              : null) ??
-          message;
-      final pageState = ref.read(chatControllerProvider);
-      ref
-          .read(conversationListControllerProvider.notifier)
-          .upsertLocalMessage(
-            chatId: chatId,
-            title: pageState.chatTitle ?? pageState.entryArgs.title ?? '',
-            conversationType: pageState.entryArgs.conversationType,
-            targetId: pageState.entryArgs.targetId,
-            messageId: effectiveMessage.messageId,
-            messageSequence: effectiveMessage.sequence,
-            preview: createConversationPreviewFormatter(
-              ref.read(appLocaleProvider),
-            ).call(
-              type: effectiveMessage.type,
-              content: effectiveMessage.content,
-              customType: effectiveMessage.extra.customType,
-              fileName: effectiveMessage.extra.fileName,
-              systemEventKey: effectiveMessage.extra.systemEventKey,
-              systemEventParams: effectiveMessage.extra.systemEventParams,
-              conversationType: pageState.entryArgs.conversationType,
-              isSelf: effectiveMessage.isOutgoing,
-              senderName: effectiveMessage.senderName,
-            ),
-            messageType: effectiveMessage.type,
-            senderName: effectiveMessage.senderName,
-            isSelf: effectiveMessage.isOutgoing,
-            customType: effectiveMessage.extra.customType,
-            fileName: effectiveMessage.extra.fileName,
-            systemEventKey: effectiveMessage.extra.systemEventKey,
-            messageStatus: effectiveMessage.status,
-            updatedAt: effectiveMessage.sentAt,
-            resetUnread: true,
-          );
-      if (pageState.entryArgs.conversationType == ConversationType.direct) {
-        if (!isSelf) {
-          _markDirectPresenceOnlineNow(ref, chatId);
-        }
-        _scheduleDirectPresenceRefresh(
-          ref,
-          chatId,
-          delay: Duration(milliseconds: isSelf ? 800 : 200),
-        );
-      }
-      if (!isSelf &&
-          pageState.entryArgs.conversationType == ConversationType.direct) {
-        final messageId = effectiveMessage.messageId.trim();
-        if (messageId.isNotEmpty && messageId != '0') {
-          unawaited(
-            ref
-                .read(socketOutboundSenderProvider)
-                .sendReadReceiptIfConnected(
-                  senderId: currentUserId,
-                  receiverId: senderId,
-                  tenantId: ref.read(authSessionProvider).tenantId,
-                  messageIds: <String>[messageId],
-                ),
-          );
-        }
-      }
+
+      // 使用批量节流机制：将消息加入缓冲队列
+      _enqueueMessageForBatch(ref, chatId, raw, isSelf, senderId, currentUserId);
       break;
     case SocketEventTypes.readReceiptChanged:
       final messageId =
@@ -274,33 +215,34 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       } else if (entryArgs.conversationType == ConversationType.group) {
         final groupId = entryArgs.targetId?.trim() ?? '';
         if (groupId.isNotEmpty) {
-          unawaited(
-            ref
-                .read(conversationListControllerProvider.notifier)
-                .syncIncrementally(),
-          );
-          final args = GroupContextArgs(groupId: groupId, groupName: '');
-          unawaited(
-            ref.read(groupSettingsControllerProvider(args).notifier).load(),
-          );
-          unawaited(
-            ref.read(groupMembersControllerProvider(args).notifier).load(),
-          );
+          // 优化：移除群设置和群成员列表的刷新调用
+          // 原因：群成员列表数据在首次进入时已加载，authSucceeded 是 WebSocket 重连/认证事件
+          // 频繁重连时不应每次都刷新群成员列表（数据不会在这么短时间内变化）
+          // 群生命周期事件（成员加入/移除/群主变更）已在 _handleSystemNotify 中单独处理
+          // 避免每次 authSucceeded 都触发重复的 group/member/list 请求
         }
       }
-      final command = entryArgs.chatId == chatId
-          ? OpenChatCommand.fromArgs(entryArgs)
-          : OpenChatCommand(
-              chatId: chatId,
-              conversationType: entryArgs.conversationType,
-              entryMode: ChatEntryMode.latest,
-            );
-      unawaited(() async {
-        await ref
-            .read(chatTimelineControllerProvider.notifier)
-            .reloadLatest(command: command);
-        await _rehydrateReeditHints(ref, chatId);
-      }());
+      // 优化：仅在存在"发送中"消息时才调用 confirmPendingMessages
+      // 避免每次 authSucceeded 都触发 window 接口请求
+      final hasPending = ref
+          .read(chatTimelineControllerProvider)
+          .messages
+          .any((m) => m.status == MessageStatus.sending && m.isOutgoing);
+      if (hasPending) {
+        final command = entryArgs.chatId == chatId
+            ? OpenChatCommand.fromArgs(entryArgs)
+            : OpenChatCommand(
+                chatId: chatId,
+                conversationType: entryArgs.conversationType,
+                entryMode: ChatEntryMode.latest,
+              );
+        unawaited(
+          ref
+              .read(chatTimelineControllerProvider.notifier)
+              .confirmPendingMessages(command: command),
+        );
+      }
+      unawaited(_rehydrateReeditHints(ref, chatId));
       break;
     default:
       break;
@@ -681,7 +623,7 @@ Future<void> _rehydrateReeditHints(Ref ref, String chatId) async {
   if (!changed) {
     return;
   }
-  ref
+  await ref
       .read(chatTimelineControllerProvider.notifier)
       .replaceAllMessages(hydrated);
 }
@@ -702,6 +644,143 @@ void _markDirectPresenceOnlineNow(Ref ref, String chatId) {
       );
 }
 
+/// 将消息加入批量缓冲队列，并启动 50ms 节流定时器
+void _enqueueMessageForBatch(
+  Ref ref,
+  String chatId,
+  Map<String, dynamic> raw,
+  bool isSelf,
+  String senderId,
+  String currentUserId,
+) {
+  // 消息去重：重复消息直接跳过，避免重复渲染
+  if (_messageDeduplicator.isDuplicate(raw)) {
+    return;
+  }
+
+  // 初始化缓冲队列
+  _messageBatchBuffers.putIfAbsent(chatId, () => <Map<String, dynamic>>[]);
+  final buffer = _messageBatchBuffers[chatId]!;
+
+  // 附加上下文信息供后续处理使用
+  raw['_isSelf'] = isSelf;
+  raw['_senderId'] = senderId;
+  raw['_currentUserId'] = currentUserId;
+  buffer.add(raw);
+
+  // 如果已有定时器，等待触发（节流）
+  if (_messageBatchTimers[chatId] != null) {
+    return;
+  }
+
+  // 启动 50ms 批量窗口
+  _messageBatchTimers[chatId] = Timer(
+    const Duration(milliseconds: 50),
+    () => _flushMessageBatch(ref, chatId),
+  );
+}
+
+/// 刷新消息缓冲队列：批量处理消息并更新会话列表
+void _flushMessageBatch(Ref ref, String chatId) {
+  _messageBatchTimers.remove(chatId);
+  final buffer = _messageBatchBuffers.remove(chatId);
+
+  if (buffer == null || buffer.isEmpty) {
+    return;
+  }
+
+  // 批量转换消息实体
+  final messages = <Message>[];
+  for (final raw in buffer) {
+    final message = MessageDtoMapper.toEntity(MessageDto.fromJson(raw));
+    messages.add(message);
+  }
+
+  // 调用批量添加方法（Controller 内部会去重合并）
+  final timelineController = ref.read(chatTimelineControllerProvider.notifier);
+  timelineController.appendMessagesBatch(messages);
+
+  // 使用最后一条消息更新会话列表
+  final lastRaw = buffer.last;
+  final lastMessage = messages.last;
+  final effectiveMessage =
+      timelineController.findByAnyMessageId(lastMessage.messageId) ??
+      (lastMessage.clientMessageId?.trim().isNotEmpty == true
+          ? timelineController.findByAnyMessageId(lastMessage.clientMessageId!.trim())
+          : null) ??
+      lastMessage;
+
+  final pageState = ref.read(chatControllerProvider);
+  ref
+      .read(conversationListControllerProvider.notifier)
+      .upsertLocalMessage(
+        chatId: chatId,
+        title: pageState.chatTitle ?? pageState.entryArgs.title ?? '',
+        conversationType: pageState.entryArgs.conversationType,
+        targetId: pageState.entryArgs.targetId,
+        messageId: effectiveMessage.messageId,
+        messageSequence: effectiveMessage.sequence,
+        preview: createConversationPreviewFormatter(
+          ref.read(appLocaleProvider),
+        ).call(
+          type: effectiveMessage.type,
+          content: effectiveMessage.content,
+          customType: effectiveMessage.extra.customType,
+          fileName: effectiveMessage.extra.fileName,
+          systemEventKey: effectiveMessage.extra.systemEventKey,
+          systemEventParams: effectiveMessage.extra.systemEventParams,
+          conversationType: pageState.entryArgs.conversationType,
+          isSelf: effectiveMessage.isOutgoing,
+          senderName: effectiveMessage.senderName,
+        ),
+        messageType: effectiveMessage.type,
+        senderName: effectiveMessage.senderName,
+        isSelf: effectiveMessage.isOutgoing,
+        customType: effectiveMessage.extra.customType,
+        fileName: effectiveMessage.extra.fileName,
+        systemEventKey: effectiveMessage.extra.systemEventKey,
+        messageStatus: effectiveMessage.status,
+        updatedAt: effectiveMessage.sentAt,
+        resetUnread: true,
+      );
+
+  // 处理单聊在线状态刷新
+  if (pageState.entryArgs.conversationType == ConversationType.direct) {
+    final lastIsSelf = lastRaw['_isSelf'] == true;
+    if (!lastIsSelf) {
+      _markDirectPresenceOnlineNow(ref, chatId);
+    }
+    _scheduleDirectPresenceRefresh(
+      ref,
+      chatId,
+      delay: Duration(milliseconds: lastIsSelf ? 800 : 200),
+    );
+  }
+
+  // 处理单聊已读回执（为所有非自己发送的消息发送已读）
+  final currentUserId = lastRaw['_currentUserId']?.toString() ?? '';
+  for (final raw in buffer) {
+    final isSelf = raw['_isSelf'] == true;
+    if (!isSelf &&
+        pageState.entryArgs.conversationType == ConversationType.direct) {
+      final messageId = (raw['messageId']?.toString() ?? '').trim();
+      final senderId = (raw['_senderId']?.toString() ?? '').trim();
+      if (messageId.isNotEmpty && messageId != '0') {
+        unawaited(
+          ref
+              .read(socketOutboundSenderProvider)
+              .sendReadReceiptIfConnected(
+                senderId: currentUserId,
+                receiverId: senderId,
+                tenantId: ref.read(authSessionProvider).tenantId,
+                messageIds: <String>[messageId],
+              ),
+        );
+      }
+    }
+  }
+}
+
 void _scheduleDirectPresenceRefresh(
   Ref ref,
   String chatId, {
@@ -713,14 +792,11 @@ void _scheduleDirectPresenceRefresh(
     return;
   }
   _singleChatPresenceRefreshTimers.remove(chatId)?.cancel();
-  _singleChatPresenceRefreshTimers[chatId] = Timer(delay, () async {
+  // 优化：移除 syncIncrementally 调用
+  // 原因：用户当前已在聊天页面，在线状态变化已通过 patchPresence 更新到本地会话列表
+  // 不需要触发完整的会话列表同步
+  _singleChatPresenceRefreshTimers[chatId] = Timer(delay, () {
     _singleChatPresenceRefreshTimers.remove(chatId);
-    try {
-      await ref
-          .read(conversationListControllerProvider.notifier)
-          .syncIncrementally();
-    } catch (_) {
-      // Keep silent to match old page presence refresh compensation.
-    }
+    // 仅清理定时器，不再触发 sync
   });
 }

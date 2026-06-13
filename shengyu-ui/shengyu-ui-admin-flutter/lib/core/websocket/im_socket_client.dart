@@ -97,6 +97,10 @@ class ImSocketClient {
     );
     final channel = _channelFactory(Uri.parse(_socketUrl));
     _channel = channel;
+
+    // ===== 企业级：等待 WebSocket ready，避免在连接未建立时发送消息 =====
+    await channel.ready;
+
     _channelSubscription = channel.stream.listen(
       _handleInboundFrame,
       onError: _handleTransportError,

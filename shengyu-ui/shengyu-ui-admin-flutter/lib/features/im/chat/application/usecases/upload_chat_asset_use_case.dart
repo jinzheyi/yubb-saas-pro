@@ -10,6 +10,7 @@ class UploadChatAssetUseCase {
   Future<UploadResult> execute({
     required String taskId,
     required ChatUploadInput input,
+    void Function(int sent, int total)? onProgress,
   }) {
     return _fileRepository.uploadAndCreateFile(
       taskId: taskId,
@@ -19,6 +20,7 @@ class UploadChatAssetUseCase {
       displayName: input.displayName,
       mimeType: input.mimeType,
       bytes: input.bytes,
+      onProgress: onProgress,
     );
   }
 }

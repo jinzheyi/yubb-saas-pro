@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
-class VoiceMessageBubble extends ConsumerWidget {
+/// 语音消息气泡组件
+/// 已消除 ConsumerWidget 依赖，strings 从父组件传入，避免对 appStringsProvider 的不必要订阅
+class VoiceMessageBubble extends StatelessWidget {
   const VoiceMessageBubble({
     super.key,
     required this.message,
+    required this.strings,
     required this.onRetryMessage,
     required this.onOpenMessage,
     this.onPauseMessage,
@@ -28,6 +30,7 @@ class VoiceMessageBubble extends ConsumerWidget {
   });
 
   final Message message;
+  final AppLocalizations strings;
   final ValueChanged<Message> onRetryMessage;
   final ValueChanged<Message> onOpenMessage;
   final ValueChanged<Message>? onPauseMessage;
@@ -44,9 +47,8 @@ class VoiceMessageBubble extends ConsumerWidget {
   final int playbackDurationMs;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final strings = ref.watch(appStringsProvider);
     final durationMs = _resolveDurationMs();
     final durationLabel = _durationLabel(durationMs);
     final unread = message.isOutgoing

@@ -560,6 +560,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       behavior: HitTestBehavior.translucent,
       child: MessageBubbleFactory.build(
         message,
+        strings: AppLocalizations.of(context),
         onRetryMessage: (_) {},
         onOpenMessage: (_) => _handleMessageTap(historyItem, item),
         onLongPressMessage: (message, offset) => _showItemMenu(historyItem, item),

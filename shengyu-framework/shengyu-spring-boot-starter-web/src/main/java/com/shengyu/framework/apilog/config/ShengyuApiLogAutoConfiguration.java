@@ -12,6 +12,7 @@ import com.shengyu.module.infra.api.logger.ApiAccessLogApi;
 import com.shengyu.module.infra.api.logger.ApiErrorLogApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -22,11 +23,13 @@ import javax.servlet.Filter;
 public class ShengyuApiLogAutoConfiguration {
 
     @Bean
+    @ConditionalOnBean(ApiAccessLogApi.class)
     public ApiAccessLogFrameworkService apiAccessLogFrameworkService(ApiAccessLogApi apiAccessLogApi) {
         return new ApiAccessLogFrameworkServiceImpl(apiAccessLogApi);
     }
 
     @Bean
+    @ConditionalOnBean(ApiErrorLogApi.class)
     public ApiErrorLogFrameworkService apiErrorLogFrameworkService(ApiErrorLogApi apiErrorLogApi) {
         return new ApiErrorLogFrameworkServiceImpl(apiErrorLogApi);
     }

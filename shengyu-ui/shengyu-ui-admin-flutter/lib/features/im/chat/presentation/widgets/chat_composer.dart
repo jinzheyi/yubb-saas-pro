@@ -66,6 +66,21 @@ class ChatComposer extends StatelessWidget {
     forceStrutHeight: true,
   );
 
+  // 缓存 emoji builder 单例，避免每次 build 都创建新实例
+  static final ChatEmojiSpecialTextSpanBuilder _fullExpandedEmojiBuilder =
+      ChatEmojiSpecialTextSpanBuilder(
+    fontSize: 16,
+    emojiSize: 20,
+    horizontalMargin: 0.5,
+  );
+
+  static final ChatEmojiSpecialTextSpanBuilder _composerEmojiBuilder =
+      ChatEmojiSpecialTextSpanBuilder(
+    fontSize: 15,
+    emojiSize: 18,
+    horizontalMargin: 0.5,
+  );
+
   @override
   Widget build(BuildContext context) {
     final controller = composer.textController;
@@ -88,17 +103,6 @@ class ChatComposer extends StatelessWidget {
       fontSize: 16,
       height: 24 / 16,
       color: ThemeColors.textPrimary(context),
-    );
-
-    final fullExpandedEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
-      fontSize: 16,
-      emojiSize: 20,
-      horizontalMargin: 0.5,
-    );
-    final composerEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
-      fontSize: 15,
-      emojiSize: 18,
-      horizontalMargin: 0.5,
     );
 
     if (fullExpanded) {
@@ -142,7 +146,7 @@ class ChatComposer extends StatelessWidget {
                           child: ExtendedTextField(
                             controller: controller,
                             focusNode: focusNode,
-                            specialTextSpanBuilder: fullExpandedEmojiBuilder,
+                            specialTextSpanBuilder: _fullExpandedEmojiBuilder,
                             expands: true,
                             maxLines: null,
                             minLines: null,
@@ -300,7 +304,7 @@ class ChatComposer extends StatelessWidget {
                             child: ExtendedTextField(
                               controller: controller,
                               focusNode: focusNode,
-                              specialTextSpanBuilder: composerEmojiBuilder,
+                              specialTextSpanBuilder: _composerEmojiBuilder,
                               minLines: 1,
                               maxLines: null,
                               textInputAction: TextInputAction.send,

@@ -29,6 +29,7 @@ class FileRepositoryImpl implements FileRepository {
     required String mimeType,
     Uint8List? bytes,
     int? maxSize,
+    void Function(int sent, int total)? onProgress,
   }) async {
     final directory = UploadDirectoryResolver.resolve(
       purpose: purpose,
@@ -44,6 +45,7 @@ class FileRepositoryImpl implements FileRepository {
         bytes: bytes,
         maxSize: maxSize,
       ),
+      onProgress: onProgress,
     );
     return UploadResultMapper.toEntity(
       taskId: taskId,

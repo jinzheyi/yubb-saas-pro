@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/app/shell/global_badge_socket_binding.dart';
+import 'package:shengyu_ui_admin_im/app/splash/app_splash_screen.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_mode_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
@@ -16,15 +17,15 @@ class AppBootstrap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(appBootstrapProvider);
+    final bootstrapState = ref.watch(appBootstrapProvider);
     // 全局角标 Socket 绑定：在根 widget 级别 watch，
     // 确保整个应用生命周期内始终监听 badge 推送，不受 FutureProvider 完成状态影响。
     ref.watch(globalBadgeSocketBindingProvider);
-    final router = ref.watch(appRouterProvider);
     final locale = ref.watch(appLocaleObjectProvider);
     final themeMode = ref.watch(appThemeModeProvider);
+    final router = ref.watch(appRouterProvider);
 
-    return MaterialApp.router(
+    final app = MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: AppConfig.appName,
       theme: AppTheme.light,
@@ -41,6 +42,16 @@ class AppBootstrap extends ConsumerWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
+    );
+
+    // ===== P5-1: 启动期间展示 Splash Screen =====
+    return bootstrapState.when(
+      data: (_) => app,
+      loading: () => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: const AppSplashScreen(),
+      ),
+      error: (_, __) => app,
     );
   }
 }

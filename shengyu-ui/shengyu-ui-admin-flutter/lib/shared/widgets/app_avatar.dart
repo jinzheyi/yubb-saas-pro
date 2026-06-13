@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class AppAvatar extends StatelessWidget {
@@ -37,14 +39,28 @@ class AppAvatar extends StatelessWidget {
     if (resolvedAvatar.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Image.network(
-          resolvedAvatar,
+        child: CachedNetworkImage(
+          imageUrl: resolvedAvatar,
+          cacheManager: ImCacheManager.instance,
           width: size,
           height: size,
           fit: fit,
-          cacheWidth: (size * 2).toInt(),
-          cacheHeight: (size * 2).toInt(),
-          errorBuilder: (_, _, _) {
+          // 使用圆形加载指示器作为占位符
+          placeholder: (context, url) => Container(
+            width: size,
+            height: size,
+            color: backgroundColor ?? getUserAvatarColor(seed ?? name),
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: size * 0.4,
+              height: size * 0.4,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(textColor.withOpacity(0.6)),
+              ),
+            ),
+          ),
+          errorWidget: (context, url, error) {
             if (onImageError != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 onImageError!.call();

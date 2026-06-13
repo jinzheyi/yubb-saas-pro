@@ -73,8 +73,9 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final conversationState = ref.watch(conversationListControllerProvider);
-    final conversations = conversationState.conversations;
+    // 精确订阅：仅需要 conversations 和 status 字段
+    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final listStatus = ref.watch(conversationListControllerProvider.select((state) => state.status));
     final filtered = _filteredConversations(conversations);
     final isFavoriteMode = widget.args.isFavoriteMode;
     final isContactCardMode = widget.args.isContactCardMode;
@@ -203,7 +204,7 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
                 ),
               Expanded(
                 child:
-                    conversationState.status ==
+                    listStatus ==
                             ConversationListStatus.loading &&
                         conversations.isEmpty
                     ? const Center(child: CircularProgressIndicator())

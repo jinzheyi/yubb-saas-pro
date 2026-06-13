@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_context_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
@@ -23,6 +25,7 @@ class GroupMembersController extends StateNotifier<GroupMembersState> {
   final GroupContextArgs _args;
   final String _currentUserId;
   bool _disposed = false;
+  Completer<void>? _loadCompleter;
 
   @override
   void dispose() {
@@ -34,6 +37,16 @@ class GroupMembersController extends StateNotifier<GroupMembersState> {
     if (_disposed) {
       return;
     }
+    // 优化：如果正在加载中，返回现有 Completer，避免并发重复请求
+    if (_loadCompleter != null) {
+      return _loadCompleter!.future;
+    }
+    // 优化：如果已有数据且非错误状态，不重复加载（防抖）
+    if (state.status == GroupMembersStatus.ready && state.members.isNotEmpty) {
+      return;
+    }
+
+    _loadCompleter = Completer<void>();
     state = state.copyWith(status: GroupMembersStatus.loading, error: null);
     try {
       final members = await _repository.getGroupMembers(_args.groupId);
@@ -85,6 +98,10 @@ class GroupMembersController extends StateNotifier<GroupMembersState> {
         status: GroupMembersStatus.failed,
         error: AppErrorMapper.map(error, stackTrace),
       );
+    } finally {
+      final completer = _loadCompleter;
+      _loadCompleter = null;
+      completer?.complete();
     }
   }
 

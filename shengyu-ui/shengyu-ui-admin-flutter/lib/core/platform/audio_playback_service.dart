@@ -17,6 +17,10 @@ class AudioPlaybackService {
     return _player.setUrl(url);
   }
 
+  Future<void> setFilePath(String path) {
+    return _player.setFilePath(path);
+  }
+
   Future<void> play() {
     return _player.play();
   }

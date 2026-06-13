@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
@@ -496,6 +497,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       final durationMs = (isPlaying || isPaused) ? _activeVoicePlaybackDurationMs : 0;
       return MessageBubbleFactory.build(
         message,
+        strings: AppLocalizations.of(context),
         onRetryMessage: (_) {},
         onOpenMessage: (_) => _handleMessageTap(item),
         onPauseMessage: (_) => _pauseVoiceMessage(message),
@@ -516,6 +518,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       behavior: HitTestBehavior.translucent,
       child: MessageBubbleFactory.build(
         message,
+        strings: AppLocalizations.of(context),
         onRetryMessage: (_) {},
         onOpenMessage: (_) => _handleMessageTap(item),
         onLongPressMessage: (_, __) => _showItemMenu(item),
@@ -579,7 +582,22 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         }
         return;
       }
-      await playback.setUrl(url);
+      // 优先使用本地缓存，缓存未命中时后台下载后返回本地路径
+      final localPath = await AudioCacheManager.getAudioFile(url);
+      if (localPath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).chatVoicePlayUrlFailed)),
+          );
+        }
+        return;
+      }
+      // 本地缓存文件使用 setFilePath，否则使用 setUrl
+      if (localPath.startsWith('/') || localPath.startsWith('file://')) {
+        await playback.setFilePath(localPath);
+      } else {
+        await playback.setUrl(localPath);
+      }
       if (!mounted) return;
       positionSub = playback.positionStream.listen((pos) {
         if (!mounted) return;

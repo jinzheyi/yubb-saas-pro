@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/core/platform/audio_playback_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/audio_recording_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
+import 'package:shengyu_ui_admin_im/core/network/upload_dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/coordinators/chat_upload_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/services/chat_location_opener_service.dart';
@@ -18,6 +19,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/open_c
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_uploaded_message_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_message_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/upload_chat_asset_use_case.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/multipart_upload_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/sticker_repository.dart';
@@ -27,6 +29,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/datasources/
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/repositories/file_repository_impl.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/repositories/message_repository_impl.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/repositories/sticker_repository_impl.dart';
+import 'package:shengyu_ui_admin_im/features/im/file/infrastructure/datasources/multipart_upload_data_source.dart';
+import 'package:shengyu_ui_admin_im/features/im/file/domain/repositories/multipart_upload_repository.dart';
+import 'package:shengyu_ui_admin_im/features/im/file/infrastructure/repositories/multipart_upload_repository_impl.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_composer_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_message_action_controller.dart';
@@ -37,6 +42,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_pa
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_timeline_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/upload_progress_tracker.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 
@@ -113,7 +119,7 @@ final messageRepositoryProvider = Provider<MessageRepository>((ref) {
 });
 
 final fileRepositoryProvider = Provider<FileRepository>((ref) {
-  return FileRepositoryImpl(FileHttpDataSource(dio: ref.read(dioProvider)));
+  return FileRepositoryImpl(FileHttpDataSource(dio: ref.read(dioProvider), uploadDio: ref.read(uploadDioProvider)));
 });
 
 final stickerRepositoryProvider = Provider<StickerRepository>((ref) {
@@ -136,6 +142,21 @@ final sendMessageUseCaseProvider = Provider<SendMessageUseCase>((ref) {
 
 final uploadChatAssetUseCaseProvider = Provider<UploadChatAssetUseCase>((ref) {
   return UploadChatAssetUseCase(ref.read(fileRepositoryProvider));
+});
+
+/// 分片上传数据源 Provider
+final multipartUploadDataSourceProvider = Provider<MultipartUploadDataSource>((ref) {
+  return MultipartUploadDataSource(uploadDio: ref.read(uploadDioProvider));
+});
+
+/// 分片上传仓库 Provider
+final multipartUploadRepositoryProvider = Provider<MultipartUploadRepository>((ref) {
+  return MultipartUploadRepositoryImpl(ref.read(multipartUploadDataSourceProvider));
+});
+
+/// 分片上传用例 Provider
+final multipartUploadUseCaseProvider = Provider<MultipartUploadUseCase>((ref) {
+  return MultipartUploadUseCase(ref.read(multipartUploadRepositoryProvider));
 });
 
 final sendUploadedMessageUseCaseProvider = Provider<SendUploadedMessageUseCase>(
@@ -161,6 +182,8 @@ final chatUploadCoordinatorProvider = Provider<ChatUploadCoordinator>((ref) {
     ref.read(uploadChatAssetUseCaseProvider),
     ref.read(sendUploadedMessageUseCaseProvider),
     const Uuid(),
+    progressTracker: ref.read(uploadProgressTrackerProvider.notifier),
+    multipartUploadUseCase: ref.read(multipartUploadUseCaseProvider),
   );
 });
 

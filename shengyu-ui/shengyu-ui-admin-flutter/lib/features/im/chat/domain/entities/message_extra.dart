@@ -171,4 +171,119 @@ class MessageExtra {
       systemEventParams: systemEventParams ?? this.systemEventParams,
     );
   }
+
+  /// 序列化为 JSON（用于 Isolate 跨线程通信）
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    _putIf(map, 'revision', revision);
+    _putIf(map, 'localId', localId);
+    _putIf(map, 'localPath', localPath);
+    _putIf(map, 'stickerId', stickerId);
+    _putIf(map, 'fileId', fileId);
+    _putIf(map, 'fileUrl', fileUrl);
+    _putIf(map, 'thumbFileId', thumbFileId);
+    _putIf(map, 'thumbnailUrl', thumbnailUrl);
+    _putIf(map, 'mimeType', mimeType);
+    _putIf(map, 'fileName', fileName);
+    _putIf(map, 'fileType', fileType);
+    _putIf(map, 'fileSize', fileSize);
+    _putIf(map, 'width', width);
+    _putIf(map, 'height', height);
+    _putIf(map, 'duration', duration);
+    _putIf(map, 'durationMs', durationMs);
+    _putIf(map, 'voicePlayed', voicePlayed);
+    _putIf(map, 'md5', md5);
+    _putIf(map, 'customType', customType);
+    _putIf(map, 'contactUserId', contactUserId);
+    _putIf(map, 'contactDisplayName', contactDisplayName);
+    _putIf(map, 'contactDepartmentName', contactDepartmentName);
+    _putIf(map, 'contactPostName', contactPostName);
+    _putIf(map, 'contactAvatar', contactAvatar);
+    _putIf(map, 'locationName', locationName);
+    _putIf(map, 'locationAddress', locationAddress);
+    _putIf(map, 'locationLatitude', locationLatitude);
+    _putIf(map, 'locationLongitude', locationLongitude);
+    _putIf(map, 'locationProvider', locationProvider);
+    _putIf(map, 'locationPoiId', locationPoiId);
+    _putIf(map, 'quoteMessageId', quoteMessageId);
+    _putIf(map, 'quoteContent', quoteContent);
+    _putIf(map, 'quoteSenderName', quoteSenderName);
+    _putIf(map, 'forwardedFrom', forwardedFrom);
+    if (atUserIds.isNotEmpty) {
+      map['atUserIds'] = atUserIds;
+    }
+    if (mentions.isNotEmpty) {
+      map['mentions'] = mentions.map((m) => m.toJson()).toList();
+    }
+    _putIf(map, 'reeditContent', reeditContent);
+    _putIf(map, 'reeditDeadlineTs', reeditDeadlineTs);
+    _putIf(map, 'systemEventKey', systemEventKey);
+    if (systemEventParams != null && systemEventParams!.isNotEmpty) {
+      map['systemEventParams'] = systemEventParams;
+    }
+    return map;
+  }
+
+  /// 从 JSON 反序列化（用于 Isolate 返回结果解析）
+  factory MessageExtra.fromJson(Map<String, dynamic> json) {
+    return MessageExtra(
+      revision: json['revision']?.toString(),
+      localId: json['localId']?.toString(),
+      localPath: json['localPath']?.toString(),
+      stickerId: json['stickerId']?.toString(),
+      fileId: json['fileId']?.toString(),
+      fileUrl: json['fileUrl']?.toString(),
+      thumbFileId: json['thumbFileId']?.toString(),
+      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      mimeType: json['mimeType']?.toString(),
+      fileName: json['fileName']?.toString(),
+      fileType: json['fileType']?.toString(),
+      fileSize: (json['fileSize'] as num?)?.toInt(),
+      width: (json['width'] as num?)?.toInt(),
+      height: (json['height'] as num?)?.toInt(),
+      duration: (json['duration'] as num?)?.toInt(),
+      durationMs: (json['durationMs'] as num?)?.toInt(),
+      voicePlayed: json['voicePlayed'] as bool?,
+      md5: json['md5']?.toString(),
+      customType: json['customType']?.toString(),
+      contactUserId: json['contactUserId']?.toString(),
+      contactDisplayName: json['contactDisplayName']?.toString(),
+      contactDepartmentName: json['contactDepartmentName']?.toString(),
+      contactPostName: json['contactPostName']?.toString(),
+      contactAvatar: json['contactAvatar']?.toString(),
+      locationName: json['locationName']?.toString(),
+      locationAddress: json['locationAddress']?.toString(),
+      locationLatitude: (json['locationLatitude'] as num?)?.toDouble(),
+      locationLongitude: (json['locationLongitude'] as num?)?.toDouble(),
+      locationProvider: json['locationProvider']?.toString(),
+      locationPoiId: json['locationPoiId']?.toString(),
+      quoteMessageId: json['quoteMessageId']?.toString(),
+      quoteContent: json['quoteContent']?.toString(),
+      quoteSenderName: json['quoteSenderName']?.toString(),
+      forwardedFrom: json['forwardedFrom']?.toString(),
+      atUserIds: json['atUserIds'] is List
+          ? (json['atUserIds'] as List).map((e) => e.toString()).toList()
+          : const <String>[],
+      mentions: json['mentions'] is List
+          ? (json['mentions'] as List)
+              .whereType<Map<String, dynamic>>()
+              .map(MentionSegment.fromJson)
+              .toList()
+          : const <MentionSegment>[],
+      reeditContent: json['reeditContent']?.toString(),
+      reeditDeadlineTs: (json['reeditDeadlineTs'] as num?)?.toInt(),
+      systemEventKey: json['systemEventKey']?.toString(),
+      systemEventParams: json['systemEventParams'] is Map
+          ? (json['systemEventParams'] as Map<String, dynamic>).map(
+              (k, v) => MapEntry(k.toString(), v.toString()),
+            )
+          : null,
+    );
+  }
+
+  static void _putIf(Map<String, dynamic> map, String key, dynamic value) {
+    if (value != null) {
+      map[key] = value;
+    }
+  }
 }

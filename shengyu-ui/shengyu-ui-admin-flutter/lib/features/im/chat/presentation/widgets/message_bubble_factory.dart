@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_preview_entry.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/contact_card_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/custom_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/file_message_bubble.dart';
@@ -9,11 +10,13 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/sticke
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/text_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/video_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/voice_message_bubble.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 abstract final class MessageBubbleFactory {
   static Widget build(
     Message message, {
+    required AppLocalizations strings,
     required ValueChanged<Message> onRetryMessage,
     required ValueChanged<Message> onOpenMessage,
     ValueChanged<Message>? onPauseMessage,
@@ -68,6 +71,7 @@ abstract final class MessageBubbleFactory {
       case MessageType.voice:
         return VoiceMessageBubble(
           message: message,
+          strings: strings,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
           onPauseMessage: onPauseMessage,

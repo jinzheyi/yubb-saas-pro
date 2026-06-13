@@ -34,6 +34,14 @@ public interface ErrorCodeConstants {
 
     ErrorCode FILE_UPLOAD_FAIL = new ErrorCode(1_001_003_003, "文件上传失败");
     ErrorCode FILE_UPLOAD_RECORD_NOT_FOUND = new ErrorCode(1_001_003_004, "文件上传记录不存在");
+    ErrorCode FILE_UPLOAD_TASK_NOT_EXISTS = new ErrorCode(1_001_003_005, "分片上传任务不存在");
+    ErrorCode FILE_UPLOAD_TASK_EXPIRED = new ErrorCode(1_001_003_006, "分片上传任务已过期");
+    ErrorCode FILE_UPLOAD_TASK_CANCELLED = new ErrorCode(1_001_003_007, "分片上传任务已取消");
+    ErrorCode FILE_UPLOAD_TASK_COMPLETED = new ErrorCode(1_001_003_008, "分片上传任务已完成");
+    ErrorCode FILE_CHUNK_NUMBER_INVALID = new ErrorCode(1_001_003_009, "分片序号超出范围");
+    ErrorCode FILE_CHUNK_UPLOAD_FAIL = new ErrorCode(1_001_003_010, "分片上传失败");
+    ErrorCode FILE_CHUNK_NOT_ALL_UPLOADED = new ErrorCode(1_001_003_011, "并非所有分片都已上传，无法合并");
+    ErrorCode FILE_MERGE_FAIL = new ErrorCode(1_001_003_012, "分片合并失败");
 
     // ========== 代码生成器 1-001-004-000 ==========
     ErrorCode CODEGEN_TABLE_EXISTS = new ErrorCode(1_003_001_000, "表定义已经存在");

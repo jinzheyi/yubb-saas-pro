@@ -10,6 +10,7 @@ import com.shengyu.framework.tenant.core.aop.TenantIgnore;
 import com.shengyu.module.infra.controller.platform.file.vo.file.*;
 import com.shengyu.module.infra.dal.dataobject.file.FileDO;
 import com.shengyu.module.infra.service.file.FileService;
+import com.shengyu.module.infra.service.file.FileUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -43,6 +44,9 @@ public class FileController {
 
     @Resource
     private FileService fileService;
+
+    @Resource
+    private FileUploadService fileUploadService;
 
     @PostMapping("/upload")
     @Operation(summary = "上传文件", description = "模式一：后端上传文件")
@@ -133,6 +137,43 @@ public class FileController {
     public CommonResult<PageResult<FileRespVO>> getFilePage(@Valid FilePageReqVO pageVO) {
         PageResult<FileDO> pageResult = fileService.getFilePage(pageVO);
         return success(BeanUtils.toBean(pageResult, FileRespVO.class));
+    }
+
+    // ==================== 分片上传相关接口 ====================
+
+    @PostMapping("/upload-init")
+    @Operation(summary = "初始化分片上传")
+    public CommonResult<FileUploadInitRespVO> initMultipartUpload(@Valid @RequestBody FileUploadInitReqVO reqVO) {
+        return success(fileUploadService.initMultipartUpload(reqVO));
+    }
+
+    @PostMapping("/upload-chunk")
+    @Operation(summary = "上传分片", description = "用于前端上传文件分片")
+    @Parameter(name = "chunk", description = "分片文件", required = true,
+            schema = @Schema(type = "string", format = "binary"))
+    public CommonResult<FileChunkUploadRespVO> uploadChunk(@Valid FileChunkUploadReqVO reqVO) throws Exception {
+        return success(fileUploadService.uploadChunk(reqVO));
+    }
+
+    @PostMapping("/upload-merge")
+    @Operation(summary = "完成分片合并", description = "所有分片上传完成后，调用此接口合并文件")
+    public CommonResult<FileMergeRespVO> completeMultipartUpload(@Valid @RequestBody FileMergeReqVO reqVO) throws Exception {
+        return success(fileUploadService.completeMultipartUpload(reqVO));
+    }
+
+    @PostMapping("/upload-abort")
+    @Operation(summary = "取消分片上传", description = "取消正在进行中的分片上传任务")
+    @Parameter(name = "uploadId", description = "分片上传唯一标识", required = true)
+    public CommonResult<Boolean> abortMultipartUpload(@RequestParam("uploadId") String uploadId) {
+        fileUploadService.abortMultipartUpload(uploadId);
+        return success(true);
+    }
+
+    @GetMapping("/upload-status")
+    @Operation(summary = "查询上传进度", description = "查询指定分片上传任务的进度信息")
+    @Parameter(name = "uploadId", description = "分片上传唯一标识", required = true)
+    public CommonResult<FileUploadStatusRespVO> getUploadStatus(@RequestParam("uploadId") String uploadId) {
+        return success(fileUploadService.getUploadStatus(uploadId));
     }
 
 }

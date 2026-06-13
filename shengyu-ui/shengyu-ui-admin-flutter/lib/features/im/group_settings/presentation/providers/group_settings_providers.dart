@@ -6,6 +6,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/cont
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/controllers/group_settings_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_members_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/states/group_settings_state.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/repositories/group_settings_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/infrastructure/datasources/group_settings_remote_data_source.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/infrastructure/repositories/group_settings_repository_impl.dart';
@@ -66,6 +67,8 @@ final groupMembersControllerProvider = StateNotifierProvider.autoDispose
     });
 
 final groupMembersFutureProvider = FutureProvider.family((ref, String groupId) {
+  // 优化：直接通过 Repository 获取，依赖 Repository 层的缓存和并发去重机制
+  // 避免独立于 groupSettingsController 重复请求
   return ref.read(groupSettingsRepositoryProvider).getGroupMembers(groupId);
 });
 

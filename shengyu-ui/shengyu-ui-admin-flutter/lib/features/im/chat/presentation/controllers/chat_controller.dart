@@ -56,7 +56,7 @@ class ChatController extends StateNotifier<ChatPageState> {
 
     try {
       final result = await _openChatUseCase(OpenChatCommand.fromArgs(args));
-      _timelineController.applyWindow(result.window);
+      await _timelineController.applyWindow(result.window);
       final readSequence = _resolveLatestReadableSequence(
         result.window.messages,
       );

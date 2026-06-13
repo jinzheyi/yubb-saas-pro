@@ -19,4 +19,13 @@ class MentionSegment {
       'endIndex': endIndex,
     };
   }
+
+  factory MentionSegment.fromJson(Map<String, dynamic> json) {
+    return MentionSegment(
+      userId: json['userId']?.toString() ?? '',
+      nickname: json['nickname']?.toString() ?? '',
+      startIndex: (json['startIndex'] as num?)?.toInt() ?? 0,
+      endIndex: (json['endIndex'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

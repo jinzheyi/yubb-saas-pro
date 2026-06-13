@@ -52,10 +52,11 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       chatTitle: chatTitle,
       picker: _mediaPickerService.pickImage,
       purpose: UploadPurpose.chatImage,
-      upload: (input, onTaskChanged) {
+      upload: (input, onTaskChanged, clientMessageId) {
         return _chatUploadCoordinator.uploadImage(
           input: input,
           onTaskChanged: onTaskChanged,
+          clientMessageId: clientMessageId,
         );
       },
     );
@@ -70,10 +71,11 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       chatTitle: chatTitle,
       picker: _mediaPickerService.captureImage,
       purpose: UploadPurpose.chatImage,
-      upload: (input, onTaskChanged) {
+      upload: (input, onTaskChanged, clientMessageId) {
         return _chatUploadCoordinator.uploadImage(
           input: input,
           onTaskChanged: onTaskChanged,
+          clientMessageId: clientMessageId,
         );
       },
     );
@@ -88,10 +90,11 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       chatTitle: chatTitle,
       picker: _mediaPickerService.pickFile,
       purpose: UploadPurpose.chatFile,
-      upload: (input, onTaskChanged) {
+      upload: (input, onTaskChanged, clientMessageId) {
         return _chatUploadCoordinator.uploadFile(
           input: input,
           onTaskChanged: onTaskChanged,
+          clientMessageId: clientMessageId,
         );
       },
     );
@@ -106,10 +109,11 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       chatTitle: chatTitle,
       picker: _mediaPickerService.pickVideo,
       purpose: UploadPurpose.chatVideo,
-      upload: (input, onTaskChanged) {
+      upload: (input, onTaskChanged, clientMessageId) {
         return _chatUploadCoordinator.uploadVideo(
           input: input,
           onTaskChanged: onTaskChanged,
+          clientMessageId: clientMessageId,
         );
       },
     );
@@ -198,6 +202,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
     required Future<ChatUploadExecutionResult> Function(
       ChatUploadInput input,
       void Function(dynamic task) onTaskChanged,
+      String? clientMessageId,
     )
     upload,
   }) async {
@@ -243,6 +248,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
           localOptimisticMessage,
           task,
         ),
+        optimisticKey,
       );
       final resolvedMessage = _resolveUploadedMessage(
         base: localOptimisticMessage,
@@ -401,21 +407,25 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
 
   Future<ChatUploadExecutionResult> _uploadByPurpose(
     ChatUploadInput input,
-    void Function(dynamic task) onTaskChanged, {
+    void Function(dynamic task) onTaskChanged,
+    String? clientMessageId, {
     required UploadPurpose purpose,
   }) {
     return switch (purpose) {
       UploadPurpose.chatImage => _chatUploadCoordinator.uploadImage(
         input: input,
         onTaskChanged: onTaskChanged,
+        clientMessageId: clientMessageId,
       ),
       UploadPurpose.chatVideo => _chatUploadCoordinator.uploadVideo(
         input: input,
         onTaskChanged: onTaskChanged,
+        clientMessageId: clientMessageId,
       ),
       _ => _chatUploadCoordinator.uploadFile(
         input: input,
         onTaskChanged: onTaskChanged,
+        clientMessageId: clientMessageId,
       ),
     };
   }

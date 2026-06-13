@@ -17,6 +17,14 @@ class GroupSettingsRepositoryImpl implements GroupSettingsRepository {
 
   final GroupSettingsRemoteDataSource _remoteDataSource;
 
+  /// 优化：群成员列表缓存，避免重复请求
+  /// Key: groupId, Value: 缓存数据
+  final Map<String, _MemberCache> _memberCache = {};
+  static const Duration _cacheTtl = Duration(seconds: 30);
+
+  /// 优化：并发请求去重，同一时刻相同 groupId 只有一个请求在飞
+  final Map<String, Future<List<GroupMember>>> _pendingMemberRequests = {};
+
   @override
   Future<GroupInviteInfo> getGroupInviteInfo(String groupId) async {
     final dto = await _remoteDataSource.getGroupInviteCode(groupId);
@@ -125,8 +133,41 @@ class GroupSettingsRepositoryImpl implements GroupSettingsRepository {
 
   @override
   Future<List<GroupMember>> getGroupMembers(String groupId) async {
+    // 优化：检查缓存是否有效
+    final cache = _memberCache[groupId];
+    if (cache != null &&
+        cache.members.isNotEmpty &&
+        DateTime.now().difference(cache.cachedAt) < _cacheTtl) {
+      return cache.members;
+    }
+
+    // 优化：如果已有并发请求在飞，直接复用该 Future
+    final pending = _pendingMemberRequests[groupId];
+    if (pending != null) {
+      return pending;
+    }
+
+    // 创建新请求并放入 pending 池
+    final future = _fetchAndCacheMembers(groupId);
+    _pendingMemberRequests[groupId] = future;
+    try {
+      return await future;
+    } finally {
+      // 请求完成（无论成功/失败）后移除 pending
+      _pendingMemberRequests.remove(groupId);
+    }
+  }
+
+  Future<List<GroupMember>> _fetchAndCacheMembers(String groupId) async {
     final items = await _remoteDataSource.getGroupMembers(groupId);
-    return items.map(GroupSettingsDtoMapper.toMember).toList();
+    final members = items.map(GroupSettingsDtoMapper.toMember).toList();
+    _memberCache[groupId] = _MemberCache(members: members);
+    return members;
+  }
+
+  /// 优化：清除指定群的成员缓存（当成员发生变更时调用）
+  void invalidateMemberCache(String groupId) {
+    _memberCache.remove(groupId);
   }
 
   @override
@@ -310,4 +351,10 @@ class GroupSettingsRepositoryImpl implements GroupSettingsRepository {
   Future<void> clearChatHistory({required String chatId}) {
     return _remoteDataSource.clearChatHistory(chatId: chatId);
   }
+}
+
+class _MemberCache {
+  _MemberCache({required this.members});
+  final List<GroupMember> members;
+  final DateTime cachedAt = DateTime.now();
 }
