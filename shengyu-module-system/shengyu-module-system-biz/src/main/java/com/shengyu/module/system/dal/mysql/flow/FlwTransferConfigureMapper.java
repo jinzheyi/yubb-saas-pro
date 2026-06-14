@@ -7,6 +7,8 @@ import com.shengyu.module.system.dal.dataobject.flow.FlwTransferConfigure;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import java.util.Date;
 
+import org.apache.ibatis.annotations.Mapper;
+
 /**
  * <p>
  * 流程转办配置 Mapper 接口
@@ -15,6 +17,7 @@ import java.util.Date;
  * @author 青苗
  * @since 2025-08-17
  */
+@Mapper
 public interface FlwTransferConfigureMapper extends BaseMapperX<FlwTransferConfigure> {
 
     default TaskTransferVO selectByUserId(Long userId, Date nowTime) {

@@ -104,4 +104,14 @@ public interface BadgeUpdateMessageOrBuilder extends
    */
   com.shengyu.framework.websocket.core.protocol.MenuBadgeOrBuilder getMenuBadgesOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+   * </pre>
+   *
+   * <code>bool incremental = 4;</code>
+   * @return The incremental.
+   */
+  boolean getIncremental();
 }

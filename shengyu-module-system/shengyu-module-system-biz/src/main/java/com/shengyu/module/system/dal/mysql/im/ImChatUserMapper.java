@@ -82,6 +82,12 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
     }
 
     /**
+     * 仅查询 unread_count > 0 的会话，减少数据量
+     */
+    @Select("SELECT * FROM im_chat_user WHERE user_id = #{userId} AND unread_count > 0 AND deleted_by_user = 0")
+    List<ImChatUserDO> selectListWithUnread(@Param("userId") Long userId);
+
+    /**
      * 获取单个会话的未读数（SQL 查询，不加载整个对象）
      */
     @Select("SELECT COALESCE(last_message_sequence - last_read_sequence, 0) FROM im_chat_user WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0 LIMIT 1")

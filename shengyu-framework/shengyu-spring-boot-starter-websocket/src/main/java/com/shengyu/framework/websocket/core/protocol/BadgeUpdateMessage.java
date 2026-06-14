@@ -184,6 +184,21 @@ private static final long serialVersionUID = 0L;
     return menuBadges_.get(index);
   }
 
+  public static final int INCREMENTAL_FIELD_NUMBER = 4;
+  private boolean incremental_;
+  /**
+   * <pre>
+   * 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+   * </pre>
+   *
+   * <code>bool incremental = 4;</code>
+   * @return The incremental.
+   */
+  @java.lang.Override
+  public boolean getIncremental() {
+    return incremental_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -207,6 +222,9 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < menuBadges_.size(); i++) {
       output.writeMessage(3, menuBadges_.get(i));
     }
+    if (incremental_ != false) {
+      output.writeBool(4, incremental_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -227,6 +245,10 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < menuBadges_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, menuBadges_.get(i));
+    }
+    if (incremental_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(4, incremental_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -249,6 +271,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getConversationBadgesList())) return false;
     if (!getMenuBadgesList()
         .equals(other.getMenuBadgesList())) return false;
+    if (getIncremental()
+        != other.getIncremental()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -270,6 +294,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + MENUBADGES_FIELD_NUMBER;
       hash = (53 * hash) + getMenuBadgesList().hashCode();
     }
+    hash = (37 * hash) + INCREMENTAL_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncremental());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -418,6 +445,8 @@ private static final long serialVersionUID = 0L;
         menuBadgesBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000002);
+      incremental_ = false;
+
       return this;
     }
 
@@ -464,6 +493,7 @@ private static final long serialVersionUID = 0L;
       } else {
         result.menuBadges_ = menuBadgesBuilder_.build();
       }
+      result.incremental_ = incremental_;
       onBuilt();
       return result;
     }
@@ -567,6 +597,9 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (other.getIncremental() != false) {
+        setIncremental(other.getIncremental());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -624,6 +657,11 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 26
+            case 32: {
+              incremental_ = input.readBool();
+
+              break;
+            } // case 32
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1306,6 +1344,49 @@ private static final long serialVersionUID = 0L;
         menuBadges_ = null;
       }
       return menuBadgesBuilder_;
+    }
+
+    private boolean incremental_ ;
+    /**
+     * <pre>
+     * 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+     * </pre>
+     *
+     * <code>bool incremental = 4;</code>
+     * @return The incremental.
+     */
+    @java.lang.Override
+    public boolean getIncremental() {
+      return incremental_;
+    }
+    /**
+     * <pre>
+     * 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+     * </pre>
+     *
+     * <code>bool incremental = 4;</code>
+     * @param value The incremental to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncremental(boolean value) {
+      
+      incremental_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+     * </pre>
+     *
+     * <code>bool incremental = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncremental() {
+      
+      incremental_ = false;
+      onChanged();
+      return this;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

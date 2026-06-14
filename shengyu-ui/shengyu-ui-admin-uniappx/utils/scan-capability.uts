@@ -1,9 +1,0 @@
-export function canUseSystemScanner(): boolean {
-	const anyUni: any = uni as any
-	return anyUni != null && typeof anyUni.scanCode === 'function'
-}
-
-export function isSystemScanCanceled(err: any): boolean {
-	const errMsg = err != null && (err as any).errMsg != null ? String((err as any).errMsg).toLowerCase() : ''
-	return errMsg.indexOf('cancel') > -1
-}

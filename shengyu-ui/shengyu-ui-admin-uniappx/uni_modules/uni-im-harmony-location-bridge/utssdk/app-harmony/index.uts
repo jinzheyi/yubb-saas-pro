@@ -1,7 +1,0 @@
-import { HarmonyLocationBridgeApi } from '../interface.uts'
-
-export const harmonyLocationBridgeApi: HarmonyLocationBridgeApi = {
-	ensureLoaded(): boolean {
-		return true
-	}
-}

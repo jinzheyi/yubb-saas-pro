@@ -214,6 +214,44 @@ class BadgeService extends StateNotifier<BadgeState> {
     _applySnapshot(payload);
   }
 
+  /// 增量更新角标（仅更新变化的会话）
+  void applyIncrementalPayload(Map<String, dynamic> payload) {
+    final conversationBadgesList = payload['conversationBadges'] as List?;
+    if (conversationBadgesList != null) {
+      for (final item in conversationBadgesList) {
+        if (item is! Map) continue;
+        final chatId = (item['chatId'] ?? item['conversationId'])?.toString().trim() ?? '';
+        if (chatId.isEmpty || chatId == '0') continue;
+        final unreadCount = (item['unreadCount'] as num?)?.toInt() ?? 0;
+        
+        if (unreadCount <= 0) {
+          // 未读数为 0，移除该会话角标
+          final updated = Map<String, int>.from(state.conversationBadges)
+            ..remove(chatId);
+          state = state.copyWith(conversationBadges: updated);
+        } else {
+          // 更新该会话角标
+          final updated = Map<String, int>.from(state.conversationBadges);
+          updated[chatId] = unreadCount;
+          state = state.copyWith(conversationBadges: updated);
+        }
+      }
+    }
+    
+    // 重新计算总未读数
+    final newTotal = state.conversationBadges.values.fold(0, (sum, v) => sum + v);
+    
+    // 更新总未读数（服务端计算后下发）
+    final totalUnreadCount = (payload['unreadCount'] as num?)?.toInt() ?? newTotal;
+    state = state.copyWith(
+      totalUnreadCount: totalUnreadCount < 0 ? 0 : totalUnreadCount,
+      lastUpdateTime: DateTime.now().millisecondsSinceEpoch,
+    );
+    
+    _debouncedNotify();
+    _throttledPersist();
+  }
+
   /// 清空角标（退出登录时调用）
   void reset() {
     state = const BadgeState();
@@ -226,6 +264,29 @@ class BadgeService extends StateNotifier<BadgeState> {
   /// 获取指定会话角标
   int getConversationBadge(String chatId) {
     return state.conversationBadges[chatId] ?? 0;
+  }
+
+  /// 清除指定会话的角标（进入聊天页时调用）
+  void clearConversationBadge(String chatId) {
+    final current = state.conversationBadges[chatId];
+    if (current == null || current == 0) return;
+
+    final nextBadges = Map<String, int>.from(state.conversationBadges);
+    nextBadges.remove(chatId);
+
+    // 重新计算总未读数
+    final newTotal = nextBadges.values.fold(0, (sum, v) => sum + v);
+
+    final next = state.copyWith(
+      totalUnreadCount: newTotal,
+      conversationBadges: nextBadges,
+      lastUpdateTime: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    if (next == state) return;
+    state = next;
+    _debouncedNotify();
+    _throttledPersist();
   }
 
   /// 获取指定菜单角标

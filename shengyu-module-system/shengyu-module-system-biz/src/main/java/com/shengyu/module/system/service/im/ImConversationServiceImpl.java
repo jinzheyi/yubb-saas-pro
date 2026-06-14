@@ -842,23 +842,14 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Override
     public List<ConversationBadge> getConversationBadges(Long userId) {
-        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
+        // 优化: 使用 SQL 直接查询 unread_count > 0 的会话，避免全表扫描
+        List<ImChatUserDO> chatUsers = chatUserMapper.selectListWithUnread(userId);
+        
         return chatUsers.stream()
-                .map(cu -> {
-                    Long lastMsgSeq = cu.getLastMessageSequence() != null ? cu.getLastMessageSequence() : 0L;
-                    Long lastReadSeq = cu.getLastReadSequence() != null ? cu.getLastReadSequence() : 0L;
-                    int unread = 0;
-                    try {
-                        unread = (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
-                    } catch (Exception ignore) {
-                        unread = cu.getUnreadCount() != null ? Math.max(cu.getUnreadCount(), 0) : 0;
-                    }
-                    return new Object[]{cu.getChatId(), unread};
-                })
-                .filter(arr -> (int) arr[1] > 0)
+                .filter(cu -> cu.getUnreadCount() != null && cu.getUnreadCount() > 0)
                 .map(cu -> ConversationBadge.newBuilder()
-                        .setConversationId((Long) cu[0])
-                        .setUnreadCount((Integer) cu[1])
+                        .setConversationId(cu.getChatId())
+                        .setUnreadCount(cu.getUnreadCount())
                         .build())
                 .collect(Collectors.toList());
     }

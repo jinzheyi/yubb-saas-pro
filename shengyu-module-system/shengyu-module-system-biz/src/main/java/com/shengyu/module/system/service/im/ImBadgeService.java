@@ -44,4 +44,13 @@ public interface ImBadgeService {
      */
     com.shengyu.module.system.controller.app.im.vo.badge.AppImBadgeRespVO getBadgeDataVO(Long userId);
 
+    /**
+     * 增量推送单个会话角标更新
+     *
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param newUnreadCount 新未读数
+     */
+    void pushIncrementalBadgeUpdate(Long userId, Long chatId, int newUnreadCount);
+
 }

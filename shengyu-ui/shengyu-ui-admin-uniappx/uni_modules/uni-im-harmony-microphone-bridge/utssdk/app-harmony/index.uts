@@ -1,7 +1,0 @@
-import { HarmonyMicrophoneBridgeApi } from '../interface.uts'
-
-export const harmonyMicrophoneBridgeApi: HarmonyMicrophoneBridgeApi = {
-	ensureLoaded(): boolean {
-		return true
-	}
-}

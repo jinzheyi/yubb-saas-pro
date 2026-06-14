@@ -1,9 +1,0 @@
-export function canUseRecorderManager(): boolean {
-	const anyUni: any = uni as any
-	return anyUni != null && typeof anyUni.getRecorderManager === 'function'
-}
-
-export function canCreateInnerAudioContext(): boolean {
-	const anyUni: any = uni as any
-	return anyUni != null && typeof anyUni.createInnerAudioContext === 'function'
-}

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/conversation_preview_cache.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -18,7 +20,8 @@ import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 /// 会话列表项组件
 /// 已从 StatefulWidget 改为 StatelessWidget，消除不必要的 State 创建和销毁
 /// 鼠标长按使用 _MouseLongPressHandler 独立处理
-class ConversationTile extends StatelessWidget {
+/// 角标数字从 BadgeState 读取（单一数据源），确保与会话列表/Tab 栏一致
+class ConversationTile extends ConsumerWidget {
   const ConversationTile({
     super.key,
     required this.conversation,
@@ -39,7 +42,7 @@ class ConversationTile extends StatelessWidget {
   final bool highlightPinned;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final strings = AppLocalizations.of(context);
     final conversation = this.conversation;
@@ -57,6 +60,11 @@ class ConversationTile extends StatelessWidget {
         (conversation.isGroupKicked ||
             conversation.isGroupLeft ||
             conversation.isGroupDisbanded);
+
+    // 从 BadgeState 读取角标（单一数据源），fallback 到 conversation.unreadCount
+    final badgeState = ref.watch(badgeServiceProvider);
+    final unreadCount = badgeState.conversationBadges[conversation.chatId] ??
+        conversation.unreadCount;
 
     return Material(
       color: highlightPinned
@@ -78,6 +86,7 @@ class ConversationTile extends StatelessWidget {
                   _ConversationAvatar(
                     conversation: conversation,
                     displayTitle: displayTitle,
+                    unreadCount: unreadCount,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -540,10 +549,12 @@ class _ConversationAvatar extends StatelessWidget {
   const _ConversationAvatar({
     required this.conversation,
     required this.displayTitle,
+    this.unreadCount = 0,
   });
 
   final Conversation conversation;
   final String displayTitle;
+  final int unreadCount;
 
   @override
   Widget build(BuildContext context) {
@@ -579,7 +590,7 @@ class _ConversationAvatar extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
-        if (conversation.unreadCount > 0)
+        if (unreadCount > 0)
           Positioned(
             top: conversation.isMuted ? -3 : -7,
             right: conversation.isMuted ? -3 : -7,
@@ -604,9 +615,9 @@ class _ConversationAvatar extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      conversation.unreadCount > 99
+                      unreadCount > 99
                           ? '99+'
-                          : '${conversation.unreadCount}',
+                          : '$unreadCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,

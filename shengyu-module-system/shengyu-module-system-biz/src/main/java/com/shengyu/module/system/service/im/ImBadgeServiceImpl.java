@@ -129,4 +129,33 @@ public class ImBadgeServiceImpl implements ImBadgeService {
         return respVO;
     }
 
+    @Override
+    public void pushIncrementalBadgeUpdate(Long userId, Long chatId, int newUnreadCount) {
+        log.debug("[ImBadgeService] 增量推送角标, userId: {}, chatId: {}, unread: {}", 
+                userId, chatId, newUnreadCount);
+        
+        try {
+            // 构建增量角标
+            ConversationBadge badge = ConversationBadge.newBuilder()
+                    .setConversationId(chatId)
+                    .setUnreadCount(newUnreadCount)
+                    .build();
+            
+            // 获取总未读数 (仅用于 Tab 栏)
+            Integer totalUnread = conversationService.getTotalUnreadCount(userId);
+            
+            // 构建角标更新消息，标记为增量推送
+            BadgeUpdateMessage badgeUpdate = BadgeUpdateMessage.newBuilder()
+                    .setUnreadCount(totalUnread != null ? totalUnread : 0)
+                    .addConversationBadges(badge)
+                    .setIncremental(true)
+                    .build();
+            
+            messageSender.sendToUser(userId, MessageType.BADGE_UPDATE, badgeUpdate);
+        } catch (Exception e) {
+            log.error("[ImBadgeService] 增量推送角标失败, userId: {}, chatId: {}", 
+                    userId, chatId, e);
+        }
+    }
+
 }

@@ -1,6 +1,5 @@
 package com.shengyu.server;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -14,10 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author 圣钰科技
  */
 @SuppressWarnings("SpringComponentScan") // 忽略 IDEA 无法识别 ${shengyu.info.base-package}
-@MapperScan(basePackages = {"${shengyu.info.base-package}.module.system.dal.mysql", "${shengyu.info.base-package}.module.platform.dal.mysql"})
-@SpringBootApplication(
-    scanBasePackages = {"${shengyu.info.base-package}.server", "${shengyu.info.base-package}.module"}
-)
+@SpringBootApplication(scanBasePackages = {"${shengyu.info.base-package}.server", "${shengyu.info.base-package}.module"})
 public class ShengyuServerApplication {
 
     public static void main(String[] args) {

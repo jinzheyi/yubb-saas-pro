@@ -42,10 +42,19 @@ void _handleGlobalBadgeEvent(Ref ref, ImSocketEvent event) {
       }
       break;
     case SocketEventTypes.badgeUpdated:
-      // WebSocket badge 推送：更新全局角标
-      ref.read(badgeServiceProvider.notifier).applyWebSocketPayload(
-        event.payload,
-      );
+      // WebSocket badge 推送：区分增量/全量更新
+      final payload = event.payload as Map<String, dynamic>?;
+      if (payload != null) {
+        final bool incremental = payload['incremental'] == true;
+        
+        if (incremental) {
+          // 增量更新: 合并变化的会话角标
+          ref.read(badgeServiceProvider.notifier).applyIncrementalPayload(payload);
+        } else {
+          // 全量更新: 覆盖所有角标数据
+          ref.read(badgeServiceProvider.notifier).applyWebSocketPayload(payload);
+        }
+      }
       break;
     default:
       break;

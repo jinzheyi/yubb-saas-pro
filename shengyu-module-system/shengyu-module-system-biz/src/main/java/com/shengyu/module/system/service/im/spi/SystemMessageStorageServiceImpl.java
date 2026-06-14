@@ -842,7 +842,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 						}
 					}
                     if (!isSender) {
-                        imBadgeService.pushBadgeUpdate(memberId);
+                        imBadgeService.pushIncrementalBadgeUpdate(memberId, chatId, 1);
                         if (bizBody != null) {
                             nettyMessageSender.sendToUserWithExtra(
                                     memberId,
@@ -936,7 +936,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         false,
                         messageDO.getSendTime()
                 );
-                imBadgeService.pushBadgeUpdate(header.getReceiverId());
+                imBadgeService.pushIncrementalBadgeUpdate(header.getReceiverId(), chatId, 1);
 
                 // 单聊接收方实时转发业务消息（携带 rev），保证后续最终态合并一致
                 try {

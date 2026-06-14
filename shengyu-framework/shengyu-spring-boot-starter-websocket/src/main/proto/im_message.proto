@@ -281,6 +281,8 @@ message BadgeUpdateMessage {
   repeated ConversationBadge conversationBadges = 2;
   // 菜单角标列表
   repeated MenuBadge menuBadges = 3;
+  // 是否为增量推送（true 时 conversationBadges 仅包含变化的会话）
+  bool incremental = 4;
 }
 
 // 会话角标

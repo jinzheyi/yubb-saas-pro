@@ -183,39 +183,40 @@ public final class ImMessageProto {
       "\030\004 \001(\t\022\024\n\014replyContent\030\005 \001(\t\022\021\n\tatUserId" +
       "s\030\006 \003(\003\022\036\n\010mentions\030\007 \003(\0132\014.MentionUser\"" +
       "H\n\rTypingMessage\022\024\n\014targetUserId\030\001 \001(\003\022\017" +
-      "\n\007groupId\030\002 \001(\003\022\020\n\010isTyping\030\003 \001(\010\"y\n\022Bad" +
-      "geUpdateMessage\022\023\n\013unreadCount\030\001 \001(\005\022.\n\022" +
-      "conversationBadges\030\002 \003(\0132\022.ConversationB" +
-      "adge\022\036\n\nmenuBadges\030\003 \003(\0132\n.MenuBadge\"@\n\021" +
-      "ConversationBadge\022\026\n\016conversationId\030\001 \001(" +
-      "\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n\tMenuBadge\022\016\n\006m" +
-      "enuId\030\001 \001(\t\022\022\n\nbadgeCount\030\002 \001(\005\"\226\001\n\021Call" +
-      "SignalMessage\022\016\n\006callId\030\001 \001(\t\022\020\n\010callTyp" +
-      "e\030\002 \001(\005\022\022\n\nsignalType\030\003 \001(\005\022\020\n\010callerId\030" +
-      "\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024\n\014rejectReason\030" +
-      "\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"\307\001\n\025WorkflowNot" +
-      "ifyMessage\022\031\n\021processInstanceId\030\001 \001(\t\022\023\n" +
-      "\013processName\030\002 \001(\t\022\023\n\013initiatorId\030\003 \001(\003\022" +
-      "\025\n\rinitiatorName\030\004 \001(\t\022\017\n\007content\030\005 \001(\t\022" +
-      " \n\007buttons\030\006 \003(\0132\017.WorkflowButton\022\016\n\006sta" +
-      "tus\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(\t\"J\n\016WorkflowBu" +
-      "tton\022\020\n\010buttonId\030\001 \001(\t\022\022\n\nbuttonText\030\002 \001" +
-      "(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001\n\023TodoReminderM" +
-      "essage\022\016\n\006todoId\030\001 \001(\t\022\r\n\005title\030\002 \001(\t\022\017\n" +
-      "\007content\030\003 \001(\t\022\017\n\007dueTime\030\004 \001(\003\022\024\n\014remin" +
-      "derType\030\005 \001(\005\022\017\n\007jumpUrl\030\006 \001(\t\022\016\n\006status" +
-      "\030\007 \001(\005*\211\003\n\013MessageType\022\013\n\007UNKNOWN\020\000\022\021\n\rH" +
-      "EARTBEAT_REQ\020\001\022\022\n\016HEARTBEAT_RESP\020\002\022\014\n\010AU" +
-      "TH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n\005CLOSE\020\005\022\007\n\003AC" +
-      "K\020\010\022\014\n\010ACK_RESP\020\t\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t" +
-      "\n\005VOICE\020f\022\t\n\005VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010LOCATI" +
-      "ON\020i\022\n\n\006CUSTOM\020j\022\t\n\005EMOJI\020k\022\013\n\007STICKER\020l" +
-      "\022\022\n\rSYSTEM_NOTIFY\020\310\001\022\021\n\014READ_RECEIPT\020\311\001\022" +
-      "\013\n\006RECALL\020\312\001\022\013\n\006TYPING\020\313\001\022\021\n\014BADGE_UPDAT" +
-      "E\020\314\001\022\020\n\013QUOTE_REPLY\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001" +
-      "\022\024\n\017WORKFLOW_NOTIFY\020\317\001\022\022\n\rTODO_REMINDER\020" +
-      "\320\001BA\n-com.shengyu.framework.websocket.co" +
-      "re.protocolB\016ImMessageProtoP\001b\006proto3"
+      "\n\007groupId\030\002 \001(\003\022\020\n\010isTyping\030\003 \001(\010\"\216\001\n\022Ba" +
+      "dgeUpdateMessage\022\023\n\013unreadCount\030\001 \001(\005\022.\n" +
+      "\022conversationBadges\030\002 \003(\0132\022.Conversation" +
+      "Badge\022\036\n\nmenuBadges\030\003 \003(\0132\n.MenuBadge\022\023\n" +
+      "\013incremental\030\004 \001(\010\"@\n\021ConversationBadge\022" +
+      "\026\n\016conversationId\030\001 \001(\003\022\023\n\013unreadCount\030\002" +
+      " \001(\005\"/\n\tMenuBadge\022\016\n\006menuId\030\001 \001(\t\022\022\n\nbad" +
+      "geCount\030\002 \001(\005\"\226\001\n\021CallSignalMessage\022\016\n\006c" +
+      "allId\030\001 \001(\t\022\020\n\010callType\030\002 \001(\005\022\022\n\nsignalT" +
+      "ype\030\003 \001(\005\022\020\n\010callerId\030\004 \001(\003\022\020\n\010calleeId\030" +
+      "\005 \001(\003\022\024\n\014rejectReason\030\006 \001(\t\022\021\n\textraData" +
+      "\030\007 \001(\t\"\307\001\n\025WorkflowNotifyMessage\022\031\n\021proc" +
+      "essInstanceId\030\001 \001(\t\022\023\n\013processName\030\002 \001(\t" +
+      "\022\023\n\013initiatorId\030\003 \001(\003\022\025\n\rinitiatorName\030\004" +
+      " \001(\t\022\017\n\007content\030\005 \001(\t\022 \n\007buttons\030\006 \003(\0132\017" +
+      ".WorkflowButton\022\016\n\006status\030\007 \001(\005\022\017\n\007jumpU" +
+      "rl\030\010 \001(\t\"J\n\016WorkflowButton\022\020\n\010buttonId\030\001" +
+      " \001(\t\022\022\n\nbuttonText\030\002 \001(\t\022\022\n\nbuttonType\030\003" +
+      " \001(\005\"\215\001\n\023TodoReminderMessage\022\016\n\006todoId\030\001" +
+      " \001(\t\022\r\n\005title\030\002 \001(\t\022\017\n\007content\030\003 \001(\t\022\017\n\007" +
+      "dueTime\030\004 \001(\003\022\024\n\014reminderType\030\005 \001(\005\022\017\n\007j" +
+      "umpUrl\030\006 \001(\t\022\016\n\006status\030\007 \001(\005*\211\003\n\013Message" +
+      "Type\022\013\n\007UNKNOWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016" +
+      "HEARTBEAT_RESP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_R" +
+      "ESP\020\004\022\t\n\005CLOSE\020\005\022\007\n\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022" +
+      "\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f\022\t\n\005VIDEO" +
+      "\020g\022\010\n\004FILE\020h\022\014\n\010LOCATION\020i\022\n\n\006CUSTOM\020j\022\t" +
+      "\n\005EMOJI\020k\022\013\n\007STICKER\020l\022\022\n\rSYSTEM_NOTIFY\020" +
+      "\310\001\022\021\n\014READ_RECEIPT\020\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TY" +
+      "PING\020\313\001\022\021\n\014BADGE_UPDATE\020\314\001\022\020\n\013QUOTE_REPL" +
+      "Y\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001\022\024\n\017WORKFLOW_NOTIF" +
+      "Y\020\317\001\022\022\n\rTODO_REMINDER\020\320\001BA\n-com.shengyu." +
+      "framework.websocket.core.protocolB\016ImMes" +
+      "sageProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -328,7 +329,7 @@ public final class ImMessageProto {
     internal_static_BadgeUpdateMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BadgeUpdateMessage_descriptor,
-        new java.lang.String[] { "UnreadCount", "ConversationBadges", "MenuBadges", });
+        new java.lang.String[] { "UnreadCount", "ConversationBadges", "MenuBadges", "Incremental", });
     internal_static_ConversationBadge_descriptor =
       getDescriptor().getMessageTypes().get(18);
     internal_static_ConversationBadge_fieldAccessorTable = new

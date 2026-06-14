@@ -63,6 +63,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_p
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_timeline.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
@@ -219,12 +220,17 @@ class _ChatPageState extends ConsumerState<ChatPage>
   /// 激活当前会话（用于角标智能处理）
   void _activateCurrentConversation() {
     if (!mounted) return;
-    final conversationState = ref.read(conversationListControllerProvider);
-    final conversationUnread = conversationState.conversations
-        .where((c) => c.chatId == widget.args.chatId)
-        .fold<int>(0, (_, c) => c.unreadCount);
-    ref.read(conversationListControllerProvider.notifier).activateChat(widget.args.chatId);
-    _activeConversationService.updateActiveChatUnreadCount(conversationUnread);
+    final chatId = widget.args.chatId;
+
+    // 从 BadgeState 读取该会话进入时的未读数（单一数据源）
+    final badgeState = ref.read(badgeServiceProvider);
+    final unreadAtEntry = badgeState.conversationBadges[chatId] ?? 0;
+
+    // 激活当前会话（告知 Tab 栏需要扣除的未读数）
+    _activeConversationService.activateChat(chatId, unreadCount: unreadAtEntry);
+
+    // 清除该会话的角标（用户已在聊天页，消息应视为已读）
+    ref.read(badgeServiceProvider.notifier).clearConversationBadge(chatId);
   }
 
   @override
