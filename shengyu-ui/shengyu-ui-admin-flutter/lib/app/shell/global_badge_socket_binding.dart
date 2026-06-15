@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
@@ -30,16 +31,30 @@ final globalBadgeSocketBindingProvider = Provider<StreamSubscription<ImSocketEve
 int _lastBadgeInitAt = 0;
 const int _badgeInitCooldownMs = 10000; // 10秒冷却期
 
+// 标记是否发生了重连：重连后首次 authSucceeded 应强制刷新角标
+bool _hasReconnected = false;
+
 void _handleGlobalBadgeEvent(Ref ref, ImSocketEvent event) {
   switch (event.type) {
     case SocketEventTypes.authSucceeded:
       // 认证成功：通过 HTTP API 初始化角标
-      // 优化：添加10秒冷却期，配合本地缓存减少请求
+      // 优化：重连后强制刷新（忽略冷却期），确保后台期间角标变化不丢失
       final now = DateTime.now().millisecondsSinceEpoch;
+      final shouldForceRefresh = _hasReconnected;
+      if (shouldForceRefresh) {
+        debugPrint('[GlobalBadge] Reconnected, forcing badge refresh');
+        _hasReconnected = false;
+        _lastBadgeInitAt = 0; // 重置冷却期，确保立即刷新
+      }
       if (now - _lastBadgeInitAt >= _badgeInitCooldownMs) {
         _lastBadgeInitAt = now;
         _initBadgeFromServer(ref);
       }
+      break;
+    case SocketEventTypes.reconnecting:
+      // 记录重连事件，确保重连成功后强制刷新角标
+      _hasReconnected = true;
+      debugPrint('[GlobalBadge] Reconnecting detected, will force badge refresh on authSucceeded');
       break;
     case SocketEventTypes.badgeUpdated:
       // WebSocket badge 推送：区分增量/全量更新

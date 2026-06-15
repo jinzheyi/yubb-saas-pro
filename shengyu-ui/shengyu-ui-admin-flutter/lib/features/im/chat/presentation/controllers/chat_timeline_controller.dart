@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_window_result.dart';
@@ -330,6 +331,45 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     }
   }
 
+  /// 重连后拉取离线消息（根治方案）
+  /// 与 confirmPendingMessages 不同，此方法不检查是否有"发送中"消息
+  /// 而是直接拉取最新消息，确保对方发来的离线消息能被接收
+  Future<void> pullMessagesAfterReconnect({required OpenChatCommand command}) async {
+    debugPrint('[ChatTimeline] pullMessagesAfterReconnect: pulling latest messages after reconnect');
+    
+    try {
+      // 拉取最近 10 条消息（覆盖离线期间可能收到的消息）
+      final pullCommand = OpenChatCommand(
+        chatId: command.chatId,
+        conversationType: command.conversationType,
+        entryMode: ChatEntryMode.latest,
+        title: command.title,
+        anchorSequence: command.anchorSequence,
+        anchorMessageId: command.anchorMessageId,
+        windowLimitOverride: 10,
+      );
+      final result = await _loadChatWindowUseCase(pullCommand);
+      if (result.messages.isEmpty) {
+        debugPrint('[ChatTimeline] pullMessagesAfterReconnect: no messages returned');
+        return;
+      }
+
+      final merged = await _mergeWindowMessagesOffThread(
+        existing: state.messages,
+        incoming: result.messages,
+      );
+      state = state.copyWith(
+        status: ChatTimelineStatus.ready,
+        messages: merged,
+        quotePreviewCache: _buildQuotePreviewCache(merged),
+      );
+      debugPrint('[ChatTimeline] pullMessagesAfterReconnect: merged ${merged.length} messages');
+    } catch (e) {
+      // 静默失败，不影响主流程
+      debugPrint('[ChatTimeline] pullMessagesAfterReconnect failed: $e');
+    }
+  }
+
   void replaceSingleMessage({
     required String clientMessageId,
     required Message message,
@@ -352,6 +392,32 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       error: null,
       quotePreviewCache: _buildQuotePreviewCache(nextMessages),
+    );
+  }
+
+  void markSentByClientMessageId({required String clientMessageId}) {
+    final index = state.messages.indexWhere(
+      (item) =>
+          item.clientMessageId == clientMessageId ||
+          item.messageId == clientMessageId,
+    );
+    if (index < 0) {
+      return;
+    }
+
+    // 如果已经是已读或更高状态，跳过（避免降级）
+    final current = state.messages[index];
+    if (current.status == MessageStatus.read || current.status == MessageStatus.sent) {
+      return;
+    }
+
+    final nextMessages = [...state.messages];
+    nextMessages[index] = nextMessages[index].copyWith(
+      status: MessageStatus.sent,
+    );
+    state = state.copyWith(
+      status: ChatTimelineStatus.ready,
+      messages: nextMessages,
     );
   }
 

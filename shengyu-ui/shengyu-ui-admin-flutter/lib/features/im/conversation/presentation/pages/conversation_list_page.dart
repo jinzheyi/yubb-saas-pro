@@ -10,11 +10,13 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
+import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart';
@@ -126,8 +128,8 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_consumeGroupRemovalNotice());
-      unawaited(_syncOnForegroundIfNeeded());
+      // 回前台：检查 WebSocket 连接、刷新角标、sync 会话列表
+      unawaited(_handleResumeFromBackground());
       return;
     }
     if (state == AppLifecycleState.inactive ||
@@ -136,6 +138,28 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
         state == AppLifecycleState.detached) {
       _lastPageHideAt = DateTime.now().millisecondsSinceEpoch;
     }
+  }
+
+  /// 回前台时的恢复逻辑
+  Future<void> _handleResumeFromBackground() async {
+    if (!mounted) return;
+
+    // 1. 检查 WebSocket 连接状态，如果断连则触发重连
+    final socketClient = ref.read(imSocketClientProvider);
+    if (socketClient.state != ImSocketConnectionState.connected) {
+      debugPrint('[ConversationListPage] WebSocket not connected on resume, triggering reconnect');
+      unawaited(socketClient.reconnect());
+    }
+
+    // 2. 强制刷新角标数据（忽略冷却期）
+    ref.read(badgeServiceProvider.notifier).forceRefresh();
+    final dio = ref.read(dioProvider);
+    await ref.read(badgeServiceProvider.notifier).initBadgeData(dio);
+
+    // 3. 执行常规的会话列表 sync
+    if (!mounted) return;
+    unawaited(_consumeGroupRemovalNotice());
+    unawaited(_syncOnForegroundIfNeeded());
   }
 
   @override

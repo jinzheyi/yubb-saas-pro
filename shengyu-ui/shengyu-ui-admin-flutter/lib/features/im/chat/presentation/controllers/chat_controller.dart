@@ -255,6 +255,15 @@ class ChatController extends StateNotifier<ChatPageState> {
         atUserIds: localMessage.extra.atUserIds,
         mentions: localMessage.extra.mentions,
       );
+      // 发送成功：更新消息状态为 sent
+      _timelineController.markSentByClientMessageId(
+        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: localMessage.chatId,
+        messageId: localMessage.clientMessageId ?? localMessage.messageId,
+        status: MessageStatus.sent,
+      );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
     } catch (error, stackTrace) {
@@ -369,6 +378,15 @@ class ChatController extends StateNotifier<ChatPageState> {
         receiverId: target.receiverId,
         groupId: target.groupId,
       );
+      // 发送成功：更新消息状态为 sent
+      _timelineController.markSentByClientMessageId(
+        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: localMessage.chatId,
+        messageId: localMessage.clientMessageId ?? localMessage.messageId,
+        status: MessageStatus.sent,
+      );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
     } catch (error, stackTrace) {
@@ -423,6 +441,15 @@ class ChatController extends StateNotifier<ChatPageState> {
         receiverId: target.receiverId,
         groupId: target.groupId,
       );
+      // 发送成功：更新消息状态为 sent
+      _timelineController.markSentByClientMessageId(
+        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: localMessage.chatId,
+        messageId: localMessage.clientMessageId ?? localMessage.messageId,
+        status: MessageStatus.sent,
+      );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
     } catch (error, stackTrace) {
@@ -476,6 +503,15 @@ class ChatController extends StateNotifier<ChatPageState> {
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
         receiverId: target.receiverId,
         groupId: target.groupId,
+      );
+      // 发送成功：更新消息状态为 sent
+      _timelineController.markSentByClientMessageId(
+        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: localMessage.chatId,
+        messageId: localMessage.clientMessageId ?? localMessage.messageId,
+        status: MessageStatus.sent,
       );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;

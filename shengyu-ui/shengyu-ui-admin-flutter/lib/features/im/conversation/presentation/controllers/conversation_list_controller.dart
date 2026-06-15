@@ -126,7 +126,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     bool incrementUnread = false,
   }) {
     // 记录本地更新时间，避免 WebSocket 推送触发多余 sync
-    markLocalConversationUpdate(chatId);
+    markLocalConversationUpdate(chatId, isSelf: isSelf);
 
     final items = [...state.conversations];
     final index = _findConversationIndex(

@@ -17,6 +17,8 @@ import 'package:shengyu_ui_admin_im/core/platform/local_file_size_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/local_uri_bytes_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_outbound_sender.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
@@ -231,6 +233,34 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
     // 清除该会话的角标（用户已在聊天页，消息应视为已读）
     ref.read(badgeServiceProvider.notifier).clearConversationBadge(chatId);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 回前台：检查 WebSocket 连接并重试发送中消息
+      unawaited(_handleResumeFromBackground());
+    }
+  }
+
+  /// 回前台时的恢复逻辑（根治方案）
+  Future<void> _handleResumeFromBackground() async {
+    if (!mounted) return;
+
+    // 1. 如果 WebSocket 未连接，触发重连（authSucceeded 事件会自动处理 pullMessagesAfterReconnect）
+    final socketClient = ref.read(imSocketClientProvider);
+    if (socketClient.state != ImSocketConnectionState.connected) {
+      debugPrint('[ChatPage] WebSocket not connected on resume, triggering reconnect');
+      unawaited(socketClient.reconnect());
+      // 重连成功后，authSucceeded 事件会自动触发 pullMessagesAfterReconnect
+      return;
+    }
+
+    // 2. WebSocket 已连接：直接拉取离线消息（后台期间可能收到的对方消息）
+    final command = OpenChatCommand.fromArgs(widget.args);
+    await ref
+        .read(chatTimelineControllerProvider.notifier)
+        .pullMessagesAfterReconnect(command: command);
   }
 
   @override

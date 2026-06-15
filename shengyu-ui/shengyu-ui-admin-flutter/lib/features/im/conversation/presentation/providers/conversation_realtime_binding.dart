@@ -43,18 +43,33 @@ final Map<String, int> _syncThrottleTimestamps = <String, int>{};
 const int _syncThrottleIntervalMs = 1000;
 
 /// 本地会话更新时间记录：避免发送消息后 WebSocket 推送触发多余 sync
-/// key: chatId, value: 更新时间戳 (毫秒)
-final Map<String, int> _localConversationUpdateTimes = <String, int>{};
+/// key: chatId, value: {time: 更新时间戳 (毫秒), isSelf: 是否自己发的消息}
+final Map<String, Map<String, dynamic>> _localConversationUpdateTimes = <String, Map<String, dynamic>>{};
 const int _localUpdateCooldownMs = 3000; // 3 秒冷却期
 
 /// 记录本地更新（由 upsertLocalMessage 调用）
-void markLocalConversationUpdate(String chatId) {
-  _localConversationUpdateTimes[chatId] = DateTime.now().millisecondsSinceEpoch;
+void markLocalConversationUpdate(String chatId, {bool isSelf = false}) {
+  _localConversationUpdateTimes[chatId] = {
+    'time': DateTime.now().millisecondsSinceEpoch,
+    'isSelf': isSelf,
+  };
 }
 
 /// 检查是否应该跳过 sync（因为近期有本地更新）
-bool _isRecentlyUpdatedLocally(String chatId) {
-  final updateTime = _localConversationUpdateTimes[chatId] ?? 0;
+/// 只有自己发的消息才需要跳过，对方的消息应触发 sync
+bool _shouldSkipSyncForLocalUpdate(String chatId) {
+  final updateRecord = _localConversationUpdateTimes[chatId];
+  if (updateRecord == null) {
+    return false;
+  }
+  
+  // 如果本地更新是自己发的消息，则跳过 sync（因为本地已更新）
+  final wasSelfUpdate = updateRecord['isSelf'] as bool? ?? false;
+  if (!wasSelfUpdate) {
+    return false;
+  }
+  
+  final updateTime = updateRecord['time'] as int? ?? 0;
   final now = DateTime.now().millisecondsSinceEpoch;
   return now - updateTime < _localUpdateCooldownMs;
 }
@@ -74,11 +89,12 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
     case SocketEventTypes.conversationHint:
     case SocketEventTypes.conversationUpdated:
     case SocketEventTypes.conversationDeleted:
-      // 优化：如果该会话近期有本地更新（如发送消息），跳过 sync
+      // 优化：如果该会话近期有本地更新（自己发的消息），跳过 sync
       // 因为本地已通过 upsertLocalMessage 更新了会话列表
+      // 注意：对方发来的消息（isSelf=false）不会跳过 sync
       final chatId = event.chatId?.trim() ?? '';
-      if (chatId.isNotEmpty && _isRecentlyUpdatedLocally(chatId)) {
-        debugPrint('[ConversationRealtime] Skipping sync for recently updated chat: $chatId');
+      if (chatId.isNotEmpty && _shouldSkipSyncForLocalUpdate(chatId)) {
+        debugPrint('[ConversationRealtime] Skipping sync for recently updated chat (self message): $chatId');
         break;
       }
       

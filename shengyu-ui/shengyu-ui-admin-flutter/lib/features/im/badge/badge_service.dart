@@ -209,6 +209,13 @@ class BadgeService extends StateNotifier<BadgeState> {
     // 注意：这里需要 Dio，由调用方处理
   }
 
+  /// 强制刷新角标（回前台/重连后调用，忽略冷却期）
+  /// 调用方需确保通过 Dio 完成实际请求，此方法仅重置状态
+  void forceRefresh() {
+    _lastServerSyncAt = 0; // 重置冷却期，确保下次 initBadgeData 能立即执行
+    _syncingFromServer = false; // 允许立即发起新请求
+  }
+
   /// 处理 WebSocket badgeUpdated 推送
   void applyWebSocketPayload(Map<String, dynamic> payload) {
     _applySnapshot(payload);

@@ -222,26 +222,21 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
           // 避免每次 authSucceeded 都触发重复的 group/member/list 请求
         }
       }
-      // 优化：仅在存在"发送中"消息时才调用 confirmPendingMessages
-      // 避免每次 authSucceeded 都触发 window 接口请求
-      final hasPending = ref
-          .read(chatTimelineControllerProvider)
-          .messages
-          .any((m) => m.status == MessageStatus.sending && m.isOutgoing);
-      if (hasPending) {
-        final command = entryArgs.chatId == chatId
-            ? OpenChatCommand.fromArgs(entryArgs)
-            : OpenChatCommand(
-                chatId: chatId,
-                conversationType: entryArgs.conversationType,
-                entryMode: ChatEntryMode.latest,
-              );
-        unawaited(
-          ref
-              .read(chatTimelineControllerProvider.notifier)
-              .confirmPendingMessages(command: command),
-        );
-      }
+      // 根治方案：WebSocket 重连成功后，拉取离线消息（包含对方发来的消息+自己消息状态确认）
+      // 原因：后台期间 WebSocket 断开，messageReceived 事件全部丢失
+      // 必须通过 HTTP 拉取最新消息补偿，确保消息不丢失
+      final command = entryArgs.chatId == chatId
+          ? OpenChatCommand.fromArgs(entryArgs)
+          : OpenChatCommand(
+              chatId: chatId,
+              conversationType: entryArgs.conversationType,
+              entryMode: ChatEntryMode.latest,
+            );
+      unawaited(
+        ref
+            .read(chatTimelineControllerProvider.notifier)
+            .pullMessagesAfterReconnect(command: command),
+      );
       unawaited(_rehydrateReeditHints(ref, chatId));
       break;
     default:
@@ -653,9 +648,15 @@ void _enqueueMessageForBatch(
   String senderId,
   String currentUserId,
 ) {
-  // 消息去重：重复消息直接跳过，避免重复渲染
-  if (_messageDeduplicator.isDuplicate(raw)) {
+  // 消息去重：自己发送的消息（isSelf=true）不做去重，因为需要更新状态
+  // 只有对方发送的消息才进行去重，避免重复渲染
+  if (!isSelf && _messageDeduplicator.isDuplicate(raw)) {
     return;
+  }
+  
+  // 对于自己发送的消息，也需要加入去重器（避免后续重复推送）
+  if (isSelf) {
+    _messageDeduplicator.isDuplicate(raw);
   }
 
   // 初始化缓冲队列
