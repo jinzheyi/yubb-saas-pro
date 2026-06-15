@@ -47,8 +47,8 @@ public class TextMessageProcessor implements MessageProcessor {
     public void process(ChannelHandlerContext ctx, ImMessage message) {
         try {
             MessageHeader inHeader = message.getHeader();
-            if (log.isInfoEnabled()) {
-                log.info("[TextMessage] process enter: messageId={}, messageType={}, senderId={}, receiverId={}, groupId={}, tenantId={}, channelId={}",
+            if (log.isDebugEnabled()) {
+                log.debug("[TextMessage] process: messageId={}, messageType={}, senderId={}, receiverId={}, groupId={}, tenantId={}, channelId={}",
                         inHeader.getMessageId(), inHeader.getMessageType(), inHeader.getSenderId(), inHeader.getReceiverId(), inHeader.getGroupId(), inHeader.getTenantId(),
                         ctx != null && ctx.channel() != null ? ctx.channel().id() : null);
             }
@@ -69,12 +69,12 @@ public class TextMessageProcessor implements MessageProcessor {
                 return;
             }
 
-            if (log.isInfoEnabled()) {
-                log.info("[TextMessage] senderSession: userId={}, deviceType={}, active={}",
+            if (log.isDebugEnabled()) {
+                log.debug("[TextMessage] senderSession: userId={}, deviceType={}, active={}",
                         senderSession.getUserId(), senderSession.getDeviceType(), senderSession.isActive());
             }
 
-            log.info("[TextMessage] 收到文本消息, from: {}, to: {}, group: {}, content: {}", 
+            log.debug("[TextMessage] 收到文本消息, from: {}, to: {}, group: {}, content: {}", 
                 message.getHeader().getSenderId(),
                 message.getHeader().getReceiverId(),
                 message.getHeader().getGroupId(),

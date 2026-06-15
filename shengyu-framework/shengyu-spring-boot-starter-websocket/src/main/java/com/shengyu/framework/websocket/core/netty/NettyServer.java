@@ -78,7 +78,8 @@ public class NettyServer implements ApplicationRunner, DisposableBean {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
                 .channel(useEpoll ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
-                .handler(new LoggingHandler(LogLevel.DEBUG))
+                // 生产环境：关闭 LoggingHandler 避免 50w 并发时日志 I/O 成为瓶颈
+                // 开发调试时可通过配置启用：.handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(channelInitializer)
                 // TCP 参数优化
                 .option(ChannelOption.SO_BACKLOG, nettyProperties.getSoBacklog())

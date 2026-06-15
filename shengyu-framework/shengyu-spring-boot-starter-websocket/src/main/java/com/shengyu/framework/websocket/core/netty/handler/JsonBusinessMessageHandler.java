@@ -25,6 +25,7 @@ import com.shengyu.framework.websocket.core.protocol.TypingMessage;
 import com.shengyu.framework.websocket.core.protocol.VideoMessage;
 import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.shengyu.framework.websocket.config.NettyProperties;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -52,6 +53,8 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
 
     private final NettySessionManager sessionManager;
 
+    private final NettyProperties nettyProperties;
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // 只处理 WebSocket 文本帧转发出来的 String
@@ -61,6 +64,15 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         }
 
         final String text = (String) msg;
+        // 企业级：限制 JSON 消息最大长度，防止超大 payload 导致 GC 压力
+        int maxLen = nettyProperties != null ? nettyProperties.getMaxJsonMessageLength() : 256 * 1024;
+        if (text.length() > maxLen) {
+            sendJsonClose(ctx, "PAYLOAD_TOO_LARGE", 413,
+                i18n("ws.biz.payload_too_large", "Message payload exceeds maximum size ({0} bytes)", maxLen));
+            ctx.close();
+            return;
+        }
+
         JSONObject json;
         try {
             json = JSONUtil.parseObj(text);
