@@ -1,5 +1,6 @@
 package com.shengyu.framework.websocket.core.processor.impl;
 
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 
 /**
  * 文本消息处理器
@@ -36,6 +39,7 @@ public class TextMessageProcessor implements MessageProcessor {
     private final NettySessionManager sessionManager;
     private final MessageStorageService messageStorageService;
     private final NettyMessageSender messageSender;
+    private final WebSocketMetrics metrics;
     private SensitiveWordFilterService sensitiveWordFilterService;
 
     @Autowired(required = false)
@@ -45,6 +49,7 @@ public class TextMessageProcessor implements MessageProcessor {
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
+        long startTime = System.nanoTime();
         try {
             MessageHeader inHeader = message.getHeader();
             if (log.isDebugEnabled()) {
@@ -183,6 +188,9 @@ public class TextMessageProcessor implements MessageProcessor {
 
         } catch (InvalidProtocolBufferException e) {
             log.error("[TextMessage] 解析消息失败", e);
+        } finally {
+            long elapsedNanos = System.nanoTime() - startTime;
+            metrics.recordMessageProcessing("TEXT", Duration.ofNanos(elapsedNanos));
         }
     }
 

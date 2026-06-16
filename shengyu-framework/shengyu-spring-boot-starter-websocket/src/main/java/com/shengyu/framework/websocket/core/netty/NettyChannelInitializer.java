@@ -12,11 +12,13 @@ import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.SSLEngine;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,7 +28,6 @@ import java.util.concurrent.TimeUnit;
  * @author 圣钰科技
  */
 @Slf4j
-@RequiredArgsConstructor
 public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final NettyProperties nettyProperties;
@@ -37,9 +38,41 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final AuthHandler authHandler;
     private final JsonBusinessMessageHandler jsonBusinessMessageHandler;
 
+    /**
+     * SSL 上下文（如果启用了 SSL/TLS）
+     * 在构造时构建一次，所有 Channel 复用
+     */
+    private final SslContext sslContext;
+
+    public NettyChannelInitializer(
+            NettyProperties nettyProperties,
+            WebSocketFrameHandler webSocketFrameHandler,
+            WebSocketProtobufOutboundHandler webSocketProtobufOutboundHandler,
+            ProtobufMessageHandler protobufMessageHandler,
+            HeartbeatHandler heartbeatHandler,
+            AuthHandler authHandler,
+            JsonBusinessMessageHandler jsonBusinessMessageHandler) {
+        this.nettyProperties = nettyProperties;
+        this.webSocketFrameHandler = webSocketFrameHandler;
+        this.webSocketProtobufOutboundHandler = webSocketProtobufOutboundHandler;
+        this.protobufMessageHandler = protobufMessageHandler;
+        this.heartbeatHandler = heartbeatHandler;
+        this.authHandler = authHandler;
+        this.jsonBusinessMessageHandler = jsonBusinessMessageHandler;
+        this.sslContext = WebSocketSslContextBuilder.buildSslContext(nettyProperties);
+    }
+
     @Override
     protected void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
+
+        // ========== SSL/TLS 支持（wss://） ==========
+        // 如果启用了 SSL，必须作为第一个 handler 添加到 Pipeline
+        if (sslContext != null) {
+            SSLEngine sslEngine = sslContext.newEngine(ch.alloc());
+            pipeline.addLast("ssl-handler", new SslHandler(sslEngine));
+            log.info("[Netty] SSL/TLS 已启用，协议: wss://");
+        }
 
         // ========== WebSocket 协议支持（对外） ==========
         if (nettyProperties.getEnableWebSocket()) {

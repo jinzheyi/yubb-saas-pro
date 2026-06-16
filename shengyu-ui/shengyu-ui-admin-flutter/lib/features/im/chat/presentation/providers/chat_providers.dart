@@ -7,6 +7,8 @@ import 'package:shengyu_ui_admin_im/core/platform/audio_recording_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/network/upload_dio_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_outbound_sender.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/coordinators/chat_upload_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/services/chat_location_opener_service.dart';
@@ -43,6 +45,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_ti
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/upload_progress_tracker.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/message_cache_queue_binding.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_locale_controller.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 
@@ -232,7 +235,7 @@ final chatTimelineControllerProvider =
 
 final chatControllerProvider =
     StateNotifierProvider.autoDispose<ChatController, ChatPageState>((ref) {
-      return ChatController(
+      final controller = ChatController(
         ref.read(openChatUseCaseProvider),
         ref.read(sendMessageUseCaseProvider),
         ref.read(markConversationReadUseCaseProvider),
@@ -240,5 +243,13 @@ final chatControllerProvider =
         createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
         ref.read(chatTimelineControllerProvider.notifier),
+        socketClient: ref.read(imSocketClientProvider),
+        socketOutboundSender: ref.read(socketOutboundSenderProvider),
       );
+      // 注入消息缓存队列
+      final cacheQueue = ref.read(messageCacheQueueProvider);
+      controller.setCacheQueue(cacheQueue);
+      // 初始化缓存队列绑定（注册发送回调 + 监听网络状态）
+      ref.read(messageCacheQueueInitBindingProvider(ref.read(sendMessageUseCaseProvider)));
+      return controller;
     });

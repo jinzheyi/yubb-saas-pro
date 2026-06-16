@@ -26,6 +26,7 @@ dependencies:
   file_picker: ^10.3.2
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
+  connectivity_plus: ^6.1.5
   mobile_scanner: ^7.2.0
   record: ^6.2.0
   just_audio: ^0.10.5

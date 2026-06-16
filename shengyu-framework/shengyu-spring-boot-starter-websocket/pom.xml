@@ -74,6 +74,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Micrometer 监控指标采集（可选） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- 业务组件 -->
         <dependency>
             <!-- 为什么要依赖 tenant 组件？

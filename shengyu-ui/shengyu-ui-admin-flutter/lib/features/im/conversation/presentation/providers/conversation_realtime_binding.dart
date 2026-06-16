@@ -31,21 +31,96 @@ class GroupMemberRemovedSignal {
 /// 会话实时绑定：在整个应用生命周期中保持活跃，不随Tab切换而销毁
 /// 移除 autoDispose 确保 websocket 订阅在 Tab 切换时保持连接
 final conversationRealtimeBindingProvider = Provider<void>((ref) {
+  // 启动定期清理任务（仅首次初始化）
+  _startMapCleanupTimers();
+  
   final StreamSubscription<ImSocketEvent> subscription = ref
       .read(socketMessageDispatcherProvider)
       .stream
       .listen((event) => _handleConversationSocketEvent(ref, event));
-  ref.onDispose(subscription.cancel);
+  ref.onDispose(() {
+    subscription.cancel();
+    // 注意：不清理 Timer，因为是全局的，需要跟随整个应用生命周期
+  });
 });
 
 /// 会话同步节流器：避免高频 WebSocket 事件触发频繁同步
+/// 【泄漏修复】定期清理过期条目，限制最大容量
 final Map<String, int> _syncThrottleTimestamps = <String, int>{};
 const int _syncThrottleIntervalMs = 1000;
+const int _syncThrottleMaxEntries = 500;
+Timer? _syncThrottleCleanupTimer;
 
 /// 本地会话更新时间记录：避免发送消息后 WebSocket 推送触发多余 sync
 /// key: chatId, value: {time: 更新时间戳 (毫秒), isSelf: 是否自己发的消息}
+/// 【泄漏修复】定期清理过期条目，限制最大容量
 final Map<String, Map<String, dynamic>> _localConversationUpdateTimes = <String, Map<String, dynamic>>{};
 const int _localUpdateCooldownMs = 3000; // 3 秒冷却期
+const int _localUpdateMaxEntries = 500;
+Timer? _localUpdateCleanupTimer;
+
+/// 启动定期清理任务（在 Provider 首次创建时调用）
+void _startMapCleanupTimers() {
+  // 清理节流器 Map：每 5 分钟清理一次超过最大容量的条目
+  _syncThrottleCleanupTimer ??= Timer.periodic(
+    const Duration(minutes: 5),
+    (_) => _cleanupSyncThrottleMap(),
+  );
+  
+  // 清理本地更新记录：每 3 分钟清理一次过期条目
+  _localUpdateCleanupTimer ??= Timer.periodic(
+    const Duration(minutes: 3),
+    (_) => _cleanupLocalUpdateMap(),
+  );
+}
+
+/// 清理节流器 Map 中超过最大容量的条目
+void _cleanupSyncThrottleMap() {
+  if (_syncThrottleTimestamps.length <= _syncThrottleMaxEntries) {
+    return;
+  }
+  // 保留最新的 N 个条目
+  final entries = _syncThrottleTimestamps.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  _syncThrottleTimestamps.clear();
+  for (int i = 0; i < _syncThrottleMaxEntries; i++) {
+    _syncThrottleTimestamps[entries[i].key] = entries[i].value;
+  }
+  debugPrint('[ConversationRealtime] Cleaned sync throttle map: ${_syncThrottleTimestamps.length} entries');
+}
+
+/// 清理本地更新 Map 中过期条目（超过冷却期的条目）
+void _cleanupLocalUpdateMap() {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final keysToRemove = <String>[];
+  
+  for (final entry in _localConversationUpdateTimes.entries) {
+    final updateTime = entry.value['time'] as int? ?? 0;
+    // 超过冷却期两倍的条目可以安全清理
+    if (now - updateTime > _localUpdateCooldownMs * 2) {
+      keysToRemove.add(entry.key);
+    }
+  }
+  
+  for (final key in keysToRemove) {
+    _localConversationUpdateTimes.remove(key);
+  }
+  
+  // 如果仍然超过最大容量，强制清理最旧的条目
+  if (_localConversationUpdateTimes.length > _localUpdateMaxEntries) {
+    final entries = _localConversationUpdateTimes.entries.toList()
+      ..sort((a, b) => 
+          ((b.value['time'] as int? ?? 0).compareTo(a.value['time'] as int? ?? 0)));
+    _localConversationUpdateTimes.clear();
+    for (int i = 0; i < _localUpdateMaxEntries; i++) {
+      _localConversationUpdateTimes[entries[i].key] = entries[i].value;
+    }
+  }
+  
+  if (keysToRemove.isNotEmpty) {
+    debugPrint('[ConversationRealtime] Cleaned local update map: ${keysToRemove.length} expired entries');
+  }
+}
 
 /// 记录本地更新（由 upsertLocalMessage 调用）
 void markLocalConversationUpdate(String chatId, {bool isSelf = false}) {

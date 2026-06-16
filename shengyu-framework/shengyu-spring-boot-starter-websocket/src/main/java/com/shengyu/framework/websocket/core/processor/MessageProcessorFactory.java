@@ -1,6 +1,8 @@
 package com.shengyu.framework.websocket.core.processor;
 
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import io.netty.channel.ChannelHandlerContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,13 @@ public class MessageProcessorFactory {
     private final Map<MessageType, MessageProcessor> processorMap = new ConcurrentHashMap<>();
 
     /**
+     * 空处理器：用于未注册消息类型的兜底（防止 null 导致 NPE）
+     */
+    private static final MessageProcessor NOOP_PROCESSOR = (ctx, message) ->
+        log.warn("[NOOP_PROCESSOR] Dropped unknown message type: {}",
+                message.getHeader() != null ? message.getHeader().getMessageType() : "null");
+
+    /**
      * 注册消息处理器
      */
     public void registerProcessor(MessageType messageType, MessageProcessor processor) {
@@ -28,10 +37,15 @@ public class MessageProcessorFactory {
     }
 
     /**
-     * 获取消息处理器
+     * 获取消息处理器（未知类型返回 NOOP_PROCESSOR 并告警）
      */
     public MessageProcessor getProcessor(MessageType messageType) {
-        return processorMap.get(messageType);
+        MessageProcessor processor = processorMap.get(messageType);
+        if (processor == null) {
+            log.error("[ProcessorFactory] UNKNOWN message type: {}, message will be DROPPED!", messageType);
+            return NOOP_PROCESSOR;
+        }
+        return processor;
     }
 
     /**

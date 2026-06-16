@@ -171,4 +171,37 @@ public class NettyProperties {
      * 防止超大 JSON 导致 GC 压力
      */
     private Integer maxJsonMessageLength = 256 * 1024;
+
+    // ==================== SSL/TLS 配置 ====================
+
+    /**
+     * 是否启用 SSL/TLS（wss://）
+     * 默认关闭，开发环境使用 ws://；生产环境建议启用以符合等保三级要求
+     */
+    private Boolean sslEnabled = false;
+
+    /**
+     * SSL KeyStore 路径
+     * 支持 classpath: 和 file: 两种格式
+     */
+    private String sslKeyStore = "classpath:keystore.p12";
+
+    /**
+     * SSL KeyStore 密码
+     */
+    private String sslKeyStorePassword = "changeit";
+
+    /**
+     * SSL KeyStore 类型
+     */
+    private String sslKeyStoreType = "PKCS12";
+
+    // ==================== 消息签名配置（等保三级数据完整性） ====================
+
+    /**
+     * 是否启用消息签名验证（等保三级要求）
+     * 开发环境默认关闭，生产环境建议开启
+     * 使用 HMAC-SHA256 对消息进行签名，确保消息在传输过程中未被篡改
+     */
+    private Boolean messageSignatureEnabled = false;
 }

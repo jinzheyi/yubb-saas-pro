@@ -27,14 +27,20 @@ import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
+import com.shengyu.module.system.dal.redis.im.LargeGroupUnreadRedisDAO;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
+import com.shengyu.module.system.service.im.ConversationSnapshotService;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.ImGroupService;
 import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -73,6 +79,11 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     private static final long MAX_VOICE_SIZE_BYTES = 10L * 1024 * 1024;
     private static final long MAX_VOICE_DURATION_MS = 60000L;
 
+    /**
+     * 大群阈值：群成员数 >= 此值时采用读扩散模型
+     */
+    private static final int LARGE_GROUP_THRESHOLD = 100;
+
 
     @Resource
     private ImChatMessageMapper chatMessageMapper;
@@ -109,6 +120,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private FileApi fileApi;
+
+    @Resource
+    private LargeGroupUnreadRedisDAO largeGroupUnreadRedisDAO;
+
+    @Resource
+    private SqlSessionFactory sqlSessionFactory;
+
+    @Resource
+    private ConversationSnapshotService conversationSnapshotService;
+
+    /**
+     * 是否启用会话快照 Redis 缓存（默认 false）
+     * 设置为 true 时，小群写扩散场景先写 Redis，由定时任务批量合并到 MySQL
+     */
+    @Value("${im.snapshot-cache-enabled:false}")
+    private boolean snapshotCacheEnabled;
 
     private static class MentionParseResult {
         private boolean atAll;
@@ -284,6 +311,73 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             // 不抛出异常，避免影响 WebSocket 连接
         }
 
+    }
+
+    @Override
+    public List<Long> batchSaveMessages(List<ImMessage> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        SqlSession batchSession = null;
+        try {
+            batchSession = sqlSessionFactory.openSession(ExecutorType.BATCH, false);
+            ImChatMessageMapper batchMapper = batchSession.getMapper(ImChatMessageMapper.class);
+
+            for (ImMessage msg : messages) {
+                MessageHeader header = msg.getHeader();
+                try {
+                    Long chatId = getOrCreateChatId(header);
+                    validateVoiceMessageOwnership(msg, chatId);
+                    validateGroupSendPermission(header);
+                    String content = parseMessageContent(msg);
+                    validateGroupMentions(msg, content);
+                    String extra = buildExtraForDb(msg);
+                    String mentionsJson = buildMentionsForDb(msg);
+                    Long quoteMessageId = parseQuoteMessageId(msg);
+
+                    Long sequence = chatMapper.nextSequence(chatId);
+
+                    LocalDateTime sendTime = LocalDateTime.now();
+                    ImChatMessageDO messageDO = new ImChatMessageDO();
+                    if (header.getMessageId() > 0) {
+                        messageDO.setId(header.getMessageId());
+                    }
+                    messageDO.setChatId(chatId);
+                    messageDO.setSequence(sequence);
+                    messageDO.setSenderId(header.getSenderId());
+                    messageDO.setMessageType(normalizeDbMessageType(header.getMessageType()));
+                    messageDO.setContent(content);
+                    messageDO.setExtra(extra);
+                    messageDO.setMentions(mentionsJson);
+                    if (quoteMessageId != null && quoteMessageId > 0) {
+                        messageDO.setQuoteMessageId(quoteMessageId);
+                    }
+                    messageDO.setSendTime(sendTime);
+                    messageDO.setRev(1L);
+                    messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
+
+                    batchMapper.insert(messageDO);
+                } catch (Exception e) {
+                    log.error("[MessageStorage] 批量保存单条消息失败, messageId: {}",
+                            header != null ? header.getMessageId() : "null", e);
+                    // 继续处理下一条消息
+                }
+            }
+            batchSession.commit();
+            batchSession.clearCache();
+
+            log.info("[MessageStorage] 批量保存消息完成, total: {}", messages.size());
+
+            return messages.stream()
+                    .filter(m -> m != null && m.getHeader() != null)
+                    .map(m -> m.getHeader().getMessageId())
+                    .collect(Collectors.toList());
+        } finally {
+            if (batchSession != null) {
+                batchSession.close();
+            }
+        }
     }
 
     @Override
@@ -775,92 +869,18 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
             if (header.getGroupId() > 0) {
                 List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
-                for (Long memberId : memberIds) {
-                    boolean isSender = memberId.equals(header.getSenderId());
-                    String finalPreview = buildGroupConversationPreview(
-                            basePreview, isSender, senderName, header.getSenderId());
-                    ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
-                    chatUserMapper.updateLastMessageAndIncrementUnread(
-                            chatUser.getId(),
-                            messageDO.getId(),
-                            messageDO.getSequence(),
-                            messageDO.getMessageType(),
-                            finalPreview,
-                            messageDO.getSendTime(),
-                            isSender ? 0 : 1,
-                            Boolean.TRUE.equals(chatUser.getNoDisturb()),
-                            header.getSenderId()
-                    );
+                if (memberIds == null || memberIds.isEmpty()) {
+                    return;
+                }
 
-                    Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
-                    if (isSender) {
-                        // 发送者：unread_count 强制归零
-                        conversationUserStateMapper.upsertAfterMessageForSender(
-                                tenantId,
-                                chatId,
-                                memberId,
-                                cursorVersion,
-                                messageDO.getSequence(),
-                                messageDO.getSendTime(),
-                                messageDO.getId(),
-                                messageDO.getSequence(),
-                                header.getSenderId(),
-                                messageDO.getMessageType(),
-                                finalPreview,
-                                false,
-                                messageDO.getSendTime()
-                        );
-                    } else {
-                        Long lastReadSeqForUpsert = 0L;
-                        LocalDateTime lastReadTimeForUpsert = null;
-                        boolean lastMessageHasAtMe = mentionParsed != null && (mentionParsed.atAll
-                                || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)));
-                        conversationUserStateMapper.upsertAfterMessage(
-                                tenantId,
-                                chatId,
-                                memberId,
-                                cursorVersion,
-                                1,
-                                lastReadSeqForUpsert,
-                                lastReadTimeForUpsert,
-                                messageDO.getId(),
-                                messageDO.getSequence(),
-                                header.getSenderId(),
-                                messageDO.getMessageType(),
-                                finalPreview,
-                                lastMessageHasAtMe,
-                                messageDO.getSendTime()
-                        );
-                    }
-
-					// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
-					if (isSender && messageDO.getSequence() != null) {
-						try {
-							chatUserMapper.markReadToSequence(memberId, chatId, messageDO.getSequence());
-						} catch (Exception ignore) {
-							// ignore
-						}
-					}
-                    if (!isSender) {
-                        imBadgeService.pushIncrementalBadgeUpdate(memberId, chatId, 1);
-                        if (bizBody != null) {
-                            nettyMessageSender.sendToUserWithExtra(
-                                    memberId,
-                                    header.getMessageType(),
-                                    bizBody,
-                                    header.getSenderId(),
-                                    memberId,
-                                    header.getGroupId(),
-                                    header.getTenantId(),
-                                    messageDO.getId(),
-                                    messageDO.getSequence(),
-                                    chatId,
-                                    cursorVersion,
-                                    null,
-                                    extraWithRev
-                            );
-                        }
-                    }
+                // 【混合扇出模型】区分群规模，小群用写扩散，大群用读扩散
+                if (memberIds.size() >= LARGE_GROUP_THRESHOLD) {
+                    // 大群：采用读扩散模型（消息状态写入 Redis，定时任务合并到 MySQL）
+                    updateChatUserAsyncForLargeGroup(tenantId, chatId, header.getSenderId(), memberIds, messageDO, mentionParsed);
+                } else {
+                    // 小群/单聊：保持现有的写扩散（遍历成员逐推）
+                    updateChatUserAsyncForSmallGroup(header, chatId, tenantId, memberIds, messageDO, rawMessage,
+                            basePreview, senderName, mentionParsed, bizBody, extraWithRev);
                 }
             } else {
                 // 单聊：发送者侧添加"我:"前缀，接收者侧保持原样
@@ -1153,6 +1173,180 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
         // 去除发送者前缀：数据库只存原始内容，前端根据 isSelf 标记动态拼接国际化文案
         return truncateContent(preview);
+    }
+
+    /**
+     * 大群读扩散：仅更新发送者状态 + 将未读记录写入 Redis，延迟批量合并到 MySQL。
+     */
+    private void updateChatUserAsyncForLargeGroup(Long tenantId, Long chatId, Long senderId, List<Long> memberIds,
+                                                   ImChatMessageDO messageDO, MentionParseResult mentionParsed) {
+
+        // 发送者仍然写扩散，保证自身状态正确
+        Long senderCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, senderId);
+        conversationUserStateMapper.upsertAfterMessageForSender(
+                tenantId, chatId, senderId, senderCursorVersion,
+                messageDO.getSequence(), messageDO.getSendTime(),
+                messageDO.getId(), messageDO.getSequence(),
+                senderId, messageDO.getMessageType(),
+                "", false, messageDO.getSendTime()
+        );
+        try {
+            chatUserMapper.markReadToSequence(senderId, chatId, messageDO.getSequence());
+        } catch (Exception ignore) {
+            // ignore
+        }
+
+        // 其余成员采用读扩散：未读状态写入 Redis
+        for (Long memberId : memberIds) {
+            if (memberId.equals(senderId)) {
+                continue;
+            }
+            try {
+                // 确保 chat_user 记录存在（大群读扩散不需要操作 chatUser）
+                ensureChatUser(memberId, chatId);
+
+                // 将未读消息写入 Redis
+                largeGroupUnreadRedisDAO.recordUnread(
+                        chatId,
+                        memberId,
+                        messageDO.getId(),
+                        messageDO.getSequence(),
+                        messageDO.getContent(),
+                        senderId
+                );
+
+                // @所有人或被@的用户，立即推送实时通知（保持体验）
+                boolean lastMessageHasAtMe = mentionParsed != null && (mentionParsed.atAll
+                        || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)));
+                if (lastMessageHasAtMe) {
+                    imBadgeService.pushIncrementalBadgeUpdate(memberId, chatId, 1);
+                }
+            } catch (Exception e) {
+                log.warn("[MessageStorage] 大群未读记录失败, chatId: {}, memberId: {}, messageId: {}",
+                        chatId, memberId, messageDO.getId(), e);
+            }
+        }
+    }
+
+    /**
+     * 小群写扩散：保持现有的逐成员推送逻辑。
+     * 【快照缓存优化】启用后先写 Redis，定时任务批量合并到 MySQL，减少 DB 压力
+     */
+    private void updateChatUserAsyncForSmallGroup(MessageHeader header, Long chatId, Long tenantId,
+                                                   List<Long> memberIds, ImChatMessageDO messageDO,
+                                                   ImMessage rawMessage, String basePreview,
+                                                   String senderName, MentionParseResult mentionParsed,
+                                                   MessageLite bizBody, String extraWithRev) {
+        for (Long memberId : memberIds) {
+            boolean isSender = memberId.equals(header.getSenderId());
+            String finalPreview = buildGroupConversationPreview(
+                    basePreview, isSender, senderName, header.getSenderId());
+
+            // 预分配 cursorVersion（用于后续实时推送）
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
+
+            if (snapshotCacheEnabled) {
+                // 快照缓存模式：先写 Redis，定时任务批量合并到 MySQL
+                ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
+                conversationSnapshotService.writeSnapshot(
+                        memberId,
+                        chatId,
+                        messageDO.getId(),
+                        messageDO.getSequence(),
+                        messageDO.getMessageType(),
+                        messageDO.getSendTime(),
+                        finalPreview,
+                        isSender ? 0 : 1,
+                        Boolean.TRUE.equals(chatUser.getNoDisturb()),
+                        header.getSenderId()
+                );
+            } else {
+                // 传统模式：直接写 MySQL
+                ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
+                chatUserMapper.updateLastMessageAndIncrementUnread(
+                        chatUser.getId(),
+                        messageDO.getId(),
+                        messageDO.getSequence(),
+                        messageDO.getMessageType(),
+                        finalPreview,
+                        messageDO.getSendTime(),
+                        isSender ? 0 : 1,
+                        Boolean.TRUE.equals(chatUser.getNoDisturb()),
+                        header.getSenderId()
+                );
+
+                if (isSender) {
+                    // 发送者：unread_count 强制归零
+                    conversationUserStateMapper.upsertAfterMessageForSender(
+                            tenantId,
+                            chatId,
+                            memberId,
+                            cursorVersion,
+                            messageDO.getSequence(),
+                            messageDO.getSendTime(),
+                            messageDO.getId(),
+                            messageDO.getSequence(),
+                            header.getSenderId(),
+                            messageDO.getMessageType(),
+                            finalPreview,
+                            false,
+                            messageDO.getSendTime()
+                    );
+                } else {
+                    Long lastReadSeqForUpsert = 0L;
+                    LocalDateTime lastReadTimeForUpsert = null;
+                    boolean lastMessageHasAtMe = mentionParsed != null && (mentionParsed.atAll
+                            || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)));
+                    conversationUserStateMapper.upsertAfterMessage(
+                            tenantId,
+                            chatId,
+                            memberId,
+                            cursorVersion,
+                            1,
+                            lastReadSeqForUpsert,
+                            lastReadTimeForUpsert,
+                            messageDO.getId(),
+                            messageDO.getSequence(),
+                            header.getSenderId(),
+                            messageDO.getMessageType(),
+                            finalPreview,
+                            lastMessageHasAtMe,
+                            messageDO.getSendTime()
+                    );
+                }
+
+                // 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
+                if (isSender && messageDO.getSequence() != null) {
+                    try {
+                        chatUserMapper.markReadToSequence(memberId, chatId, messageDO.getSequence());
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
+                }
+            }
+
+            // 非发送者：实时推送消息和角标更新
+            if (!isSender) {
+                imBadgeService.pushIncrementalBadgeUpdate(memberId, chatId, 1);
+                if (bizBody != null) {
+                    nettyMessageSender.sendToUserWithExtra(
+                            memberId,
+                            header.getMessageType(),
+                            bizBody,
+                            header.getSenderId(),
+                            memberId,
+                            header.getGroupId(),
+                            header.getTenantId(),
+                            messageDO.getId(),
+                            messageDO.getSequence(),
+                            chatId,
+                            cursorVersion,
+                            null,
+                            extraWithRev
+                    );
+                }
+            }
+        }
     }
 
     /**

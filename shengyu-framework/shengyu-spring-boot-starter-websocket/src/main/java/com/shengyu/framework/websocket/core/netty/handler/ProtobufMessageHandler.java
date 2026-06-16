@@ -12,6 +12,7 @@ import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.shengyu.framework.websocket.core.security.MessageSignature;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -36,6 +37,8 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
 
     private final NettySessionManager sessionManager;
 
+    private final com.shengyu.framework.websocket.config.NettyProperties nettyProperties;
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ImMessage msg) {
         try {
@@ -56,6 +59,16 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
                     sendPbClose(ctx, "VOICE_INVALID", 400, voiceError);
                     ctx.close();
                     return;
+                }
+            }
+
+            // 等保三级：消息签名验证（可配置，开发环境默认关闭）
+            if (Boolean.TRUE.equals(nettyProperties.getMessageSignatureEnabled())) {
+                String sessionKey = AuthHandler.getSessionKey(ctx);
+                if (sessionKey != null) {
+                    if (!verifyProtobufSignature(ctx, msg, sessionKey)) {
+                        return;
+                    }
                 }
             }
 
@@ -231,5 +244,78 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
 
     private String i18n(String key, String defaultMessage, Object... args) {
         return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
+    }
+
+    /**
+     * 验证 Protobuf 消息签名（等保三级数据完整性要求）
+     * 客户端需在 header.extra 中添加 JSON 格式的 signature 字段
+     *
+     * @param ctx        通道上下文
+     * @param msg        Protobuf 消息
+     * @param sessionKey 会话密钥
+     * @return 签名是否有效
+     */
+    private boolean verifyProtobufSignature(ChannelHandlerContext ctx, ImMessage msg, String sessionKey) {
+        MessageHeader header = msg.getHeader();
+        if (header == null) {
+            log.warn("[MessageSignature] MISSING header from userId={}", AuthHandler.getUserId(ctx));
+            sendPbClose(ctx, "SIGNATURE_MISSING", 401,
+                    i18n("ws.signature.missing", "Message signature is required"));
+            ctx.close();
+            return false;
+        }
+
+        String extra = header.getExtra();
+        if (extra == null || extra.isEmpty()) {
+            log.warn("[MessageSignature] MISSING signature (extra empty) from userId={}", AuthHandler.getUserId(ctx));
+            sendPbClose(ctx, "SIGNATURE_MISSING", 401,
+                    i18n("ws.signature.missing", "Message signature is required"));
+            ctx.close();
+            return false;
+        }
+
+        try {
+            cn.hutool.json.JSONObject extraJson = JSONUtil.parseObj(extra);
+            String signatureBase64 = extraJson.getStr("signature");
+            if (signatureBase64 == null || signatureBase64.isEmpty()) {
+                log.warn("[MessageSignature] MISSING signature field in extra from userId={}",
+                        AuthHandler.getUserId(ctx));
+                sendPbClose(ctx, "SIGNATURE_MISSING", 401,
+                        i18n("ws.signature.missing", "Message signature is required"));
+                ctx.close();
+                return false;
+            }
+
+            // 提取签名数据：header（不含 signature）+ body
+            MessageHeader signableHeader = header.toBuilder().clearExtra().build();
+            byte[] headerBytes = signableHeader.toByteArray();
+            byte[] bodyBytes = msg.getBody().toByteArray();
+            byte[] data = new byte[headerBytes.length + bodyBytes.length];
+            System.arraycopy(headerBytes, 0, data, 0, headerBytes.length);
+            System.arraycopy(bodyBytes, 0, data, headerBytes.length, bodyBytes.length);
+
+            byte[] expectedSignature = java.util.Base64.getDecoder().decode(signatureBase64);
+
+            if (!MessageSignature.verify(data, sessionKey, expectedSignature)) {
+                log.warn("[MessageSignature] INVALID signature from userId={}, message dropped!",
+                        AuthHandler.getUserId(ctx));
+                sendPbClose(ctx, "SIGNATURE_INVALID", 401,
+                        i18n("ws.signature.invalid", "Message signature verification failed"));
+                ctx.close();
+                return false;
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("[MessageSignature] signature verified for userId={}", AuthHandler.getUserId(ctx));
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[MessageSignature] signature verification failed for userId={}",
+                    AuthHandler.getUserId(ctx), e);
+            sendPbClose(ctx, "SIGNATURE_ERROR", 401,
+                    i18n("ws.signature.error", "Message signature verification error"));
+            ctx.close();
+            return false;
+        }
     }
 }

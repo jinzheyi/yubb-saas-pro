@@ -26,13 +26,12 @@ import com.shengyu.framework.websocket.core.protocol.VideoMessage;
 import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.framework.websocket.config.NettyProperties;
+import com.shengyu.framework.websocket.core.security.MessageSignature;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +43,6 @@ import java.util.List;
  * 并复用现有 {@link MessageProcessorFactory} 进行分发处理（存储/转发等）。
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 @ChannelHandler.Sharable
 public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
 
@@ -54,6 +51,14 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
     private final NettySessionManager sessionManager;
 
     private final NettyProperties nettyProperties;
+
+    public JsonBusinessMessageHandler(MessageProcessorFactory processorFactory,
+                                      NettySessionManager sessionManager,
+                                      NettyProperties nettyProperties) {
+        this.processorFactory = processorFactory;
+        this.sessionManager = sessionManager;
+        this.nettyProperties = nettyProperties;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -155,6 +160,19 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
 
         // 业务消息视为业务活跃
         sessionManager.updateLastBizActiveTime(ctx.channel());
+
+        // 等保三级：消息签名验证（可配置，开发环境默认关闭）
+        if (Boolean.TRUE.equals(nettyProperties.getMessageSignatureEnabled())) {
+            String sessionKey = AuthHandler.getSessionKey(ctx);
+            if (sessionKey != null) {
+                // JSON 消息签名验证：对原始 JSON 文本进行签名校验
+                // 客户端需要在消息末尾附加 32 字节签名（Base64 编码，64 字符）
+                // 格式: {"header":...,"body":...,"signature":"<base64_signature>"}
+                if (!verifyJsonSignature(ctx, json, sessionKey)) {
+                    return;
+                }
+            }
+        }
 
         try {
             Object bodyObj = json.get("body");
@@ -293,6 +311,56 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
 
     private String i18n(String key, String defaultMessage, Object... args) {
         return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
+    }
+
+    /**
+     * 验证 JSON 消息签名（等保三级数据完整性要求）
+     * 客户端需在消息中添加 "signature" 字段（Base64 编码的 HMAC 签名）
+     *
+     * @param ctx        通道上下文
+     * @param json       完整的 JSON 消息
+     * @param sessionKey 会话密钥
+     * @return 签名是否有效
+     */
+    private boolean verifyJsonSignature(ChannelHandlerContext ctx, JSONObject json, String sessionKey) {
+        String signatureBase64 = json.getStr("signature");
+        if (signatureBase64 == null || signatureBase64.isEmpty()) {
+            log.warn("[MessageSignature] MISSING signature from userId={}, message dropped!",
+                    AuthHandler.getUserId(ctx));
+            sendJsonClose(ctx, "SIGNATURE_MISSING", 401,
+                    i18n("ws.signature.missing", "Message signature is required"));
+            ctx.close();
+            return false;
+        }
+
+        try {
+            // 提取签名前的原始数据：移除 signature 字段后的 JSON
+            JSONObject dataJson = json.clone();
+            dataJson.remove("signature");
+            byte[] data = dataJson.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            byte[] expectedSignature = java.util.Base64.getDecoder().decode(signatureBase64);
+
+            if (!MessageSignature.verify(data, sessionKey, expectedSignature)) {
+                log.warn("[MessageSignature] INVALID signature from userId={}, message dropped!",
+                        AuthHandler.getUserId(ctx));
+                sendJsonClose(ctx, "SIGNATURE_INVALID", 401,
+                        i18n("ws.signature.invalid", "Message signature verification failed"));
+                ctx.close();
+                return false;
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("[MessageSignature] signature verified for userId={}", AuthHandler.getUserId(ctx));
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[MessageSignature] signature verification failed for userId={}",
+                    AuthHandler.getUserId(ctx), e);
+            sendJsonClose(ctx, "SIGNATURE_ERROR", 401,
+                    i18n("ws.signature.error", "Message signature verification error"));
+            ctx.close();
+            return false;
+        }
     }
 
     private ImMessage buildImMessageFromJson(ChannelHandlerContext ctx, JSONObject headerJson, Object bodyObj) {

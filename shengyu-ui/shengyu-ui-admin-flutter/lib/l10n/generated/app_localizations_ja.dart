@@ -2877,4 +2877,53 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discardAction => 'Discard';
+
+  @override
+  String get deviceListTitle => 'ログインデバイス管理';
+
+  @override
+  String get deviceListEmpty => 'ログインデバイスはありません';
+
+  @override
+  String get deviceListCurrent => '現在のデバイス';
+
+  @override
+  String get deviceListKick => 'キック';
+
+  @override
+  String get deviceKickConfirmTitle => 'デバイスキックの確認';
+
+  @override
+  String deviceKickConfirmMessage(Object deviceName) {
+    return '「$deviceName」をキックしてもよろしいですか？このデバイスは再度ログインする必要があります。';
+  }
+
+  @override
+  String get deviceKickAction => 'キック';
+
+  @override
+  String deviceKickedSuccess(Object deviceName) {
+    return '「$deviceName」をキックしました';
+  }
+
+  @override
+  String get refreshAction => '更新';
+
+  @override
+  String get deviceTimeJustNow => 'たった今';
+
+  @override
+  String deviceTimeMinutesAgo(Object minutes) {
+    return '$minutes分前';
+  }
+
+  @override
+  String deviceTimeHoursAgo(Object hours) {
+    return '$hours時間前';
+  }
+
+  @override
+  String deviceTimeDaysAgo(Object days) {
+    return '$days日前';
+  }
 }

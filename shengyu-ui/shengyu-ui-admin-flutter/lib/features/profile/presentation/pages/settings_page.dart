@@ -72,6 +72,13 @@ class SettingsPage extends ConsumerWidget {
           _SettingsGroup(
             children: [
               _SettingsNavTile(
+                icon: Icons.devices_outlined,
+                iconColor: const Color(0xFF34C759),
+                title: strings.deviceListTitle,
+                onTap: () => context.pushNamed(RouteNames.deviceList),
+              ),
+              const Divider(height: 1, indent: 64, endIndent: 16),
+              _SettingsNavTile(
                 icon: Icons.shield_outlined,
                 iconColor: const Color(0xFFFF9F43),
                 title: strings.profilePrivacy,

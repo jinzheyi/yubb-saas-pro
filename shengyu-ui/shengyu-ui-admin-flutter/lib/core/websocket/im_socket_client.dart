@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session.dart';
@@ -31,6 +32,25 @@ final imSocketClientProvider = Provider<ImSocketClient>((ref) {
   return client;
 });
 
+/// WebSocket 连接状态 Provider
+final socketConnectionStateProvider = StreamProvider<ImSocketConnectionState>((
+  ref,
+) {
+  final client = ref.watch(imSocketClientProvider);
+  return client.states;
+});
+
+/// 当前重连次数 Provider
+final socketReconnectAttemptsProvider = StreamProvider<int>((ref) {
+  final client = ref.watch(imSocketClientProvider);
+  return client.reconnectAttemptsStream;
+});
+
+/// 最大重连次数 Provider
+final socketMaxReconnectAttemptsProvider = Provider<int>((ref) {
+  return AppConfig.socketMaxReconnectAttempts;
+});
+
 typedef SocketChannelFactory = WebSocketChannel Function(Uri uri);
 
 class ImSocketClient {
@@ -52,6 +72,8 @@ class ImSocketClient {
   final SocketChannelFactory _channelFactory;
   final StreamController<ImSocketConnectionState> _stateController =
       StreamController<ImSocketConnectionState>.broadcast();
+  final StreamController<int> _reconnectAttemptsController =
+      StreamController<int>.broadcast();
 
   WebSocketChannel? _channel;
   StreamSubscription<Object?>? _channelSubscription;
@@ -67,6 +89,19 @@ class ImSocketClient {
   bool _allowReconnect = true;
   bool _disposed = false;
   int _reconnectAttempts = 0;
+
+  // ACK tracking: pending requests keyed by clientMessageId
+  final Map<String, Completer<Map<String, dynamic>>> _pendingAcks =
+      <String, Completer<Map<String, dynamic>>>{};
+
+  int get reconnectAttempts => _reconnectAttempts;
+  Stream<int> get reconnectAttemptsStream => _reconnectAttemptsController.stream;
+
+  void _emitReconnectAttempts() {
+    if (!_reconnectAttemptsController.isClosed) {
+      _reconnectAttemptsController.add(_reconnectAttempts);
+    }
+  }
 
   Stream<ImSocketEvent> get events => _dispatcher.stream;
   Stream<ImSocketConnectionState> get states => _stateController.stream;
@@ -116,6 +151,7 @@ class ImSocketClient {
     _allowReconnect = false;
     _activeSession = null;
     _reconnectAttempts = 0;
+    _emitReconnectAttempts();
     _cancelReconnectTimer();
     _clearHeartbeatTimers();
     _completeAuthWithError(StateError('Socket disconnected'));
@@ -157,6 +193,7 @@ class ImSocketClient {
   }) {
     if (success) {
       _reconnectAttempts = 0;
+      _emitReconnectAttempts();
       _clearHeartbeatTimeout();
       _startHeartbeat();
       _completeAuthSuccessfully();
@@ -299,11 +336,40 @@ class ImSocketClient {
 
   void handleInboundJson(Map<String, dynamic> json) {
     _clearHeartbeatTimeout();
+    // 尝试解析为 ACK 响应
+    if (_tryResolveAck(json)) {
+      return;
+    }
     final envelope = SocketEnvelope.fromJson(json);
     final events = _inboundMapper.map(envelope);
     for (final event in events) {
       _dispatchMappedEvent(event);
     }
+  }
+
+  bool _tryResolveAck(Map<String, dynamic> json) {
+    final header = json['header'];
+    if (header is! Map<String, dynamic>) {
+      return false;
+    }
+    final ackType = header['ackType']?.toString().trim().toUpperCase() ?? '';
+    if (ackType != 'MSG_SEND_ACK' && ackType != 'ACK') {
+      return false;
+    }
+    final clientMessageId =
+        (header['clientMessageId'] ?? json['clientMessageId'])
+            ?.toString()
+            .trim() ??
+        '';
+    if (clientMessageId.isEmpty) {
+      return false;
+    }
+    final completer = _pendingAcks.remove(clientMessageId);
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(json);
+      return true;
+    }
+    return false;
   }
 
   bool handleInboundRaw(String raw) {
@@ -354,6 +420,32 @@ class ImSocketClient {
     return true;
   }
 
+  /// 发送消息并等待服务端确认（ACK）。
+  /// [clientMessageId] 用于关联请求与响应，[timeout] 控制最长等待时间。
+  /// 成功返回 ACK payload，超时或失败则抛出异常。
+  Future<Map<String, dynamic>> sendEnvelopeWithAck(
+    Map<String, Object?> envelope, {
+    required String clientMessageId,
+    bool requireAuthenticated = true,
+    Duration? timeout,
+  }) async {
+    if (_channel == null) {
+      throw StateError('Socket channel is not connected');
+    }
+    if (requireAuthenticated && _state != ImSocketConnectionState.connected) {
+      throw StateError('Socket is not authenticated');
+    }
+    final completer = Completer<Map<String, dynamic>>();
+    _pendingAcks[clientMessageId] = completer;
+    try {
+      _sendEnvelope(envelope);
+      final deadline = timeout ?? AppConfig.socketAuthTimeout;
+      return await completer.future.timeout(deadline);
+    } finally {
+      _pendingAcks.remove(clientMessageId);
+    }
+  }
+
   Future<void> dispose() async {
     _disposed = true;
     _manualDisconnect = true;
@@ -361,8 +453,10 @@ class ImSocketClient {
     _cancelReconnectTimer();
     _clearHeartbeatTimers();
     _completeAuthWithError(StateError('Socket disposed'));
+    _failAllPendingAcks(StateError('Socket disposed'));
     await _closeChannel();
     await _stateController.close();
+    await _reconnectAttemptsController.close();
   }
 
   void _setState(ImSocketConnectionState nextState) {
@@ -463,6 +557,7 @@ class ImSocketClient {
       final delay = immediate
           ? Duration.zero
           : _nextReconnectDelay(++_reconnectAttempts);
+      _emitReconnectAttempts();
       if (_reconnectAttempts > AppConfig.socketMaxReconnectAttempts &&
           !immediate) {
         _setState(ImSocketConnectionState.disconnected);
@@ -478,7 +573,22 @@ class ImSocketClient {
       if (_disposed || _manualDisconnect || !_allowReconnect) {
         return;
       }
-      await connect();
+      try {
+        await connect();
+      } catch (e) {
+        // 连接失败（如 WebSocket 握手失败），记录日志并安排下一次重连
+        debugPrint('[ImSocketClient] Reconnect attempt $_reconnectAttempts failed: $e');
+        if (_reconnectAttempts < AppConfig.socketMaxReconnectAttempts) {
+          _reconnectFuture = null;
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+          unawaited(_scheduleReconnect());
+        } else {
+          _setState(ImSocketConnectionState.disconnected);
+        }
+        return;
+      }
       try {
         await auth(session);
       } catch (_) {
@@ -573,5 +683,15 @@ class ImSocketClient {
       completer.completeError(error);
     }
     _authCompleter = null;
+  }
+
+  void _failAllPendingAcks(Object error) {
+    final pending = Map<String, Completer<Map<String, dynamic>>>.from(_pendingAcks);
+    _pendingAcks.clear();
+    for (final completer in pending.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+    }
   }
 }

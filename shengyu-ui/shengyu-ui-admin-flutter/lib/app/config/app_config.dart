@@ -19,15 +19,30 @@ abstract final class AppConfig {
 
   /// App 端 HTTP 地址。
   ///
-  /// 当前移动端统一走 `/app-api` 前缀。
-  /// 使用 mDNS 局域网域名，手机在同一 WiFi 下自动解析，DHCP 变更无需手动修改。
-  /// 格式：<电脑名>.local，可通过 `hostname` 命令查看本机名称。
+  /// 生产环境使用正式域名或 IP，真机调试时使用开发机 IP 地址。
+  /// mDNS (.local) 域名在部分安卓机型（如小米 HyperOS）上解析不稳定，
+  /// 建议生产环境使用 HTTPS 域名，开发环境使用 IP 直连。
+  /// TODO: 生产环境替换为正式 HTTPS 域名，如 https://im.yourdomain.com/app-api
   static const String apiBaseUrl = 'http://MacBook-Pro-3.local:48080/app-api';
 
   /// IM WebSocket 地址。
   ///
-  /// 同上，使用 mDNS 局域网域名。
+  /// 同上，生产环境使用 wss:// 协议 + 正式域名。
+  /// TODO: 生产环境替换为 wss://im.yourdomain.com/ws
   static const String socketUrl = 'ws://MacBook-Pro-3.local:9000/ws';
+
+  /// 网络延迟探测目标地址（Web 平台使用 HTTP 请求）。
+  ///
+  /// 开发环境默认使用 API 服务器地址（HTTP 方式探测，避免 DNS 解析失败），
+  /// 生产环境可替换为 CDN 节点、健康检查端点或外部探测服务。
+  /// 如果不需要网络探测，可设置为空字符串，此时探测直接返回 9999ms。
+  static const String networkProbeUrl = 'http://MacBook-Pro-3.local:48080/app-api';
+
+  /// 网络延迟探测目标主机（非 Web 平台使用 Socket 连接）。
+  static const String networkProbeHost = 'MacBook-Pro-3.local';
+
+  /// 网络延迟探测目标端口（非 Web 平台使用 Socket 连接）。
+  static const int networkProbePort = 48080;
 
   /// 文件上传与预览相关接口路径。
   ///
@@ -50,11 +65,11 @@ abstract final class AppConfig {
   /// WebSocket 心跳与连接治理配置。
   ///
   /// 说明：
-  /// 1. 心跳频率不宜过高，避免移动端无效耗电。
-  /// 2. 超时时间应明显大于服务端正常响应抖动。
+  /// 1. 心跳对标企业微信/飞书 30s 间隔，避免移动端无效耗电。
+  /// 2. 超时时间调整为 90s，兼容弱网抖动场景。
   /// 3. 重连采用指数退避，避免服务端故障时形成雪崩重试。
-  static const Duration socketHeartbeatInterval = Duration(seconds: 25);
-  static const Duration socketHeartbeatTimeout = Duration(seconds: 10);
+  static const Duration socketHeartbeatInterval = Duration(seconds: 30);
+  static const Duration socketHeartbeatTimeout = Duration(seconds: 90);
   static const Duration socketAuthTimeout = Duration(seconds: 8);
   static const Duration socketReconnectBaseDelay = Duration(seconds: 2);
   static const Duration socketReconnectMaxDelay = Duration(seconds: 30);

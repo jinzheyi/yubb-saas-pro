@@ -1382,5 +1382,45 @@
   "tabWorkbench": "Workbench",
   "tabProfile": "Me",
 
-  "@@@GLOBAL_ACTIONS": "Section: Global Actions"
+  "@@@GLOBAL_ACTIONS": "Section: Global Actions",
+
+  "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceListTitle": "ログインデバイス管理",
+  "deviceListEmpty": "ログインデバイスはありません",
+  "deviceListCurrent": "現在のデバイス",
+  "deviceListKick": "キック",
+  "deviceKickConfirmTitle": "デバイスキックの確認",
+  "deviceKickConfirmMessage": "「{deviceName}」をキックしてもよろしいですか？このデバイスは再度ログインする必要があります。",
+  "@deviceKickConfirmMessage": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "deviceKickAction": "キック",
+  "deviceKickedSuccess": "「{deviceName}」をキックしました",
+  "@deviceKickedSuccess": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "refreshAction": "更新",
+  "deviceTimeJustNow": "たった今",
+  "deviceTimeMinutesAgo": "{minutes}分前",
+  "@deviceTimeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "deviceTimeHoursAgo": "{hours}時間前",
+  "@deviceTimeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "deviceTimeDaysAgo": "{days}日前",
+  "@deviceTimeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    }
+  }
 }

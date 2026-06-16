@@ -1,5 +1,6 @@
 package com.shengyu.framework.websocket.config;
 
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import com.shengyu.framework.websocket.core.netty.NettyChannelInitializer;
 import com.shengyu.framework.websocket.core.netty.NettyServer;
 import com.shengyu.framework.websocket.core.netty.handler.*;
@@ -29,6 +30,7 @@ import com.shengyu.framework.websocket.core.service.impl.NoOpMessageStorageServi
 import com.shengyu.framework.websocket.core.service.impl.OfflinePushServiceImpl;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -56,6 +58,15 @@ public class NettyAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public WebSocketMetrics webSocketMetrics(NettySessionManager sessionManager,
+                                              @Autowired(required = false) io.micrometer.core.instrument.MeterRegistry meterRegistry) {
+        WebSocketMetrics metrics = new WebSocketMetrics();
+        metrics.setMeterRegistry(meterRegistry, sessionManager);
+        return metrics;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public MessageProcessorFactory messageProcessorFactory() {
         return new MessageProcessorFactory();
     }
@@ -68,8 +79,9 @@ public class NettyAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public NettyMessageSender nettyMessageSender(NettySessionManager sessionManager) {
-        return new NettyMessageSender(sessionManager);
+    public NettyMessageSender nettyMessageSender(NettySessionManager sessionManager,
+                                                  WebSocketMetrics metrics) {
+        return new NettyMessageSender(sessionManager, metrics);
     }
 
     /**
@@ -123,8 +135,9 @@ public class NettyAutoConfiguration {
 
     @Bean
     public ProtobufMessageHandler protobufMessageHandler(MessageProcessorFactory processorFactory,
-                                                         NettySessionManager sessionManager) {
-        return new ProtobufMessageHandler(processorFactory, sessionManager);
+                                                         NettySessionManager sessionManager,
+                                                         NettyProperties nettyProperties) {
+        return new ProtobufMessageHandler(processorFactory, sessionManager, nettyProperties);
     }
 
     @Bean
@@ -135,20 +148,23 @@ public class NettyAutoConfiguration {
     @Bean
     public AuthHandler authHandler(NettySessionManager sessionManager,
                                    AuthService authService,
-                                   NettyProperties nettyProperties) {
-        return new AuthHandler(sessionManager, authService, nettyProperties);
+                                   NettyProperties nettyProperties,
+                                   WebSocketMetrics metrics) {
+        return new AuthHandler(sessionManager, authService, nettyProperties, metrics);
     }
 
     @Bean
     public NettyAuthLeaseMonitor nettyAuthLeaseMonitor(NettySessionManager sessionManager,
-                                                       NettyProperties nettyProperties) {
-        return new NettyAuthLeaseMonitor(sessionManager, nettyProperties);
+                                                       NettyProperties nettyProperties,
+                                                       WebSocketMetrics metrics) {
+        return new NettyAuthLeaseMonitor(sessionManager, nettyProperties, metrics);
     }
 
     @Bean
     public JsonBusinessMessageHandler jsonBusinessMessageHandler(MessageProcessorFactory processorFactory,
-                                                                 NettySessionManager sessionManager) {
-        return new JsonBusinessMessageHandler(processorFactory, sessionManager);
+                                                                  NettySessionManager sessionManager,
+                                                                  NettyProperties nettyProperties) {
+        return new JsonBusinessMessageHandler(processorFactory, sessionManager, nettyProperties);
     }
 
     @Bean
@@ -200,8 +216,9 @@ public class NettyAutoConfiguration {
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
             com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
-            MessageProcessorFactory processorFactory) {
-        TextMessageProcessor processor = new TextMessageProcessor(sessionManager, messageStorageService, messageSender);
+            MessageProcessorFactory processorFactory,
+            WebSocketMetrics metrics) {
+        TextMessageProcessor processor = new TextMessageProcessor(sessionManager, messageStorageService, messageSender, metrics);
         processorFactory.registerProcessor(MessageType.TEXT, processor);
         log.info("[Netty] 注册文本消息处理器");
         return processor;

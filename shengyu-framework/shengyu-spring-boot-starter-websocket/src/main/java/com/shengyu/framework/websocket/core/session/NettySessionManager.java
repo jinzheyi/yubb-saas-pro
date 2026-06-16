@@ -2,10 +2,14 @@ package com.shengyu.framework.websocket.core.session;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.websocket.core.audit.AuditLogBuilder;
+import com.shengyu.framework.websocket.core.audit.AuditLogEvent;
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +21,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -76,11 +81,32 @@ public class NettySessionManager {
      */
     private final Map<Long, Set<String>> tenantChannelMap = new ConcurrentHashMap<>();
 
+    /**
+     * Lease Expire Time -> Channel IDs (Sorted)
+     * 用于租约扫描器高效扫描即将到期/已到期的连接（O(log N) 而非 O(N)）
+     * key: leaseExpireTime (毫秒时间戳), value: Set<channelId>
+     */
+    private final TreeMap<Long, Set<String>> leaseExpireIndex = new TreeMap<>();
+
     private List<NettySessionLifecycleListener> lifecycleListeners = Collections.emptyList();
+
+    private AuditLogPublisher auditLogPublisher;
+
+    private WebSocketMetrics metrics;
+
+    @Autowired(required = false)
+    public void setMetrics(WebSocketMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     @Autowired(required = false)
     public void setLifecycleListeners(List<NettySessionLifecycleListener> lifecycleListeners) {
         this.lifecycleListeners = lifecycleListeners != null ? lifecycleListeners : Collections.emptyList();
+    }
+
+    @Autowired(required = false)
+    public void setAuditLogPublisher(AuditLogPublisher auditLogPublisher) {
+        this.auditLogPublisher = auditLogPublisher;
     }
 
     private void notifySessionAdded(NettySession session) {
@@ -170,6 +196,12 @@ public class NettySessionManager {
             userDeviceIdChannelMap.put(buildUserDeviceIdKey(userId, deviceType, session.getDeviceId()), channelId);
         }
 
+        // 2.3 添加租约到期索引（用于高效扫描）
+        if (session.getLeaseExpireTime() != null && session.getLeaseExpireTime() > 0) {
+            leaseExpireIndex.computeIfAbsent(session.getLeaseExpireTime(), k -> ConcurrentHashMap.newKeySet())
+                .add(channelId);
+        }
+
         // 3. 添加到用户映射
         if (userId != null) {
             userChannelMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
@@ -214,9 +246,22 @@ public class NettySessionManager {
             }
 
             // 从用户设备映射中移除
+            // 【竞态修复】仅当 map 中的值等于被移除的 channelId 时才 remove，防止踢人时序误删新登录设备的映射
             if (userId != null && deviceType != null) {
                 String userDeviceKey = buildUserDeviceKey(userId, deviceType);
-                userDeviceChannelMap.remove(userDeviceKey);
+                userDeviceChannelMap.compute(userDeviceKey, (key, current) ->
+                    current != null && current.equals(channelId) ? null : current);
+            }
+
+            // 从租约到期索引中移除
+            if (session.getLeaseExpireTime() != null && session.getLeaseExpireTime() > 0) {
+                Set<String> expireChannels = leaseExpireIndex.get(session.getLeaseExpireTime());
+                if (expireChannels != null) {
+                    expireChannels.remove(channelId);
+                    if (expireChannels.isEmpty()) {
+                        leaseExpireIndex.remove(session.getLeaseExpireTime());
+                    }
+                }
             }
 
             // 从用户映射中移除
@@ -312,7 +357,31 @@ public class NettySessionManager {
     }
 
     /**
-     * 踢掉设备
+     * 踢掉指定设备（公开方法，供业务层调用）
+     *
+     * @param userId     用户ID
+     * @param deviceType 设备类型
+     * @param reason     踢人原因
+     * @return true-成功踢掉或设备已不存在, false-设备不存在或已离线
+     */
+    public boolean kickDevice(Long userId, Integer deviceType, String reason) {
+        if (userId == null || deviceType == null) {
+            return false;
+        }
+        NettySession session = getSessionByUserIdAndDeviceType(userId, deviceType);
+        if (session == null || !session.isActive()) {
+            return false;
+        }
+
+        // 记录审计日志：设备被踢出
+        publishKickAuditLog(session, AuditLogEvent.DEVICE_KICK, reason, null);
+
+        kickOffDeviceByReason(session, reason);
+        return true;
+    }
+
+    /**
+     * 踢掉设备（内部互踢调用）
      */
     private void kickOffDevice(NettySession kickedSession, NettySession bySession) {
         long kickedAt = System.currentTimeMillis();
@@ -320,9 +389,26 @@ public class NettySessionManager {
         String kickedAtText = KICK_TIME_FORMATTER.format(Instant.ofEpochMilli(kickedAt));
         String reason = "当前账号于" + kickedAtText + "在" + byDevice + "设备上登录。此客户端已退出登录。";
 
-        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, byDeviceType: {}, byDeviceId: {}",
-            kickedSession.getUserId(), kickedSession.getDeviceType(),
-            bySession != null ? bySession.getDeviceType() : null, bySession != null ? bySession.getDeviceId() : null);
+        // 记录审计日志：被踢下线
+        publishKickAuditLog(kickedSession, AuditLogEvent.KICKED, reason, bySession);
+
+        kickOffDeviceByReason(kickedSession, reason);
+    }
+
+    /**
+     * 执行踢人操作（发送通知并关闭连接）
+     */
+    private void kickOffDeviceByReason(NettySession kickedSession, String reason) {
+        long kickedAt = System.currentTimeMillis();
+        String kickedAtText = KICK_TIME_FORMATTER.format(Instant.ofEpochMilli(kickedAt));
+        String byDevice = buildDeviceDisplay(kickedSession);
+
+        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}",
+            kickedSession.getUserId(), kickedSession.getDeviceType(), reason);
+
+        if (metrics != null) {
+            metrics.recordSessionKicked();
+        }
 
         try {
             Channel ch = kickedSession.getChannel();
@@ -333,6 +419,7 @@ public class NettySessionManager {
             // 先移除会话索引，避免关闭链路延迟导致旧索引残留
             removeSession(ch);
 
+            Object notification;
             if (isWebSocketChannel(ch)) {
                 String payload = JSONUtil.createObj()
                     .set("header", JSONUtil.createObj()
@@ -346,7 +433,7 @@ public class NettySessionManager {
                         .set("kickedAt", kickedAt)
                         .set("byDevice", byDevice))
                     .toString();
-                ch.writeAndFlush(new TextWebSocketFrame(payload));
+                notification = new TextWebSocketFrame(payload);
             } else {
                 String extra = JSONUtil.createObj()
                     .set("action", "KICKED")
@@ -361,12 +448,48 @@ public class NettySessionManager {
                     .setTimestamp(System.currentTimeMillis())
                     .setExtra(extra)
                     .build();
-                ch.writeAndFlush(ImMessage.newBuilder().setHeader(header).build());
+                notification = ImMessage.newBuilder().setHeader(header).build();
             }
 
-            ch.close();
+            // 【延迟关闭修复】等待 KICKED 消息发送完成后再关闭连接（500ms 延迟），确保客户端来得及处理通知
+            ch.writeAndFlush(notification)
+                .addListener((ChannelFutureListener) future ->
+                    future.channel().eventLoop().schedule(
+                        () -> future.channel().close(),
+                        500, TimeUnit.MILLISECONDS
+                    )
+                );
         } catch (Exception e) {
             log.error("[SessionManager] 踢掉设备失败", e);
+        }
+    }
+
+    /**
+     * 发布踢人/设备下线审计日志
+     */
+    private void publishKickAuditLog(NettySession session, AuditLogEvent event, String reason, NettySession bySession) {
+        if (auditLogPublisher == null || session == null) {
+            return;
+        }
+        try {
+            String details = JSONUtil.createObj()
+                    .set("reason", reason)
+                    .set("eventType", event.getType())
+                    .set("byDevice", bySession != null ? buildDeviceDisplay(bySession) : null)
+                    .set("byUserId", bySession != null ? bySession.getUserId() : null)
+                    .toString();
+            auditLogPublisher.publish(AuditLogBuilder.builder()
+                    .eventType(event.getType())
+                    .eventName(event.getName())
+                    .userId(session.getUserId())
+                    .tenantId(session.getTenantId())
+                    .deviceId(session.getDeviceId())
+                    .deviceType(session.getDeviceType())
+                    .details(details)
+                    .timestamp(System.currentTimeMillis())
+                    .build());
+        } catch (Exception e) {
+            log.warn("[SessionManager] 发布审计日志失败, eventType: {}", event.getType(), e);
         }
     }
 
@@ -535,6 +658,28 @@ public class NettySessionManager {
     }
 
     /**
+     * 获取活跃连接数（用于监控指标采集）
+     */
+    public int getActiveConnectionCount() {
+        return (int) channelSessionMap.values().stream().filter(NettySession::isActive).count();
+    }
+
+    /**
+     * 按租户统计活跃连接数（用于监控指标采集）
+     */
+    public Map<Long, Integer> getActiveConnectionCountByTenant() {
+        return tenantChannelMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> (int) e.getValue().stream()
+                                .map(channelSessionMap::get)
+                                .filter(Objects::nonNull)
+                                .filter(NettySession::isActive)
+                                .count()
+                ));
+    }
+
+    /**
      * 判断用户是否在线
      */
     public boolean isUserOnline(Long userId) {
@@ -555,6 +700,7 @@ public class NettySessionManager {
         accessTokenChannelMap.clear();
         userDeviceIdChannelMap.clear();
         tenantChannelMap.clear();
+        leaseExpireIndex.clear();
         log.info("[SessionManager] 清理所有会话");
     }
 
@@ -580,5 +726,31 @@ public class NettySessionManager {
             session.updateLastBizActiveTime();
             notifySessionBizActive(session);
         }
+    }
+
+    /**
+     * 获取指定时间前到期的所有会话（高效范围查询）
+     * @param expireTimeMs 到期时间戳（毫秒）
+     * @return 到期会话列表
+     */
+    public List<NettySession> getSessionsExpiringBefore(long expireTimeMs) {
+        Map<Long, Set<String>> headMap = leaseExpireIndex.headMap(expireTimeMs);
+        List<NettySession> result = new ArrayList<>();
+        for (Set<String> channelIds : headMap.values()) {
+            for (String channelId : channelIds) {
+                NettySession session = channelSessionMap.get(channelId);
+                if (session != null && session.isActive()) {
+                    result.add(session);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 获取租约索引条目数（用于监控）
+     */
+    public int getLeaseExpireIndexEntryCount() {
+        return leaseExpireIndex.size();
     }
 }

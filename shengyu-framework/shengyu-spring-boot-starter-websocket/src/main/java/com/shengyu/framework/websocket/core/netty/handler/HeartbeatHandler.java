@@ -35,8 +35,17 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
 
     private final NettySessionManager sessionManager;
 
+    /**
+     * Channel 属性 Key：记录连续读空闲次数
+     */
+    private static final io.netty.util.AttributeKey<Integer> NO_HEARTBEAT_COUNT_KEY =
+        io.netty.util.AttributeKey.valueOf("noHeartbeatCount");
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 收到客户端任何消息时，重置读空闲计数器
+        ctx.channel().attr(NO_HEARTBEAT_COUNT_KEY).set(0);
+
         // 处理 JSON 格式心跳请求（WebSocket）
         if (msg instanceof String) {
             String text = (String) msg;
@@ -103,16 +112,30 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
         if (evt instanceof IdleStateEvent) {
             IdleStateEvent event = (IdleStateEvent) evt;
             
-            // 读空闲：客户端长时间未发送数据
+            // 读空闲：客户端长时间未发送数据，发心跳探测
             if (event.state() == IdleState.READER_IDLE) {
-                log.warn("[Heartbeat] 读空闲超时，关闭连接: {}", ctx.channel().id().asShortText());
-                sessionManager.removeSession(ctx.channel());
-                ctx.close();
+                // 尝试发心跳探测，连续 3 次无响应则关闭连接
+                Integer noHeartbeatCount = ctx.channel().attr(NO_HEARTBEAT_COUNT_KEY).get();
+                if (noHeartbeatCount == null) {
+                    noHeartbeatCount = 0;
+                }
+                noHeartbeatCount++;
+                ctx.channel().attr(NO_HEARTBEAT_COUNT_KEY).set(noHeartbeatCount);
+
+                if (noHeartbeatCount >= 3) {
+                    log.warn("[Heartbeat] 读空闲超时 3 次，关闭连接: {}", ctx.channel().id().asShortText());
+                    sessionManager.removeSession(ctx.channel());
+                    ctx.close();
+                } else {
+                    // 发心跳探测
+                    log.debug("[Heartbeat] 读空闲，发送心跳探测: {}", ctx.channel().id().asShortText());
+                    sendJsonHeartbeatResponse(ctx);
+                }
             }
-            // 写空闲：服务端长时间未发送数据，主动发送心跳
+            // 写空闲：服务端长时间未发消息，主动发心跳保活（防止运营商 NAT 超时）
             else if (event.state() == IdleState.WRITER_IDLE) {
-                // 服务端主动发送心跳（可选）
-                log.debug("[Heartbeat] 写空闲，可主动发送心跳: {}", ctx.channel().id().asShortText());
+                log.debug("[Heartbeat] 写空闲，主动发送心跳保活: {}", ctx.channel().id().asShortText());
+                sendJsonHeartbeatResponse(ctx);
             }
             // 读写空闲
             else if (event.state() == IdleState.ALL_IDLE) {

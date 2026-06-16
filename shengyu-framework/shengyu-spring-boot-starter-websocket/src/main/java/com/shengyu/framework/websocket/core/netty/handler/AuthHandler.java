@@ -8,10 +8,12 @@ import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.security.core.util.LoginBase;
 import com.shengyu.framework.websocket.config.NettyProperties;
 import com.shengyu.framework.websocket.core.protocol.*;
+import com.shengyu.framework.websocket.core.security.MessageSignature;
 import com.shengyu.framework.websocket.core.service.AuthService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionAuthState;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -45,15 +47,18 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
     private static final AttributeKey<Long> USER_ID_KEY = AttributeKey.valueOf("USER_ID");
     private static final AttributeKey<Long> TENANT_ID_KEY = AttributeKey.valueOf("TENANT_ID");
     private static final AttributeKey<String> LOCALE_KEY = AttributeKey.valueOf("LOCALE");
+    private static final AttributeKey<String> SESSION_KEY = AttributeKey.valueOf("SESSION_KEY");
 
     private final NettySessionManager sessionManager;
     private final AuthService authService;
     private final NettyProperties nettyProperties;
+    private final WebSocketMetrics metrics;
 
-    public AuthHandler(NettySessionManager sessionManager, AuthService authService, NettyProperties nettyProperties) {
+    public AuthHandler(NettySessionManager sessionManager, AuthService authService, NettyProperties nettyProperties, WebSocketMetrics metrics) {
         this.sessionManager = sessionManager;
         this.authService = authService;
         this.nettyProperties = nettyProperties;
+        this.metrics = metrics;
     }
 
     @Override
@@ -331,6 +336,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             String locale = normalizeLocaleTag(body.getStr("locale", ""));
 
             if (StrUtil.isBlank(accessToken)) {
+                metrics.recordAuthFailure("token_empty");
                 sendJsonAuthResponse(ctx, false, 400,
                     localizeFor(locale, "ws.auth.token_required", "Token must not be empty"), 0L, 0L);
                 ctx.close();
@@ -340,6 +346,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 验证 Token（集成项目鉴权）
             LoginBase loginUser = authService.validateToken(accessToken);
             if (loginUser == null) {
+                metrics.recordAuthFailure("token_invalid");
                 sendJsonAuthResponse(ctx, false, 401,
                     localizeFor(locale, "ws.auth.token_invalid", "Token is invalid or expired"), 0L, 0L);
                 ctx.close();
@@ -379,6 +386,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 创建会话
             long now = System.currentTimeMillis();
             long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
+
+            // 等保三级：生成会话密钥用于消息签名验证
+            String sessionKey = MessageSignature.generateSessionKey(accessToken, now);
+            ctx.channel().attr(SESSION_KEY).set(sessionKey);
+
             NettySession session = NettySession.builder()
                 .channel(ctx.channel())
                 .userId(loginUser.getId())
@@ -427,6 +439,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             String locale = normalizeLocaleTag(authRequest.getLocale());
 
             if (StrUtil.isBlank(accessToken)) {
+                metrics.recordAuthFailure("token_empty");
                 sendProtobufAuthResponse(ctx, false, 400,
                     localizeFor(locale, "ws.auth.token_required", "Token must not be empty"), 0L, 0L);
                 ctx.close();
@@ -436,6 +449,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 验证 Token（集成项目鉴权）
             LoginBase loginUser = authService.validateToken(accessToken);
             if (loginUser == null) {
+                metrics.recordAuthFailure("token_invalid");
                 sendProtobufAuthResponse(ctx, false, 401,
                     localizeFor(locale, "ws.auth.token_invalid", "Token is invalid or expired"), 0L, 0L);
                 ctx.close();
@@ -475,6 +489,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 创建会话
             long now = System.currentTimeMillis();
             long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
+
+            // 等保三级：生成会话密钥用于消息签名验证
+            String sessionKey = MessageSignature.generateSessionKey(accessToken, now);
+            ctx.channel().attr(SESSION_KEY).set(sessionKey);
+
             NettySession session = NettySession.builder()
                 .channel(ctx.channel())
                 .userId(loginUser.getId())
@@ -632,6 +651,13 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
      */
     public static Long getTenantId(ChannelHandlerContext ctx) {
         return ctx.channel().attr(TENANT_ID_KEY).get();
+    }
+
+    /**
+     * 获取会话密钥（用于消息签名验证）
+     */
+    public static String getSessionKey(ChannelHandlerContext ctx) {
+        return ctx.channel().attr(SESSION_KEY).get();
     }
 
     private String i18n(String key, String defaultMessage, Object... args) {

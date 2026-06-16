@@ -49,6 +49,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/scan_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/incoming_call_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/outgoing_call_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/device/presentation/pages/device_list_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favorites_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favorite_detail_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/file_preview_args.dart';
@@ -662,6 +663,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: RoutePaths.deviceList,
+        name: RouteNames.deviceList,
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const DeviceListPage()),
       ),
     ],
   );

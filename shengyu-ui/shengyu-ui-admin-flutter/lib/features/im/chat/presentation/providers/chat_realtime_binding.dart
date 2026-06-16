@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
@@ -13,6 +14,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/mappers/mess
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/read_receipt_summary.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/message_cache_queue_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/read_receipt_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -205,6 +207,15 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       _handleSystemNotify(ref, chatId, event.payload);
       break;
     case SocketEventTypes.authSucceeded:
+      // WebSocket 重连成功后，触发消息缓存队列重发
+      final cacheQueue = ref.read(messageCacheQueueProvider);
+      if (cacheQueue.hasPendingMessages) {
+        debugPrint(
+          '[chatRealtimeBinding] authSucceeded, triggering cache queue retry (${cacheQueue.queueLength} pending)',
+        );
+        cacheQueue.onSocketReconnected();
+      }
+
       final entryArgs = ref.read(chatControllerProvider).entryArgs;
       if (entryArgs.conversationType == ConversationType.direct) {
         _scheduleDirectPresenceRefresh(
@@ -215,11 +226,6 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       } else if (entryArgs.conversationType == ConversationType.group) {
         final groupId = entryArgs.targetId?.trim() ?? '';
         if (groupId.isNotEmpty) {
-          // 优化：移除群设置和群成员列表的刷新调用
-          // 原因：群成员列表数据在首次进入时已加载，authSucceeded 是 WebSocket 重连/认证事件
-          // 频繁重连时不应每次都刷新群成员列表（数据不会在这么短时间内变化）
-          // 群生命周期事件（成员加入/移除/群主变更）已在 _handleSystemNotify 中单独处理
-          // 避免每次 authSucceeded 都触发重复的 group/member/list 请求
         }
       }
       // 根治方案：WebSocket 重连成功后，拉取离线消息（包含对方发来的消息+自己消息状态确认）

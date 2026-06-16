@@ -66,6 +66,22 @@
 | 18 | Token 撤销联动 | ✅ | `revokeByAccessToken` 第 256-312 行 |
 | 19 | 角标服务（Flutter StateNotifier） | ✅ | `badge_service.dart` 完整实现 |
 | 20 | 会话同步游标机制 | ✅ | Flutter `ConversationSyncCoordinator` |
+| 21 | 群消息扇出混合模型（写扩散+读扩散） | ✅ | LargeGroupUnreadRedisDAO + ImLargeGroupUnreadMergeJob |
+| 22 | 消息存储批量写入（MyBatis Batch） | ✅ | batchSaveMessages 方法 |
+| 23 | 会话快照 Redis 缓存 | ✅ | ConversationSnapshotService |
+| 24 | NettyAuthLeaseMonitor 索引化 | ✅ | leaseExpireIndex (TreeMap) |
+| 25 | wss:// 启用（TLS 1.2+） | ✅ | WebSocketSslContextBuilder |
+| 26 | 弱网监控服务 | ✅ | NetworkMonitorService |
+| 27 | 网络异常 Notice Bar | ✅ | NetworkStatusNoticeBar |
+| 28 | 消息发送状态指示器 | ✅ | MessageSendStatusIndicator |
+| 29 | Dio 弱网拦截器 | ✅ | WeakNetworkInterceptor |
+| 30 | 消息本地缓存队列 | ✅ | MessageCacheQueue |
+| 31 | WebSocket 重连 UI 绑定 | ✅ | ConnectionStatusNoticeBar |
+| 32 | Flutter 生命周期统一管理 | ✅ | AppLifecycleManager |
+| 33 | Flutter 全局 Map 泄漏修复 | ✅ | 容量限制 + 定时清理 |
+| 34 | 登录设备管理 API + UI | ✅ | AppImDeviceController + DeviceListPage |
+| 35 | 双层缓冲合并（100ms→50ms） | ✅ | chat_timeline_controller 移除第二层缓冲 |
+| 36 | 登录设备管理 Flutter UI | ✅ | DeviceListPage + 设置页入口 |
 
 ### 1.3 架构亮点（基于源码深度审查 v4.0 修正）
 
@@ -1455,53 +1471,53 @@ static const String socketUrl = 'ws://MacBook-Pro-3.local:9000/ws';
 
 ## 十一、实施计划（v5.0 修正）
 
-### Phase 1：P0 级核心优化（2 周）
+### Phase 1：P0 级核心优化（2 周） ✅ 已完成
 
-| 任务 | 文件 | 优先级 | 源码确认 |
-|------|------|--------|----------|
-| 群消息扇出混合模型 | [SystemMessageStorageServiceImpl](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/spi/SystemMessageStorageServiceImpl.java#L730-L968) | P0 | ✅ L776-864 遍历群成员 |
-| 消息存储批量写入 | `MessageStorageService` + Mapper | P0 | ✅ `saveMessageWithId` 单条 INSERT |
-| SessionManager 竞态修复 | [NettySessionManager](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java#L128-L188) | P0 | ✅ L152-157 竞态窗口 |
-| sendToTenant/broadcast 背压 | [NettyMessageSender](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/sender/NettyMessageSender.java#L318-L404) | P0 | ✅ L340/370/396 缺 isWritable |
-| 未知消息类型告警 | [MessageProcessorFactory](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/MessageProcessorFactory.java#L33-L35) | P0 | ✅ 返回 null 无告警 |
-| 踢人消息延迟关闭 | [NettySessionManager](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java#L317-L371) | P0 | ✅ L367 立即 close |
-| wss:// 启用 | Netty 配置 | P0 | - |
-| Flutter mDNS 替换 | `app_config.dart` | P0 | ✅ L25/L30 `.local` 域名 |
-| Flutter 后台保活 | `AndroidManifest.xml` | P0 | ✅ 缺失前台服务配置 |
+| 任务 | 文件 | 优先级 | 源码确认 | 状态 |
+|------|------|--------|----------|------|
+| 群消息扇出混合模型 | [SystemMessageStorageServiceImpl](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/spi/SystemMessageStorageServiceImpl.java#L730-L968) | P0 | ✅ L776-864 遍历群成员 | ✅ |
+| 消息存储批量写入 | `MessageStorageService` + Mapper | P0 | ✅ `saveMessageWithId` 单条 INSERT | ✅ |
+| SessionManager 竞态修复 | [NettySessionManager](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java#L128-L188) | P0 | ✅ L152-157 竞态窗口 | ✅ |
+| sendToTenant/broadcast 背压 | [NettyMessageSender](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/sender/NettyMessageSender.java#L318-L404) | P0 | ✅ L340/370/396 缺 isWritable | ✅ |
+| 未知消息类型告警 | [MessageProcessorFactory](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/MessageProcessorFactory.java#L33-L35) | P0 | ✅ 返回 null 无告警 | ✅ |
+| 踢人消息延迟关闭 | [NettySessionManager](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java#L317-L371) | P0 | ✅ L367 立即 close | ✅ |
+| wss:// 启用 | Netty 配置 | P0 | - | ✅（代码已实现，证书部署见 ssl-certificate-guide.md） |
+| Flutter mDNS 替换 | `app_config.dart` | P0 | ✅ L25/L30 `.local` 域名 | ✅ |
+| Flutter 后台保活 | `AndroidManifest.xml` | P0 | ✅ 缺失前台服务配置 | ✅ |
 
-### Phase 2：P1 级架构完善（2 周）
+### Phase 2：P1 级架构完善（2 周） ✅ 已完成
 
-| 任务 | 文件 | 优先级 | 源码确认 |
-|------|------|--------|----------|
-| 弱网/断网网络状态监控 | 新增 `NetworkMonitorService` | P1 | 对标微信 Notice Bar 设计 |
-| 网络异常 UI 提示组件 | 新增 `NetworkStatusNoticeBar` | P1 | 对标微信持续提示策略 |
-| 消息发送状态指示器 | 新增 `MessageSendStatusIndicator` | P1 | 对标微信重试按钮 |
-| Dio 弱网拦截器 | 新增 `WeakNetworkInterceptor` | P1 | 弱网自动重试 2 次 |
-| 消息本地缓存队列 | 新增 `MessageCacheQueue` | P1 | 断网消息缓存，网络恢复重发 |
-| WebSocket 重连 UI 绑定 | `im_socket_client.dart` + UI | P1 | ✅ L466-469 无提示 |
-| Flutter Protobuf Binary | `im_socket_client.dart` | P1 | ✅ 已支持 codec 协商 |
-| 会话快照 Redis 缓存 | 新增服务 | P1 | ✅ `updateChatUserAsync` 每次全量 DB 操作 |
-| 心跳机制双向优化 | `HeartbeatHandler` + [Flutter](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-flutter/lib/app/config/app_config.dart#L56) | P1 | ✅ 心跳 25s 偏短 |
-| Redis 缓存架构完善 | 多处 | P1 | ✅ 群成员/角标/快照未缓存 |
-| Flutter _serial 链修复 | [socket_session_coordinator.dart](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-flutter/lib/core/websocket/socket_session_coordinator.dart#L24-L28) | P1 | ✅ L24-28 无限增长 |
-| NettyAuthLeaseMonitor 索引化 | [NettyAuthLeaseMonitor](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettyAuthLeaseMonitor.java#L65-L136) | P1 | ✅ O(N) 全量遍历 |
-| 登录设备管理 API | 新增接口 | P1 | - |
-| 在线状态查询 API | 新增接口 | P1 | - |
-| Flutter 生命周期统一管理 | App 级别 Provider | P1 | ✅ 多页面分散注册 |
-| Flutter 全局 Map 泄漏修复 | `conversation_realtime_binding.dart` | P1 | ✅ L42/L47 无清理 |
+| 任务 | 文件 | 优先级 | 源码确认 | 状态 |
+|------|------|--------|----------|------|
+| 弱网/断网网络状态监控 | 新增 `NetworkMonitorService` | P1 | 对标微信 Notice Bar 设计 | ✅ |
+| 网络异常 UI 提示组件 | 新增 `NetworkStatusNoticeBar` | P1 | 对标微信持续提示策略 | ✅ |
+| 消息发送状态指示器 | 新增 `MessageSendStatusIndicator` | P1 | 对标微信重试按钮 | ✅ |
+| Dio 弱网拦截器 | 新增 `WeakNetworkInterceptor` | P1 | 弱网自动重试 2 次 | ✅ |
+| 消息本地缓存队列 | 新增 `MessageCacheQueue` | P1 | 断网消息缓存，网络恢复重发 | ✅ |
+| WebSocket 重连 UI 绑定 | `im_socket_client.dart` + UI | P1 | ✅ L466-469 无提示 | ✅ |
+| Flutter Protobuf Binary | `im_socket_client.dart` | P1 | ✅ 已支持 codec 协商 | ✅ |
+| 会话快照 Redis 缓存 | 新增服务 | P1 | ✅ `updateChatUserAsync` 每次全量 DB 操作 | ✅ |
+| 心跳机制双向优化 | `HeartbeatHandler` + [Flutter](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-flutter/lib/app/config/app_config.dart#L56) | P1 | ✅ 心跳 25s 偏短 | ✅ |
+| Redis 缓存架构完善 | 多处 | P1 | ✅ 群成员/角标/快照未缓存 | ✅（大群未读缓存、会话快照缓存已实现） |
+| Flutter _serial 链修复 | [socket_session_coordinator.dart](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-flutter/lib/core/websocket/socket_session_coordinator.dart#L24-L28) | P1 | ✅ L24-28 无限增长 | ✅ |
+| NettyAuthLeaseMonitor 索引化 | [NettyAuthLeaseMonitor](file:///Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettyAuthLeaseMonitor.java#L65-L136) | P1 | ✅ O(N) 全量遍历 | ✅ |
+| 登录设备管理 API | 新增接口 | P1 | - | ✅ |
+| 在线状态查询 API | 新增接口 | P1 | - | ✅ |
+| Flutter 生命周期统一管理 | App 级别 Provider | P1 | ✅ 多页面分散注册 | ✅ |
+| Flutter 全局 Map 泄漏修复 | `conversation_realtime_binding.dart` | P1 | ✅ L42/L47 无清理 | ✅ |
 
 ### Phase 3：P2 级优化 + 等保三级合规（2 周）
 
-| 任务 | 说明 | 优先级 |
-|------|------|--------|
-| 双层缓冲合并 | 50ms+50ms → 单层 50ms | P2 |
-| 消息发送切换 WebSocket | HTTP → WebSocket 优先 | P2 |
-| 心跳间隔调整 | 25s → 30s | P2 |
-| 会话更新去重 | 去除重复 upsertLocalMessage | P3 |
-| 国密 TLS 证书 | SM2 证书替换 | P1 |
-| 消息签名（SM3） | HMAC-SM3 | P1 |
-| 审计日志系统 | 全链路审计 | P1 |
-| 监控指标集成 | Prometheus + Grafana + Flutter 客户端埋点 | P2 |
+| 任务 | 说明 | 优先级 | 状态 |
+|------|------|--------|------|
+| 双层缓冲合并 | 50ms+50ms → 单层 50ms | P2 | ✅ |
+| 消息发送切换 WebSocket | HTTP → WebSocket 优先 | P2 | ❌ 待推进 |
+| 心跳间隔调整 | 25s → 30s | P2 | ✅（30s/90s） |
+| 会话更新去重 | 去除重复 upsertLocalMessage | P3 | ❌ 待推进 |
+| 国密 TLS 证书 | SM2 证书替换 | P1 | ❌ 等 Phase 4 |
+| 消息签名（SM3） | HMAC-SM3 | P1 | ❌ 待推进 |
+| 审计日志系统 | 全链路审计 | P1 | ❌ 待推进 |
+| 监控指标集成 | Prometheus + Grafana + Flutter 客户端埋点 | P2 | ❌ 待推进 |
 
 ---
 

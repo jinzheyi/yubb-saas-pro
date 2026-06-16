@@ -1494,5 +1494,35 @@
   "@@@LANGUAGE_SETTINGS": "Section: Language Settings",
   "discardChangesConfirm": "确认放弃语言更改？",
   "continueEditAction": "继续编辑",
-  "discardAction": "放弃"
+  "discardAction": "放弃",
+
+  "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceListTitle": "登录设备管理",
+  "deviceListEmpty": "暂无登录设备",
+  "deviceListCurrent": "当前设备",
+  "deviceListKick": "踢出",
+  "deviceKickConfirmTitle": "确认踢出设备",
+  "deviceKickConfirmMessage": "确认将「{deviceName}」踢出登录吗？该设备需要重新登录才能继续使用。",
+  "deviceKickAction": "踢出",
+  "deviceKickedSuccess": "已将「{deviceName}」踢出登录",
+  "refreshAction": "刷新",
+  "deviceTimeJustNow": "刚刚",
+  "deviceTimeMinutesAgo": "{minutes} 分钟前",
+  "@deviceTimeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "deviceTimeHoursAgo": "{hours} 小时前",
+  "@deviceTimeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "deviceTimeDaysAgo": "{days} 天前",
+  "@deviceTimeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    }
+  }
 }

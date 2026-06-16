@@ -1382,5 +1382,45 @@
   "tabWorkbench": "Workbench",
   "tabProfile": "Me",
 
-  "@@@GLOBAL_ACTIONS": "Section: Global Actions"
+  "@@@GLOBAL_ACTIONS": "Section: Global Actions",
+
+  "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceListTitle": "로그인 기기 관리",
+  "deviceListEmpty": "로그인된 기기가 없습니다",
+  "deviceListCurrent": "현재 기기",
+  "deviceListKick": "퇴출",
+  "deviceKickConfirmTitle": "기기 퇴출 확인",
+  "deviceKickConfirmMessage": "「{deviceName}」을(를) 퇴출하시겠습니까? 이 기기는 다시 로그인해야 계속 사용할 수 있습니다.",
+  "@deviceKickConfirmMessage": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "deviceKickAction": "퇴출",
+  "deviceKickedSuccess": "「{deviceName}」이(가) 퇴출되었습니다",
+  "@deviceKickedSuccess": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "refreshAction": "새로고침",
+  "deviceTimeJustNow": "방금",
+  "deviceTimeMinutesAgo": "{minutes}분 전",
+  "@deviceTimeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "deviceTimeHoursAgo": "{hours}시간 전",
+  "@deviceTimeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "deviceTimeDaysAgo": "{days}일 전",
+  "@deviceTimeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    }
+  }
 }

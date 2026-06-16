@@ -5150,6 +5150,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard'**
   String get discardAction;
+
+  /// No description provided for @deviceListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Login Devices'**
+  String get deviceListTitle;
+
+  /// No description provided for @deviceListEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No logged-in devices'**
+  String get deviceListEmpty;
+
+  /// No description provided for @deviceListCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get deviceListCurrent;
+
+  /// No description provided for @deviceListKick.
+  ///
+  /// In en, this message translates to:
+  /// **'Kick'**
+  String get deviceListKick;
+
+  /// No description provided for @deviceKickConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Kick Device'**
+  String get deviceKickConfirmTitle;
+
+  /// No description provided for @deviceKickConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to kick out 「{deviceName}」? This device will need to log in again to continue using.'**
+  String deviceKickConfirmMessage(Object deviceName);
+
+  /// No description provided for @deviceKickAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Kick'**
+  String get deviceKickAction;
+
+  /// No description provided for @deviceKickedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'「{deviceName}」 has been kicked'**
+  String deviceKickedSuccess(Object deviceName);
+
+  /// No description provided for @refreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refreshAction;
+
+  /// No description provided for @deviceTimeJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get deviceTimeJustNow;
+
+  /// No description provided for @deviceTimeMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String deviceTimeMinutesAgo(Object minutes);
+
+  /// No description provided for @deviceTimeHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String deviceTimeHoursAgo(Object hours);
+
+  /// No description provided for @deviceTimeDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String deviceTimeDaysAgo(Object days);
 }
 
 class _AppLocalizationsDelegate

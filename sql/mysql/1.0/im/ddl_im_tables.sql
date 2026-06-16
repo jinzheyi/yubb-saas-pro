@@ -579,3 +579,35 @@ CREATE TABLE `im_notification` (
    INDEX `idx_type`(`notify_type` ASC) USING BTREE COMMENT '通知类型索引',
    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM通知表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for im_audit_log
+-- IM 审计日志表: 记录所有安全相关操作，等保三级合规要求
+-- 说明:
+-- 1. 记录登录/登出/踢人/权限变更等安全事件
+-- 2. 支持查询/导出，满足审计合规要求
+-- 3. 建议定期归档（如按月分区或迁移到历史表）
+-- ----------------------------
+DROP TABLE IF EXISTS `im_audit_log`;
+CREATE TABLE `im_audit_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  `user_id` bigint NOT NULL COMMENT '用户编号',
+  `event_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件类型(LOGIN/LOGOUT/KICKED/DEVICE_MANAGE/AUTH_FAILURE 等)',
+  `event_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件名称(中文描述)',
+  `device_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '设备ID',
+  `device_type` int NULL DEFAULT NULL COMMENT '设备类型(1-Web 2-Android 3-iOS 4-Desktop)',
+  `ip_address` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT 'IP地址',
+  `user_agent` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '客户端信息',
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '详细信息(JSON格式)',
+  `timestamp` bigint NULL DEFAULT NULL COMMENT '事件时间戳(毫秒)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_user_time`(`tenant_id` ASC, `user_id` ASC, `timestamp` DESC) USING BTREE COMMENT '租户+用户+时间索引',
+  INDEX `idx_tenant_event_time`(`tenant_id` ASC, `event_type` ASC, `timestamp` DESC) USING BTREE COMMENT '租户+事件类型+时间索引',
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM审计日志表(等保三级合规)' ROW_FORMAT = DYNAMIC;

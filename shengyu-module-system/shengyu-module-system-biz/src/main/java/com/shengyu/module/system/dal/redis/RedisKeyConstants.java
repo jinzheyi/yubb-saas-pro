@@ -107,4 +107,36 @@ public interface RedisKeyConstants {
      */
     String CHAT_LOG = "chatlog_%s_%s_%s";
 
+    /**
+     * 大群未读状态缓存（Redis Hash）
+     * <p>
+     * KEY 格式：im:group:unread:{chatId}:{userId}
+     * VALUE 数据类型：Hash，field=last_message_id，value=未读状态JSON
+     */
+    String LARGE_GROUP_UNREAD = "im:group:unread:%s:%s";
+
+    /**
+     * 大群未读状态 dirty key 集合（Redis Set）
+     * <p>
+     * KEY 格式：im:group:unread:dirty
+     * VALUE 数据类型：Set，member={chatId}:{userId}
+     */
+    String LARGE_GROUP_UNREAD_DIRTY = "im:group:unread:dirty";
+
+    /**
+     * 会话快照缓存 key（Redis Hash）
+     * <p>
+     * KEY 格式：im:snapshot:{userId}:{chatId}
+     * VALUE 数据类型：Hash，field=lastMessageId/lastMessageSequence/lastMessageType/lastMessageTime/incrementUnread
+     */
+    String IM_SNAPSHOT = "im:snapshot";
+
+    /**
+     * 会话快照 dirty key 集合（Redis Set）
+     * <p>
+     * KEY 格式：im:snapshot:dirty
+     * VALUE 数据类型：Set，member={userId}:{chatId}
+     */
+    String IM_SNAPSHOT_DIRTY = "im:snapshot:dirty";
+
 }

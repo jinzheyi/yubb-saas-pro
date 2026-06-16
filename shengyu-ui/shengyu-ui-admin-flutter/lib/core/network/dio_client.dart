@@ -9,6 +9,8 @@ import 'package:shengyu_ui_admin_im/core/network/interceptors/auth_interceptor.d
 import 'package:shengyu_ui_admin_im/core/network/interceptors/locale_interceptor.dart';
 import 'package:shengyu_ui_admin_im/core/network/interceptors/request_id_interceptor.dart';
 import 'package:shengyu_ui_admin_im/core/network/interceptors/tenant_interceptor.dart';
+import 'package:shengyu_ui_admin_im/core/network/network_monitor_service.dart';
+import 'package:shengyu_ui_admin_im/core/network/weak_network_interceptor.dart';
 
 final refreshTokenCoordinatorProvider = Provider<RefreshTokenCoordinator>((
   ref,
@@ -41,6 +43,7 @@ abstract final class DioClientFactory {
       TenantInterceptor(ref),
       LocaleInterceptor(ref),
       RequestIdInterceptor(),
+      WeakNetworkInterceptor(NetworkMonitorService(), dio: dio),
     ]);
     return dio;
   }

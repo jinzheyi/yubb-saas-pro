@@ -36,6 +36,54 @@ class SocketOutboundSender {
     }, requireAuthenticated: true);
   }
 
+  /// 通过 WebSocket 发送文本消息并等待服务端确认（ACK）。
+  /// 失败时抛出异常，调用方应捕获后降级为 HTTP 发送。
+  Future<String> sendTextMessage({
+    required String chatId,
+    required String content,
+    required String clientMessageId,
+    String? receiverId,
+    String? groupId,
+    int? messageType,
+    Map<String, dynamic>? extra,
+  }) async {
+    final envelope = <String, Object?>{
+      'header': {
+        'messageId': _uuid.v4(),
+        'messageType': SocketMessageType.text,
+        'chatId': chatId,
+        'clientMessageId': clientMessageId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        if (receiverId != null) 'receiverId': receiverId,
+        if (groupId != null) 'groupId': groupId,
+        if (messageType != null) 'messageType': messageType,
+      },
+      'body': {
+        'chatId': chatId,
+        'clientMessageId': clientMessageId,
+        'content': content,
+        'type': 'text',
+        if (extra != null) 'extra': extra,
+      },
+    };
+
+    final ack = await _socketClient.sendEnvelopeWithAck(
+      envelope,
+      clientMessageId: clientMessageId,
+      requireAuthenticated: true,
+    );
+
+    // 检查 ACK 是否表示发送成功
+    final header = ack['header'] as Map<String, dynamic>?;
+    final success = header?['success'] == true || header?['code'] == 0;
+    if (!success) {
+      final errorMsg = header?['message']?.toString() ?? '发送失败';
+      throw StateError('[WebSocket] send message ack error: $errorMsg');
+    }
+
+    return clientMessageId;
+  }
+
   Future<bool> sendReadReceiptIfConnected({
     required String senderId,
     required String receiverId,

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/core/widgets/connection_status_notice_bar.dart';
+import 'package:shengyu_ui_admin_im/core/widgets/network_status_notice_bar.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -25,7 +27,15 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final shouldShowBottomNav = _isPrimaryTabLocation(currentLocation);
     return Scaffold(
-      body: SafeArea(child: child),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const NetworkStatusNoticeBar(),
+            const ConnectionStatusNoticeBar(),
+            Expanded(child: child),
+          ],
+        ),
+      ),
       bottomNavigationBar: shouldShowBottomNav
           ? _AppBottomNavigationBar(
               currentLocation: currentLocation,

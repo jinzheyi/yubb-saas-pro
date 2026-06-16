@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
 
 import java.util.List;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 public class NettyMessageSender {
 
     private final NettySessionManager sessionManager;
+    private final WebSocketMetrics metrics;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private ConversationSnapshotService conversationSnapshotService;
@@ -153,6 +155,7 @@ public class NettyMessageSender {
                             if (!channel.isWritable()) {
                                 log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
                                         userId, session.getDeviceType(), messageId);
+                                metrics.recordMessageSendFailure("channel_not_writable");
                                 continue;
                             }
 
@@ -161,6 +164,7 @@ public class NettyMessageSender {
                                     if (!f.isSuccess()) {
                                         log.warn("[MessageSender] ws(pb) write failed: userId={}, channelId={}, messageId={}, type={}",
                                                 userId, channel.id(), messageId, messageType, f.cause());
+                                        metrics.recordMessageSendFailure("write_failed");
                                     }
                                 });
                             } else {
@@ -168,6 +172,7 @@ public class NettyMessageSender {
                                     if (!f.isSuccess()) {
                                         log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
                                                 userId, channel.id(), messageId, messageType, f.cause());
+                                        metrics.recordMessageSendFailure("write_failed");
                                     }
                                 });
                             }
@@ -176,12 +181,14 @@ public class NettyMessageSender {
                             if (!channel.isWritable()) {
                                 log.warn("[MessageSender] channel not writable, drop message: userId={}, deviceType={}, messageId={}",
                                         userId, session.getDeviceType(), messageId);
+                                metrics.recordMessageSendFailure("channel_not_writable");
                                 continue;
                             }
                             channel.writeAndFlush(protobufMessage).addListener(f -> {
                                 if (!f.isSuccess()) {
                                     log.warn("[MessageSender] protobuf write failed: userId={}, channelId={}, messageId={}, type={}",
                                             userId, channel.id(), messageId, messageType, f.cause());
+                                    metrics.recordMessageSendFailure("write_failed");
                                 }
                             });
                         }
@@ -333,7 +340,7 @@ public class NettyMessageSender {
                     continue;
                 }
                 Channel channel = session.getChannel();
-                if (channel == null) {
+                if (channel == null || !channel.isWritable()) {
                     continue;
                 }
                 if (isWebSocketChannel(channel)) {
@@ -367,7 +374,11 @@ public class NettyMessageSender {
         int successCount = 0;
         for (NettySession session : sessions) {
             if (session.isActive()) {
-                session.getChannel().writeAndFlush(message);
+                Channel channel = session.getChannel();
+                if (channel == null || !channel.isWritable()) {
+                    continue;
+                }
+                channel.writeAndFlush(message);
                 successCount++;
             }
         }
@@ -389,11 +400,15 @@ public class NettyMessageSender {
         
         for (NettySession session : sessions) {
             if (deviceId.equals(session.getDeviceId()) && session.isActive()) {
+                Channel channel = session.getChannel();
+                if (channel == null || !channel.isWritable()) {
+                    return;
+                }
                 Long tenantId = session.getTenantId();
                 // 使用租户上下文执行
                 TenantUtils.execute(tenantId, () -> {
                     ImMessage message = buildMessage(messageType, body, null, userId, null, tenantId);
-                    session.getChannel().writeAndFlush(message);
+                    channel.writeAndFlush(message);
                 });
                 log.debug("[MessageSender] 发送消息给设备: userId={}, deviceId={}", userId, deviceId);
                 return;

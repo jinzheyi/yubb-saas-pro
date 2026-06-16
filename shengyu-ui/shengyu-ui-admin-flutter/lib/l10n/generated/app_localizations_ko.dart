@@ -2877,4 +2877,53 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get discardAction => 'Discard';
+
+  @override
+  String get deviceListTitle => '로그인 기기 관리';
+
+  @override
+  String get deviceListEmpty => '로그인된 기기가 없습니다';
+
+  @override
+  String get deviceListCurrent => '현재 기기';
+
+  @override
+  String get deviceListKick => '퇴출';
+
+  @override
+  String get deviceKickConfirmTitle => '기기 퇴출 확인';
+
+  @override
+  String deviceKickConfirmMessage(Object deviceName) {
+    return '「$deviceName」을(를) 퇴출하시겠습니까? 이 기기는 다시 로그인해야 계속 사용할 수 있습니다.';
+  }
+
+  @override
+  String get deviceKickAction => '퇴출';
+
+  @override
+  String deviceKickedSuccess(Object deviceName) {
+    return '「$deviceName」이(가) 퇴출되었습니다';
+  }
+
+  @override
+  String get refreshAction => '새로고침';
+
+  @override
+  String get deviceTimeJustNow => '방금';
+
+  @override
+  String deviceTimeMinutesAgo(Object minutes) {
+    return '$minutes분 전';
+  }
+
+  @override
+  String deviceTimeHoursAgo(Object hours) {
+    return '$hours시간 전';
+  }
+
+  @override
+  String deviceTimeDaysAgo(Object days) {
+    return '$days일 전';
+  }
 }

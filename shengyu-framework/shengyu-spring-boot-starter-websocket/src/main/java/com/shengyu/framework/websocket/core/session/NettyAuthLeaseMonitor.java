@@ -3,6 +3,7 @@ package com.shengyu.framework.websocket.core.session;
 import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.websocket.config.NettyProperties;
+import com.shengyu.framework.websocket.core.metrics.WebSocketMetrics;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -35,12 +36,14 @@ public class NettyAuthLeaseMonitor {
 
     private final NettySessionManager sessionManager;
     private final NettyProperties nettyProperties;
+    private final WebSocketMetrics metrics;
 
     private ScheduledExecutorService executor;
 
-    public NettyAuthLeaseMonitor(NettySessionManager sessionManager, NettyProperties nettyProperties) {
+    public NettyAuthLeaseMonitor(NettySessionManager sessionManager, NettyProperties nettyProperties, WebSocketMetrics metrics) {
         this.sessionManager = sessionManager;
         this.nettyProperties = nettyProperties;
+        this.metrics = metrics;
     }
 
     @PostConstruct
@@ -64,17 +67,17 @@ public class NettyAuthLeaseMonitor {
 
     private void scanOnce() {
         try {
-            List<NettySession> sessions = sessionManager.getAllSessions();
-            if (sessions.isEmpty()) {
-                return;
-            }
-
             long now = System.currentTimeMillis();
             long suggestWindowMs = Math.max(1L, nettyProperties.getAuthRenewSuggestSeconds()) * 1000L;
             long activeWindowMs = Math.max(1L, nettyProperties.getBizActiveWindowSeconds()) * 1000L;
+            int processedCount = 0;
             int cleanedCount = 0;
 
-            for (NettySession session : sessions) {
+            // 【索引化优化】仅扫描即将到期或已到期的连接（O(log N) 而非 O(N)）
+            long scanUpToMs = now + suggestWindowMs;
+            List<NettySession> expiringSessions = sessionManager.getSessionsExpiringBefore(scanUpToMs);
+
+            for (NettySession session : expiringSessions) {
                 if (session == null) {
                     continue;
                 }
@@ -100,11 +103,15 @@ public class NettyAuthLeaseMonitor {
 
                 // 1) Lease 过期：强制重登
                 if (session.isLeaseExpired()) {
+                    if (metrics != null) {
+                        metrics.recordSessionExpired();
+                    }
                     sendReauthRequired(ch, 401,
                         localizeFor(session.getLocale(), "ws.auth.reauth_required", "Login expired. Please sign in again"));
                     session.setAuthState(NettySessionAuthState.EXPIRED);
                     sessionManager.removeSession(ch);
                     ch.close();
+                    cleanedCount++;
                     continue;
                 }
 
@@ -124,11 +131,13 @@ public class NettyAuthLeaseMonitor {
 
                     sendRenewSuggest(ch, (int) Math.max(0L, remainingMs / 1000L));
                     session.markRenewSuggested();
+                    processedCount++;
                 }
             }
 
-            if (cleanedCount > 0) {
-                log.info("[LeaseMonitor] scan done, total={}, zombieCleaned={}", sessions.size(), cleanedCount);
+            if (cleanedCount > 0 || processedCount > 0) {
+                log.info("[LeaseMonitor] scan done, expiring={}, processed={}, zombieCleaned={}, indexEntries={}",
+                    expiringSessions.size(), processedCount, cleanedCount, sessionManager.getLeaseExpireIndexEntryCount());
             }
         } catch (Exception e) {
             log.warn("[LeaseMonitor] scan error: {}", e.getMessage(), e);

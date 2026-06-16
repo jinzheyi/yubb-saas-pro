@@ -2877,4 +2877,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discardAction => 'Discard';
+
+  @override
+  String get deviceListTitle => 'Login Devices';
+
+  @override
+  String get deviceListEmpty => 'No logged-in devices';
+
+  @override
+  String get deviceListCurrent => 'Current';
+
+  @override
+  String get deviceListKick => 'Kick';
+
+  @override
+  String get deviceKickConfirmTitle => 'Confirm Kick Device';
+
+  @override
+  String deviceKickConfirmMessage(Object deviceName) {
+    return 'Are you sure you want to kick out 「$deviceName」? This device will need to log in again to continue using.';
+  }
+
+  @override
+  String get deviceKickAction => 'Kick';
+
+  @override
+  String deviceKickedSuccess(Object deviceName) {
+    return '「$deviceName」 has been kicked';
+  }
+
+  @override
+  String get refreshAction => 'Refresh';
+
+  @override
+  String get deviceTimeJustNow => 'Just now';
+
+  @override
+  String deviceTimeMinutesAgo(Object minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String deviceTimeHoursAgo(Object hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String deviceTimeDaysAgo(Object days) {
+    return '${days}d ago';
+  }
 }

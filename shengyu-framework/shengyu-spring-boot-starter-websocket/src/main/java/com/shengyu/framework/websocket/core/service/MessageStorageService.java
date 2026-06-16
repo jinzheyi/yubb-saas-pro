@@ -103,4 +103,20 @@ public interface MessageStorageService {
     default void markMessagesRead(Long userId, List<Long> messageIds) {
         // no-op
     }
+
+    /**
+     * 批量保存消息
+     *
+     * 说明：
+     * - 使用 MyBatis Batch Executor 模式实现批量写入，适用于大群消息等高性能场景
+     * - 批量写入在单个事务中完成，保证数据一致性
+     * - 默认实现为空，业务模块按需实现
+     *
+     * @param messages IM 消息列表（Protobuf 对象）
+     * @return 保存成功的消息ID列表
+     */
+    default List<Long> batchSaveMessages(List<ImMessage> messages) {
+        // no-op
+        return java.util.Collections.emptyList();
+    }
 }

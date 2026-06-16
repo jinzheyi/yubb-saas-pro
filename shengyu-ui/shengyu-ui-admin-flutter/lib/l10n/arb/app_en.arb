@@ -1500,5 +1500,45 @@
   "@@@LANGUAGE_SETTINGS": "Section: Language Settings",
   "discardChangesConfirm": "Discard language changes?",
   "continueEditAction": "Keep Editing",
-  "discardAction": "Discard"
+  "discardAction": "Discard",
+
+  "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceListTitle": "Login Devices",
+  "deviceListEmpty": "No logged-in devices",
+  "deviceListCurrent": "Current",
+  "deviceListKick": "Kick",
+  "deviceKickConfirmTitle": "Confirm Kick Device",
+  "deviceKickConfirmMessage": "Are you sure you want to kick out 「{deviceName}」? This device will need to log in again to continue using.",
+  "@deviceKickConfirmMessage": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "deviceKickAction": "Kick",
+  "deviceKickedSuccess": "「{deviceName}」 has been kicked",
+  "@deviceKickedSuccess": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "refreshAction": "Refresh",
+  "deviceTimeJustNow": "Just now",
+  "deviceTimeMinutesAgo": "{minutes}m ago",
+  "@deviceTimeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "deviceTimeHoursAgo": "{hours}h ago",
+  "@deviceTimeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "deviceTimeDaysAgo": "{days}d ago",
+  "@deviceTimeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    }
+  }
 }

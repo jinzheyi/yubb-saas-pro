@@ -2700,4 +2700,53 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discardAction => '放弃';
+
+  @override
+  String get deviceListTitle => '登录设备管理';
+
+  @override
+  String get deviceListEmpty => '暂无登录设备';
+
+  @override
+  String get deviceListCurrent => '当前设备';
+
+  @override
+  String get deviceListKick => '踢出';
+
+  @override
+  String get deviceKickConfirmTitle => '确认踢出设备';
+
+  @override
+  String deviceKickConfirmMessage(Object deviceName) {
+    return '确认将「$deviceName」踢出登录吗？该设备需要重新登录才能继续使用。';
+  }
+
+  @override
+  String get deviceKickAction => '踢出';
+
+  @override
+  String deviceKickedSuccess(Object deviceName) {
+    return '已将「$deviceName」踢出登录';
+  }
+
+  @override
+  String get refreshAction => '刷新';
+
+  @override
+  String get deviceTimeJustNow => '刚刚';
+
+  @override
+  String deviceTimeMinutesAgo(Object minutes) {
+    return '$minutes 分钟前';
+  }
+
+  @override
+  String deviceTimeHoursAgo(Object hours) {
+    return '$hours 小时前';
+  }
+
+  @override
+  String deviceTimeDaysAgo(Object days) {
+    return '$days 天前';
+  }
 }

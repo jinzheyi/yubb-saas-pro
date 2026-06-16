@@ -1,11 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
+import 'package:shengyu_ui_admin_im/core/network/network_monitor_service.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_outbound_sender.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/services/optimistic_message_factory.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/mark_conversation_read_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/open_chat_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_message_use_case.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/data/message_cache_queue.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/location_share_payload.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
@@ -20,6 +25,7 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart'
     show ConversationPreviewFormatter;
+import 'package:uuid/uuid.dart';
 
 class ChatController extends StateNotifier<ChatPageState> {
   ChatController(
@@ -29,8 +35,12 @@ class ChatController extends StateNotifier<ChatPageState> {
     this._optimisticMessageFactory,
     this._messagePreviewFormatter,
     this._conversationListController,
-    this._timelineController,
-  ) : super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
+    this._timelineController, {
+    ImSocketClient? socketClient,
+    SocketOutboundSender? socketOutboundSender,
+  })  : _socketClient = socketClient,
+        _socketOutboundSender = socketOutboundSender,
+        super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
 
   final OpenChatUseCase _openChatUseCase;
   final SendMessageUseCase _sendMessageUseCase;
@@ -39,6 +49,38 @@ class ChatController extends StateNotifier<ChatPageState> {
   final ConversationPreviewFormatter _messagePreviewFormatter;
   final ConversationListController _conversationListController;
   final ChatTimelineController _timelineController;
+  final ImSocketClient? _socketClient;
+  final SocketOutboundSender? _socketOutboundSender;
+
+  /// 消息缓存队列（断网时缓存消息，网络恢复后自动重发）
+  MessageCacheQueue? _cacheQueue;
+
+  /// 设置消息缓存队列
+  void setCacheQueue(MessageCacheQueue queue) {
+    _cacheQueue = queue;
+    // 注册状态变更回调：队列重发成功/失败时更新 UI
+    queue.registerStatusChangeCallback((clientMessageId, success) {
+      if (success) {
+        _timelineController.markSentByClientMessageId(
+          clientMessageId: clientMessageId,
+        );
+        _conversationListController.patchLastMessageStatus(
+          chatId: state.entryArgs.chatId,
+          messageId: clientMessageId,
+          status: MessageStatus.sent,
+        );
+      } else {
+        _timelineController.markFailedByClientMessageId(
+          clientMessageId: clientMessageId,
+        );
+        _conversationListController.patchLastMessageStatus(
+          chatId: state.entryArgs.chatId,
+          messageId: clientMessageId,
+          status: MessageStatus.failed,
+        );
+      }
+    });
+  }
 
   void updateChatTitle(String title) {
     if (state.chatTitle == title) {
@@ -220,59 +262,53 @@ class ChatController extends StateNotifier<ChatPageState> {
   }
 
   Future<bool> _submitTextMessage(Message localMessage) async {
-    _conversationListController.upsertLocalMessage(
-      chatId: localMessage.chatId,
-      title: state.chatTitle ?? state.entryArgs.title ?? '',
-      conversationType: state.entryArgs.conversationType,
-      targetId: state.entryArgs.targetId,
-      messageId: localMessage.clientMessageId ?? localMessage.messageId,
-      messageSequence: localMessage.sequence,
-      preview: _conversationPreview(localMessage),
-      messageType: localMessage.type,
-      senderName: localMessage.senderName,
-      isSelf: localMessage.isOutgoing,
-      customType: localMessage.extra.customType,
-      fileName: localMessage.extra.fileName,
-      systemEventKey: localMessage.extra.systemEventKey,
-      messageStatus: localMessage.status,
-      updatedAt: localMessage.sentAt,
-      resetUnread: true,
-    );
+    final clientMessageId =
+        localMessage.clientMessageId ?? localMessage.messageId;
+    final target = _resolveLegacySendTarget();
+
+    // 断网时：加入缓存队列
+    if (!_isNetworkAvailable()) {
+      debugPrint(
+        '[ChatController] network unavailable, enqueueing: $clientMessageId',
+      );
+      _cacheQueue?.enqueue(
+        PendingMessage(
+          id: const Uuid().v4(),
+          chatId: localMessage.chatId,
+          clientMessageId: clientMessageId,
+          content: localMessage.content,
+          receiverId: target.receiverId,
+          groupId: target.groupId,
+        ),
+      );
+      state = state.copyWith(pendingAction: ChatPendingAction.none);
+      return true; // 消息已缓存，不视为失败
+    }
+
     state = state.copyWith(
       pendingAction: ChatPendingAction.sendingMessage,
       error: null,
     );
 
     try {
-      final target = _resolveLegacySendTarget();
-      await _sendMessageUseCase(
-        chatId: localMessage.chatId,
-        text: localMessage.content,
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        receiverId: target.receiverId,
-        groupId: target.groupId,
-        quoteInfo: localMessage.quoteInfo,
-        atUserIds: localMessage.extra.atUserIds,
-        mentions: localMessage.extra.mentions,
+      // WebSocket 优先发送
+      final wsSent = await _trySendViaWebSocket(
+        clientMessageId: clientMessageId,
+        localMessage: localMessage,
+        target: target,
       );
-      // 发送成功：更新消息状态为 sent
-      _timelineController.markSentByClientMessageId(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-      );
-      _conversationListController.patchLastMessageStatus(
-        chatId: localMessage.chatId,
-        messageId: localMessage.clientMessageId ?? localMessage.messageId,
-        status: MessageStatus.sent,
-      );
-      state = state.copyWith(pendingAction: ChatPendingAction.none);
-      return true;
+      if (wsSent) {
+        return true;
+      }
+      // WebSocket 不可用或未确认：降级为 HTTP
+      return _submitTextMessageViaHttp(localMessage, clientMessageId, target);
     } catch (error, stackTrace) {
       _timelineController.markFailedByClientMessageId(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+        clientMessageId: clientMessageId,
       );
       _conversationListController.patchLastMessageStatus(
         chatId: localMessage.chatId,
-        messageId: localMessage.clientMessageId ?? localMessage.messageId,
+        messageId: clientMessageId,
         status: MessageStatus.failed,
       );
       state = state.copyWith(
@@ -281,6 +317,91 @@ class ChatController extends StateNotifier<ChatPageState> {
       );
       return false;
     }
+  }
+
+  /// 尝试通过 WebSocket 发送消息，返回 true 表示发送成功，false 表示 WebSocket 不可用需降级 HTTP。
+  /// 若 WebSocket 发送失败（抛出异常），也会返回 false。
+  Future<bool> _trySendViaWebSocket({
+    required String clientMessageId,
+    required Message localMessage,
+    required ({String? receiverId, String? groupId}) target,
+  }) async {
+    if (_socketOutboundSender == null ||
+        _socketClient == null ||
+        !_socketClient.canSendBusinessMessage) {
+      return false;
+    }
+
+    try {
+      await _socketOutboundSender.sendTextMessage(
+        chatId: localMessage.chatId,
+        content: localMessage.content,
+        clientMessageId: clientMessageId,
+        receiverId: target.receiverId,
+        groupId: target.groupId,
+        messageType: 1, // TEXT
+        extra: _buildWebSocketExtra(localMessage),
+      );
+      // 发送成功：更新消息状态为 sent
+      _timelineController.markSentByClientMessageId(
+        clientMessageId: clientMessageId,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: localMessage.chatId,
+        messageId: clientMessageId,
+        status: MessageStatus.sent,
+      );
+      state = state.copyWith(pendingAction: ChatPendingAction.none);
+      return true;
+    } catch (e) {
+      debugPrint('[ChatController] WebSocket send failed: $e');
+      return false;
+    }
+  }
+
+  Map<String, dynamic>? _buildWebSocketExtra(Message message) {
+    final extra = <String, dynamic>{};
+    final atUserIds = message.extra.atUserIds;
+    if (atUserIds.isNotEmpty) {
+      extra['atUserIds'] = atUserIds;
+    }
+    final mentions = message.extra.mentions;
+    if (mentions.isNotEmpty) {
+      extra['mentions'] = mentions.map((m) => m.toJson()).toList();
+    }
+    final quoteInfo = message.quoteInfo;
+    if (quoteInfo != null) {
+      extra['quoteInfo'] = quoteInfo.toJson();
+    }
+    return extra.isEmpty ? null : extra;
+  }
+
+  Future<bool> _submitTextMessageViaHttp(
+    Message localMessage,
+    String clientMessageId,
+    ({String? receiverId, String? groupId}) target,
+  ) async {
+    await _sendMessageUseCase(
+      chatId: localMessage.chatId,
+      text: localMessage.content,
+      clientMessageId: clientMessageId,
+      receiverId: target.receiverId,
+      groupId: target.groupId,
+      quoteInfo: localMessage.quoteInfo,
+      atUserIds: localMessage.extra.atUserIds,
+      mentions: localMessage.extra.mentions,
+    );
+    // 发送成功：更新消息状态为 sent
+    _timelineController.markSentByClientMessageId(
+      clientMessageId: clientMessageId,
+    );
+    _conversationListController.patchLastMessageStatus(
+      chatId: localMessage.chatId,
+      messageId: clientMessageId,
+      status: MessageStatus.sent,
+    );
+    state = state.copyWith(pendingAction: ChatPendingAction.none);
+    return true;
   }
 
   ContactCardSharePayload? _restoreContactCardPayload(Message message) {
@@ -347,24 +468,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     Message localMessage,
     ContactCardSharePayload payload,
   ) async {
-    _conversationListController.upsertLocalMessage(
-      chatId: localMessage.chatId,
-      title: state.chatTitle ?? state.entryArgs.title ?? '',
-      conversationType: state.entryArgs.conversationType,
-      targetId: state.entryArgs.targetId,
-      messageId: localMessage.clientMessageId ?? localMessage.messageId,
-      messageSequence: localMessage.sequence,
-      preview: _conversationPreview(localMessage),
-      messageType: localMessage.type,
-      senderName: localMessage.senderName,
-      isSelf: localMessage.isOutgoing,
-      customType: localMessage.extra.customType,
-      fileName: localMessage.extra.fileName,
-      systemEventKey: localMessage.extra.systemEventKey,
-      messageStatus: localMessage.status,
-      updatedAt: localMessage.sentAt,
-      resetUnread: true,
-    );
     state = state.copyWith(
       pendingAction: ChatPendingAction.sendingMessage,
       error: null,
@@ -410,24 +513,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     Message localMessage,
     LocationSharePayload payload,
   ) async {
-    _conversationListController.upsertLocalMessage(
-      chatId: localMessage.chatId,
-      title: state.chatTitle ?? state.entryArgs.title ?? '',
-      conversationType: state.entryArgs.conversationType,
-      targetId: state.entryArgs.targetId,
-      messageId: localMessage.clientMessageId ?? localMessage.messageId,
-      messageSequence: localMessage.sequence,
-      preview: _conversationPreview(localMessage),
-      messageType: localMessage.type,
-      senderName: localMessage.senderName,
-      isSelf: localMessage.isOutgoing,
-      customType: localMessage.extra.customType,
-      fileName: localMessage.extra.fileName,
-      systemEventKey: localMessage.extra.systemEventKey,
-      messageStatus: localMessage.status,
-      updatedAt: localMessage.sentAt,
-      resetUnread: true,
-    );
     state = state.copyWith(
       pendingAction: ChatPendingAction.sendingMessage,
       error: null,
@@ -473,24 +558,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     Message localMessage,
     StickerPayload payload,
   ) async {
-    _conversationListController.upsertLocalMessage(
-      chatId: localMessage.chatId,
-      title: state.chatTitle ?? state.entryArgs.title ?? '',
-      conversationType: state.entryArgs.conversationType,
-      targetId: state.entryArgs.targetId,
-      messageId: localMessage.clientMessageId ?? localMessage.messageId,
-      messageSequence: localMessage.sequence,
-      preview: _conversationPreview(localMessage),
-      messageType: localMessage.type,
-      senderName: localMessage.senderName,
-      isSelf: localMessage.isOutgoing,
-      customType: localMessage.extra.customType,
-      fileName: localMessage.extra.fileName,
-      systemEventKey: localMessage.extra.systemEventKey,
-      messageStatus: localMessage.status,
-      updatedAt: localMessage.sentAt,
-      resetUnread: true,
-    );
     state = state.copyWith(
       pendingAction: ChatPendingAction.sendingMessage,
       error: null,
@@ -570,6 +637,11 @@ class ChatController extends StateNotifier<ChatPageState> {
       receiverId: receiverId.isEmpty || receiverId == '0' ? null : receiverId,
       groupId: null,
     );
+  }
+
+  /// 检查网络是否可用
+  bool _isNetworkAvailable() {
+    return NetworkMonitorService().isNetworkAvailable;
   }
 
   String _conversationPreview(Message message) {

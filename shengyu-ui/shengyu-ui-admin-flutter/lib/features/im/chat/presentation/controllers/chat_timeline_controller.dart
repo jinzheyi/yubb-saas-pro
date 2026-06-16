@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
@@ -30,9 +28,30 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   /// 避免小数据量时 JSON 序列化/反序列化的额外开销
   static const int _offThreadThreshold = 20;
 
-  // 批量消息缓冲机制：用于降低群聊高频消息场景下的 rebuild 频率
-  Timer? _flushTimer;
-  final List<Message> _pendingMessages = <Message>[];
+  /// 批量添加消息（直接处理，无二次缓冲）
+  void appendMessagesBatch(List<Message> messages) {
+    if (messages.isEmpty) {
+      return;
+    }
+
+    // 规范化并去重 incoming 消息
+    final deduped = <String, Message>{};
+    for (final message in messages) {
+      final normalized = MessageSemanticsNormalizer.normalize(message);
+      final dedupKey = normalized.messageId.isNotEmpty
+          ? normalized.messageId
+          : (normalized.clientMessageId ?? normalized.sequence ?? '');
+      if (dedupKey.isEmpty) {
+        continue;
+      }
+      // 后到的消息覆盖先到的（保留最新状态）
+      deduped[dedupKey] = normalized;
+    }
+
+    if (deduped.isNotEmpty) {
+      _mergeMessagesToTimeline(deduped.values.toList());
+    }
+  }
 
   /// 添加单条消息（低频率场景保持原有路径）
   void appendSingleMessage(Message message) {
@@ -61,60 +80,6 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       quotePreviewCache: _buildQuotePreviewCache(nextMessages),
     );
-  }
-
-  /// 批量添加消息（高频场景：将消息加入缓冲队列，50ms 后统一刷新）
-  void appendMessagesBatch(List<Message> messages) {
-    if (messages.isEmpty) {
-      return;
-    }
-
-    // 将消息加入待刷新队列
-    _pendingMessages.addAll(messages);
-
-    // 如果已有定时器在运行，等待其触发（实现节流效果）
-    if (_flushTimer != null) {
-      return;
-    }
-
-    // 启动 50ms 批量窗口
-    _flushTimer = Timer(
-      const Duration(milliseconds: 50),
-      _flushPendingMessages,
-    );
-  }
-
-  /// 刷新待处理消息队列：去重 + 合并 + 更新状态
-  void _flushPendingMessages() {
-    _flushTimer = null;
-
-    if (_pendingMessages.isEmpty) {
-      return;
-    }
-
-    // 取出待处理消息并清空队列
-    final incoming = _pendingMessages.toList(growable: false);
-    _pendingMessages.clear();
-
-    // 构建消息去重哈希表
-    final incomingDeduped = <String, Message>{};
-    for (final message in incoming) {
-      final normalizedMessage = MessageSemanticsNormalizer.normalize(message);
-      // 使用 messageId / clientMessageId / sequence 作为去重 key
-      final dedupKey = normalizedMessage.messageId.isNotEmpty
-          ? normalizedMessage.messageId
-          : (normalizedMessage.clientMessageId ?? normalizedMessage.sequence ?? '');
-      if (dedupKey.isEmpty) {
-        continue;
-      }
-      // 后到的消息覆盖先到的（保留最新状态）
-      incomingDeduped[dedupKey] = normalizedMessage;
-    }
-
-    // 批量合并到消息时间线
-    if (incomingDeduped.isNotEmpty) {
-      _mergeMessagesToTimeline(incomingDeduped.values.toList());
-    }
   }
 
   /// 合并多条消息到时间线（批量去重 + 有序插入）

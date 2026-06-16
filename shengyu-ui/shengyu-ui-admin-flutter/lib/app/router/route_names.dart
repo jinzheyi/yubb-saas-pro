@@ -44,4 +44,5 @@ abstract final class RouteNames {
   static const callIncoming = 'callIncoming';
   static const callOutgoing = 'callOutgoing';
   static const callSession = 'callSession';
+  static const deviceList = 'deviceList';
 }
