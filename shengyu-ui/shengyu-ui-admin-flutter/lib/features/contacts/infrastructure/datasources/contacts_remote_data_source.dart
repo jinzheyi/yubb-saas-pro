@@ -70,13 +70,14 @@ class ContactsRemoteDataSource {
     String deptId, {
     String keyword = '',
   }) async {
+    final hasKeyword = keyword.trim().isNotEmpty;
     final response = await dio.get(
-      '/system/im/contact/list-by-dept',
+      '/system/im/contact/list-by-dept-page',
       queryParameters: {
         'deptId': deptId,
         'pageNo': 1,
         'pageSize': 200,
-        if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        if (hasKeyword) 'keyword': keyword.trim(),
       },
     );
     final result = ApiResult.fromJson<List<ContactDto>>(

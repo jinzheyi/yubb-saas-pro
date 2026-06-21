@@ -2,6 +2,7 @@ class ContactDirectoryItem {
   const ContactDirectoryItem({
     required this.userId,
     required this.name,
+    required this.departmentId,
     required this.departmentName,
     required this.pinyin,
     required this.chatId,
@@ -13,6 +14,7 @@ class ContactDirectoryItem {
 
   final String userId;
   final String name;
+  final String departmentId;
   final String departmentName;
   final String pinyin;
   final String chatId;

@@ -150,6 +150,7 @@ class ContactsRepositoryImpl implements ContactsRepository {
     return ContactDirectoryItem(
       userId: dto.userId,
       name: displayName,
+      departmentId: dto.departmentId,
       departmentName: dto.departmentName,
       pinyin: dto.pinyin,
       chatId: '',

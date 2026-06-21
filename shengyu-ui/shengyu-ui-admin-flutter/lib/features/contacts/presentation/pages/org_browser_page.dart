@@ -13,6 +13,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/widgets/contacts_section_widgets.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 
 class OrgBrowserPage extends ConsumerStatefulWidget {
@@ -26,7 +27,6 @@ class OrgBrowserPage extends ConsumerStatefulWidget {
 
 class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
   final TextEditingController _searchController = TextEditingController();
-  Timer? _searchDebounce;
   bool _searching = false;
   List<DepartmentSummary>? _searchedDepartments;
   final Map<String, List<ContactDirectoryItem>> _searchedMembersByDept =
@@ -41,7 +41,6 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -57,7 +56,10 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
     final sourceDepartments =
         orgAsync.valueOrNull ?? const <DepartmentSummary>[];
     final departments = _searchedDepartments ?? sourceDepartments;
-    final visibleDepartments = _filterDepartments(departments);
+    // 搜索模式下直接用搜索结果，不再按部门名过滤
+    final visibleDepartments = _searchedDepartments != null
+        ? departments
+        : _filterDepartments(departments);
     final roots = _buildTree(visibleDepartments);
     final rootCount = roots.fold<int>(
       0,
@@ -76,22 +78,49 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
           Container(
             color: ThemeColors.surface(context),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '搜索组织架构',
-                prefixIcon: Icon(
-                  Icons.search_rounded,
+            child: Row(
+              children: [
+                Icon(
+                  ShengyuIconFont.chaxun,
+                  size: 16,
                   color: ThemeColors.searchIcon(context),
                 ),
-                filled: true,
-                fillColor: ThemeColors.searchBarBg(context),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: '搜索组织架构',
+                      border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      isCollapsed: true,
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: ThemeColors.searchHint(context),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: ThemeColors.searchText(context),
+                    ),
+                    onChanged: _handleSearchChanged,
+                    onSubmitted: _handleSearchSubmitted,
+                  ),
                 ),
-              ),
-              onChanged: _handleSearchChanged,
+                if (_searchController.text.trim().isNotEmpty)
+                  GestureDetector(
+                    onTap: _handleSearchIconTap,
+                    child: Icon(
+                      ShengyuIconFont.fasong,
+                      size: 16,
+                      color: ThemeColors.searchIcon(context),
+                    ),
+                  ),
+              ],
             ),
           ),
           if (orgAsync.isLoading || _searching)
@@ -165,23 +194,27 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
 
   void _handleSearchChanged(String value) {
     setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      final keyword = value.trim();
-      if (keyword.isEmpty) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _searching = false;
-          _searchedDepartments = null;
-          _searchedMembersByDept.clear();
-        });
-        unawaited(_primeExpandedMembers());
+  }
+
+  void _handleSearchSubmitted(String value) {
+    final keyword = value.trim();
+    if (keyword.isEmpty) {
+      if (!mounted) {
         return;
       }
-      unawaited(_runSearch(keyword));
-    });
+      setState(() {
+        _searching = false;
+        _searchedDepartments = null;
+        _searchedMembersByDept.clear();
+      });
+      unawaited(_primeExpandedMembers());
+      return;
+    }
+    unawaited(_runSearch(keyword));
+  }
+
+  void _handleSearchIconTap() {
+    _handleSearchSubmitted(_searchController.text);
   }
 
   Future<void> _runSearch(String keyword) async {
@@ -195,14 +228,28 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       });
     }
     final searchedMembersByDept = <String, List<ContactDirectoryItem>>{};
-    final result = await _searchAndFilterDepartments(
-      departments: departments,
-      keyword: keyword,
-      searchedMembersByDept: searchedMembersByDept,
-    );
+    final tree = _buildTree(departments);
+    // 只用根部门搜一次，后端会自动搜索该部门及其所有子部门
+    if (tree.isNotEmpty) {
+      final rootDeptId = tree.first.department.deptId;
+      final allMembers = await ref
+          .read(contactsRepositoryProvider)
+          .getContactsByDepartment(rootDeptId, keyword: keyword);
+      // 按部门分组
+      for (final member in allMembers) {
+        final deptId = member.departmentId;
+        if (deptId.isNotEmpty) {
+          searchedMembersByDept
+              .putIfAbsent(deptId, () => <ContactDirectoryItem>[])
+              .add(member);
+        }
+      }
+    }
     if (!mounted || _searchController.text.trim() != keyword) {
       return;
     }
+    // 构建搜索结果的部门树（只保留有匹配成员的部门）
+    final result = _buildSearchTree(departments, searchedMembersByDept);
     setState(() {
       _searching = false;
       _searchedDepartments = result;
@@ -210,6 +257,34 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
         ..clear()
         ..addAll(searchedMembersByDept);
     });
+  }
+
+  List<DepartmentSummary> _buildSearchTree(
+    List<DepartmentSummary> departments,
+    Map<String, List<ContactDirectoryItem>> searchedMembersByDept,
+  ) {
+    final byId = <String, DepartmentSummary>{
+      for (final d in departments) d.deptId: d,
+    };
+    final keptIds = <String>{};
+    for (final deptId in searchedMembersByDept.keys) {
+      DepartmentSummary? cursor = byId[deptId];
+      while (cursor != null && keptIds.add(cursor.deptId)) {
+        final parentId = cursor.parentDeptId;
+        cursor = parentId == null ? null : byId[parentId];
+      }
+    }
+    final result = departments
+        .where((d) => keptIds.contains(d.deptId))
+        .map((d) => DepartmentSummary(
+              deptId: d.deptId,
+              name: d.name,
+              memberCount: searchedMembersByDept[d.deptId]?.length ?? 0,
+              parentDeptId: d.parentDeptId,
+              sort: d.sort,
+            ))
+        .toList();
+    return result;
   }
 
   Future<void> _primeExpandedMembers() async {
@@ -257,61 +332,6 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
     } finally {
       _loadingDeptIds.remove(deptId);
     }
-  }
-
-  Future<List<DepartmentSummary>> _searchAndFilterDepartments({
-    required List<DepartmentSummary> departments,
-    required String keyword,
-    required Map<String, List<ContactDirectoryItem>> searchedMembersByDept,
-  }) async {
-    final result = <DepartmentSummary>[];
-    final tree = _buildTree(departments);
-    for (final node in tree) {
-      result.addAll(
-        await _searchNode(
-          node: node,
-          keyword: keyword,
-          searchedMembersByDept: searchedMembersByDept,
-        ),
-      );
-    }
-    return result;
-  }
-
-  Future<List<DepartmentSummary>> _searchNode({
-    required _OrgNode node,
-    required String keyword,
-    required Map<String, List<ContactDirectoryItem>> searchedMembersByDept,
-  }) async {
-    final matchedMembers = await ref
-        .read(contactsRepositoryProvider)
-        .getContactsByDepartment(node.department.deptId, keyword: keyword);
-    if (matchedMembers.isNotEmpty) {
-      searchedMembersByDept[node.department.deptId] = matchedMembers;
-    }
-    final matchedChildren = <DepartmentSummary>[];
-    for (final child in node.children) {
-      matchedChildren.addAll(
-        await _searchNode(
-          node: child,
-          keyword: keyword,
-          searchedMembersByDept: searchedMembersByDept,
-        ),
-      );
-    }
-    if (matchedMembers.isEmpty && matchedChildren.isEmpty) {
-      return const <DepartmentSummary>[];
-    }
-    return <DepartmentSummary>[
-      DepartmentSummary(
-        deptId: node.department.deptId,
-        name: node.department.name,
-        memberCount: matchedMembers.length,
-        parentDeptId: node.department.parentDeptId,
-        sort: node.department.sort,
-      ),
-      ...matchedChildren,
-    ];
   }
 
   List<DepartmentSummary> _filterDepartments(

@@ -266,6 +266,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
             name: profile.nickname.trim().isEmpty
                 ? '我'
                 : profile.nickname.trim(),
+            departmentId: '',
             departmentName: profile.departmentName,
             pinyin: 'W',
             postName: profile.postName,
@@ -307,6 +308,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
               (item) => _SelectableContact(
                 userId: item.userId,
                 name: item.name.trim().isEmpty ? '未命名用户' : item.name.trim(),
+                departmentId: item.departmentId,
                 departmentName: item.departmentName,
                 pinyin: item.pinyin,
                 postName: item.postName,
@@ -557,6 +559,7 @@ class _SelectableContact extends ContactDirectoryItem {
   const _SelectableContact({
     required super.userId,
     required super.name,
+    required super.departmentId,
     required super.departmentName,
     required super.pinyin,
     required super.avatarUrl,

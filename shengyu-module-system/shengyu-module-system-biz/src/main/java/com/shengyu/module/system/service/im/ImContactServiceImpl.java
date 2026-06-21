@@ -12,10 +12,14 @@ import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.im.ImContactSettingDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserDeptDO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 
 import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
 import com.shengyu.module.system.dal.mysql.dept.PostMapper;
 import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
@@ -124,47 +128,68 @@ public class ImContactServiceImpl implements ImContactService {
             }
         }
 
-        // 2. 查询部门下用户ID
-        List<UserDeptDO> userDeptList = userDeptMapper.selectListByDeptIds(deptIds);
-        if (userDeptList == null || userDeptList.isEmpty()) {
-            return PageResult.empty();
-        }
-        List<Long> contactIds = userDeptList.stream()
-                .map(UserDeptDO::getUserId)
-                .filter(id -> id != null && !id.equals(userId))
-                .distinct()
-                .collect(Collectors.toList());
-        if (contactIds.isEmpty()) {
-            return PageResult.empty();
+        String keyword = StrUtil.trimToNull(reqVO.getKeyword());
+        List<AdminUserDO> users;
+        Map<Long, Long> userToActualDeptMap;
+
+        if (StrUtil.isNotBlank(keyword)) {
+            // 关键字搜索模式：全量搜索用户，返回所有匹配用户（不限部门范围）
+            // 3a. 全量按关键字搜索用户（不限定部门）
+            users = userMapper.selectListByNickname(keyword);
+            if (users == null || users.isEmpty()) {
+                return PageResult.empty();
+            }
+
+            // 3b. 查出这些用户与部门的关联关系，建立 userId -> 部门ID 映射
+            List<Long> matchedUserIds = users.stream()
+                    .map(AdminUserDO::getId)
+                    .collect(Collectors.toList());
+            List<UserDeptRespVO> userDeptList = userDeptMapper.selectListByUserIds(matchedUserIds);
+            userToActualDeptMap = new LinkedHashMap<>();
+            if (userDeptList != null && !userDeptList.isEmpty()) {
+                for (UserDeptRespVO ud : userDeptList) {
+                    if (ud != null && ud.getUserId() != null && ud.getDeptId() != null) {
+                        userToActualDeptMap.putIfAbsent(ud.getUserId(), ud.getDeptId());
+                    }
+                }
+            }
+            // 对于没有部门关联的用户，使用其主部门ID
+            for (AdminUserDO user : users) {
+                if (!userToActualDeptMap.containsKey(user.getId()) && user.getDeptId() != null) {
+                    userToActualDeptMap.put(user.getId(), user.getDeptId());
+                }
+            }
+        } else {
+            // 无关键字模式：先查部门用户关联，再查用户（保持原逻辑）
+            List<UserDeptDO> userDeptList = userDeptMapper.selectListByDeptIds(deptIds);
+            if (userDeptList == null || userDeptList.isEmpty()) {
+                return PageResult.empty();
+            }
+            userToActualDeptMap = new LinkedHashMap<>();
+            for (UserDeptDO ud : userDeptList) {
+                if (ud != null && ud.getUserId() != null && ud.getDeptId() != null) {
+                    userToActualDeptMap.putIfAbsent(ud.getUserId(), ud.getDeptId());
+                }
+            }
+            List<Long> contactIds = new ArrayList<>(userToActualDeptMap.keySet());
+            if (contactIds.isEmpty()) {
+                return PageResult.empty();
+            }
+            users = userMapper.selectBatchIds(contactIds);
         }
 
-        // 3. 查询用户信息
-        List<AdminUserDO> users = userMapper.selectBatchIds(contactIds);
         if (users == null || users.isEmpty()) {
             return PageResult.empty();
         }
 
-        String keyword = reqVO.getKeyword();
-        List<AdminUserDO> filtered = users.stream()
-                .filter(u -> u != null && u.getId() != null)
-                .filter(u -> {
-                    if (StrUtil.isBlank(keyword)) {
-                        return true;
-                    }
-                    String nick = u.getNickname() != null ? u.getNickname() : "";
-                    return StrUtil.contains(nick, keyword);
-                })
-                .collect(Collectors.toList());
-
-        filtered.sort(Comparator
+        // 4. 排序（按昵称 + ID）
+        users.sort(Comparator
                 .comparing((AdminUserDO u) -> u.getNickname() != null ? u.getNickname() : "")
                 .thenComparing(u -> u.getId() != null ? u.getId() : 0L));
 
-        long total = filtered.size();
-        if (total <= 0) {
-            return PageResult.empty();
-        }
+        long total = users.size();
 
+        // 5. 内存分页
         int pageNo = reqVO.getPageNo() != null ? reqVO.getPageNo() : 1;
         int pageSize = reqVO.getPageSize() != null ? reqVO.getPageSize() : 10;
         if (pageNo < 1) {
@@ -174,21 +199,22 @@ public class ImContactServiceImpl implements ImContactService {
             pageSize = 10;
         }
         int fromIndex = (pageNo - 1) * pageSize;
-        if (fromIndex >= filtered.size()) {
+        if (fromIndex >= users.size()) {
             return new PageResult<>(Collections.emptyList(), total);
         }
-        int toIndex = Math.min(fromIndex + pageSize, filtered.size());
-        List<AdminUserDO> pageUsers = filtered.subList(fromIndex, toIndex);
+        int toIndex = Math.min(fromIndex + pageSize, users.size());
+        List<AdminUserDO> pageUsers = users.subList(fromIndex, toIndex);
 
-        // 4. 查询当前用户的联系人设置
+        // 6. 查询当前用户的联系人设置
         List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserId(userId);
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
 
-        // 5. 转换为VO
+        // 7. 转换为VO（使用实际部门ID而非用户主部门ID）
         List<AppImContactRespVO> voList = pageUsers.stream()
                 .map(u -> {
-                    AppImContactRespVO respVO = buildContactRespVO(u);
+                    Long actualDeptId = userToActualDeptMap.get(u.getId());
+                    AppImContactRespVO respVO = buildContactRespVO(u, actualDeptId);
                     ImContactSettingDO setting = settingMap.get(u.getId());
                     if (setting != null) {
                         respVO.setStar(setting.getStar());
@@ -235,14 +261,19 @@ public class ImContactServiceImpl implements ImContactService {
             }
         }
 
-        // 2. 查询这些部门下的用户ID
+        // 2. 查询这些部门下的用户ID（保留userId->deptId映射，用于返回实际部门而非用户主部门）
         List<UserDeptDO> userDeptList = userDeptMapper.selectListByDeptIds(deptIds);
         if (userDeptList == null || userDeptList.isEmpty()) {
             return new ArrayList<>();
         }
-        List<Long> contactIds = userDeptList.stream().map(UserDeptDO::getUserId).distinct().collect(Collectors.toList());
-        // 排除自己
-        contactIds = contactIds.stream().filter(id -> id != null && !id.equals(userId)).collect(Collectors.toList());
+        // 建立 userId -> 实际部门ID 的映射（一个用户可能在多个部门，取第一个匹配）
+        Map<Long, Long> userToActualDeptMap = new LinkedHashMap<>();
+        for (UserDeptDO ud : userDeptList) {
+            if (ud != null && ud.getUserId() != null && ud.getDeptId() != null) {
+                userToActualDeptMap.putIfAbsent(ud.getUserId(), ud.getDeptId());
+            }
+        }
+        List<Long> contactIds = new ArrayList<>(userToActualDeptMap.keySet());
         if (contactIds.isEmpty()) {
             return new ArrayList<>();
         }
@@ -255,11 +286,12 @@ public class ImContactServiceImpl implements ImContactService {
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
 
-        // 5. 转换为VO并填充设置信息
+        // 5. 转换为VO并填充设置信息（使用实际部门ID而非用户主部门ID）
         return users.stream()
-                .filter(u -> u != null && u.getId() != null && !u.getId().equals(userId))
+                .filter(u -> u != null && u.getId() != null)
                 .map(u -> {
-                    AppImContactRespVO respVO = buildContactRespVO(u);
+                    Long actualDeptId = userToActualDeptMap.get(u.getId());
+                    AppImContactRespVO respVO = buildContactRespVO(u, actualDeptId);
                     ImContactSettingDO setting = settingMap.get(u.getId());
                     if (setting != null) {
                         respVO.setStar(setting.getStar());
@@ -424,15 +456,19 @@ public class ImContactServiceImpl implements ImContactService {
      * 构建联系人响应VO
      */
     private AppImContactRespVO buildContactRespVO(AdminUserDO user) {
+        return buildContactRespVO(user, user.getDeptId());
+    }
+
+    private AppImContactRespVO buildContactRespVO(AdminUserDO user, Long actualDeptId) {
         AppImContactRespVO respVO = new AppImContactRespVO();
         respVO.setId(user.getId());
         respVO.setNickname(user.getNickname());
         respVO.setAvatar(user.getAvatar());
-        respVO.setDeptId(user.getDeptId());
+        respVO.setDeptId(actualDeptId);
         
         // 查询部门信息
-        if (user.getDeptId() != null) {
-            DeptDO dept = deptMapper.selectById(user.getDeptId());
+        if (actualDeptId != null) {
+            DeptDO dept = deptMapper.selectById(actualDeptId);
             if (dept != null) {
                 respVO.setDeptName(dept.getName());
             }
