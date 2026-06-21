@@ -27,6 +27,7 @@ class OrgBrowserPage extends ConsumerStatefulWidget {
 
 class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   bool _searching = false;
   List<DepartmentSummary>? _searchedDepartments;
   final Map<String, List<ContactDirectoryItem>> _searchedMembersByDept =
@@ -42,6 +43,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -72,97 +74,145 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
         centerTitle: true,
         title: Text(strings.contactsOrganization),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          Container(
-            color: ThemeColors.surface(context),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              children: [
-                Icon(
-                  ShengyuIconFont.chaxun,
-                  size: 16,
-                  color: ThemeColors.searchIcon(context),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: '搜索组织架构',
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      isCollapsed: true,
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: ThemeColors.searchHint(context),
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: ThemeColors.searchText(context),
-                    ),
-                    onChanged: _handleSearchChanged,
-                    onSubmitted: _handleSearchSubmitted,
-                  ),
-                ),
-                if (_searchController.text.trim().isNotEmpty)
-                  GestureDetector(
-                    onTap: _handleSearchIconTap,
-                    child: Icon(
-                      ShengyuIconFont.fasong,
-                      size: 16,
-                      color: ThemeColors.searchIcon(context),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (orgAsync.isLoading || _searching)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (orgAsync.hasError)
-            _OrgErrorCard(
-              message: orgAsync.error.toString(),
-              onRetry: () => ref.invalidate(organizationTreeProvider),
-            )
-          else if (roots.isEmpty)
-            _OrgEmptyCard(message: strings.contactsOrganizationEmpty)
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ContactsSectionCard(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ===== Header + Search Bar (1:1 对齐会话列表页) =====
+            Container(
+              color: ThemeColors.surface(context),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
                 children: [
-                  _RootHeader(
-                    title: '${strings.contactsOrganization} ($rootCount)',
-                    expanded: _expandedIds.contains('root'),
-                    onTap: () {
-                      setState(() {
-                        if (_expandedIds.contains('root')) {
-                          _expandedIds.remove('root');
-                        } else {
-                          _expandedIds.add('root');
-                        }
-                      });
-                    },
+                  // 标题行
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.contactsOrganization,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: ThemeColors.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  if (_expandedIds.contains('root'))
-                    ..._buildNodes(
-                      nodes: roots,
-                      selectionState: selectionState,
-                      selectionController: selectionController,
+                  const SizedBox(height: 4),
+                  // 搜索框（1:1 对齐会话列表页）
+                  Container(
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: ThemeColors.searchBarBg(context),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: _searchController.text.trim().isNotEmpty
+                              ? _handleSearch
+                              : null,
+                          child: Icon(
+                            ShengyuIconFont.chaxun,
+                            size: 16,
+                            color: _searchController.text.trim().isNotEmpty
+                                ? ThemeColors.searchIcon(context)
+                                : ThemeColors.searchHint(context),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            textInputAction: TextInputAction.search,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeColors.searchText(context),
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '搜索组织架构',
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              isCollapsed: true,
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: ThemeColors.searchHint(context),
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                            onSubmitted: (_) => _handleSearch(),
+                          ),
+                        ),
+                        if (_searchController.text.trim().isNotEmpty)
+                          InkWell(
+                            onTap: _handleSearch,
+                            child: Icon(
+                              ShengyuIconFont.fasong,
+                              size: 16,
+                              color: ThemeColors.searchIcon(context),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // ===== 内容区域 =====
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 24),
+                children: [
+                  if (orgAsync.isLoading || _searching)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (orgAsync.hasError)
+                    _OrgErrorCard(
+                      message: orgAsync.error.toString(),
+                      onRetry: () => ref.invalidate(organizationTreeProvider),
+                    )
+                  else if (roots.isEmpty)
+                    _OrgEmptyCard(message: strings.contactsOrganizationEmpty)
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ContactsSectionCard(
+                        children: [
+                          _RootHeader(
+                            title: '${strings.contactsOrganization} ($rootCount)',
+                            expanded: _expandedIds.contains('root'),
+                            onTap: () {
+                              setState(() {
+                                if (_expandedIds.contains('root')) {
+                                  _expandedIds.remove('root');
+                                } else {
+                                  _expandedIds.add('root');
+                                }
+                              });
+                            },
+                          ),
+                          if (_expandedIds.contains('root'))
+                            ..._buildNodes(
+                              nodes: roots,
+                              selectionState: selectionState,
+                              selectionController: selectionController,
+                            ),
+                        ],
+                      ),
                     ),
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
@@ -192,12 +242,9 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
     );
   }
 
-  void _handleSearchChanged(String value) {
-    setState(() {});
-  }
-
-  void _handleSearchSubmitted(String value) {
-    final keyword = value.trim();
+  void _handleSearch() {
+    _searchFocusNode.unfocus();
+    final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
       if (!mounted) {
         return;
@@ -211,10 +258,6 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       return;
     }
     unawaited(_runSearch(keyword));
-  }
-
-  void _handleSearchIconTap() {
-    _handleSearchSubmitted(_searchController.text);
   }
 
   Future<void> _runSearch(String keyword) async {

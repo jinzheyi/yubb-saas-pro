@@ -30,6 +30,7 @@ class MyDepartmentPage extends ConsumerStatefulWidget {
 
 class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String? _selectedDeptId;
   final Set<String> _expandedDeptIds = <String>{};
   bool _searching = false;
@@ -49,6 +50,7 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -59,7 +61,6 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     final sourceDepartments =
         deptTreeAsync.valueOrNull ?? const <DepartmentSummary>[];
     final departments = _searchedDepartments ?? sourceDepartments;
-    // 搜索模式下直接用搜索结果，不再按部门名过滤
     final visibleDepartments = _searchedDepartments != null
         ? departments
         : _filterDepartments(departments);
@@ -95,111 +96,136 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
         centerTitle: true,
         title: Text(strings.contactsDepartments),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          Container(
-            color: ThemeColors.surface(context),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activeDept?.name ??
-                      widget.args.initialDeptName ??
-                      strings.contactsDepartments,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: ThemeColors.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: ThemeColors.searchBarBg(context),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ===== Header + Search Bar (1:1 对齐会话列表页) =====
+            Container(
+              color: ThemeColors.surface(context),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
+                children: [
+                  // 标题行
+                  Row(
                     children: [
-                      Icon(
-                        ShengyuIconFont.chaxun,
-                        size: 16,
-                        color: ThemeColors.searchIcon(context),
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          textInputAction: TextInputAction.search,
-                          decoration: InputDecoration(
-                            hintText: '搜索部门成员',
-                            border: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            disabledBorder: InputBorder.none,
-                            isCollapsed: true,
-                            hintStyle: TextStyle(
-                              fontSize: 14,
-                              color: ThemeColors.searchHint(context),
-                            ),
-                            contentPadding: EdgeInsets.zero,
-                          ),
+                        child: Text(
+                          activeDept?.name ??
+                              widget.args.initialDeptName ??
+                              strings.contactsDepartments,
                           style: TextStyle(
-                            fontSize: 14,
-                            color: ThemeColors.searchText(context),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: ThemeColors.textPrimary(context),
                           ),
-                          onChanged: _handleSearchChanged,
-                          onSubmitted: _handleSearchSubmitted,
                         ),
                       ),
-                      if (_searchController.text.trim().isNotEmpty)
-                        GestureDetector(
-                          onTap: _handleSearchIconTap,
-                          child: Icon(
-                            ShengyuIconFont.fasong,
-                            size: 16,
-                            color: ThemeColors.searchIcon(context),
-                          ),
-                        ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  // 搜索框（1:1 对齐会话列表页）
+                  Container(
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: ThemeColors.searchBarBg(context),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: _searchController.text.trim().isNotEmpty
+                              ? _handleSearch
+                              : null,
+                          child: Icon(
+                            ShengyuIconFont.chaxun,
+                            size: 16,
+                            color: _searchController.text.trim().isNotEmpty
+                                ? ThemeColors.searchIcon(context)
+                                : ThemeColors.searchHint(context),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            textInputAction: TextInputAction.search,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeColors.searchText(context),
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '搜索部门成员',
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              isCollapsed: true,
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: ThemeColors.searchHint(context),
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                            onSubmitted: (_) => _handleSearch(),
+                          ),
+                        ),
+                        if (_searchController.text.trim().isNotEmpty)
+                          InkWell(
+                            onTap: _handleSearch,
+                            child: Icon(
+                              ShengyuIconFont.fasong,
+                              size: 16,
+                              color: ThemeColors.searchIcon(context),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          if (deptTreeAsync.isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_searching)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (deptTreeAsync.hasError)
-            _DepartmentErrorCard(
-              message: deptTreeAsync.error.toString(),
-              onRetry: () => ref.invalidate(myDepartmentTreeProvider),
-            )
-          else if (visibleDepartments.isEmpty)
-            _DepartmentEmptyCard(message: strings.contactsDepartmentsEmpty)
-          else
-            ..._buildDepartmentSections(
-              strings: strings,
-              departments: visibleDepartments,
-              activeDept: activeDept,
-              membersAsync: membersAsync,
-              members: members,
-              selectionState: selectionState,
-              selectionController: selectionController,
-              context: context,
+            // ===== 内容区域 =====
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 24),
+                children: [
+                  if (deptTreeAsync.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_searching)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (deptTreeAsync.hasError)
+                    _DepartmentErrorCard(
+                      message: deptTreeAsync.error.toString(),
+                      onRetry: () => ref.invalidate(myDepartmentTreeProvider),
+                    )
+                  else if (visibleDepartments.isEmpty)
+                    _DepartmentEmptyCard(message: strings.contactsDepartmentsEmpty)
+                  else
+                    ..._buildDepartmentSections(
+                      strings: strings,
+                      departments: visibleDepartments,
+                      activeDept: activeDept,
+                      membersAsync: membersAsync,
+                      members: members,
+                      selectionState: selectionState,
+                      selectionController: selectionController,
+                      context: context,
+                    ),
+                ],
+              ),
             ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: widget.args.selectionMode && !_isSingleSelection
           ? Container(
@@ -302,31 +328,38 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
       return widgets;
     }
     widgets.add(
-      ContactsSectionCard(
-        children: [
-          for (var index = 0; index < members.length; index++) ...[
-            _DepartmentMemberTile(
-              member: members[index],
-              role: members[index].postName.isEmpty
-                  ? members[index].departmentName
-                  : members[index].postName,
-              color: _memberColor(members[index].userId),
-              selectionMode: widget.args.selectionMode,
-              singleSelection: _isSingleSelection,
-              selected: selectionState.isSelected(members[index].userId),
-              onTap: () => widget.args.selectionMode
-                  ? _toggleSelected(selectionController, members[index])
-                  : _openProfile(context, members[index]),
-            ),
-            if (index != members.length - 1)
-              Divider(
-                height: 1,
-                indent: 70,
-                endIndent: 16,
-                color: ThemeColors.divider(context),
+      Container(
+        color: ThemeColors.surface(context),
+        child: Column(
+          children: [
+            for (var index = 0; index < members.length; index++) ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: index == members.length - 1
+                          ? Colors.transparent
+                          : ThemeColors.divider(context),
+                    ),
+                  ),
+                ),
+                child: _DepartmentMemberTile(
+                  member: members[index],
+                  role: members[index].postName.isEmpty
+                      ? members[index].departmentName
+                      : members[index].postName,
+                  color: _memberColor(members[index].userId),
+                  selectionMode: widget.args.selectionMode,
+                  singleSelection: _isSingleSelection,
+                  selected: selectionState.isSelected(members[index].userId),
+                  onTap: () => widget.args.selectionMode
+                      ? _toggleSelected(selectionController, members[index])
+                      : _openProfile(context, members[index]),
+                ),
               ),
+            ],
           ],
-        ],
+        ),
       ),
     );
     return widgets;
@@ -430,6 +463,15 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
                           color: ThemeColors.chevronColor(context),
                         ),
                 ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.apartment_rounded,
+                  size: 16,
+                  color: selected
+                      ? const Color(0xFF3D75F6)
+                      : const Color(0xFF6FB214),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${node.department.name} ${strings.contactsCountPeople(node.department.memberCount)}',
@@ -456,12 +498,9 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     return widgets;
   }
 
-  void _handleSearchChanged(String value) {
-    setState(() {});
-  }
-
-  void _handleSearchSubmitted(String value) {
-    final keyword = value.trim();
+  void _handleSearch() {
+    _searchFocusNode.unfocus();
+    final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
       if (!mounted) {
         return;
@@ -475,10 +514,6 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
     unawaited(_runDepartmentSearch(keyword));
   }
 
-  void _handleSearchIconTap() {
-    _handleSearchSubmitted(_searchController.text);
-  }
-
   Future<void> _runDepartmentSearch(String keyword) async {
     final departments = ref.read(myDepartmentTreeProvider).valueOrNull;
     if (departments == null || departments.isEmpty) {
@@ -490,14 +525,12 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
       });
     }
     final searchedMembersByDept = <String, List<ContactDirectoryItem>>{};
-    // 只用根部门搜一次，后端会自动搜索该部门及其所有子部门
     final tree = _buildTree(departments);
     if (tree.isNotEmpty) {
       final rootDeptId = tree.first.department.deptId;
       final allMembers = await ref
           .read(contactsRepositoryProvider)
           .getContactsByDepartment(rootDeptId, keyword: keyword);
-      // 按部门分组
       for (final member in allMembers) {
         final deptId = member.departmentId;
         if (deptId.isNotEmpty) {
@@ -507,7 +540,6 @@ class _MyDepartmentPageState extends ConsumerState<MyDepartmentPage> {
         }
       }
     }
-    // 构建搜索结果的部门树（只保留有匹配成员的部门）
     final result = _buildSearchTree(departments, searchedMembersByDept);
     final firstMatchedDept = _findFirstDeptWithMembers(
       departments: result,
