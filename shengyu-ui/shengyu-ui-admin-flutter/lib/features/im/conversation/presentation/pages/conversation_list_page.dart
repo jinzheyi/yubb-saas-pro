@@ -334,29 +334,17 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _handleRefresh,
-                    child: switch (listStatus) {
-                      ConversationListStatus.initial ||
-                      ConversationListStatus.loading => const ConversationSkeleton(),
-                      ConversationListStatus.failed => ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.sizeOf(context).height * 0.5,
-                            child: AppErrorView(
-                              error: listError,
-                              onRetry: _reloadConversations,
-                            ),
-                          ),
-                        ],
-                      ),
-                      ConversationListStatus.ready => _buildConversationBody(
-                        context: context,
-                        strings: strings,
-                        pinnedConversations: displayedPinned,
-                        allPinnedCount: pinnedConversations.length,
-                        normalConversations: normalConversations,
-                      ),
-                    },
+                    child: _buildListBody(
+                      context,
+                      strings,
+                      listStatus,
+                      listError,
+                      conversations,
+                      filteredConversations,
+                      pinnedConversations,
+                      normalConversations,
+                      displayedPinned,
+                    ),
                   ),
                 ),
               ],
@@ -393,6 +381,57 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
         ],
       ),
     );
+  }
+
+  Widget _buildListBody(
+    BuildContext context,
+    AppLocalizations strings,
+    ConversationListStatus listStatus,
+    AppError? listError,
+    List<Conversation> conversations,
+    List<Conversation> filteredConversations,
+    List<Conversation> pinnedConversations,
+    List<Conversation> normalConversations,
+    List<Conversation> displayedPinned,
+  ) {
+    // 关键优化：如果有数据（无论来自缓存还是网络），直接显示
+    // 不显示骨架屏
+    if (conversations.isNotEmpty) {
+      return _buildConversationBody(
+        context: context,
+        strings: strings,
+        pinnedConversations: displayedPinned,
+        allPinnedCount: pinnedConversations.length,
+        normalConversations: normalConversations,
+      );
+    }
+
+    // 无数据时根据状态显示
+    return switch (listStatus) {
+      ConversationListStatus.initial ||
+      ConversationListStatus.loading => const ConversationSkeleton(),
+      ConversationListStatus.failed => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.5,
+            child: AppErrorView(
+              error: listError,
+              onRetry: _reloadConversations,
+            ),
+          ),
+        ],
+      ),
+      ConversationListStatus.ready => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: 420,
+            child: AppEmptyView(message: strings.emptyConversation),
+          ),
+        ],
+      ),
+    };
   }
 
   Widget _buildConversationBody({

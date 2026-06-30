@@ -2,8 +2,13 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_viewpo
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 
 class ChatWindowResult {
-  const ChatWindowResult({required this.messages, required this.viewportState});
+  const ChatWindowResult({
+    required this.messages,
+    required this.viewportState,
+    this.chatId,
+  });
 
   final List<Message> messages;
   final ChatViewportState viewportState;
+  final String? chatId;
 }

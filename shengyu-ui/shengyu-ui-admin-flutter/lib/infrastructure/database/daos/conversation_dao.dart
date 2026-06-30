@@ -3,6 +3,9 @@ import 'package:drift/drift.dart';
 import '../tables/conversations_table.dart';
 import '../im_database.dart';
 
+// 注意：本 DAO 中使用的 Conversation 类型是 Drift 生成的数据类（来自 im_database.dart）
+// 而非 domain entity Conversation。两者同名，此处使用 Drift 生成的类型。
+
 part 'conversation_dao.g.dart';
 
 /// 会话数据访问对象
@@ -99,5 +102,74 @@ class ConversationDao extends DatabaseAccessor<ImDatabase>
           ..where((c) => c.unreadCount.isBiggerThanValue(0)))
         .get()
         .then((list) => list.fold<int>(0, (sum, c) => sum + c.unreadCount));
+  }
+
+  /// 【新增】获取会话列表（带用户隔离）
+  Future<List<Conversation>> getConversationListByUser({
+    required String userId,
+    int limit = 1000,
+  }) {
+    return (select(conversations)
+          ..where((t) => t.userId.equals(userId))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.isPinned),
+            (t) => OrderingTerm.desc(t.lastMessageTime),
+          ])
+          ..limit(limit))
+        .get();
+  }
+
+  /// 【新增】批量插入或更新会话（带用户隔离）
+  Future<void> upsertConversationsForUser({
+    required String userId,
+    required List<ConversationsCompanion> companions,
+  }) async {
+    await batch((batch) {
+      for (final companion in companions) {
+        // 强制设置 userId，确保用户隔离
+        final companionWithUserId = ConversationsCompanion(
+          chatId: companion.chatId,
+          type: companion.type,
+          targetName: companion.targetName,
+          targetAvatar: companion.targetAvatar,
+          targetId: companion.targetId,
+          lastMessageId: companion.lastMessageId,
+          lastMessageSequence: companion.lastMessageSequence,
+          lastReadSequence: companion.lastReadSequence,
+          lastMessagePreview: companion.lastMessagePreview,
+          lastMessageType: companion.lastMessageType,
+          lastMessageSenderName: companion.lastMessageSenderName,
+          lastMessageIsSelf: companion.lastMessageIsSelf,
+          lastMessageStatus: companion.lastMessageStatus,
+          lastMessageHasAtMe: companion.lastMessageHasAtMe,
+          lastMessageTime: companion.lastMessageTime,
+          unreadCount: companion.unreadCount,
+          isPinned: companion.isPinned,
+          isMuted: companion.isMuted,
+          updatedAt: companion.updatedAt,
+          userId: Value(userId),
+          cachedAt: companion.cachedAt,
+          groupMemberCount: companion.groupMemberCount,
+          groupMemberStatus: companion.groupMemberStatus,
+        );
+        batch.insert(
+          conversations,
+          companionWithUserId,
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
+  /// 【新增】清理过期会话（按用户）
+  Future<void> cleanExpiredConversations({
+    required String userId,
+    required DateTime before,
+  }) async {
+    await (delete(conversations)
+          ..where((t) =>
+              t.userId.equals(userId) &
+              t.cachedAt.isSmallerThanValue(before.millisecondsSinceEpoch)))
+        .go();
   }
 }

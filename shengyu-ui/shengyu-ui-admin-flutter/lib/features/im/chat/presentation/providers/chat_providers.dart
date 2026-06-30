@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/platform/audio_playback_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/audio_recording_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
@@ -227,14 +228,18 @@ final chatComposerControllerProvider =
 
 final chatTimelineControllerProvider =
     StateNotifierProvider.autoDispose<ChatTimelineController, ChatTimelineState>((ref) {
+      final currentUserId = ref.read(authSessionProvider).userId;
       return ChatTimelineController(
         ref.read(loadChatWindowUseCaseProvider),
         ref.read(loadOlderMessagesUseCaseProvider),
+        unifiedCacheManager: ref.read(unifiedCacheManagerProvider),
+        currentUserId: currentUserId,
       );
     });
 
 final chatControllerProvider =
     StateNotifierProvider.autoDispose<ChatController, ChatPageState>((ref) {
+      final currentUserId = ref.read(authSessionProvider).userId;
       final controller = ChatController(
         ref.read(openChatUseCaseProvider),
         ref.read(sendMessageUseCaseProvider),
@@ -245,6 +250,8 @@ final chatControllerProvider =
         ref.read(chatTimelineControllerProvider.notifier),
         socketClient: ref.read(imSocketClientProvider),
         socketOutboundSender: ref.read(socketOutboundSenderProvider),
+        unifiedCacheManager: ref.read(unifiedCacheManagerProvider),
+        currentUserId: currentUserId,
       );
       // 注入消息缓存队列
       final cacheQueue = ref.read(messageCacheQueueProvider);

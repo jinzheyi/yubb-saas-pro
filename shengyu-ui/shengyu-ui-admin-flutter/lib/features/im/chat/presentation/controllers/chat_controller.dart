@@ -26,6 +26,9 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart'
     show ConversationPreviewFormatter;
 import 'package:uuid/uuid.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_window_result.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_viewport_state.dart';
 
 class ChatController extends StateNotifier<ChatPageState> {
   ChatController(
@@ -38,8 +41,12 @@ class ChatController extends StateNotifier<ChatPageState> {
     this._timelineController, {
     ImSocketClient? socketClient,
     SocketOutboundSender? socketOutboundSender,
+    UnifiedCacheManager? unifiedCacheManager,
+    String? currentUserId,
   })  : _socketClient = socketClient,
         _socketOutboundSender = socketOutboundSender,
+        _unifiedCacheManager = unifiedCacheManager,
+        _currentUserId = currentUserId,
         super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
 
   final OpenChatUseCase _openChatUseCase;
@@ -51,6 +58,8 @@ class ChatController extends StateNotifier<ChatPageState> {
   final ChatTimelineController _timelineController;
   final ImSocketClient? _socketClient;
   final SocketOutboundSender? _socketOutboundSender;
+  final UnifiedCacheManager? _unifiedCacheManager;
+  final String? _currentUserId;
 
   /// 消息缓存队列（断网时缓存消息，网络恢复后自动重发）
   MessageCacheQueue? _cacheQueue;
@@ -96,6 +105,41 @@ class ChatController extends StateNotifier<ChatPageState> {
       error: null,
     );
 
+    // ========== 【Phase 4】缓存优先策略 ==========
+    // 1. 尝试从缓存加载消息
+    if (_unifiedCacheManager != null && _currentUserId != null) {
+      final cached = await _unifiedCacheManager.getMessages(
+        _currentUserId!,
+        args.chatId,
+      );
+
+      if (cached != null && cached.data.isNotEmpty) {
+        // 先显示缓存消息（跳过骨架屏）
+        await _timelineController.applyWindow(
+          ChatWindowResult(
+            messages: cached.data,
+            viewportState: cached.viewportState ?? const ChatViewportState(anchorMessageId: null, hasMoreBefore: true, hasMoreAfter: true),
+            chatId: args.chatId,
+          ),
+        );
+
+        // 设置 ready 状态（跳过 initializing 的骨架屏）
+        state = state.copyWith(
+          pageStatus: ChatPageStatus.ready,
+          isReadOnly: args.isReadOnly,
+          highlightedMessageId: args.highlightedMessageId,
+        );
+
+        debugPrint('[ChatController] Cache hit, showing cached messages (${cached.data.length} messages)');
+
+        // 后台拉取最新消息并合并
+        _backgroundRefreshMessages(args);
+        return;
+      }
+    }
+    // ========== 【Phase 4 结束】 ==========
+
+    // 原有逻辑：从网络加载
     try {
       final result = await _openChatUseCase(OpenChatCommand.fromArgs(args));
       await _timelineController.applyWindow(result.window);
@@ -115,11 +159,85 @@ class ChatController extends StateNotifier<ChatPageState> {
         isReadOnly: args.isReadOnly,
         highlightedMessageId: args.highlightedMessageId,
       );
+
+      // ========== 【Phase 4】写入缓存 ==========
+      if (_unifiedCacheManager != null && _currentUserId != null) {
+        await _unifiedCacheManager.setMessages(
+          _currentUserId!,
+          args.chatId,
+          result.window.messages,
+          result.window.viewportState,
+        );
+      }
+      // ========== 【Phase 4 结束】 ==========
     } catch (error, stackTrace) {
+      // ========== 【Phase 4】网络失败时降级到过期缓存 ==========
+      if (_unifiedCacheManager != null && _currentUserId != null) {
+        final staleCached = await _unifiedCacheManager.getMessages(
+          _currentUserId!,
+          args.chatId,
+        );
+        if (staleCached != null && staleCached.data.isNotEmpty) {
+          debugPrint('[ChatController] Network failed, using stale cache');
+          await _timelineController.applyWindow(
+            ChatWindowResult(
+              messages: staleCached.data,
+              viewportState: staleCached.viewportState ?? const ChatViewportState(anchorMessageId: null, hasMoreBefore: true, hasMoreAfter: true),
+              chatId: args.chatId,
+            ),
+          );
+          state = state.copyWith(
+            pageStatus: ChatPageStatus.ready,
+          );
+          return;
+        }
+      }
+      // ========== 【Phase 4 结束】 ==========
+
       state = state.copyWith(
         pageStatus: ChatPageStatus.failed,
         error: AppErrorMapper.map(error, stackTrace),
       );
+    }
+  }
+
+  /// 【Phase 4】后台刷新消息（缓存命中后调用）
+  Future<void> _backgroundRefreshMessages(ChatEntryArgs args) async {
+    try {
+      final result = await _openChatUseCase(OpenChatCommand.fromArgs(args));
+
+      if (!mounted) return;
+
+      // 合并最新消息到时间线
+      await _timelineController.applyWindow(result.window);
+
+      // 更新标题
+      if (result.chatTitle != null) {
+        state = state.copyWith(chatTitle: result.chatTitle);
+      }
+
+      // 标记已读
+      final readSequence = _resolveLatestReadableSequence(result.window.messages);
+      if (readSequence != null) {
+        await _markConversationReadUseCase(
+          chatId: args.chatId,
+          readSequence: readSequence,
+        );
+      }
+      _conversationListController.markConversationRead(args.chatId);
+
+      // 更新缓存
+      if (_unifiedCacheManager != null && _currentUserId != null) {
+        await _unifiedCacheManager.setMessages(
+          _currentUserId!,
+          args.chatId,
+          result.window.messages,
+          result.window.viewportState,
+        );
+      }
+    } catch (e) {
+      debugPrint('[ChatController] Background refresh failed: $e');
+      // 静默失败，缓存数据仍然可用
     }
   }
 

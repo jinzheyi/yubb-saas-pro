@@ -8,6 +8,10 @@ enum MessageStatusDb { sending, sent, delivered, failed, recalled }
 
 /// 按会话ID查询消息的索引
 @TableIndex(name: 'idx_messages_chat_id', columns: {#chatId})
+/// 按会话ID + 序列号查询（用于历史消息分页）
+@TableIndex(name: 'idx_messages_chat_sequence', columns: {#chatId, #sequence})
+/// 按用户 + 会话查询（用于用户隔离）
+@TableIndex(name: 'idx_messages_user_chat', columns: {#userId, #chatId})
 /// 客户端消息ID唯一索引（用于去重）
 @TableIndex(
     name: 'idx_messages_client_message_id', columns: {#clientMessageId}, unique: true)
@@ -52,8 +56,18 @@ class Messages extends Table {
   /// MessageExtra序列化JSON
   TextColumn get extraJson => text().nullable()();
 
+  /// 引用信息JSON（对应 QuoteInfo）
+  TextColumn get quoteInfoJson => text().nullable()();
+
   /// 本地创建时间戳
   DateTimeColumn get createdAt => dateTime()();
+
+  /// === 用户隔离 ===
+  TextColumn get userId => text().withDefault(const Constant(''))();
+
+  /// === 缓存时间戳（毫秒级） ===
+  /// 注意：此字段由 Mapper 显式设置，不使用默认值以避免类加载时固定时间戳
+  IntColumn get cachedAt => integer()();
 
   @override
   Set<Column> get primaryKey => {messageId};

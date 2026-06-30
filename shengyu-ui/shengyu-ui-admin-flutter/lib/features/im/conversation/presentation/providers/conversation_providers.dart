@@ -10,6 +10,10 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/repo
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/cursor_version_store.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/memory_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/disk_cache_manager.dart';
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
   final currentUserId = ref.read(authSessionProvider).userId;
@@ -47,13 +51,31 @@ final conversationListControllerProvider =
     StateNotifierProvider<ConversationListController, ConversationListState>((
       ref,
     ) {
+      final currentUserId = ref.watch(authSessionProvider).userId;
       return ConversationListController(
         ref.read(conversationSyncCoordinatorProvider),
         ref.read(syncConversationsIncrementallyUseCaseProvider),
         ref.read(conversationRepositoryProvider),
         ref.read(activeConversationServiceProvider.notifier),
+        ref.read(unifiedCacheManagerProvider),
+        ref.read(cursorVersionStoreProvider),
+        currentUserId,
       );
     });
+
+/// 游标版本存储 Provider
+final cursorVersionStoreProvider = Provider<CursorVersionStore>((ref) {
+  return CursorVersionStore();
+});
+
+/// 统一缓存管理器 Provider
+final unifiedCacheManagerProvider = Provider<UnifiedCacheManager>((ref) {
+  return UnifiedCacheManager(
+    memoryCache: MemoryCacheManager(),
+    diskCache: DiskCacheManager(),
+    cursorVersionStore: ref.watch(cursorVersionStoreProvider),
+  );
+});
 
 /// 未读消息统计汇总（一次遍历，避免重复计算）
 class UnreadCountSummary {

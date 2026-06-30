@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/provid
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 
 /// 会话清理服务
 ///
@@ -53,10 +54,23 @@ class SessionCleanupService {
     }
 
     // 只要 userId 发生变化（包括登出→登录、用户A→用户B），都执行清理
-    _clearAllUserScopes();
+    _clearAllUserScopes(previousUserId);
   }
 
-  void _clearAllUserScopes() {
+  void _clearAllUserScopes([String? previousUserId]) {
+    // ========== Phase 6.1: 清空内存缓存 ==========
+    // 在 invalidate providers 之前，先清空旧用户的内存缓存
+    // 这样可以确保下次登录时不会显示旧用户的缓存数据
+    if (previousUserId != null && previousUserId.isNotEmpty) {
+      try {
+        final cacheManager = _ref.read(unifiedCacheManagerProvider);
+        cacheManager.clearMemoryCacheForUser(previousUserId);
+      } catch (e) {
+        // 静默失败，不影响主流程
+      }
+    }
+    // ========== Phase 6.1 结束 ==========
+
     _ref.invalidate(currentUserProfileProvider);
     _ref.invalidate(conversationListControllerProvider);
     _ref.invalidate(chatControllerProvider);

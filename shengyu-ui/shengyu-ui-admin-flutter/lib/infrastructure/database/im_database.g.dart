@@ -146,6 +146,17 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _quoteInfoJsonMeta = const VerificationMeta(
+    'quoteInfoJson',
+  );
+  @override
+  late final GeneratedColumn<String> quoteInfoJson = GeneratedColumn<String>(
+    'quote_info_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -155,6 +166,27 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     aliasedName,
     false,
     type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<int> cachedAt = GeneratedColumn<int>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   @override
@@ -172,7 +204,10 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     sequence,
     isOutgoing,
     extraJson,
+    quoteInfoJson,
     createdAt,
+    userId,
+    cachedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -272,6 +307,15 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         extraJson.isAcceptableOrUnknown(data['extra_json']!, _extraJsonMeta),
       );
     }
+    if (data.containsKey('quote_info_json')) {
+      context.handle(
+        _quoteInfoJsonMeta,
+        quoteInfoJson.isAcceptableOrUnknown(
+          data['quote_info_json']!,
+          _quoteInfoJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -279,6 +323,20 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
       );
     } else if (isInserting) {
       context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
     }
     return context;
   }
@@ -345,9 +403,21 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         DriftSqlType.string,
         data['${effectivePrefix}extra_json'],
       ),
+      quoteInfoJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quote_info_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cached_at'],
       )!,
     );
   }
@@ -403,8 +473,18 @@ class Message extends DataClass implements Insertable<Message> {
   /// MessageExtra序列化JSON
   final String? extraJson;
 
+  /// 引用信息JSON（对应 QuoteInfo）
+  final String? quoteInfoJson;
+
   /// 本地创建时间戳
   final DateTime createdAt;
+
+  /// === 用户隔离 ===
+  final String userId;
+
+  /// === 缓存时间戳（毫秒级） ===
+  /// 注意：此字段由 Mapper 显式设置，不使用默认值以避免类加载时固定时间戳
+  final int cachedAt;
   const Message({
     required this.messageId,
     this.clientMessageId,
@@ -419,7 +499,10 @@ class Message extends DataClass implements Insertable<Message> {
     this.sequence,
     required this.isOutgoing,
     this.extraJson,
+    this.quoteInfoJson,
     required this.createdAt,
+    required this.userId,
+    required this.cachedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -451,7 +534,12 @@ class Message extends DataClass implements Insertable<Message> {
     if (!nullToAbsent || extraJson != null) {
       map['extra_json'] = Variable<String>(extraJson);
     }
+    if (!nullToAbsent || quoteInfoJson != null) {
+      map['quote_info_json'] = Variable<String>(quoteInfoJson);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['user_id'] = Variable<String>(userId);
+    map['cached_at'] = Variable<int>(cachedAt);
     return map;
   }
 
@@ -478,7 +566,12 @@ class Message extends DataClass implements Insertable<Message> {
       extraJson: extraJson == null && nullToAbsent
           ? const Value.absent()
           : Value(extraJson),
+      quoteInfoJson: quoteInfoJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quoteInfoJson),
       createdAt: Value(createdAt),
+      userId: Value(userId),
+      cachedAt: Value(cachedAt),
     );
   }
 
@@ -505,7 +598,10 @@ class Message extends DataClass implements Insertable<Message> {
       sequence: serializer.fromJson<String?>(json['sequence']),
       isOutgoing: serializer.fromJson<bool>(json['isOutgoing']),
       extraJson: serializer.fromJson<String?>(json['extraJson']),
+      quoteInfoJson: serializer.fromJson<String?>(json['quoteInfoJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      userId: serializer.fromJson<String>(json['userId']),
+      cachedAt: serializer.fromJson<int>(json['cachedAt']),
     );
   }
   @override
@@ -529,7 +625,10 @@ class Message extends DataClass implements Insertable<Message> {
       'sequence': serializer.toJson<String?>(sequence),
       'isOutgoing': serializer.toJson<bool>(isOutgoing),
       'extraJson': serializer.toJson<String?>(extraJson),
+      'quoteInfoJson': serializer.toJson<String?>(quoteInfoJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'userId': serializer.toJson<String>(userId),
+      'cachedAt': serializer.toJson<int>(cachedAt),
     };
   }
 
@@ -547,7 +646,10 @@ class Message extends DataClass implements Insertable<Message> {
     Value<String?> sequence = const Value.absent(),
     bool? isOutgoing,
     Value<String?> extraJson = const Value.absent(),
+    Value<String?> quoteInfoJson = const Value.absent(),
     DateTime? createdAt,
+    String? userId,
+    int? cachedAt,
   }) => Message(
     messageId: messageId ?? this.messageId,
     clientMessageId: clientMessageId.present
@@ -564,7 +666,12 @@ class Message extends DataClass implements Insertable<Message> {
     sequence: sequence.present ? sequence.value : this.sequence,
     isOutgoing: isOutgoing ?? this.isOutgoing,
     extraJson: extraJson.present ? extraJson.value : this.extraJson,
+    quoteInfoJson: quoteInfoJson.present
+        ? quoteInfoJson.value
+        : this.quoteInfoJson,
     createdAt: createdAt ?? this.createdAt,
+    userId: userId ?? this.userId,
+    cachedAt: cachedAt ?? this.cachedAt,
   );
   Message copyWithCompanion(MessagesCompanion data) {
     return Message(
@@ -589,7 +696,12 @@ class Message extends DataClass implements Insertable<Message> {
           ? data.isOutgoing.value
           : this.isOutgoing,
       extraJson: data.extraJson.present ? data.extraJson.value : this.extraJson,
+      quoteInfoJson: data.quoteInfoJson.present
+          ? data.quoteInfoJson.value
+          : this.quoteInfoJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
 
@@ -609,7 +721,10 @@ class Message extends DataClass implements Insertable<Message> {
           ..write('sequence: $sequence, ')
           ..write('isOutgoing: $isOutgoing, ')
           ..write('extraJson: $extraJson, ')
-          ..write('createdAt: $createdAt')
+          ..write('quoteInfoJson: $quoteInfoJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
   }
@@ -629,7 +744,10 @@ class Message extends DataClass implements Insertable<Message> {
     sequence,
     isOutgoing,
     extraJson,
+    quoteInfoJson,
     createdAt,
+    userId,
+    cachedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -648,7 +766,10 @@ class Message extends DataClass implements Insertable<Message> {
           other.sequence == this.sequence &&
           other.isOutgoing == this.isOutgoing &&
           other.extraJson == this.extraJson &&
-          other.createdAt == this.createdAt);
+          other.quoteInfoJson == this.quoteInfoJson &&
+          other.createdAt == this.createdAt &&
+          other.userId == this.userId &&
+          other.cachedAt == this.cachedAt);
 }
 
 class MessagesCompanion extends UpdateCompanion<Message> {
@@ -665,7 +786,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<String?> sequence;
   final Value<bool> isOutgoing;
   final Value<String?> extraJson;
+  final Value<String?> quoteInfoJson;
   final Value<DateTime> createdAt;
+  final Value<String> userId;
+  final Value<int> cachedAt;
   final Value<int> rowid;
   const MessagesCompanion({
     this.messageId = const Value.absent(),
@@ -681,7 +805,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.sequence = const Value.absent(),
     this.isOutgoing = const Value.absent(),
     this.extraJson = const Value.absent(),
+    this.quoteInfoJson = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MessagesCompanion.insert({
@@ -698,7 +825,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.sequence = const Value.absent(),
     required bool isOutgoing,
     this.extraJson = const Value.absent(),
+    this.quoteInfoJson = const Value.absent(),
     required DateTime createdAt,
+    this.userId = const Value.absent(),
+    required int cachedAt,
     this.rowid = const Value.absent(),
   }) : messageId = Value(messageId),
        chatId = Value(chatId),
@@ -709,7 +839,8 @@ class MessagesCompanion extends UpdateCompanion<Message> {
        senderName = Value(senderName),
        sentAt = Value(sentAt),
        isOutgoing = Value(isOutgoing),
-       createdAt = Value(createdAt);
+       createdAt = Value(createdAt),
+       cachedAt = Value(cachedAt);
   static Insertable<Message> custom({
     Expression<String>? messageId,
     Expression<String>? clientMessageId,
@@ -724,7 +855,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Expression<String>? sequence,
     Expression<bool>? isOutgoing,
     Expression<String>? extraJson,
+    Expression<String>? quoteInfoJson,
     Expression<DateTime>? createdAt,
+    Expression<String>? userId,
+    Expression<int>? cachedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -741,7 +875,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       if (sequence != null) 'sequence': sequence,
       if (isOutgoing != null) 'is_outgoing': isOutgoing,
       if (extraJson != null) 'extra_json': extraJson,
+      if (quoteInfoJson != null) 'quote_info_json': quoteInfoJson,
       if (createdAt != null) 'created_at': createdAt,
+      if (userId != null) 'user_id': userId,
+      if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -760,7 +897,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Value<String?>? sequence,
     Value<bool>? isOutgoing,
     Value<String?>? extraJson,
+    Value<String?>? quoteInfoJson,
     Value<DateTime>? createdAt,
+    Value<String>? userId,
+    Value<int>? cachedAt,
     Value<int>? rowid,
   }) {
     return MessagesCompanion(
@@ -777,7 +917,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       sequence: sequence ?? this.sequence,
       isOutgoing: isOutgoing ?? this.isOutgoing,
       extraJson: extraJson ?? this.extraJson,
+      quoteInfoJson: quoteInfoJson ?? this.quoteInfoJson,
       createdAt: createdAt ?? this.createdAt,
+      userId: userId ?? this.userId,
+      cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -828,8 +971,17 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     if (extraJson.present) {
       map['extra_json'] = Variable<String>(extraJson.value);
     }
+    if (quoteInfoJson.present) {
+      map['quote_info_json'] = Variable<String>(quoteInfoJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<int>(cachedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -853,7 +1005,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
           ..write('sequence: $sequence, ')
           ..write('isOutgoing: $isOutgoing, ')
           ..write('extraJson: $extraJson, ')
+          ..write('quoteInfoJson: $quoteInfoJson, ')
           ..write('createdAt: $createdAt, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -906,12 +1061,45 @@ class $ConversationsTable extends Conversations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _targetIdMeta = const VerificationMeta(
+    'targetId',
+  );
+  @override
+  late final GeneratedColumn<String> targetId = GeneratedColumn<String>(
+    'target_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastMessageIdMeta = const VerificationMeta(
     'lastMessageId',
   );
   @override
   late final GeneratedColumn<String> lastMessageId = GeneratedColumn<String>(
     'last_message_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastMessageSequenceMeta =
+      const VerificationMeta('lastMessageSequence');
+  @override
+  late final GeneratedColumn<String> lastMessageSequence =
+      GeneratedColumn<String>(
+        'last_message_sequence',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastReadSequenceMeta = const VerificationMeta(
+    'lastReadSequence',
+  );
+  @override
+  late final GeneratedColumn<String> lastReadSequence = GeneratedColumn<String>(
+    'last_read_sequence',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -928,6 +1116,70 @@ class $ConversationsTable extends Conversations
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       );
+  static const VerificationMeta _lastMessageTypeMeta = const VerificationMeta(
+    'lastMessageType',
+  );
+  @override
+  late final GeneratedColumn<String> lastMessageType = GeneratedColumn<String>(
+    'last_message_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastMessageSenderNameMeta =
+      const VerificationMeta('lastMessageSenderName');
+  @override
+  late final GeneratedColumn<String> lastMessageSenderName =
+      GeneratedColumn<String>(
+        'last_message_sender_name',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastMessageIsSelfMeta = const VerificationMeta(
+    'lastMessageIsSelf',
+  );
+  @override
+  late final GeneratedColumn<bool> lastMessageIsSelf = GeneratedColumn<bool>(
+    'last_message_is_self',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("last_message_is_self" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastMessageStatusMeta = const VerificationMeta(
+    'lastMessageStatus',
+  );
+  @override
+  late final GeneratedColumn<String> lastMessageStatus =
+      GeneratedColumn<String>(
+        'last_message_status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('sent'),
+      );
+  static const VerificationMeta _lastMessageHasAtMeMeta =
+      const VerificationMeta('lastMessageHasAtMe');
+  @override
+  late final GeneratedColumn<bool> lastMessageHasAtMe = GeneratedColumn<bool>(
+    'last_message_has_at_me',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("last_message_has_at_me" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _lastMessageTimeMeta = const VerificationMeta(
     'lastMessageTime',
   );
@@ -949,7 +1201,8 @@ class $ConversationsTable extends Conversations
     aliasedName,
     false,
     type: DriftSqlType.int,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _isPinnedMeta = const VerificationMeta(
     'isPinned',
@@ -960,10 +1213,11 @@ class $ConversationsTable extends Conversations
     aliasedName,
     false,
     type: DriftSqlType.bool,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_pinned" IN (0, 1))',
     ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _isMutedMeta = const VerificationMeta(
     'isMuted',
@@ -974,10 +1228,11 @@ class $ConversationsTable extends Conversations
     aliasedName,
     false,
     type: DriftSqlType.bool,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_muted" IN (0, 1))',
     ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
@@ -990,19 +1245,75 @@ class $ConversationsTable extends Conversations
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<int> cachedAt = GeneratedColumn<int>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupMemberCountMeta = const VerificationMeta(
+    'groupMemberCount',
+  );
+  @override
+  late final GeneratedColumn<int> groupMemberCount = GeneratedColumn<int>(
+    'group_member_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _groupMemberStatusMeta = const VerificationMeta(
+    'groupMemberStatus',
+  );
+  @override
+  late final GeneratedColumn<int> groupMemberStatus = GeneratedColumn<int>(
+    'group_member_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     chatId,
     type,
     targetName,
     targetAvatar,
+    targetId,
     lastMessageId,
+    lastMessageSequence,
+    lastReadSequence,
     lastMessagePreview,
+    lastMessageType,
+    lastMessageSenderName,
+    lastMessageIsSelf,
+    lastMessageStatus,
+    lastMessageHasAtMe,
     lastMessageTime,
     unreadCount,
     isPinned,
     isMuted,
     updatedAt,
+    userId,
+    cachedAt,
+    groupMemberCount,
+    groupMemberStatus,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1041,12 +1352,36 @@ class $ConversationsTable extends Conversations
         ),
       );
     }
+    if (data.containsKey('target_id')) {
+      context.handle(
+        _targetIdMeta,
+        targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta),
+      );
+    }
     if (data.containsKey('last_message_id')) {
       context.handle(
         _lastMessageIdMeta,
         lastMessageId.isAcceptableOrUnknown(
           data['last_message_id']!,
           _lastMessageIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_sequence')) {
+      context.handle(
+        _lastMessageSequenceMeta,
+        lastMessageSequence.isAcceptableOrUnknown(
+          data['last_message_sequence']!,
+          _lastMessageSequenceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_read_sequence')) {
+      context.handle(
+        _lastReadSequenceMeta,
+        lastReadSequence.isAcceptableOrUnknown(
+          data['last_read_sequence']!,
+          _lastReadSequenceMeta,
         ),
       );
     }
@@ -1060,6 +1395,53 @@ class $ConversationsTable extends Conversations
       );
     } else if (isInserting) {
       context.missing(_lastMessagePreviewMeta);
+    }
+    if (data.containsKey('last_message_type')) {
+      context.handle(
+        _lastMessageTypeMeta,
+        lastMessageType.isAcceptableOrUnknown(
+          data['last_message_type']!,
+          _lastMessageTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastMessageTypeMeta);
+    }
+    if (data.containsKey('last_message_sender_name')) {
+      context.handle(
+        _lastMessageSenderNameMeta,
+        lastMessageSenderName.isAcceptableOrUnknown(
+          data['last_message_sender_name']!,
+          _lastMessageSenderNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_is_self')) {
+      context.handle(
+        _lastMessageIsSelfMeta,
+        lastMessageIsSelf.isAcceptableOrUnknown(
+          data['last_message_is_self']!,
+          _lastMessageIsSelfMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_status')) {
+      context.handle(
+        _lastMessageStatusMeta,
+        lastMessageStatus.isAcceptableOrUnknown(
+          data['last_message_status']!,
+          _lastMessageStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_has_at_me')) {
+      context.handle(
+        _lastMessageHasAtMeMeta,
+        lastMessageHasAtMe.isAcceptableOrUnknown(
+          data['last_message_has_at_me']!,
+          _lastMessageHasAtMeMeta,
+        ),
+      );
     }
     if (data.containsKey('last_message_time')) {
       context.handle(
@@ -1080,24 +1462,18 @@ class $ConversationsTable extends Conversations
           _unreadCountMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_unreadCountMeta);
     }
     if (data.containsKey('is_pinned')) {
       context.handle(
         _isPinnedMeta,
         isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
       );
-    } else if (isInserting) {
-      context.missing(_isPinnedMeta);
     }
     if (data.containsKey('is_muted')) {
       context.handle(
         _isMutedMeta,
         isMuted.isAcceptableOrUnknown(data['is_muted']!, _isMutedMeta),
       );
-    } else if (isInserting) {
-      context.missing(_isMutedMeta);
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -1106,6 +1482,38 @@ class $ConversationsTable extends Conversations
       );
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    if (data.containsKey('group_member_count')) {
+      context.handle(
+        _groupMemberCountMeta,
+        groupMemberCount.isAcceptableOrUnknown(
+          data['group_member_count']!,
+          _groupMemberCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('group_member_status')) {
+      context.handle(
+        _groupMemberStatusMeta,
+        groupMemberStatus.isAcceptableOrUnknown(
+          data['group_member_status']!,
+          _groupMemberStatusMeta,
+        ),
+      );
     }
     return context;
   }
@@ -1134,13 +1542,45 @@ class $ConversationsTable extends Conversations
         DriftSqlType.string,
         data['${effectivePrefix}target_avatar'],
       ),
+      targetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_id'],
+      ),
       lastMessageId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}last_message_id'],
       ),
+      lastMessageSequence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_sequence'],
+      ),
+      lastReadSequence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_read_sequence'],
+      ),
       lastMessagePreview: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}last_message_preview'],
+      )!,
+      lastMessageType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_type'],
+      )!,
+      lastMessageSenderName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_sender_name'],
+      ),
+      lastMessageIsSelf: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}last_message_is_self'],
+      )!,
+      lastMessageStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_status'],
+      )!,
+      lastMessageHasAtMe: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}last_message_has_at_me'],
       )!,
       lastMessageTime: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1162,6 +1602,22 @@ class $ConversationsTable extends Conversations
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cached_at'],
+      )!,
+      groupMemberCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_member_count'],
+      )!,
+      groupMemberStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_member_status'],
+      ),
     );
   }
 
@@ -1187,11 +1643,35 @@ class Conversation extends DataClass implements Insertable<Conversation> {
   /// 会话头像URL
   final String? targetAvatar;
 
+  /// 对方用户ID（单聊时的 targetId）
+  final String? targetId;
+
   /// 最后一条消息ID
   final String? lastMessageId;
 
+  /// 最后一条消息序列号
+  final String? lastMessageSequence;
+
+  /// 最后已读序列号
+  final String? lastReadSequence;
+
   /// 最后一条消息预览文本
   final String lastMessagePreview;
+
+  /// 最后一条消息类型（存储为字符串名称）
+  final String lastMessageType;
+
+  /// 最后一条消息发送者名称
+  final String? lastMessageSenderName;
+
+  /// 最后一条消息是否自己发送
+  final bool lastMessageIsSelf;
+
+  /// 最后一条消息状态（存储为字符串名称）
+  final String lastMessageStatus;
+
+  /// 是否有 @我
+  final bool lastMessageHasAtMe;
 
   /// 最后一条消息时间
   final DateTime lastMessageTime;
@@ -1207,18 +1687,43 @@ class Conversation extends DataClass implements Insertable<Conversation> {
 
   /// 更新时间
   final DateTime updatedAt;
+
+  /// === 用户隔离 ===
+  final String userId;
+
+  /// === 缓存时间戳（毫秒级） ===
+  /// 注意：此字段由 Mapper 显式设置，不使用默认值以避免类加载时固定时间戳
+  final int cachedAt;
+
+  /// === 群成员数量 ===
+  final int groupMemberCount;
+
+  /// === 群成员状态（1=已退出, 2=已被踢, 3=已解散） ===
+  final int? groupMemberStatus;
   const Conversation({
     required this.chatId,
     required this.type,
     required this.targetName,
     this.targetAvatar,
+    this.targetId,
     this.lastMessageId,
+    this.lastMessageSequence,
+    this.lastReadSequence,
     required this.lastMessagePreview,
+    required this.lastMessageType,
+    this.lastMessageSenderName,
+    required this.lastMessageIsSelf,
+    required this.lastMessageStatus,
+    required this.lastMessageHasAtMe,
     required this.lastMessageTime,
     required this.unreadCount,
     required this.isPinned,
     required this.isMuted,
     required this.updatedAt,
+    required this.userId,
+    required this.cachedAt,
+    required this.groupMemberCount,
+    this.groupMemberStatus,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1233,15 +1738,37 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     if (!nullToAbsent || targetAvatar != null) {
       map['target_avatar'] = Variable<String>(targetAvatar);
     }
+    if (!nullToAbsent || targetId != null) {
+      map['target_id'] = Variable<String>(targetId);
+    }
     if (!nullToAbsent || lastMessageId != null) {
       map['last_message_id'] = Variable<String>(lastMessageId);
     }
+    if (!nullToAbsent || lastMessageSequence != null) {
+      map['last_message_sequence'] = Variable<String>(lastMessageSequence);
+    }
+    if (!nullToAbsent || lastReadSequence != null) {
+      map['last_read_sequence'] = Variable<String>(lastReadSequence);
+    }
     map['last_message_preview'] = Variable<String>(lastMessagePreview);
+    map['last_message_type'] = Variable<String>(lastMessageType);
+    if (!nullToAbsent || lastMessageSenderName != null) {
+      map['last_message_sender_name'] = Variable<String>(lastMessageSenderName);
+    }
+    map['last_message_is_self'] = Variable<bool>(lastMessageIsSelf);
+    map['last_message_status'] = Variable<String>(lastMessageStatus);
+    map['last_message_has_at_me'] = Variable<bool>(lastMessageHasAtMe);
     map['last_message_time'] = Variable<DateTime>(lastMessageTime);
     map['unread_count'] = Variable<int>(unreadCount);
     map['is_pinned'] = Variable<bool>(isPinned);
     map['is_muted'] = Variable<bool>(isMuted);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['user_id'] = Variable<String>(userId);
+    map['cached_at'] = Variable<int>(cachedAt);
+    map['group_member_count'] = Variable<int>(groupMemberCount);
+    if (!nullToAbsent || groupMemberStatus != null) {
+      map['group_member_status'] = Variable<int>(groupMemberStatus);
+    }
     return map;
   }
 
@@ -1253,15 +1780,37 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       targetAvatar: targetAvatar == null && nullToAbsent
           ? const Value.absent()
           : Value(targetAvatar),
+      targetId: targetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetId),
       lastMessageId: lastMessageId == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageId),
+      lastMessageSequence: lastMessageSequence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessageSequence),
+      lastReadSequence: lastReadSequence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReadSequence),
       lastMessagePreview: Value(lastMessagePreview),
+      lastMessageType: Value(lastMessageType),
+      lastMessageSenderName: lastMessageSenderName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessageSenderName),
+      lastMessageIsSelf: Value(lastMessageIsSelf),
+      lastMessageStatus: Value(lastMessageStatus),
+      lastMessageHasAtMe: Value(lastMessageHasAtMe),
       lastMessageTime: Value(lastMessageTime),
       unreadCount: Value(unreadCount),
       isPinned: Value(isPinned),
       isMuted: Value(isMuted),
       updatedAt: Value(updatedAt),
+      userId: Value(userId),
+      cachedAt: Value(cachedAt),
+      groupMemberCount: Value(groupMemberCount),
+      groupMemberStatus: groupMemberStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupMemberStatus),
     );
   }
 
@@ -1277,15 +1826,31 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       ),
       targetName: serializer.fromJson<String>(json['targetName']),
       targetAvatar: serializer.fromJson<String?>(json['targetAvatar']),
+      targetId: serializer.fromJson<String?>(json['targetId']),
       lastMessageId: serializer.fromJson<String?>(json['lastMessageId']),
+      lastMessageSequence: serializer.fromJson<String?>(
+        json['lastMessageSequence'],
+      ),
+      lastReadSequence: serializer.fromJson<String?>(json['lastReadSequence']),
       lastMessagePreview: serializer.fromJson<String>(
         json['lastMessagePreview'],
       ),
+      lastMessageType: serializer.fromJson<String>(json['lastMessageType']),
+      lastMessageSenderName: serializer.fromJson<String?>(
+        json['lastMessageSenderName'],
+      ),
+      lastMessageIsSelf: serializer.fromJson<bool>(json['lastMessageIsSelf']),
+      lastMessageStatus: serializer.fromJson<String>(json['lastMessageStatus']),
+      lastMessageHasAtMe: serializer.fromJson<bool>(json['lastMessageHasAtMe']),
       lastMessageTime: serializer.fromJson<DateTime>(json['lastMessageTime']),
       unreadCount: serializer.fromJson<int>(json['unreadCount']),
       isPinned: serializer.fromJson<bool>(json['isPinned']),
       isMuted: serializer.fromJson<bool>(json['isMuted']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      userId: serializer.fromJson<String>(json['userId']),
+      cachedAt: serializer.fromJson<int>(json['cachedAt']),
+      groupMemberCount: serializer.fromJson<int>(json['groupMemberCount']),
+      groupMemberStatus: serializer.fromJson<int?>(json['groupMemberStatus']),
     );
   }
   @override
@@ -1298,13 +1863,27 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       ),
       'targetName': serializer.toJson<String>(targetName),
       'targetAvatar': serializer.toJson<String?>(targetAvatar),
+      'targetId': serializer.toJson<String?>(targetId),
       'lastMessageId': serializer.toJson<String?>(lastMessageId),
+      'lastMessageSequence': serializer.toJson<String?>(lastMessageSequence),
+      'lastReadSequence': serializer.toJson<String?>(lastReadSequence),
       'lastMessagePreview': serializer.toJson<String>(lastMessagePreview),
+      'lastMessageType': serializer.toJson<String>(lastMessageType),
+      'lastMessageSenderName': serializer.toJson<String?>(
+        lastMessageSenderName,
+      ),
+      'lastMessageIsSelf': serializer.toJson<bool>(lastMessageIsSelf),
+      'lastMessageStatus': serializer.toJson<String>(lastMessageStatus),
+      'lastMessageHasAtMe': serializer.toJson<bool>(lastMessageHasAtMe),
       'lastMessageTime': serializer.toJson<DateTime>(lastMessageTime),
       'unreadCount': serializer.toJson<int>(unreadCount),
       'isPinned': serializer.toJson<bool>(isPinned),
       'isMuted': serializer.toJson<bool>(isMuted),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'userId': serializer.toJson<String>(userId),
+      'cachedAt': serializer.toJson<int>(cachedAt),
+      'groupMemberCount': serializer.toJson<int>(groupMemberCount),
+      'groupMemberStatus': serializer.toJson<int?>(groupMemberStatus),
     };
   }
 
@@ -1313,27 +1892,59 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     ConversationTypeDb? type,
     String? targetName,
     Value<String?> targetAvatar = const Value.absent(),
+    Value<String?> targetId = const Value.absent(),
     Value<String?> lastMessageId = const Value.absent(),
+    Value<String?> lastMessageSequence = const Value.absent(),
+    Value<String?> lastReadSequence = const Value.absent(),
     String? lastMessagePreview,
+    String? lastMessageType,
+    Value<String?> lastMessageSenderName = const Value.absent(),
+    bool? lastMessageIsSelf,
+    String? lastMessageStatus,
+    bool? lastMessageHasAtMe,
     DateTime? lastMessageTime,
     int? unreadCount,
     bool? isPinned,
     bool? isMuted,
     DateTime? updatedAt,
+    String? userId,
+    int? cachedAt,
+    int? groupMemberCount,
+    Value<int?> groupMemberStatus = const Value.absent(),
   }) => Conversation(
     chatId: chatId ?? this.chatId,
     type: type ?? this.type,
     targetName: targetName ?? this.targetName,
     targetAvatar: targetAvatar.present ? targetAvatar.value : this.targetAvatar,
+    targetId: targetId.present ? targetId.value : this.targetId,
     lastMessageId: lastMessageId.present
         ? lastMessageId.value
         : this.lastMessageId,
+    lastMessageSequence: lastMessageSequence.present
+        ? lastMessageSequence.value
+        : this.lastMessageSequence,
+    lastReadSequence: lastReadSequence.present
+        ? lastReadSequence.value
+        : this.lastReadSequence,
     lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
+    lastMessageType: lastMessageType ?? this.lastMessageType,
+    lastMessageSenderName: lastMessageSenderName.present
+        ? lastMessageSenderName.value
+        : this.lastMessageSenderName,
+    lastMessageIsSelf: lastMessageIsSelf ?? this.lastMessageIsSelf,
+    lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
+    lastMessageHasAtMe: lastMessageHasAtMe ?? this.lastMessageHasAtMe,
     lastMessageTime: lastMessageTime ?? this.lastMessageTime,
     unreadCount: unreadCount ?? this.unreadCount,
     isPinned: isPinned ?? this.isPinned,
     isMuted: isMuted ?? this.isMuted,
     updatedAt: updatedAt ?? this.updatedAt,
+    userId: userId ?? this.userId,
+    cachedAt: cachedAt ?? this.cachedAt,
+    groupMemberCount: groupMemberCount ?? this.groupMemberCount,
+    groupMemberStatus: groupMemberStatus.present
+        ? groupMemberStatus.value
+        : this.groupMemberStatus,
   );
   Conversation copyWithCompanion(ConversationsCompanion data) {
     return Conversation(
@@ -1345,12 +1956,34 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       targetAvatar: data.targetAvatar.present
           ? data.targetAvatar.value
           : this.targetAvatar,
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
       lastMessageId: data.lastMessageId.present
           ? data.lastMessageId.value
           : this.lastMessageId,
+      lastMessageSequence: data.lastMessageSequence.present
+          ? data.lastMessageSequence.value
+          : this.lastMessageSequence,
+      lastReadSequence: data.lastReadSequence.present
+          ? data.lastReadSequence.value
+          : this.lastReadSequence,
       lastMessagePreview: data.lastMessagePreview.present
           ? data.lastMessagePreview.value
           : this.lastMessagePreview,
+      lastMessageType: data.lastMessageType.present
+          ? data.lastMessageType.value
+          : this.lastMessageType,
+      lastMessageSenderName: data.lastMessageSenderName.present
+          ? data.lastMessageSenderName.value
+          : this.lastMessageSenderName,
+      lastMessageIsSelf: data.lastMessageIsSelf.present
+          ? data.lastMessageIsSelf.value
+          : this.lastMessageIsSelf,
+      lastMessageStatus: data.lastMessageStatus.present
+          ? data.lastMessageStatus.value
+          : this.lastMessageStatus,
+      lastMessageHasAtMe: data.lastMessageHasAtMe.present
+          ? data.lastMessageHasAtMe.value
+          : this.lastMessageHasAtMe,
       lastMessageTime: data.lastMessageTime.present
           ? data.lastMessageTime.value
           : this.lastMessageTime,
@@ -1360,6 +1993,14 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
       isMuted: data.isMuted.present ? data.isMuted.value : this.isMuted,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+      groupMemberCount: data.groupMemberCount.present
+          ? data.groupMemberCount.value
+          : this.groupMemberCount,
+      groupMemberStatus: data.groupMemberStatus.present
+          ? data.groupMemberStatus.value
+          : this.groupMemberStatus,
     );
   }
 
@@ -1370,31 +2011,55 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           ..write('type: $type, ')
           ..write('targetName: $targetName, ')
           ..write('targetAvatar: $targetAvatar, ')
+          ..write('targetId: $targetId, ')
           ..write('lastMessageId: $lastMessageId, ')
+          ..write('lastMessageSequence: $lastMessageSequence, ')
+          ..write('lastReadSequence: $lastReadSequence, ')
           ..write('lastMessagePreview: $lastMessagePreview, ')
+          ..write('lastMessageType: $lastMessageType, ')
+          ..write('lastMessageSenderName: $lastMessageSenderName, ')
+          ..write('lastMessageIsSelf: $lastMessageIsSelf, ')
+          ..write('lastMessageStatus: $lastMessageStatus, ')
+          ..write('lastMessageHasAtMe: $lastMessageHasAtMe, ')
           ..write('lastMessageTime: $lastMessageTime, ')
           ..write('unreadCount: $unreadCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('isMuted: $isMuted, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('groupMemberCount: $groupMemberCount, ')
+          ..write('groupMemberStatus: $groupMemberStatus')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     chatId,
     type,
     targetName,
     targetAvatar,
+    targetId,
     lastMessageId,
+    lastMessageSequence,
+    lastReadSequence,
     lastMessagePreview,
+    lastMessageType,
+    lastMessageSenderName,
+    lastMessageIsSelf,
+    lastMessageStatus,
+    lastMessageHasAtMe,
     lastMessageTime,
     unreadCount,
     isPinned,
     isMuted,
     updatedAt,
-  );
+    userId,
+    cachedAt,
+    groupMemberCount,
+    groupMemberStatus,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1403,13 +2068,25 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           other.type == this.type &&
           other.targetName == this.targetName &&
           other.targetAvatar == this.targetAvatar &&
+          other.targetId == this.targetId &&
           other.lastMessageId == this.lastMessageId &&
+          other.lastMessageSequence == this.lastMessageSequence &&
+          other.lastReadSequence == this.lastReadSequence &&
           other.lastMessagePreview == this.lastMessagePreview &&
+          other.lastMessageType == this.lastMessageType &&
+          other.lastMessageSenderName == this.lastMessageSenderName &&
+          other.lastMessageIsSelf == this.lastMessageIsSelf &&
+          other.lastMessageStatus == this.lastMessageStatus &&
+          other.lastMessageHasAtMe == this.lastMessageHasAtMe &&
           other.lastMessageTime == this.lastMessageTime &&
           other.unreadCount == this.unreadCount &&
           other.isPinned == this.isPinned &&
           other.isMuted == this.isMuted &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.userId == this.userId &&
+          other.cachedAt == this.cachedAt &&
+          other.groupMemberCount == this.groupMemberCount &&
+          other.groupMemberStatus == this.groupMemberStatus);
 }
 
 class ConversationsCompanion extends UpdateCompanion<Conversation> {
@@ -1417,26 +2094,50 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
   final Value<ConversationTypeDb> type;
   final Value<String> targetName;
   final Value<String?> targetAvatar;
+  final Value<String?> targetId;
   final Value<String?> lastMessageId;
+  final Value<String?> lastMessageSequence;
+  final Value<String?> lastReadSequence;
   final Value<String> lastMessagePreview;
+  final Value<String> lastMessageType;
+  final Value<String?> lastMessageSenderName;
+  final Value<bool> lastMessageIsSelf;
+  final Value<String> lastMessageStatus;
+  final Value<bool> lastMessageHasAtMe;
   final Value<DateTime> lastMessageTime;
   final Value<int> unreadCount;
   final Value<bool> isPinned;
   final Value<bool> isMuted;
   final Value<DateTime> updatedAt;
+  final Value<String> userId;
+  final Value<int> cachedAt;
+  final Value<int> groupMemberCount;
+  final Value<int?> groupMemberStatus;
   final Value<int> rowid;
   const ConversationsCompanion({
     this.chatId = const Value.absent(),
     this.type = const Value.absent(),
     this.targetName = const Value.absent(),
     this.targetAvatar = const Value.absent(),
+    this.targetId = const Value.absent(),
     this.lastMessageId = const Value.absent(),
+    this.lastMessageSequence = const Value.absent(),
+    this.lastReadSequence = const Value.absent(),
     this.lastMessagePreview = const Value.absent(),
+    this.lastMessageType = const Value.absent(),
+    this.lastMessageSenderName = const Value.absent(),
+    this.lastMessageIsSelf = const Value.absent(),
+    this.lastMessageStatus = const Value.absent(),
+    this.lastMessageHasAtMe = const Value.absent(),
     this.lastMessageTime = const Value.absent(),
     this.unreadCount = const Value.absent(),
     this.isPinned = const Value.absent(),
     this.isMuted = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.groupMemberCount = const Value.absent(),
+    this.groupMemberStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ConversationsCompanion.insert({
@@ -1444,35 +2145,58 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     required ConversationTypeDb type,
     required String targetName,
     this.targetAvatar = const Value.absent(),
+    this.targetId = const Value.absent(),
     this.lastMessageId = const Value.absent(),
+    this.lastMessageSequence = const Value.absent(),
+    this.lastReadSequence = const Value.absent(),
     required String lastMessagePreview,
+    required String lastMessageType,
+    this.lastMessageSenderName = const Value.absent(),
+    this.lastMessageIsSelf = const Value.absent(),
+    this.lastMessageStatus = const Value.absent(),
+    this.lastMessageHasAtMe = const Value.absent(),
     required DateTime lastMessageTime,
-    required int unreadCount,
-    required bool isPinned,
-    required bool isMuted,
+    this.unreadCount = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.isMuted = const Value.absent(),
     required DateTime updatedAt,
+    this.userId = const Value.absent(),
+    required int cachedAt,
+    this.groupMemberCount = const Value.absent(),
+    this.groupMemberStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : chatId = Value(chatId),
        type = Value(type),
        targetName = Value(targetName),
        lastMessagePreview = Value(lastMessagePreview),
+       lastMessageType = Value(lastMessageType),
        lastMessageTime = Value(lastMessageTime),
-       unreadCount = Value(unreadCount),
-       isPinned = Value(isPinned),
-       isMuted = Value(isMuted),
-       updatedAt = Value(updatedAt);
+       updatedAt = Value(updatedAt),
+       cachedAt = Value(cachedAt);
   static Insertable<Conversation> custom({
     Expression<String>? chatId,
     Expression<int>? type,
     Expression<String>? targetName,
     Expression<String>? targetAvatar,
+    Expression<String>? targetId,
     Expression<String>? lastMessageId,
+    Expression<String>? lastMessageSequence,
+    Expression<String>? lastReadSequence,
     Expression<String>? lastMessagePreview,
+    Expression<String>? lastMessageType,
+    Expression<String>? lastMessageSenderName,
+    Expression<bool>? lastMessageIsSelf,
+    Expression<String>? lastMessageStatus,
+    Expression<bool>? lastMessageHasAtMe,
     Expression<DateTime>? lastMessageTime,
     Expression<int>? unreadCount,
     Expression<bool>? isPinned,
     Expression<bool>? isMuted,
     Expression<DateTime>? updatedAt,
+    Expression<String>? userId,
+    Expression<int>? cachedAt,
+    Expression<int>? groupMemberCount,
+    Expression<int>? groupMemberStatus,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1480,14 +2204,29 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       if (type != null) 'type': type,
       if (targetName != null) 'target_name': targetName,
       if (targetAvatar != null) 'target_avatar': targetAvatar,
+      if (targetId != null) 'target_id': targetId,
       if (lastMessageId != null) 'last_message_id': lastMessageId,
+      if (lastMessageSequence != null)
+        'last_message_sequence': lastMessageSequence,
+      if (lastReadSequence != null) 'last_read_sequence': lastReadSequence,
       if (lastMessagePreview != null)
         'last_message_preview': lastMessagePreview,
+      if (lastMessageType != null) 'last_message_type': lastMessageType,
+      if (lastMessageSenderName != null)
+        'last_message_sender_name': lastMessageSenderName,
+      if (lastMessageIsSelf != null) 'last_message_is_self': lastMessageIsSelf,
+      if (lastMessageStatus != null) 'last_message_status': lastMessageStatus,
+      if (lastMessageHasAtMe != null)
+        'last_message_has_at_me': lastMessageHasAtMe,
       if (lastMessageTime != null) 'last_message_time': lastMessageTime,
       if (unreadCount != null) 'unread_count': unreadCount,
       if (isPinned != null) 'is_pinned': isPinned,
       if (isMuted != null) 'is_muted': isMuted,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (userId != null) 'user_id': userId,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (groupMemberCount != null) 'group_member_count': groupMemberCount,
+      if (groupMemberStatus != null) 'group_member_status': groupMemberStatus,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1497,13 +2236,25 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     Value<ConversationTypeDb>? type,
     Value<String>? targetName,
     Value<String?>? targetAvatar,
+    Value<String?>? targetId,
     Value<String?>? lastMessageId,
+    Value<String?>? lastMessageSequence,
+    Value<String?>? lastReadSequence,
     Value<String>? lastMessagePreview,
+    Value<String>? lastMessageType,
+    Value<String?>? lastMessageSenderName,
+    Value<bool>? lastMessageIsSelf,
+    Value<String>? lastMessageStatus,
+    Value<bool>? lastMessageHasAtMe,
     Value<DateTime>? lastMessageTime,
     Value<int>? unreadCount,
     Value<bool>? isPinned,
     Value<bool>? isMuted,
     Value<DateTime>? updatedAt,
+    Value<String>? userId,
+    Value<int>? cachedAt,
+    Value<int>? groupMemberCount,
+    Value<int?>? groupMemberStatus,
     Value<int>? rowid,
   }) {
     return ConversationsCompanion(
@@ -1511,13 +2262,26 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       type: type ?? this.type,
       targetName: targetName ?? this.targetName,
       targetAvatar: targetAvatar ?? this.targetAvatar,
+      targetId: targetId ?? this.targetId,
       lastMessageId: lastMessageId ?? this.lastMessageId,
+      lastMessageSequence: lastMessageSequence ?? this.lastMessageSequence,
+      lastReadSequence: lastReadSequence ?? this.lastReadSequence,
       lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
+      lastMessageType: lastMessageType ?? this.lastMessageType,
+      lastMessageSenderName:
+          lastMessageSenderName ?? this.lastMessageSenderName,
+      lastMessageIsSelf: lastMessageIsSelf ?? this.lastMessageIsSelf,
+      lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
+      lastMessageHasAtMe: lastMessageHasAtMe ?? this.lastMessageHasAtMe,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
       isPinned: isPinned ?? this.isPinned,
       isMuted: isMuted ?? this.isMuted,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
+      cachedAt: cachedAt ?? this.cachedAt,
+      groupMemberCount: groupMemberCount ?? this.groupMemberCount,
+      groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1539,11 +2303,39 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     if (targetAvatar.present) {
       map['target_avatar'] = Variable<String>(targetAvatar.value);
     }
+    if (targetId.present) {
+      map['target_id'] = Variable<String>(targetId.value);
+    }
     if (lastMessageId.present) {
       map['last_message_id'] = Variable<String>(lastMessageId.value);
     }
+    if (lastMessageSequence.present) {
+      map['last_message_sequence'] = Variable<String>(
+        lastMessageSequence.value,
+      );
+    }
+    if (lastReadSequence.present) {
+      map['last_read_sequence'] = Variable<String>(lastReadSequence.value);
+    }
     if (lastMessagePreview.present) {
       map['last_message_preview'] = Variable<String>(lastMessagePreview.value);
+    }
+    if (lastMessageType.present) {
+      map['last_message_type'] = Variable<String>(lastMessageType.value);
+    }
+    if (lastMessageSenderName.present) {
+      map['last_message_sender_name'] = Variable<String>(
+        lastMessageSenderName.value,
+      );
+    }
+    if (lastMessageIsSelf.present) {
+      map['last_message_is_self'] = Variable<bool>(lastMessageIsSelf.value);
+    }
+    if (lastMessageStatus.present) {
+      map['last_message_status'] = Variable<String>(lastMessageStatus.value);
+    }
+    if (lastMessageHasAtMe.present) {
+      map['last_message_has_at_me'] = Variable<bool>(lastMessageHasAtMe.value);
     }
     if (lastMessageTime.present) {
       map['last_message_time'] = Variable<DateTime>(lastMessageTime.value);
@@ -1560,6 +2352,18 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<int>(cachedAt.value);
+    }
+    if (groupMemberCount.present) {
+      map['group_member_count'] = Variable<int>(groupMemberCount.value);
+    }
+    if (groupMemberStatus.present) {
+      map['group_member_status'] = Variable<int>(groupMemberStatus.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1573,13 +2377,25 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
           ..write('type: $type, ')
           ..write('targetName: $targetName, ')
           ..write('targetAvatar: $targetAvatar, ')
+          ..write('targetId: $targetId, ')
           ..write('lastMessageId: $lastMessageId, ')
+          ..write('lastMessageSequence: $lastMessageSequence, ')
+          ..write('lastReadSequence: $lastReadSequence, ')
           ..write('lastMessagePreview: $lastMessagePreview, ')
+          ..write('lastMessageType: $lastMessageType, ')
+          ..write('lastMessageSenderName: $lastMessageSenderName, ')
+          ..write('lastMessageIsSelf: $lastMessageIsSelf, ')
+          ..write('lastMessageStatus: $lastMessageStatus, ')
+          ..write('lastMessageHasAtMe: $lastMessageHasAtMe, ')
           ..write('lastMessageTime: $lastMessageTime, ')
           ..write('unreadCount: $unreadCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('isMuted: $isMuted, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('groupMemberCount: $groupMemberCount, ')
+          ..write('groupMemberStatus: $groupMemberStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1594,6 +2410,14 @@ abstract class _$ImDatabase extends GeneratedDatabase {
   late final Index idxMessagesChatId = Index(
     'idx_messages_chat_id',
     'CREATE INDEX idx_messages_chat_id ON messages (chat_id)',
+  );
+  late final Index idxMessagesChatSequence = Index(
+    'idx_messages_chat_sequence',
+    'CREATE INDEX idx_messages_chat_sequence ON messages (chat_id, sequence)',
+  );
+  late final Index idxMessagesUserChat = Index(
+    'idx_messages_user_chat',
+    'CREATE INDEX idx_messages_user_chat ON messages (user_id, chat_id)',
   );
   late final Index idxMessagesClientMessageId = Index(
     'idx_messages_client_message_id',
@@ -1611,6 +2435,8 @@ abstract class _$ImDatabase extends GeneratedDatabase {
     messages,
     conversations,
     idxMessagesChatId,
+    idxMessagesChatSequence,
+    idxMessagesUserChat,
     idxMessagesClientMessageId,
   ];
 }
@@ -1630,7 +2456,10 @@ typedef $$MessagesTableCreateCompanionBuilder =
       Value<String?> sequence,
       required bool isOutgoing,
       Value<String?> extraJson,
+      Value<String?> quoteInfoJson,
       required DateTime createdAt,
+      Value<String> userId,
+      required int cachedAt,
       Value<int> rowid,
     });
 typedef $$MessagesTableUpdateCompanionBuilder =
@@ -1648,7 +2477,10 @@ typedef $$MessagesTableUpdateCompanionBuilder =
       Value<String?> sequence,
       Value<bool> isOutgoing,
       Value<String?> extraJson,
+      Value<String?> quoteInfoJson,
       Value<DateTime> createdAt,
+      Value<String> userId,
+      Value<int> cachedAt,
       Value<int> rowid,
     });
 
@@ -1728,8 +2560,23 @@ class $$MessagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get quoteInfoJson => $composableBuilder(
+    column: $table.quoteInfoJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1808,8 +2655,23 @@ class $$MessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get quoteInfoJson => $composableBuilder(
+    column: $table.quoteInfoJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -1870,8 +2732,19 @@ class $$MessagesTableAnnotationComposer
   GeneratedColumn<String> get extraJson =>
       $composableBuilder(column: $table.extraJson, builder: (column) => column);
 
+  GeneratedColumn<String> get quoteInfoJson => $composableBuilder(
+    column: $table.quoteInfoJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<int> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
 }
 
 class $$MessagesTableTableManager
@@ -1915,7 +2788,10 @@ class $$MessagesTableTableManager
                 Value<String?> sequence = const Value.absent(),
                 Value<bool> isOutgoing = const Value.absent(),
                 Value<String?> extraJson = const Value.absent(),
+                Value<String?> quoteInfoJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<int> cachedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MessagesCompanion(
                 messageId: messageId,
@@ -1931,7 +2807,10 @@ class $$MessagesTableTableManager
                 sequence: sequence,
                 isOutgoing: isOutgoing,
                 extraJson: extraJson,
+                quoteInfoJson: quoteInfoJson,
                 createdAt: createdAt,
+                userId: userId,
+                cachedAt: cachedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1949,7 +2828,10 @@ class $$MessagesTableTableManager
                 Value<String?> sequence = const Value.absent(),
                 required bool isOutgoing,
                 Value<String?> extraJson = const Value.absent(),
+                Value<String?> quoteInfoJson = const Value.absent(),
                 required DateTime createdAt,
+                Value<String> userId = const Value.absent(),
+                required int cachedAt,
                 Value<int> rowid = const Value.absent(),
               }) => MessagesCompanion.insert(
                 messageId: messageId,
@@ -1965,7 +2847,10 @@ class $$MessagesTableTableManager
                 sequence: sequence,
                 isOutgoing: isOutgoing,
                 extraJson: extraJson,
+                quoteInfoJson: quoteInfoJson,
                 createdAt: createdAt,
+                userId: userId,
+                cachedAt: cachedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1996,13 +2881,25 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       required ConversationTypeDb type,
       required String targetName,
       Value<String?> targetAvatar,
+      Value<String?> targetId,
       Value<String?> lastMessageId,
+      Value<String?> lastMessageSequence,
+      Value<String?> lastReadSequence,
       required String lastMessagePreview,
+      required String lastMessageType,
+      Value<String?> lastMessageSenderName,
+      Value<bool> lastMessageIsSelf,
+      Value<String> lastMessageStatus,
+      Value<bool> lastMessageHasAtMe,
       required DateTime lastMessageTime,
-      required int unreadCount,
-      required bool isPinned,
-      required bool isMuted,
+      Value<int> unreadCount,
+      Value<bool> isPinned,
+      Value<bool> isMuted,
       required DateTime updatedAt,
+      Value<String> userId,
+      required int cachedAt,
+      Value<int> groupMemberCount,
+      Value<int?> groupMemberStatus,
       Value<int> rowid,
     });
 typedef $$ConversationsTableUpdateCompanionBuilder =
@@ -2011,13 +2908,25 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<ConversationTypeDb> type,
       Value<String> targetName,
       Value<String?> targetAvatar,
+      Value<String?> targetId,
       Value<String?> lastMessageId,
+      Value<String?> lastMessageSequence,
+      Value<String?> lastReadSequence,
       Value<String> lastMessagePreview,
+      Value<String> lastMessageType,
+      Value<String?> lastMessageSenderName,
+      Value<bool> lastMessageIsSelf,
+      Value<String> lastMessageStatus,
+      Value<bool> lastMessageHasAtMe,
       Value<DateTime> lastMessageTime,
       Value<int> unreadCount,
       Value<bool> isPinned,
       Value<bool> isMuted,
       Value<DateTime> updatedAt,
+      Value<String> userId,
+      Value<int> cachedAt,
+      Value<int> groupMemberCount,
+      Value<int?> groupMemberStatus,
       Value<int> rowid,
     });
 
@@ -2051,13 +2960,53 @@ class $$ConversationsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get lastMessageId => $composableBuilder(
     column: $table.lastMessageId,
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get lastMessageSequence => $composableBuilder(
+    column: $table.lastMessageSequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastReadSequence => $composableBuilder(
+    column: $table.lastReadSequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get lastMessagePreview => $composableBuilder(
     column: $table.lastMessagePreview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessageType => $composableBuilder(
+    column: $table.lastMessageType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessageSenderName => $composableBuilder(
+    column: $table.lastMessageSenderName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get lastMessageIsSelf => $composableBuilder(
+    column: $table.lastMessageIsSelf,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessageStatus => $composableBuilder(
+    column: $table.lastMessageStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get lastMessageHasAtMe => $composableBuilder(
+    column: $table.lastMessageHasAtMe,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2083,6 +3032,26 @@ class $$ConversationsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get groupMemberCount => $composableBuilder(
+    column: $table.groupMemberCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get groupMemberStatus => $composableBuilder(
+    column: $table.groupMemberStatus,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2116,13 +3085,53 @@ class $$ConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get lastMessageId => $composableBuilder(
     column: $table.lastMessageId,
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lastMessageSequence => $composableBuilder(
+    column: $table.lastMessageSequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastReadSequence => $composableBuilder(
+    column: $table.lastReadSequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get lastMessagePreview => $composableBuilder(
     column: $table.lastMessagePreview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastMessageType => $composableBuilder(
+    column: $table.lastMessageType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastMessageSenderName => $composableBuilder(
+    column: $table.lastMessageSenderName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get lastMessageIsSelf => $composableBuilder(
+    column: $table.lastMessageIsSelf,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastMessageStatus => $composableBuilder(
+    column: $table.lastMessageStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get lastMessageHasAtMe => $composableBuilder(
+    column: $table.lastMessageHasAtMe,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2148,6 +3157,26 @@ class $$ConversationsTableOrderingComposer
 
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get groupMemberCount => $composableBuilder(
+    column: $table.groupMemberCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get groupMemberStatus => $composableBuilder(
+    column: $table.groupMemberStatus,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -2177,13 +3206,51 @@ class $$ConversationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get targetId =>
+      $composableBuilder(column: $table.targetId, builder: (column) => column);
+
   GeneratedColumn<String> get lastMessageId => $composableBuilder(
     column: $table.lastMessageId,
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get lastMessageSequence => $composableBuilder(
+    column: $table.lastMessageSequence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastReadSequence => $composableBuilder(
+    column: $table.lastReadSequence,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get lastMessagePreview => $composableBuilder(
     column: $table.lastMessagePreview,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessageType => $composableBuilder(
+    column: $table.lastMessageType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessageSenderName => $composableBuilder(
+    column: $table.lastMessageSenderName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get lastMessageIsSelf => $composableBuilder(
+    column: $table.lastMessageIsSelf,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessageStatus => $composableBuilder(
+    column: $table.lastMessageStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get lastMessageHasAtMe => $composableBuilder(
+    column: $table.lastMessageHasAtMe,
     builder: (column) => column,
   );
 
@@ -2205,6 +3272,22 @@ class $$ConversationsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<int> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get groupMemberCount => $composableBuilder(
+    column: $table.groupMemberCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get groupMemberStatus => $composableBuilder(
+    column: $table.groupMemberStatus,
+    builder: (column) => column,
+  );
 }
 
 class $$ConversationsTableTableManager
@@ -2242,26 +3325,50 @@ class $$ConversationsTableTableManager
                 Value<ConversationTypeDb> type = const Value.absent(),
                 Value<String> targetName = const Value.absent(),
                 Value<String?> targetAvatar = const Value.absent(),
+                Value<String?> targetId = const Value.absent(),
                 Value<String?> lastMessageId = const Value.absent(),
+                Value<String?> lastMessageSequence = const Value.absent(),
+                Value<String?> lastReadSequence = const Value.absent(),
                 Value<String> lastMessagePreview = const Value.absent(),
+                Value<String> lastMessageType = const Value.absent(),
+                Value<String?> lastMessageSenderName = const Value.absent(),
+                Value<bool> lastMessageIsSelf = const Value.absent(),
+                Value<String> lastMessageStatus = const Value.absent(),
+                Value<bool> lastMessageHasAtMe = const Value.absent(),
                 Value<DateTime> lastMessageTime = const Value.absent(),
                 Value<int> unreadCount = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isMuted = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<int> cachedAt = const Value.absent(),
+                Value<int> groupMemberCount = const Value.absent(),
+                Value<int?> groupMemberStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationsCompanion(
                 chatId: chatId,
                 type: type,
                 targetName: targetName,
                 targetAvatar: targetAvatar,
+                targetId: targetId,
                 lastMessageId: lastMessageId,
+                lastMessageSequence: lastMessageSequence,
+                lastReadSequence: lastReadSequence,
                 lastMessagePreview: lastMessagePreview,
+                lastMessageType: lastMessageType,
+                lastMessageSenderName: lastMessageSenderName,
+                lastMessageIsSelf: lastMessageIsSelf,
+                lastMessageStatus: lastMessageStatus,
+                lastMessageHasAtMe: lastMessageHasAtMe,
                 lastMessageTime: lastMessageTime,
                 unreadCount: unreadCount,
                 isPinned: isPinned,
                 isMuted: isMuted,
                 updatedAt: updatedAt,
+                userId: userId,
+                cachedAt: cachedAt,
+                groupMemberCount: groupMemberCount,
+                groupMemberStatus: groupMemberStatus,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2270,26 +3377,50 @@ class $$ConversationsTableTableManager
                 required ConversationTypeDb type,
                 required String targetName,
                 Value<String?> targetAvatar = const Value.absent(),
+                Value<String?> targetId = const Value.absent(),
                 Value<String?> lastMessageId = const Value.absent(),
+                Value<String?> lastMessageSequence = const Value.absent(),
+                Value<String?> lastReadSequence = const Value.absent(),
                 required String lastMessagePreview,
+                required String lastMessageType,
+                Value<String?> lastMessageSenderName = const Value.absent(),
+                Value<bool> lastMessageIsSelf = const Value.absent(),
+                Value<String> lastMessageStatus = const Value.absent(),
+                Value<bool> lastMessageHasAtMe = const Value.absent(),
                 required DateTime lastMessageTime,
-                required int unreadCount,
-                required bool isPinned,
-                required bool isMuted,
+                Value<int> unreadCount = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<bool> isMuted = const Value.absent(),
                 required DateTime updatedAt,
+                Value<String> userId = const Value.absent(),
+                required int cachedAt,
+                Value<int> groupMemberCount = const Value.absent(),
+                Value<int?> groupMemberStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationsCompanion.insert(
                 chatId: chatId,
                 type: type,
                 targetName: targetName,
                 targetAvatar: targetAvatar,
+                targetId: targetId,
                 lastMessageId: lastMessageId,
+                lastMessageSequence: lastMessageSequence,
+                lastReadSequence: lastReadSequence,
                 lastMessagePreview: lastMessagePreview,
+                lastMessageType: lastMessageType,
+                lastMessageSenderName: lastMessageSenderName,
+                lastMessageIsSelf: lastMessageIsSelf,
+                lastMessageStatus: lastMessageStatus,
+                lastMessageHasAtMe: lastMessageHasAtMe,
                 lastMessageTime: lastMessageTime,
                 unreadCount: unreadCount,
                 isPinned: isPinned,
                 isMuted: isMuted,
                 updatedAt: updatedAt,
+                userId: userId,
+                cachedAt: cachedAt,
+                groupMemberCount: groupMemberCount,
+                groupMemberStatus: groupMemberStatus,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

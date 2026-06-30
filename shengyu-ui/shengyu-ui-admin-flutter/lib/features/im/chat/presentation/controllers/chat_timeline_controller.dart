@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
@@ -12,21 +14,45 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_ext
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_preview_entry.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/isolates/message_merge_isolate.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_timeline_state.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   ChatTimelineController(
     this._loadChatWindowUseCase,
-    this._loadOlderMessagesUseCase,
-  ) : super(const ChatTimelineState());
+    this._loadOlderMessagesUseCase, {
+    UnifiedCacheManager? unifiedCacheManager,
+    String? currentUserId,
+  })  : _unifiedCacheManager = unifiedCacheManager,
+        _currentUserId = currentUserId,
+        super(const ChatTimelineState());
 
   final LoadChatWindowUseCase _loadChatWindowUseCase;
   final LoadOlderMessagesUseCase _loadOlderMessagesUseCase;
+  final UnifiedCacheManager? _unifiedCacheManager;
+  final String? _currentUserId;
 
   /// Isolate 离屏计算阈值：消息总数超过此值时才使用 Isolate
   /// 避免小数据量时 JSON 序列化/反序列化的额外开销
   static const int _offThreadThreshold = 20;
+
+  /// 【缓存写穿 Helper】异步写入消息缓存（取最近 500 条）
+  void _writeMessagesToCache() {
+    if (_unifiedCacheManager != null &&
+        _currentUserId != null &&
+        state.messages.isNotEmpty) {
+      final toCache = state.messages.length > 500
+          ? state.messages.sublist(state.messages.length - 500)
+          : state.messages;
+      unawaited(_unifiedCacheManager!.setMessages(
+        _currentUserId!,
+        toCache.first.chatId,
+        toCache,
+        state.viewportState,
+      ));
+    }
+  }
 
   /// 批量添加消息（直接处理，无二次缓冲）
   void appendMessagesBatch(List<Message> messages) {
@@ -50,7 +76,29 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
     if (deduped.isNotEmpty) {
       _mergeMessagesToTimeline(deduped.values.toList());
+
+      // 【缓存写穿】
+      _writeMessagesToCache();
     }
+  }
+
+  /// 消息排序：先按 sequence 升序，sequence 缺失时回退到 sentAt 排序
+  ///
+  /// 设计约束：所有消息合并路径必须调用此方法，确保消息时间线顺序正确
+  List<Message> _sortMessagesBySequence(List<Message> messages) {
+    final sorted = [...messages];
+    sorted.sort((a, b) {
+      final seqA = a.sequence;
+      final seqB = b.sequence;
+      if (seqA != null && seqB != null && seqA.isNotEmpty && seqB.isNotEmpty) {
+        final numA = int.tryParse(seqA) ?? 0;
+        final numB = int.tryParse(seqB) ?? 0;
+        return numA.compareTo(numB);
+      }
+      // 如果 sequence 缺失，回退到时间戳排序
+      return a.sentAt.compareTo(b.sentAt);
+    });
+    return sorted;
   }
 
   /// 添加单条消息（低频率场景保持原有路径）
@@ -71,6 +119,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         messages: nextMessages,
         quotePreviewCache: _buildQuotePreviewCache(nextMessages),
       );
+      // 【缓存写穿】
+      _writeMessagesToCache();
       return;
     }
 
@@ -80,6 +130,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       quotePreviewCache: _buildQuotePreviewCache(nextMessages),
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   /// 合并多条消息到时间线（批量去重 + 有序插入）
@@ -92,7 +144,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     if (existing.isEmpty) {
       state = state.copyWith(
         status: ChatTimelineStatus.ready,
-        messages: incoming,
+        messages: _sortMessagesBySequence(incoming),
       );
       return;
     }
@@ -140,7 +192,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
-      messages: nextMessages,
+      messages: _sortMessagesBySequence(nextMessages),
       quotePreviewCache: _buildQuotePreviewCache(nextMessages),
     );
   }
@@ -157,6 +209,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       error: null,
       quotePreviewCache: _buildQuotePreviewCache(merged),
     );
+
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   Future<void> loadOlder({required String chatId}) async {
@@ -208,6 +263,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         viewportState: result.viewportState,
         quotePreviewCache: _buildQuotePreviewCache(mergedOlder),
       );
+      // 【缓存写穿】
+      _writeMessagesToCache();
     } catch (error, stackTrace) {
       state = state.copyWith(
         status: ChatTimelineStatus.failed,
@@ -227,6 +284,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       viewportState: result.viewportState,
       quotePreviewCache: _buildQuotePreviewCache(merged),
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   Future<void> reloadLatest({required OpenChatCommand command}) async {
@@ -243,6 +302,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         error: null,
         quotePreviewCache: _buildQuotePreviewCache(merged),
       );
+      // 【缓存写穿】
+      _writeMessagesToCache();
     } catch (error, stackTrace) {
       state = state.copyWith(
         status: ChatTimelineStatus.failed,
@@ -290,6 +351,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         messages: merged,
         quotePreviewCache: _buildQuotePreviewCache(merged),
       );
+      // 【缓存写穿】
+      _writeMessagesToCache();
     } catch (e) {
       // 静默失败，不影响主流程
       debugPrint('[ChatTimeline] confirmPendingMessages failed: $e');
@@ -328,6 +391,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         messages: merged,
         quotePreviewCache: _buildQuotePreviewCache(merged),
       );
+      // 【缓存写穿】
+      _writeMessagesToCache();
       debugPrint('[ChatTimeline] pullMessagesAfterReconnect: merged ${merged.length} messages');
     } catch (e) {
       // 静默失败，不影响主流程
@@ -358,6 +423,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       error: null,
       quotePreviewCache: _buildQuotePreviewCache(nextMessages),
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void markSentByClientMessageId({required String clientMessageId}) {
@@ -384,6 +451,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void markFailedByClientMessageId({required String clientMessageId}) {
@@ -404,6 +473,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void markSendingByClientMessageId({required String clientMessageId}) {
@@ -424,6 +495,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   Message? findByAnyMessageId(String messageId) {
@@ -453,6 +526,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       status: ChatTimelineStatus.ready,
       messages: nextMessages,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void markVoicePlayed({required String messageId}) {
@@ -473,6 +548,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       error: null,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void applyRecalledMessage(Message message) {
@@ -534,6 +611,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       error: null,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void removeByAnyMessageId(String messageId) {
@@ -551,6 +630,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       error: null,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void applyReeditHint({
@@ -584,14 +665,23 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       messages: nextMessages,
       error: null,
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   void clearAll() {
+    // 先获取 chatId（清空后拿不到）
+    final chatId = state.messages.isNotEmpty ? state.messages.first.chatId : null;
+
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
       messages: const <Message>[],
       error: null,
     );
+    // 【缓存写穿】清空缓存
+    if (_unifiedCacheManager != null && _currentUserId != null && chatId != null) {
+      unawaited(_unifiedCacheManager!.clearMessages(_currentUserId!, chatId));
+    }
   }
 
   Future<void> replaceAllMessages(List<Message> messages) async {
@@ -605,6 +695,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       error: null,
       quotePreviewCache: _buildQuotePreviewCache(merged),
     );
+    // 【缓存写穿】
+    _writeMessagesToCache();
   }
 
   List<Message> _mergeWindowMessages({
@@ -651,19 +743,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     }
 
     // 按 sequence 排序，确保消息时间线正确（处理 API 返回历史消息导致的顺序错乱）
-    result.sort((a, b) {
-      final seqA = a.sequence;
-      final seqB = b.sequence;
-      if (seqA != null && seqB != null && seqA.isNotEmpty && seqB.isNotEmpty) {
-        final numA = int.tryParse(seqA) ?? 0;
-        final numB = int.tryParse(seqB) ?? 0;
-        return numA.compareTo(numB);
-      }
-      // 如果 sequence 缺失，回退到时间戳排序
-      return a.sentAt.compareTo(b.sentAt);
-    });
-
-    return result;
+    return _sortMessagesBySequence(result);
   }
 
   /// 离屏合并窗口消息（智能调度：大数据量走 Isolate，小数据量走主线程）
