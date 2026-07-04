@@ -21,6 +21,6 @@ public class ToTenantReqVO {
 
     @Schema(description = "租户id", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     @NotNull(message = "{validation.auth.target_tenant_id.required}")
-    private Long id;
+    private String id;
 
 }

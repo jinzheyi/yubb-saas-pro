@@ -10,6 +10,7 @@ import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuListReqDTO;
 import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthPermissionInfoRespVO;
+import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginReqVO;
 import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsLoginReqVO;
 import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsSendReqVO;
@@ -39,9 +40,11 @@ import java.util.Set;
 
 import static cn.hutool.core.collection.CollUtil.isEmpty;
 import static com.shengyu.framework.common.enums.logger.LoginLogTypeEnum.LOGOUT_SELF;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TOKEN_EXPIRED;
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 
 /**
  * 移动端 - 认证 Controller
@@ -173,6 +176,23 @@ public class AppAuthController {
         // 转换为 Web 端的 VO（Service 层复用）
         adminAuthService.sendSmsCode(AuthConvert.INSTANCE.convert(reqVO));
         return success(true);
+    }
+
+    // ========== 租户切换相关 ==========
+
+    @PostMapping("/to-tenant")
+    @Operation(summary = "切换租户（移动端）")
+    @OperateLog(enable = false)
+    public CommonResult<AuthLoginRespVO> toTenant(
+            @RequestBody @Valid ToTenantReqVO reqVO,
+            HttpServletRequest request) {
+        String token = SecurityFrameworkUtils.obtainAuthorization(request,
+                securityProperties.getTokenHeader(), securityProperties.getTokenParameter());
+        if (StrUtil.isBlank(token)) {
+            throw exception(AUTH_TOKEN_EXPIRED);
+        }
+        log.info("[移动端切换租户] 用户: {}, 目标租户ID: {}", getLoginUserId(), reqVO.getId());
+        return success(adminAuthService.toTenant(reqVO, token));
     }
 
 }

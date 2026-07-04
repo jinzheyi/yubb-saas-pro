@@ -4,6 +4,7 @@ class AuthSession {
     required this.accessToken,
     required this.refreshToken,
     required this.tenantId,
+    this.tenantName,
     required this.deviceId,
     required this.deviceType,
     required this.deviceName,
@@ -16,6 +17,7 @@ class AuthSession {
       accessToken = '',
       refreshToken = '',
       tenantId = '',
+      tenantName = null,
       deviceId = 'flutter-debug-device',
       deviceType = 1,
       deviceName = 'Flutter Client',
@@ -26,6 +28,7 @@ class AuthSession {
   final String accessToken;
   final String refreshToken;
   final String tenantId;
+  final String? tenantName;
   final String deviceId;
   final int deviceType;
   final String deviceName;
@@ -39,6 +42,7 @@ class AuthSession {
     String? accessToken,
     String? refreshToken,
     String? tenantId,
+    String? tenantName,
     String? deviceId,
     int? deviceType,
     String? deviceName,
@@ -50,6 +54,7 @@ class AuthSession {
       accessToken: accessToken ?? this.accessToken,
       refreshToken: refreshToken ?? this.refreshToken,
       tenantId: tenantId ?? this.tenantId,
+      tenantName: tenantName ?? this.tenantName,
       deviceId: deviceId ?? this.deviceId,
       deviceType: deviceType ?? this.deviceType,
       deviceName: deviceName ?? this.deviceName,

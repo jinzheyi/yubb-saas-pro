@@ -1496,6 +1496,54 @@
   "continueEditAction": "继续编辑",
   "discardAction": "放弃",
 
+  "@@@TENANT_SWITCH": "Section: Tenant Switch",
+  "tenantSwitchTitle": "切换企业",
+  "tenantCurrent": "当前",
+  "tenantSwitching": "切换中...",
+  "tenantSwitchSuccess": "切换成功",
+  "tenantSwitchFailed": "切换失败",
+  "tenantAlreadyCurrent": "已在当前企业",
+  "tenantNotSwitchable": "该企业不可切换",
+  "tenantLoadingFailed": "加载租户列表失败",
+  "tenantSearchHint": "搜索企业",
+  "tenantNoTenants": "暂无企业",
+  "tenantNoSearchResults": "未找到匹配的企业",
+  "tenantCreateOrJoin": "创建/加入企业",
+  "tenantCreateOrJoinComingSoon": "创建/加入企业功能待实现",
+  "tenantLastLogin": "上次登录: {time}",
+  "@tenantLastLogin": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantTimeJustNow": "刚刚",
+  "tenantTimeMinutesAgo": "{count}分钟前",
+  "@tenantTimeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tenantTimeHoursAgo": "{count}小时前",
+  "@tenantTimeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tenantTimeDaysAgo": "{count}天前",
+  "@tenantTimeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
   "@@@DEVICE_LIST": "Section: Device Management",
   "deviceListTitle": "登录设备管理",
   "deviceListEmpty": "暂无登录设备",

@@ -5151,6 +5151,114 @@ abstract class AppLocalizations {
   /// **'Discard'**
   String get discardAction;
 
+  /// No description provided for @tenantSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Organization'**
+  String get tenantSwitchTitle;
+
+  /// No description provided for @tenantCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get tenantCurrent;
+
+  /// No description provided for @tenantSwitching.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching...'**
+  String get tenantSwitching;
+
+  /// No description provided for @tenantSwitchSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched successfully'**
+  String get tenantSwitchSuccess;
+
+  /// No description provided for @tenantSwitchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch failed'**
+  String get tenantSwitchFailed;
+
+  /// No description provided for @tenantAlreadyCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in current organization'**
+  String get tenantAlreadyCurrent;
+
+  /// No description provided for @tenantNotSwitchable.
+  ///
+  /// In en, this message translates to:
+  /// **'This organization is not switchable'**
+  String get tenantNotSwitchable;
+
+  /// No description provided for @tenantLoadingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load tenant list'**
+  String get tenantLoadingFailed;
+
+  /// No description provided for @tenantSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search organization'**
+  String get tenantSearchHint;
+
+  /// No description provided for @tenantNoTenants.
+  ///
+  /// In en, this message translates to:
+  /// **'No organizations'**
+  String get tenantNoTenants;
+
+  /// No description provided for @tenantNoSearchResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching organizations found'**
+  String get tenantNoSearchResults;
+
+  /// No description provided for @tenantCreateOrJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Create/Join Organization'**
+  String get tenantCreateOrJoin;
+
+  /// No description provided for @tenantCreateOrJoinComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Create/Join organization feature coming soon'**
+  String get tenantCreateOrJoinComingSoon;
+
+  /// No description provided for @tenantLastLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Last login: {time}'**
+  String tenantLastLogin(String time);
+
+  /// No description provided for @tenantTimeJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get tenantTimeJustNow;
+
+  /// No description provided for @tenantTimeMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} minutes ago'**
+  String tenantTimeMinutesAgo(int count);
+
+  /// No description provided for @tenantTimeHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hours ago'**
+  String tenantTimeHoursAgo(int count);
+
+  /// No description provided for @tenantTimeDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days ago'**
+  String tenantTimeDaysAgo(int count);
+
   /// No description provided for @deviceListTitle.
   ///
   /// In en, this message translates to:

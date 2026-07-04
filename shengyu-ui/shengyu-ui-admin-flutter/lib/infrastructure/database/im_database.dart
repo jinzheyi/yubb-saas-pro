@@ -88,7 +88,13 @@ class ImDatabase extends _$ImDatabase {
 
   /// 获取数据库单例
   static ImDatabase get instance {
-    _instance ??= ImDatabase(driftDatabase(name: 'yubb_im'));
+    _instance ??= ImDatabase(driftDatabase(
+      name: 'yubb_im',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    ));
     return _instance!;
   }
 
@@ -97,5 +103,18 @@ class ImDatabase extends _$ImDatabase {
     final current = _instance;
     _instance = null;
     await current?.close();
+  }
+
+  /// 清理所有表数据（租户切换时调用）
+  Future<void> clearAllTables() async {
+    try {
+      // 清理消息表（drift 语法）
+      await delete(messages).go();
+      
+      // 清理会话表（drift 语法）
+      await delete(conversations).go();
+    } catch (e) {
+      rethrow;
+    }
   }
 }

@@ -37,6 +37,7 @@ class SocketAuthPayloadBuilder {
       },
       'body': {
         'accessToken': session.accessToken,
+        'tenantId': session.tenantId, // 显式传递 tenantId 用于服务端校验
         'deviceType': session.deviceType,
         'deviceId': session.deviceId,
         'deviceName': session.deviceName,

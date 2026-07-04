@@ -20,6 +20,11 @@ class TokenStorage {
     );
     await prefs.setString(StorageKeyRegistry.userId, session.userId);
     await prefs.setString(StorageKeyRegistry.tenantId, session.tenantId);
+    if (session.tenantName != null) {
+      await prefs.setString(StorageKeyRegistry.tenantName, session.tenantName!);
+    } else {
+      await prefs.remove(StorageKeyRegistry.tenantName);
+    }
     await prefs.setString(StorageKeyRegistry.locale, session.locale);
     await prefs.setString(StorageKeyRegistry.deviceId, session.deviceId);
     await prefs.setInt(StorageKeyRegistry.deviceType, session.deviceType);
@@ -46,6 +51,7 @@ class TokenStorage {
       accessToken: accessToken,
       refreshToken: refreshToken ?? '',
       tenantId: prefs.getString(StorageKeyRegistry.tenantId) ?? '',
+      tenantName: prefs.getString(StorageKeyRegistry.tenantName),
       deviceId: prefs.getString(StorageKeyRegistry.deviceId) ?? '',
       deviceType: prefs.getInt(StorageKeyRegistry.deviceType) ?? 1,
       deviceName:
@@ -62,6 +68,7 @@ class TokenStorage {
     await _secureStorage.delete(key: StorageKeyRegistry.refreshToken);
     await prefs.remove(StorageKeyRegistry.userId);
     await prefs.remove(StorageKeyRegistry.tenantId);
+    await prefs.remove(StorageKeyRegistry.tenantName);
     await prefs.remove(StorageKeyRegistry.locale);
     await prefs.remove(StorageKeyRegistry.deviceId);
     await prefs.remove(StorageKeyRegistry.deviceType);

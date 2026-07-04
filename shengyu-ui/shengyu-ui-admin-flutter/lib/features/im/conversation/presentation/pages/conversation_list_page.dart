@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
@@ -28,6 +29,7 @@ import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_empty_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
+import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/tenant_switch_page.dart';
 
 class ConversationListPage extends ConsumerStatefulWidget {
   const ConversationListPage({super.key});
@@ -191,6 +193,8 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
             bottom: false,
             child: Column(
               children: [
+                // 租户切换栏（飞书风格）
+                _buildTenantSwitcher(context, ref),
                 Container(
                   color: ThemeColors.surface(context),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -379,6 +383,49 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildTenantSwitcher(BuildContext context, WidgetRef ref) {
+    // 直接从 AuthSession 读取 tenantName（登录/切换租户时已返回）
+    final session = ref.watch(authSessionProvider);
+    final tenantName = session.tenantName ?? '';
+
+    return GestureDetector(
+      onTap: () => TenantSwitchPage.showAsLeftSheet(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: ThemeColors.surface(context),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: const Color(0xFF1677FF),
+              child: Text(
+                tenantName.isNotEmpty ? tenantName[0] : '?',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                tenantName.isNotEmpty ? tenantName : '加载中...',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down, color: Colors.grey, size: 20),
+          ],
+        ),
       ),
     );
   }

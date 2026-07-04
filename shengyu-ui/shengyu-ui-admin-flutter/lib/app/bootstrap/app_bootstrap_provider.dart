@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/auth/session_cleanup_service.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_session_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
+import 'package:shengyu_ui_admin_im/features/profile/domain/services/tenant_switch_service.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 
 final appBootstrapProvider = FutureProvider<void>((ref) async {
@@ -23,13 +24,14 @@ final appBootstrapProvider = FutureProvider<void>((ref) async {
   // 保证整个应用生命周期内始终监听 badge 推送，不受页面导航影响。
   ref.watch(globalBadgeSocketBindingProvider);
 
-  // ===== P5-2: 并行初始化 auth/locale/theme/IM缓存，缩短启动等待时间 =====
+  // ===== P5-2: 并行初始化 auth/locale/theme/IM缓存/租户列表，缩短启动等待时间 =====
   // IM 缓存预加载必须阻塞启动页，确保进入主界面前缓存已就绪，避免骨架屏
   await Future.wait<void>([
     _safeBootstrap(ref, 'auth', () => ref.read(authBootstrapCoordinatorProvider).bootstrap()),
     _safeBootstrap(ref, 'locale', () => ref.read(appLocaleControllerProvider.notifier).load()),
     _safeBootstrap(ref, 'theme', () => ref.read(appThemeControllerProvider.notifier).load()),
     _safeBootstrap(ref, 'im-cache', () => _preloadImCache(ref)),
+    _safeBootstrap(ref, 'tenant-list', () => _preloadTenantList(ref)),
   ]);
 });
 
@@ -65,6 +67,26 @@ Future<void> _preloadImCache(Ref ref) async {
     }
   } catch (e, stack) {
     debugPrint('[Bootstrap] IM cache preload error: $e\n$stack');
+  }
+}
+
+/// Phase 6: 预加载租户列表
+///
+/// 在用户登录后，异步预加载租户列表，使得打开租户切换面板时无需等待
+Future<void> _preloadTenantList(Ref ref) async {
+  try {
+    final session = ref.read(authSessionProvider);
+    if (!session.isAuthenticated) {
+      debugPrint('[Bootstrap] Tenant list preload skipped: user not logged in');
+      return;
+    }
+
+    final service = ref.read(tenantSwitchServiceProvider.notifier);
+    await service.loadTenantList();
+    final count = ref.read(tenantSwitchServiceProvider).tenantList.length;
+    debugPrint('[Bootstrap] Tenant list preloaded: $count tenants');
+  } catch (e, stack) {
+    debugPrint('[Bootstrap] Tenant list preload error: $e\n$stack');
   }
 }
 

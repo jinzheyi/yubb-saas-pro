@@ -242,6 +242,11 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 构建返回结果
         AuthLoginRespVO loginRespVO = BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
         loginRespVO.setDeptId(user.getDeptId());
+        // 填充租户名称
+        TenantRespDTO tenant = tenantService.getTenantById(user.getTenantId());
+        if (tenant != null) {
+            loginRespVO.setTenantName(tenant.getName());
+        }
         return loginRespVO;
     }
 
@@ -277,7 +282,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         DataPermission dataPermission = getDisableDataPermissionDisable();
         DataPermissionContextHolder.add(dataPermission);
         try {
-            TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
+            Long targetTenantId = Long.parseLong(reqVO.getId());
+            TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(targetTenantId))
                 .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
             if (tenantRespDTO.getStatus().equals(CommonStatusEnum.DISABLE.getStatus())) {
                 throw exception(TENANT_DISABLE, tenantRespDTO.getName());

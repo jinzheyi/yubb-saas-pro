@@ -2879,6 +2879,69 @@ class AppLocalizationsKo extends AppLocalizations {
   String get discardAction => 'Discard';
 
   @override
+  String get tenantSwitchTitle => 'Switch Organization';
+
+  @override
+  String get tenantCurrent => 'Current';
+
+  @override
+  String get tenantSwitching => 'Switching...';
+
+  @override
+  String get tenantSwitchSuccess => 'Switched successfully';
+
+  @override
+  String get tenantSwitchFailed => 'Switch failed';
+
+  @override
+  String get tenantAlreadyCurrent => 'Already in current organization';
+
+  @override
+  String get tenantNotSwitchable => 'This organization is not switchable';
+
+  @override
+  String get tenantLoadingFailed => 'Failed to load tenant list';
+
+  @override
+  String get tenantSearchHint => 'Search organization';
+
+  @override
+  String get tenantNoTenants => 'No organizations';
+
+  @override
+  String get tenantNoSearchResults => 'No matching organizations found';
+
+  @override
+  String get tenantCreateOrJoin => 'Create/Join Organization';
+
+  @override
+  String get tenantCreateOrJoinComingSoon =>
+      'Create/Join organization feature coming soon';
+
+  @override
+  String tenantLastLogin(String time) {
+    return 'Last login: $time';
+  }
+
+  @override
+  String get tenantTimeJustNow => 'Just now';
+
+  @override
+  String tenantTimeMinutesAgo(int count) {
+    return '$count minutes ago';
+  }
+
+  @override
+  String tenantTimeHoursAgo(int count) {
+    return '$count hours ago';
+  }
+
+  @override
+  String tenantTimeDaysAgo(int count) {
+    return '$count days ago';
+  }
+
+  @override
   String get deviceListTitle => '로그인 기기 관리';
 
   @override

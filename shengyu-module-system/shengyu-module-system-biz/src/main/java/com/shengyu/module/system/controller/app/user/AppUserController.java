@@ -6,6 +6,7 @@ import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserDetailRespVO;
@@ -198,6 +199,14 @@ public class AppUserController {
         }).collect(Collectors.toList());
         
         return success(result);
+    }
+
+    // ========== 租户切换相关 ==========
+
+    @GetMapping("/get-my-tenant-list")
+    @Operation(summary = "获取当前用户的租户列表（移动端）")
+    public CommonResult<List<MyTenantRespVO>> getMyTenantList() {
+        return success(userService.getMyTenantList());
     }
 
     /**

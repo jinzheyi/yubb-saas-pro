@@ -30,6 +30,9 @@ public class AuthLoginRespVO {
     @Schema(description = "多租户编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
     private Long tenantId;
 
+    @Schema(description = "租户名称", example = "深圳腾讯科技股份有限公司")
+    private String tenantName;
+
     @Schema(description = "用户登录选择部门id", example = "1")
     private Long deptId;
 

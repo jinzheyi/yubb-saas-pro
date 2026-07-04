@@ -1502,6 +1502,54 @@
   "continueEditAction": "Keep Editing",
   "discardAction": "Discard",
 
+  "@@@TENANT_SWITCH": "Section: Tenant Switch",
+  "tenantSwitchTitle": "Switch Organization",
+  "tenantCurrent": "Current",
+  "tenantSwitching": "Switching...",
+  "tenantSwitchSuccess": "Switched successfully",
+  "tenantSwitchFailed": "Switch failed",
+  "tenantAlreadyCurrent": "Already in current organization",
+  "tenantNotSwitchable": "This organization is not switchable",
+  "tenantLoadingFailed": "Failed to load tenant list",
+  "tenantSearchHint": "Search organization",
+  "tenantNoTenants": "No organizations",
+  "tenantNoSearchResults": "No matching organizations found",
+  "tenantCreateOrJoin": "Create/Join Organization",
+  "tenantCreateOrJoinComingSoon": "Create/Join organization feature coming soon",
+  "tenantLastLogin": "Last login: {time}",
+  "@tenantLastLogin": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantTimeJustNow": "Just now",
+  "tenantTimeMinutesAgo": "{count} minutes ago",
+  "@tenantTimeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tenantTimeHoursAgo": "{count} hours ago",
+  "@tenantTimeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tenantTimeDaysAgo": "{count} days ago",
+  "@tenantTimeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
   "@@@DEVICE_LIST": "Section: Device Management",
   "deviceListTitle": "Login Devices",
   "deviceListEmpty": "No logged-in devices",

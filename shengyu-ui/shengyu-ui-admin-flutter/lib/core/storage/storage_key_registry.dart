@@ -3,6 +3,7 @@ abstract final class StorageKeyRegistry {
   static const accessToken = 'auth.access_token';
   static const refreshToken = 'auth.refresh_token';
   static const tenantId = 'auth.tenant_id';
+  static const tenantName = 'auth.tenant_name';
   static const deviceId = 'device.id';
   static const deviceType = 'device.type';
   static const deviceName = 'device.name';

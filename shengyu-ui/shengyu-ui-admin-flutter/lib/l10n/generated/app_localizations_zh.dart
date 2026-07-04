@@ -2702,6 +2702,68 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discardAction => '放弃';
 
   @override
+  String get tenantSwitchTitle => '切换企业';
+
+  @override
+  String get tenantCurrent => '当前';
+
+  @override
+  String get tenantSwitching => '切换中...';
+
+  @override
+  String get tenantSwitchSuccess => '切换成功';
+
+  @override
+  String get tenantSwitchFailed => '切换失败';
+
+  @override
+  String get tenantAlreadyCurrent => '已在当前企业';
+
+  @override
+  String get tenantNotSwitchable => '该企业不可切换';
+
+  @override
+  String get tenantLoadingFailed => '加载租户列表失败';
+
+  @override
+  String get tenantSearchHint => '搜索企业';
+
+  @override
+  String get tenantNoTenants => '暂无企业';
+
+  @override
+  String get tenantNoSearchResults => '未找到匹配的企业';
+
+  @override
+  String get tenantCreateOrJoin => '创建/加入企业';
+
+  @override
+  String get tenantCreateOrJoinComingSoon => '创建/加入企业功能待实现';
+
+  @override
+  String tenantLastLogin(String time) {
+    return '上次登录: $time';
+  }
+
+  @override
+  String get tenantTimeJustNow => '刚刚';
+
+  @override
+  String tenantTimeMinutesAgo(int count) {
+    return '$count分钟前';
+  }
+
+  @override
+  String tenantTimeHoursAgo(int count) {
+    return '$count小时前';
+  }
+
+  @override
+  String tenantTimeDaysAgo(int count) {
+    return '$count天前';
+  }
+
+  @override
   String get deviceListTitle => '登录设备管理';
 
   @override

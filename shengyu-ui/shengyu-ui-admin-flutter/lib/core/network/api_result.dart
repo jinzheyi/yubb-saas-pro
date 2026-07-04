@@ -17,8 +17,17 @@ class ApiResult<T> {
     Map<String, dynamic> json, {
     required R Function(Object? raw) dataParser,
   }) {
+    // 兼容 code 字段可能是 String 或 num 类型
+    final rawCode = json['code'];
+    int parsedCode = -1;
+    if (rawCode is num) {
+      parsedCode = rawCode.toInt();
+    } else if (rawCode is String) {
+      parsedCode = int.tryParse(rawCode) ?? -1;
+    }
+    
     return ApiResult<R>(
-      code: (json['code'] as num?)?.toInt() ?? -1,
+      code: parsedCode,
       message: json['msg']?.toString() ?? json['message']?.toString() ?? '',
       data: dataParser(json['data']),
     );

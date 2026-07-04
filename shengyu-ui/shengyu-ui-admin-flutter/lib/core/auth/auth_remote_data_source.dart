@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_token_dto.dart';
 import 'package:shengyu_ui_admin_im/core/auth/permission_info_dto.dart';
+import 'package:shengyu_ui_admin_im/core/auth/tenant_list_item_dto.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 
@@ -113,5 +114,36 @@ class AuthRemoteDataSource {
       AppConfig.putHeader(headers, AppConfig.tenantIdHeader, tenantId);
     }
     return headers;
+  }
+
+  /// 获取租户列表
+  Future<List<TenantListItemDto>> getMyTenantList() async {
+    final response = await _dio.get('/system/user/get-my-tenant-list');
+    final result = ApiResult.fromJson<List<TenantListItemDto>>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) {
+        if (raw is! List) return [];
+        return raw
+            .whereType<Map>()
+            .map((e) => TenantListItemDto.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      },
+    );
+    return result.requireData();
+  }
+
+  /// 切换租户
+  Future<AuthTokenDto> toTenant({required String tenantId}) async {
+    final response = await _dio.post(
+      '/system/auth/to-tenant',
+      data: {'id': tenantId},
+    );
+    final result = ApiResult.fromJson<AuthTokenDto>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) {
+        return AuthTokenDto.fromJson(raw as Map<String, dynamic>? ?? const {});
+      },
+    );
+    return result.requireData();
   }
 }

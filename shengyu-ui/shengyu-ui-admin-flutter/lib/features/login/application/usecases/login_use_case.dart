@@ -30,6 +30,7 @@ class LoginUseCase {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
       tenantId: token.tenantId,
+      tenantName: token.tenantName,
       deviceId: deviceInfo.deviceId,
       deviceType: deviceInfo.deviceType,
       deviceName: deviceInfo.deviceName,
