@@ -158,6 +158,7 @@ class ContactPickerSelectableTile extends StatelessWidget {
         name: item.name,
         color: getUserAvatarColor(item.userId),
         avatarUrl: item.avatarUrl,
+        seed: item.userId,
         size: 42,
         borderRadius: 21,
       ),

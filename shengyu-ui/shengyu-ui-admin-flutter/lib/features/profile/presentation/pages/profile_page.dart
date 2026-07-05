@@ -64,6 +64,7 @@ class ProfilePage extends ConsumerWidget {
               secondaryLine: secondaryLine,
               avatarUrl: profile.avatarUrl,
               nickname: profile.nickname,
+              userId: session.userId,
               onTapAvatar: () => _showAvatarActionSheet(context, ref),
             ),
             const SizedBox(height: 14),
@@ -357,6 +358,7 @@ class ProfilePage extends ConsumerWidget {
               secondaryLine: '',
               avatarUrl: null,
               nickname: '',
+              userId: session.userId,
               onTapAvatar: () => _showAvatarActionSheet(context, ref),
             ),
             const SizedBox(height: 14),
@@ -549,6 +551,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.secondaryLine,
     required this.avatarUrl,
     required this.nickname,
+    required this.userId,
     required this.onTapAvatar,
   });
 
@@ -557,6 +560,7 @@ class _ProfileHeader extends StatelessWidget {
   final String secondaryLine;
   final String? avatarUrl;
   final String nickname;
+  final String userId;
   final VoidCallback onTapAvatar;
 
   @override
@@ -578,6 +582,7 @@ class _ProfileHeader extends StatelessWidget {
                       name: username,
                       avatarUrl: avatarUrl,
                       fontSize: theme.textTheme.headlineSmall?.fontSize ?? 24,
+                      userId: userId,
                     ),
                     Positioned(
                       right: 0,
@@ -648,18 +653,20 @@ class _ProfileAvatar extends StatelessWidget {
     required this.name,
     required this.avatarUrl,
     required this.fontSize,
+    required this.userId,
   });
 
   final String name;
   final String? avatarUrl;
   final double fontSize;
+  final String userId;
 
   @override
   Widget build(BuildContext context) {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
-      backgroundColor: Colors.white.withValues(alpha: 0.2),
+      seed: userId,
       size: 56,
       borderRadius: 14,
       fontSize: fontSize,

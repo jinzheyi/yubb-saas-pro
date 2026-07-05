@@ -121,6 +121,7 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
                     AppAvatar(
                       name: title,
                       avatarUrl: remoteAvatarUrl,
+                      seed: state.callerProfile?.userId ?? state.calleeProfile?.userId,
                       backgroundColor: const Color(0xFF246BFD),
                       size: 72,
                       borderRadius: 24,

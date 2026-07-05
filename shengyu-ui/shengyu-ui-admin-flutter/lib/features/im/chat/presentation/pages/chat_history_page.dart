@@ -291,6 +291,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                     name: item.senderName,
                     color: _avatarColorFor(item.senderId),
                     avatarUrl: item.senderAvatar,
+                    seed: item.senderId,
                     size: 40,
                     borderRadius: 20,
                   ),

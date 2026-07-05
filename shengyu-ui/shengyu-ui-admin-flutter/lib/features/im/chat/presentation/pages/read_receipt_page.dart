@@ -103,6 +103,7 @@ class _ReadReceiptPageState extends ConsumerState<ReadReceiptPage> {
                             leading: ContactsInitialAvatar(
                               name: item.userName,
                               color: const Color(0xFF246BFD),
+                              seed: item.userId,
                               avatarUrl: item.avatar,
                               size: 40,
                               borderRadius: 20,

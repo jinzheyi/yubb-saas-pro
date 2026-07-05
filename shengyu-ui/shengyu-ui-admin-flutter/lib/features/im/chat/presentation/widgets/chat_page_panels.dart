@@ -1233,6 +1233,7 @@ class _MentionMemberTile extends StatelessWidget {
                   : AppAvatar(
                       name: displayName,
                       avatarUrl: item!.avatarUrl,
+                      seed: item!.userId,
                       backgroundColor: avatarColor,
                       size: 36,
                       borderRadius: 18,

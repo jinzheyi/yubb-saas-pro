@@ -58,6 +58,7 @@ class ContactGroupMembersPage extends ConsumerWidget {
                 name: displayName,
                 avatarUrl: member.avatarUrl,
                 color: getUserAvatarColor(member.userId),
+                seed: member.userId,
               ),
               title: Text(displayName),
               subtitle: Text(role),

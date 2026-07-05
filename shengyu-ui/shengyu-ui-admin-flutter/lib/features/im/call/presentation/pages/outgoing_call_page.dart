@@ -64,6 +64,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage> {
               AppAvatar(
                 name: title,
                 avatarUrl: avatarUrl,
+                seed: state.calleeProfile?.userId,
                 backgroundColor: const Color(0xFF246BFD),
                 size: 76,
                 borderRadius: 24,

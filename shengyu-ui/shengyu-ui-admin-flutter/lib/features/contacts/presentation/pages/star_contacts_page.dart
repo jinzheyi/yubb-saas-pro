@@ -62,6 +62,7 @@ class StarContactsPage extends ConsumerWidget {
                         name: contact.name,
                         color: getUserAvatarColor(contact.userId),
                         avatarUrl: contact.avatarUrl,
+                        seed: contact.userId,
                         size: 44,
                         borderRadius: 12,
                         fontSize: 18,

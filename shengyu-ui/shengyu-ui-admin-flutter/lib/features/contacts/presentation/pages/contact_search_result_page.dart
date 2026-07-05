@@ -110,6 +110,7 @@ class _ContactResultBlock extends StatelessWidget {
             leading: ContactsInitialAvatar(
               name: items[index].name,
               color: getUserAvatarColor(items[index].userId),
+              seed: items[index].userId,
               avatarUrl: items[index].avatarUrl,
               size: 42,
             ),

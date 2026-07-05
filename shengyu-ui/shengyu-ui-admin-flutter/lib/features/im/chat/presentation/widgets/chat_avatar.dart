@@ -5,6 +5,7 @@ class ChatAvatar extends StatelessWidget {
   const ChatAvatar({
     super.key,
     required this.seed,
+    required this.name,
     this.imageUrl,
     this.size = 40,
     this.borderRadius = 8,
@@ -12,6 +13,7 @@ class ChatAvatar extends StatelessWidget {
   });
 
   final String seed;
+  final String name;
   final String? imageUrl;
   final double size;
   final double borderRadius;
@@ -20,8 +22,9 @@ class ChatAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppAvatar(
-      name: seed,
+      name: name,
       avatarUrl: imageUrl,
+      seed: seed,
       size: size,
       borderRadius: borderRadius,
       fontSize: fontSize,

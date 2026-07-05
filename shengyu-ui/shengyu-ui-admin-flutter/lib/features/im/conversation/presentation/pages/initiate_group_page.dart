@@ -190,6 +190,7 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
                             name: item.name,
                             avatarUrl: item.avatarUrl,
                             color: _avatarColor(item.userId),
+                            seed: item.userId,
                           ),
                           title: Text(
                             item.name,

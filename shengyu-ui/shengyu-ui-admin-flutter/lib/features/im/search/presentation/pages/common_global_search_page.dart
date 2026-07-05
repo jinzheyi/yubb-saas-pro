@@ -1237,6 +1237,7 @@ class _ResultAvatar extends StatelessWidget {
     return AppAvatar(
       name: item.avatarText,
       avatarUrl: item.avatarUrl,
+      seed: item.id,
       backgroundColor: item.avatarBg,
       size: 44,
       borderRadius: 8,

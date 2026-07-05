@@ -173,6 +173,7 @@ class ContactsInitialAvatar extends StatelessWidget {
     required this.name,
     required this.color,
     this.avatarUrl,
+    this.seed,
     this.size = 40,
     this.borderRadius = 10,
     this.fontSize = 16,
@@ -181,6 +182,7 @@ class ContactsInitialAvatar extends StatelessWidget {
   final String name;
   final Color color;
   final String? avatarUrl;
+  final String? seed;
   final double size;
   final double borderRadius;
   final double fontSize;
@@ -190,6 +192,7 @@ class ContactsInitialAvatar extends StatelessWidget {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
+      seed: seed,
       backgroundColor: color,
       size: size,
       borderRadius: borderRadius,

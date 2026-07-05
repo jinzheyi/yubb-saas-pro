@@ -1158,6 +1158,7 @@ class _MemberPreviewAvatar extends StatelessWidget {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
+      seed: userId,
       backgroundColor: getUserAvatarColor(userId),
       size: 54,
       borderRadius: 10,

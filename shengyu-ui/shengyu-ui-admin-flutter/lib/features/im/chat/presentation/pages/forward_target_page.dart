@@ -532,6 +532,7 @@ class _ForwardConversationTile extends StatelessWidget {
                 AppAvatar(
                   name: title,
                   avatarUrl: conversation.targetAvatar,
+                  seed: conversation.targetId,
                   backgroundColor: getUserAvatarColor(conversation.targetId ?? ''),
                   size: 44,
                   borderRadius: 10,

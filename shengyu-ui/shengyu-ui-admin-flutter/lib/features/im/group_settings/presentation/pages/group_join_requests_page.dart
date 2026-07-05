@@ -172,6 +172,7 @@ class _GroupJoinRequestsPageState extends ConsumerState<GroupJoinRequestsPage> {
                   _RequestAvatar(
                     name: applicantName,
                     avatarUrl: item.applicantAvatar,
+                    seed: item.applicantUserId,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -463,21 +464,21 @@ class _TabChip extends StatelessWidget {
 }
 
 class _RequestAvatar extends StatelessWidget {
-  const _RequestAvatar({required this.name, this.avatarUrl});
+  const _RequestAvatar({required this.name, this.avatarUrl, required this.seed});
 
   final String name;
   final String? avatarUrl;
+  final String seed;
 
   @override
   Widget build(BuildContext context) {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
-      backgroundColor: const Color(0xFFEEF3FF),
+      seed: seed,
       size: 44,
       borderRadius: 12,
       fontSize: 18,
-      textColor: const Color(0xFF246BFD),
     );
   }
 }

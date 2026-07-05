@@ -36,6 +36,7 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       <String, List<ContactDirectoryItem>>{};
   final Set<String> _loadingDeptIds = <String>{};
   final Set<String> _expandedIds = <String>{'root'};
+  bool _primed = false;
 
   bool get _isSingleSelection =>
       widget.args.selectionMode && widget.args.selectionLimit == 1;
@@ -67,6 +68,11 @@ class _OrgBrowserPageState extends ConsumerState<OrgBrowserPage> {
       0,
       (sum, node) => sum + node.department.memberCount,
     );
+    // 首次加载组织树后，自动预加载已展开部门的成员数据
+    if (!_primed && sourceDepartments.isNotEmpty && _searchedDepartments == null) {
+      _primed = true;
+      Future.microtask(_primeExpandedMembers);
+    }
     return Scaffold(
       backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
@@ -793,6 +799,7 @@ class _OrgMemberTile extends StatelessWidget {
               name: member.name,
               avatarUrl: member.avatarUrl,
               color: getUserAvatarColor(member.userId),
+              seed: member.userId,
               size: 38,
             ),
             const SizedBox(width: 12),

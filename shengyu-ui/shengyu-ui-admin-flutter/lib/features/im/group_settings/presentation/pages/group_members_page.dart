@@ -777,6 +777,7 @@ class _MemberTile extends StatelessWidget {
               ],
               _MemberAvatar(
                 name: displayName,
+                userId: member.id,
                 colorValue: member.colorValue,
                 avatarUrl: member.avatarUrl,
                 size: 38,
@@ -836,6 +837,7 @@ class _MemberTile extends StatelessWidget {
 class _MemberAvatar extends StatelessWidget {
   const _MemberAvatar({
     required this.name,
+    required this.userId,
     required this.colorValue,
     required this.size,
     required this.borderRadius,
@@ -844,6 +846,7 @@ class _MemberAvatar extends StatelessWidget {
   });
 
   final String name;
+  final String userId;
   final int colorValue;
   final double size;
   final double borderRadius;
@@ -855,6 +858,7 @@ class _MemberAvatar extends StatelessWidget {
     return AppAvatar(
       name: name,
       avatarUrl: avatarUrl,
+      seed: userId,
       backgroundColor: Color(colorValue),
       size: size,
       borderRadius: borderRadius,

@@ -100,6 +100,7 @@ class _MyFollowingPageState extends ConsumerState<MyFollowingPage> {
                       leading: ContactsInitialAvatar(
                         name: item.name,
                         color: getUserAvatarColor(item.userId),
+                        seed: item.userId,
                         avatarUrl: item.avatarUrl,
                       ),
                       title: Text(item.name),

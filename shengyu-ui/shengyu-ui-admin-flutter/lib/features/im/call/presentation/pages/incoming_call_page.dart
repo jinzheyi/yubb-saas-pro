@@ -48,6 +48,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
     final canAccept = ref.watch(canAcceptIncomingCallProvider);
     final title = state.title ?? widget.args.title ?? '语音通话';
     final avatarUrl = state.callerProfile?.avatarUrl;
+    final callerUserId = state.callerProfile?.userId ?? '';
     return Scaffold(
       backgroundColor: const Color(0xFF101521),
       body: SafeArea(
@@ -59,7 +60,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
               AppAvatar(
                 name: title,
                 avatarUrl: avatarUrl,
-                backgroundColor: const Color(0xFF3D75F6),
+                seed: callerUserId,
                 size: 72,
                 borderRadius: 24,
                 fontSize: 28,

@@ -666,6 +666,7 @@ class _DepartmentMemberTile extends StatelessWidget {
         name: member.name,
         color: color,
         avatarUrl: member.avatarUrl,
+        seed: member.userId,
         size: 42,
       ),
       title: member.name,

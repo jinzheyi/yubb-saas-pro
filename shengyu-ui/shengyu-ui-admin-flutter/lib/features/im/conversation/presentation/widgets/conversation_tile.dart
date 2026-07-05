@@ -579,6 +579,7 @@ class _ConversationAvatar extends StatelessWidget {
           AppAvatar(
             name: _fallbackText(),
             avatarUrl: conversation.targetAvatar,
+            seed: conversation.targetId,
             backgroundColor: resolveConversationAvatarBg(
               avatarBg: conversation.avatarBg,
               conversationType: conversation.conversationType,

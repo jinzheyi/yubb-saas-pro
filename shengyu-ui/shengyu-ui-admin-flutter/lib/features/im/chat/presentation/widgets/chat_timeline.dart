@@ -313,8 +313,13 @@ class _ChatMessageItem extends StatelessWidget {
     final senderDisplayName = _senderDisplayName(message);
 
     // 头像区域独立 RepaintBoundary，避免气泡变化触发头像重绘
+    // 使用 senderId 作为 seed 确保头像颜色稳定，使用 senderDisplayName 作为 name 显示文字头像
     final avatar = RepaintBoundary(
-      child: ChatAvatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
+      child: ChatAvatar(
+        seed: message.senderId,
+        name: senderDisplayName,
+        imageUrl: message.senderAvatar,
+      ),
     );
 
     // 气泡内容独立 RepaintBoundary

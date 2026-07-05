@@ -274,6 +274,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                     name: historyItem.senderName,
                     color: _avatarColorFor(historyItem.senderId),
                     avatarUrl: historyItem.senderAvatar,
+                    seed: historyItem.senderId,
                     size: 40,
                     borderRadius: 20,
                   ),

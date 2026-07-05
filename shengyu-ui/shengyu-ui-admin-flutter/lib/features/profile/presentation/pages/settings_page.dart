@@ -337,6 +337,7 @@ class _SettingsProfileCard extends StatelessWidget {
                       name: profile.nickname,
                       avatarUrl:
                           profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
+                      seed: profile.userId,
                       size: 56,
                       borderRadius: 14,
                       fontSize: 18,

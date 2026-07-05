@@ -1,17 +1,21 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
+import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 
 final groupMemberRemovedSignalProvider =
@@ -235,8 +239,27 @@ void _handleUserAvatarChanged(Ref ref, ImSocketEvent event) {
     return;
   }
 
-  // 仅处理自己的头像变更：刷新个人资料
+  // 1. 获取旧头像 URL
+  final oldProfile = ref.read(currentUserProfileProvider).valueOrNull;
+  final oldAvatarUrl = oldProfile?.avatarUrl ?? '';
+
+  // 2. 清理旧头像的磁盘缓存
+  if (oldAvatarUrl.isNotEmpty) {
+    unawaited(ImCacheManager.instance.removeFile(oldAvatarUrl));
+  }
+
+  // 3. 清理 Flutter ImageCache 内存缓存
+  // 注意：这会清理所有图片缓存，但头像变更是低频操作，影响可接受
+  PaintingBinding.instance.imageCache.clear();
+
+  // 4. 刷新当前用户资料（触发重新请求新头像）
   ref.invalidate(currentUserProfileProvider);
+
+  // 5. 刷新会话列表（包含当前用户头像的会话）
+  ref.invalidate(conversationListControllerProvider);
+
+  // 6. 刷新技术通讯录（包含当前用户头像）
+  ref.invalidate(contactsPageControllerProvider);
 }
 
 void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {

@@ -577,6 +577,7 @@ class _ContactTile extends StatelessWidget {
             ContactsInitialAvatar(
               name: contact.name,
               color: getUserAvatarColor(contact.userId),
+              seed: contact.userId,
               avatarUrl: contact.avatarUrl,
               size: 40,
               borderRadius: 10,

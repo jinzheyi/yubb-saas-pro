@@ -11,6 +11,7 @@ import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/con
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
+import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ContactProfilePage extends ConsumerStatefulWidget {
@@ -119,26 +120,46 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                         ),
                         child: Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                displayName,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: ThemeColors.textPrimary(context),
-                                ),
+                            AppAvatar(
+                              name: displayName,
+                              avatarUrl: _profile?.avatarUrl,
+                              seed: widget.userId,
+                              size: 64,
+                              borderRadius: 16,
+                              fontSize: 24,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          displayName,
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                            color: ThemeColors.textPrimary(context),
+                                          ),
+                                        ),
+                                      ),
+                                      if (_profile?.sex != null) ...[
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          _profile!.sex == 0 ? Icons.male : Icons.female,
+                                          size: 18,
+                                          color: _profile!.sex == 0
+                                              ? const Color(0xFF0EA5E9)
+                                              : const Color(0xFFEC4899),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            if (_profile?.sex != null) ...[
-                              const SizedBox(width: 8),
-                              Icon(
-                                _profile!.sex == 0 ? Icons.male : Icons.female,
-                                size: 18,
-                                color: _profile!.sex == 0
-                                    ? const Color(0xFF0EA5E9)
-                                    : const Color(0xFFEC4899),
-                              ),
-                            ],
                           ],
                         ),
                       ),

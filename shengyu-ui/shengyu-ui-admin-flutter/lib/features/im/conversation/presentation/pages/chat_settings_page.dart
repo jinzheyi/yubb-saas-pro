@@ -111,6 +111,7 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
                     name: displayName,
                     color: avatarColor,
                     avatarUrl: avatarUrl,
+                    seed: targetId,
                     size: 64,
                     borderRadius: 12,
                     fontSize: 24,

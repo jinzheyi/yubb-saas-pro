@@ -162,97 +162,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 _buildRoutePage(state: state, child: const ContactsPage()),
           ),
           GoRoute(
-            path: RoutePaths.contactsOrg,
-            name: RouteNames.contactsOrg,
-            pageBuilder: (context, state) {
-              final args = state.extra is ContactPickerArgs
-                  ? state.extra! as ContactPickerArgs
-                  : const ContactPickerArgs();
-              return _buildRoutePage(
-                state: state,
-                child: OrgBrowserPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
-            path: RoutePaths.contactsMyDepartment,
-            name: RouteNames.contactsMyDepartment,
-            pageBuilder: (context, state) {
-              final extra = state.extra;
-              if (extra is ContactDepartmentArgs) {
-                return _buildRoutePage(
-                  state: state,
-                  child: MyDepartmentPage(args: extra),
-                );
-              }
-              if (extra is Map<String, String>) {
-                return _buildRoutePage(
-                  state: state,
-                  child: MyDepartmentPage(
-                    args: ContactDepartmentArgs(
-                      initialDeptId: extra['deptId'],
-                      initialDeptName: extra['deptName'],
-                    ),
-                  ),
-                );
-              }
-              return _buildRoutePage(
-                state: state,
-                child: const MyDepartmentPage(),
-              );
-            },
-          ),
-          GoRoute(
-            path: RoutePaths.contactsMyGroups,
-            name: RouteNames.contactsMyGroups,
-            pageBuilder: (context, state) {
-              final args = state.extra is ContactPickerArgs
-                  ? state.extra! as ContactPickerArgs
-                  : const ContactPickerArgs();
-              return _buildRoutePage(
-                state: state,
-                child: MyGroupsPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
-            path: RoutePaths.contactsMyFollowing,
-            name: RouteNames.contactsMyFollowing,
-            pageBuilder: (context, state) {
-              final args = state.extra is ContactPickerArgs
-                  ? state.extra! as ContactPickerArgs
-                  : const ContactPickerArgs();
-              return _buildRoutePage(
-                state: state,
-                child: MyFollowingPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
-            path: RoutePaths.contactsGroupMembers,
-            name: RouteNames.contactsGroupMembers,
-            pageBuilder: (context, state) {
-              final args = state.extra is ContactGroupMembersArgs
-                  ? state.extra! as ContactGroupMembersArgs
-                  : const ContactGroupMembersArgs(
-                      groupId: '',
-                      groupName: '群成员',
-                    );
-              return _buildRoutePage(
-                state: state,
-                child: ContactGroupMembersPage(args: args),
-              );
-            },
-          ),
-          GoRoute(
-            path: RoutePaths.contactsFavorites,
-            name: RouteNames.contactsFavorites,
-            pageBuilder: (context, state) => _buildRoutePage(
-              state: state,
-              child: const StarContactsPage(),
-            ),
-          ),
-          GoRoute(
             path: RoutePaths.contactsSearchResult,
             name: RouteNames.contactsSearchResult,
             pageBuilder: (context, state) {
@@ -333,7 +242,99 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // favorites / initiateGroup 路由放在 ShellRoute 外部，与 chat 平级，避免从 chat 页面导航时出现 key 冲突
+      // favorites / initiateGroup / contactsOrg 等路由放在 ShellRoute 外部，与 chat 平级，
+      // 避免从 InitiateGroupPage 等 ShellRoute 外部页面导航时出现 Hero key 冲突
+      GoRoute(
+        path: RoutePaths.contactsOrg,
+        name: RouteNames.contactsOrg,
+        pageBuilder: (context, state) {
+          final args = state.extra is ContactPickerArgs
+              ? state.extra! as ContactPickerArgs
+              : const ContactPickerArgs();
+          return _buildRoutePage(
+            state: state,
+            child: OrgBrowserPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.contactsMyDepartment,
+        name: RouteNames.contactsMyDepartment,
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          if (extra is ContactDepartmentArgs) {
+            return _buildRoutePage(
+              state: state,
+              child: MyDepartmentPage(args: extra),
+            );
+          }
+          if (extra is Map<String, String>) {
+            return _buildRoutePage(
+              state: state,
+              child: MyDepartmentPage(
+                args: ContactDepartmentArgs(
+                  initialDeptId: extra['deptId'],
+                  initialDeptName: extra['deptName'],
+                ),
+              ),
+            );
+          }
+          return _buildRoutePage(
+            state: state,
+            child: const MyDepartmentPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.contactsMyGroups,
+        name: RouteNames.contactsMyGroups,
+        pageBuilder: (context, state) {
+          final args = state.extra is ContactPickerArgs
+              ? state.extra! as ContactPickerArgs
+              : const ContactPickerArgs();
+          return _buildRoutePage(
+            state: state,
+            child: MyGroupsPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.contactsMyFollowing,
+        name: RouteNames.contactsMyFollowing,
+        pageBuilder: (context, state) {
+          final args = state.extra is ContactPickerArgs
+              ? state.extra! as ContactPickerArgs
+              : const ContactPickerArgs();
+          return _buildRoutePage(
+            state: state,
+            child: MyFollowingPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.contactsFavorites,
+        name: RouteNames.contactsFavorites,
+        pageBuilder: (context, state) => _buildRoutePage(
+          state: state,
+          child: const StarContactsPage(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.contactsGroupMembers,
+        name: RouteNames.contactsGroupMembers,
+        pageBuilder: (context, state) {
+          final args = state.extra is ContactGroupMembersArgs
+              ? state.extra! as ContactGroupMembersArgs
+              : const ContactGroupMembersArgs(
+                  groupId: '',
+                  groupName: '群成员',
+                );
+          return _buildRoutePage(
+            state: state,
+            child: ContactGroupMembersPage(args: args),
+          );
+        },
+      ),
       GoRoute(
         path: RoutePaths.favorites,
         name: RouteNames.favorites,
