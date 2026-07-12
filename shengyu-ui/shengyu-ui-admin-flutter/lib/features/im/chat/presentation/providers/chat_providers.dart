@@ -81,7 +81,7 @@ class ChatRealtimeSignal {
 }
 
 final mediaPickerServiceProvider = Provider<MediaPickerService>((ref) {
-  return const FilePickerMediaPickerService();
+  return FilePickerMediaPickerService();
 });
 
 final audioRecordingServiceProvider = Provider<AudioRecordingService>((ref) {
@@ -110,11 +110,11 @@ final reeditHintLocalStoreProvider = Provider<ReeditHintLocalStore>((ref) {
   return const ReeditHintLocalStore(StorageKeyRegistry.reeditHintPrefix);
 });
 
-final chatRuntimeNoticeProvider = StateProvider.autoDispose<ChatRuntimeNotice?>((ref) {
+final chatRuntimeNoticeProvider = StateProvider.autoDispose.family<ChatRuntimeNotice?, String>((ref, chatId) {
   return null;
 });
 
-final chatRealtimeSignalProvider = StateProvider.autoDispose<ChatRealtimeSignal?>((ref) {
+final chatRealtimeSignalProvider = StateProvider.autoDispose.family<ChatRealtimeSignal?, String>((ref, chatId) {
   return null;
 });
 
@@ -192,8 +192,9 @@ final chatUploadCoordinatorProvider = Provider<ChatUploadCoordinator>((ref) {
 });
 
 final chatMediaControllerProvider =
-    StateNotifierProvider.autoDispose<ChatMediaController, ChatMediaState>((
+    StateNotifierProvider.autoDispose.family<ChatMediaController, ChatMediaState, String>((
       ref,
+      chatId,
     ) {
       return ChatMediaController(
         ref.read(mediaPickerServiceProvider),
@@ -201,21 +202,21 @@ final chatMediaControllerProvider =
         ref.read(optimisticMessageFactoryProvider),
         createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
-        ref.read(chatTimelineControllerProvider.notifier),
+        ref.read(chatTimelineControllerProvider(chatId).notifier),
         ref.read(groupSettingsRepositoryProvider),
       );
     });
 
 // ChatReceiptController 已替换为轻量 StateProvider，避免过度封装
-final chatReceiptLastVisibleChatIdProvider = StateProvider<String?>((ref) {
+final chatReceiptLastVisibleChatIdProvider = StateProvider.family<String?, String>((ref, chatId) {
   return null;
 });
 
 final chatMessageActionControllerProvider =
-    Provider.autoDispose<ChatMessageActionController>((ref) {
+    Provider.autoDispose.family<ChatMessageActionController, String>((ref, chatId) {
       return ChatMessageActionController(
         ref.read(messageRepositoryProvider),
-        ref.read(chatTimelineControllerProvider.notifier),
+        ref.read(chatTimelineControllerProvider(chatId).notifier),
       );
     });
 
@@ -227,7 +228,7 @@ final chatComposerControllerProvider =
     });
 
 final chatTimelineControllerProvider =
-    StateNotifierProvider.autoDispose<ChatTimelineController, ChatTimelineState>((ref) {
+    StateNotifierProvider.autoDispose.family<ChatTimelineController, ChatTimelineState, String>((ref, chatId) {
       final currentUserId = ref.read(authSessionProvider).userId;
       return ChatTimelineController(
         ref.read(loadChatWindowUseCaseProvider),
@@ -238,7 +239,7 @@ final chatTimelineControllerProvider =
     });
 
 final chatControllerProvider =
-    StateNotifierProvider.autoDispose<ChatController, ChatPageState>((ref) {
+    StateNotifierProvider.autoDispose.family<ChatController, ChatPageState, String>((ref, chatId) {
       final currentUserId = ref.read(authSessionProvider).userId;
       final controller = ChatController(
         ref.read(openChatUseCaseProvider),
@@ -247,7 +248,7 @@ final chatControllerProvider =
         ref.read(optimisticMessageFactoryProvider),
         createConversationPreviewFormatter(ref.read(appLocaleProvider)),
         ref.read(conversationListControllerProvider.notifier),
-        ref.read(chatTimelineControllerProvider.notifier),
+        ref.read(chatTimelineControllerProvider(chatId).notifier),
         socketClient: ref.read(imSocketClientProvider),
         socketOutboundSender: ref.read(socketOutboundSenderProvider),
         unifiedCacheManager: ref.read(unifiedCacheManagerProvider),

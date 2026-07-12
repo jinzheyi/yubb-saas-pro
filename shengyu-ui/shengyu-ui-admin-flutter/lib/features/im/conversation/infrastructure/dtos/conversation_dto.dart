@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -150,7 +152,13 @@ class ConversationDto {
           json['previewText']?.toString() ??
           json['content']?.toString() ??
           '',
-      lastMessageType: _parseMessageType(json['lastMessageType']?.toString()),
+      lastMessageType: _normalizeLastMessageType(
+        _parseMessageType(json['lastMessageType']?.toString()),
+        json['lastMessageContent']?.toString() ?? '',
+        json['lastMessageCustomType']?.toString() ??
+            json['customType']?.toString() ??
+            '',
+      ),
       lastMessageSenderName:
           json['lastMessageSenderName']?.toString() ??
           json['senderName']?.toString() ??
@@ -248,8 +256,10 @@ class ConversationDto {
       case '8':
         return MessageType.sticker;
       case 'custom':
-      case '9':
         return MessageType.custom;
+      case '9':
+      case '106':
+        return MessageType.contactCard;
       case 'contact_card':
       case 'contactcard':
       case 'business_card':
@@ -260,6 +270,52 @@ class ConversationDto {
       default:
         return MessageType.text;
     }
+  }
+
+  /// 根据 lastMessageContent 和 customType 将 custom 类型规范化为具体类型
+  /// 例如：lastMessageType=9 (custom) + content 含 CONTACT_CARD → contactCard
+  static MessageType _normalizeLastMessageType(
+    MessageType type,
+    String content,
+    String customType,
+  ) {
+    if (type != MessageType.custom) {
+      return type;
+    }
+    final normalizedCustom = customType.trim().toUpperCase();
+    if (normalizedCustom == 'CONTACT_CARD') {
+      return MessageType.contactCard;
+    }
+    if (normalizedCustom == 'STICKER') {
+      return MessageType.sticker;
+    }
+    // 尝试从 content JSON 中解析类型
+    final trimmed = content.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map) {
+          final map = decoded.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+          final contentType =
+              map['type']?.toString().trim().toUpperCase() ?? '';
+          if (contentType == 'CONTACT_CARD') {
+            return MessageType.contactCard;
+          }
+          if (contentType == 'STICKER') {
+            return MessageType.sticker;
+          }
+          if (map['userId'] != null &&
+              (map['displayName'] != null || map['deptName'] != null)) {
+            return MessageType.contactCard;
+          }
+        }
+      } catch (_) {
+        // 解析失败，保持 custom
+      }
+    }
+    return MessageType.custom;
   }
 
   static MessageStatus _parseMessageStatus(String? raw) {

@@ -207,74 +207,104 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
         ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AspectRatio(
-          aspectRatio: controller.value.aspectRatio <= 0
-              ? 16 / 9
-              : controller.value.aspectRatio,
-          child: VideoPlayer(controller),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: VideoProgressIndicator(
-            controller,
-            allowScrubbing: true,
-            padding: EdgeInsets.zero,
-            colors: const VideoProgressColors(
-              playedColor: Color(0xFF246BFD),
-              bufferedColor: Color(0x665B6475),
-              backgroundColor: Color(0xFF2D3648),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final aspectRatio = controller.value.aspectRatio > 0
+            ? controller.value.aspectRatio
+            : 16 / 9;
+        // 计算可用高度：减去进度条(4px) + 间距(16+10) + 控制栏(~48) + 左右padding
+        final controlsHeight = 4.0 + 16 + 10 + 48;
+        final maxHeight = constraints.maxHeight - controlsHeight;
+        final maxWidth = constraints.maxWidth - 40; // 左右 padding 20*2
+        double videoWidth;
+        double videoHeight;
+        if (aspectRatio >= 1) {
+          // 横屏：宽度优先
+          videoWidth = maxWidth;
+          videoHeight = videoWidth / aspectRatio;
+          if (videoHeight > maxHeight) {
+            videoHeight = maxHeight;
+            videoWidth = videoHeight * aspectRatio;
+          }
+        } else {
+          // 竖屏：高度优先
+          videoHeight = maxHeight;
+          videoWidth = videoHeight * aspectRatio;
+          if (videoWidth > maxWidth) {
+            videoWidth = maxWidth;
+            videoHeight = videoWidth / aspectRatio;
+          }
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: videoWidth,
+              height: videoHeight,
+              child: VideoPlayer(controller),
             ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              IconButton.filled(
-                onPressed: () async {
-                  final value = controller.value;
-                  if (value.position >= value.duration &&
-                      value.duration > Duration.zero) {
-                    await controller.seekTo(Duration.zero);
-                  }
-                  if (controller.value.isPlaying) {
-                    await controller.pause();
-                  } else {
-                    await controller.play();
-                  }
-                },
-                iconSize: 24,
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF246BFD),
-                  foregroundColor: Colors.white,
-                ),
-                icon: AppIcon(
-                  controller.value.isPlaying
-                      ? AppIconKind.pause
-                      : AppIconKind.play,
-                  size: 24,
-                  color: Colors.white,
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                padding: EdgeInsets.zero,
+                colors: const VideoProgressColors(
+                  playedColor: Color(0xFF246BFD),
+                  bufferedColor: Color(0x665B6475),
+                  backgroundColor: Color(0xFF2D3648),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '${_formatDuration(controller.value.position)} / ${_formatDuration(controller.value.duration)}',
-                  style: const TextStyle(
-                    color: Color(0xFFB9C0CC),
-                    fontSize: 13,
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  IconButton.filled(
+                    onPressed: () async {
+                      final value = controller.value;
+                      if (value.position >= value.duration &&
+                          value.duration > Duration.zero) {
+                        await controller.seekTo(Duration.zero);
+                      }
+                      if (controller.value.isPlaying) {
+                        await controller.pause();
+                      } else {
+                        await controller.play();
+                      }
+                    },
+                    iconSize: 24,
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFF246BFD),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: AppIcon(
+                      controller.value.isPlaying
+                          ? AppIconKind.pause
+                          : AppIconKind.play,
+                      size: 24,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${_formatDuration(controller.value.position)} / ${_formatDuration(controller.value.duration)}',
+                      style: const TextStyle(
+                        color: Color(0xFFB9C0CC),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 

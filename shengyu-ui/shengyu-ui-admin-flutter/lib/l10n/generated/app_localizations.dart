@@ -1348,6 +1348,12 @@ abstract class AppLocalizations {
   /// **'Failed to get voice playback URL'**
   String get chatVoicePlayUrlFailed;
 
+  /// No description provided for @chatFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'File exceeds size limit (max {maxSize})'**
+  String chatFileTooLarge(String maxSize);
+
   /// No description provided for @chatActionCopy.
   ///
   /// In en, this message translates to:

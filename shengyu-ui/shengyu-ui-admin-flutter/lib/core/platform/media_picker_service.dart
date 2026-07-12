@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
 
 abstract class MediaPickerService {
@@ -8,13 +9,13 @@ abstract class MediaPickerService {
 
   Future<PickedFile?> captureImage();
 
-  Future<PickedFile?> pickVideo();
-
   Future<PickedFile?> pickFile();
 }
 
 class FilePickerMediaPickerService implements MediaPickerService {
-  const FilePickerMediaPickerService();
+  FilePickerMediaPickerService();
+
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   Future<PickedFile?> pickImage() async {
@@ -26,19 +27,19 @@ class FilePickerMediaPickerService implements MediaPickerService {
   }
 
   @override
-  Future<PickedFile?> captureImage() {
-    // Current desktop/web debug chain has no dedicated camera plugin wiring yet.
-    // Keep the page off platform plugins and degrade to image picking for now.
-    return pickImage();
-  }
-
-  @override
-  Future<PickedFile?> pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.video,
+  Future<PickedFile?> captureImage() async {
+    final xFile = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (xFile == null) {
+      return null;
+    }
+    final bytes = await xFile.readAsBytes();
+    return PickedFile(
+      path: xFile.path,
+      name: _fileNameFromPath(xFile.path),
+      mimeType: _resolveMimeType(_extensionFromPath(xFile.path), bytes: bytes),
+      size: bytes.lengthInBytes,
+      bytes: bytes,
     );
-    return _map(result);
   }
 
   @override
@@ -67,6 +68,22 @@ class FilePickerMediaPickerService implements MediaPickerService {
       size: file.size > 0 ? file.size : (bytes?.lengthInBytes ?? 0),
       bytes: bytes,
     );
+  }
+
+  String _fileNameFromPath(String path) {
+    final index = path.lastIndexOf('/');
+    if (index >= 0 && index < path.length - 1) {
+      return path.substring(index + 1);
+    }
+    return path;
+  }
+
+  String _extensionFromPath(String path) {
+    final index = path.lastIndexOf('.');
+    if (index >= 0 && index < path.length - 1) {
+      return path.substring(index + 1);
+    }
+    return '';
   }
 
   String _resolveMimeType(String extension, {Uint8List? bytes}) {

@@ -185,7 +185,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _activeHighlightedMessageId =
         widget.args.highlightedMessageId ?? widget.args.anchorMessageId;
     _timelineSubscription = ref.listenManual<ChatTimelineState>(
-      chatTimelineControllerProvider,
+      chatTimelineControllerProvider(widget.args.chatId),
       (previous, next) {
         _handleTimelineStateChanged(previous, next);
       },
@@ -245,6 +245,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   /// 回前台时的恢复逻辑（根治方案）
   Future<void> _handleResumeFromBackground() async {
+    // 在每次使用 ref 之前都检查 mounted，避免 widget disposed 后访问 ref
     if (!mounted) return;
 
     // 1. 如果 WebSocket 未连接，触发重连（authSucceeded 事件会自动处理 pullMessagesAfterReconnect）
@@ -257,18 +258,33 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
 
     // 2. WebSocket 已连接：直接拉取离线消息（后台期间可能收到的对方消息）
-    final command = OpenChatCommand.fromArgs(widget.args);
-    await ref
-        .read(chatTimelineControllerProvider.notifier)
-        .pullMessagesAfterReconnect(command: command);
+    if (!mounted) return;
+    try {
+      final command = OpenChatCommand.fromArgs(widget.args);
+      final timelineController = ref.read(
+        chatTimelineControllerProvider(widget.args.chatId).notifier,
+      );
+      await timelineController.pullMessagesAfterReconnect(command: command);
+    } catch (e) {
+      // controller 可能已被 dispose（多层导航场景），安全忽略
+      debugPrint('[ChatPage] Resume handler skipped: $e');
+    }
   }
 
   @override
   void dispose() {
-    // 注销当前对话（释放活跃状态）
-    // 延迟到 widget 树 finalizing 完成后执行，避免 "Tried to modify a provider while the widget tree was building" 错误
-    Future.microtask(() => _activeConversationService.deactivateChat());
+    // 立即移除 lifecycle observer，避免已 disposed 的页面仍收到回前台事件
     WidgetsBinding.instance.removeObserver(this);
+
+    final chatId = widget.args.chatId;
+
+    // 延迟注销当前对话，避免在 widget tree finalizing 期间修改 provider 状态
+    Future.microtask(() => _activeConversationService.deactivateChat());
+
+    // 不在 dispose 中手动 invalidate provider
+    // 原因：多层同名 chatId 导航时（如名片分享链），dispose 会 invalidate
+    // 仍在被其他 ChatPage 使用的 provider 实例，导致状态被重置为 initial
+    // Riverpod family-scoped provider 在所有 listener 消失后会自动 GC
     // 统一取消所有 Timer（通过 TimerManager 管理）
     _timerManager.cancelAll();
     _recordAmplitudeSubscription?.cancel();
@@ -297,9 +313,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<void> _initializeChatPage() async {
-    await ref.read(chatControllerProvider.notifier).initialize(widget.args);
+    await ref.read(chatControllerProvider(widget.args.chatId).notifier).initialize(widget.args);
     // 记录当前会话为已读可见（替代 ChatReceiptController）
-    ref.read(chatReceiptLastVisibleChatIdProvider.notifier).state = widget.args.chatId;
+    ref.read(chatReceiptLastVisibleChatIdProvider(widget.args.chatId).notifier).state = widget.args.chatId;
     await _rehydrateReeditHints();
     if (!mounted) {
       return;
@@ -378,11 +394,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
       });
     }
     ref.watch(chatRealtimeBindingProvider(widget.args.chatId));
-    ref.listen<ChatRuntimeNotice?>(chatRuntimeNoticeProvider, (prev, next) {
+    ref.listen<ChatRuntimeNotice?>(chatRuntimeNoticeProvider(widget.args.chatId), (prev, next) {
       if (next == null || next.chatId != widget.args.chatId || !mounted) {
         return;
       }
-      ref.read(chatRuntimeNoticeProvider.notifier).state = null;
+      ref.read(chatRuntimeNoticeProvider(widget.args.chatId).notifier).state = null;
       final groupId = _resolveGroupId(
         widget.args.conversationType == ConversationType.group,
       );
@@ -402,32 +418,32 @@ class _ChatPageState extends ConsumerState<ChatPage>
         });
       }
     });
-    ref.listen<ChatRealtimeSignal?>(chatRealtimeSignalProvider, (prev, next) {
+    ref.listen<ChatRealtimeSignal?>(chatRealtimeSignalProvider(widget.args.chatId), (prev, next) {
       if (next == null || next.chatId != widget.args.chatId || !mounted) {
         return;
       }
-      ref.read(chatRealtimeSignalProvider.notifier).state = null;
+      ref.read(chatRealtimeSignalProvider(widget.args.chatId).notifier).state = null;
       _handleRealtimeSignal(next);
     });
     // ===== 精确订阅优化：仅监听实际使用的字段，减少 60-70% 不必要 rebuild =====
     final strings = ref.watch(appStringsProvider);
     // 仅订阅页面状态字段：每个字段独立订阅，避免无关字段变化触发 rebuild
-    final pageStatus = ref.watch(chatControllerProvider.select((state) => state.pageStatus));
-    final pendingAction = ref.watch(chatControllerProvider.select((state) => state.pendingAction));
-    final isReadOnly = ref.watch(chatControllerProvider.select((state) => state.isReadOnly));
-    final pageError = ref.watch(chatControllerProvider.select((state) => state.error));
-    final chatTitleFromState = ref.watch(chatControllerProvider.select((state) => state.chatTitle));
-    final entryArgs = ref.watch(chatControllerProvider.select((state) => state.entryArgs));
+    final pageStatus = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.pageStatus));
+    final pendingAction = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.pendingAction));
+    final isReadOnly = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.isReadOnly));
+    final pageError = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.error));
+    final chatTitleFromState = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.chatTitle));
+    final entryArgs = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.entryArgs));
     // 仅订阅消息时间线字段：messages、status、viewportState 独立订阅
-    final timelineMessages = ref.watch(chatTimelineControllerProvider.select((state) => state.messages));
-    final timelineStatus = ref.watch(chatTimelineControllerProvider.select((state) => state.status));
-    final timelineViewportState = ref.watch(chatTimelineControllerProvider.select((state) => state.viewportState));
-    final timelineError = ref.watch(chatTimelineControllerProvider.select((state) => state.error));
-    final timelineQuotePreviewCache = ref.watch(chatTimelineControllerProvider.select((state) => state.quotePreviewCache));
+    final timelineMessages = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.messages));
+    final timelineStatus = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.status));
+    final timelineViewportState = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.viewportState));
+    final timelineError = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.error));
+    final timelineQuotePreviewCache = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.quotePreviewCache));
     // 仅订阅已读回执汇总
     final readReceiptSummaryState = ref.watch(readReceiptSummaryStoreProvider);
     // 仅订阅媒体选择状态：isPicking
-    final isMediaPicking = ref.watch(chatMediaControllerProvider.select((state) => state.isPicking));
+    final isMediaPicking = ref.watch(chatMediaControllerProvider(widget.args.chatId).select((state) => state.isPicking));
     final composer = ref.watch(chatComposerControllerProvider);
     // 仅订阅会话列表
     final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
@@ -585,7 +601,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         }
         final mentionPayload = _buildMentionPayload(trimmedValue);
         final sent = await ref
-            .read(chatControllerProvider.notifier)
+            .read(chatControllerProvider(widget.args.chatId).notifier)
             .sendText(
               trimmedValue,
               quoteInfo: _quoteInfo,
@@ -596,7 +612,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           if (!context.mounted) {
             return;
           }
-          final error = ref.read(chatControllerProvider).error;
+          final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
           if (_handleGroupLifecycleRequestError(
             context,
             error,
@@ -667,10 +683,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 return false;
               }
               final sent = await ref
-                  .read(chatControllerProvider.notifier)
+                  .read(chatControllerProvider(widget.args.chatId).notifier)
                   .sendSticker(payload);
               if (!sent && context.mounted) {
-                final error = ref.read(chatControllerProvider).error;
+                final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
                 if (_handleGroupLifecycleRequestError(
                   context,
                   error,
@@ -778,13 +794,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                   final notice = strings.chatNoMoreMessages;
                                   final beforeCount = timelineMessages.length;
                                   await ref
-                                      .read(chatTimelineControllerProvider.notifier)
+                                      .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
                                       .loadOlder(chatId: entryArgs.chatId);
                                   if (!mounted || !context.mounted) {
                                     return;
                                   }
                                   final nextTimeline = ref.read(
-                                    chatTimelineControllerProvider,
+                                    chatTimelineControllerProvider(widget.args.chatId),
                                   );
                                   if (beforeCount == nextTimeline.messages.length &&
                                       nextTimeline.viewportState?.hasMoreBefore ==
@@ -796,7 +812,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           onRetryMessage: (message) async {
                             if (message.type == MessageType.text) {
                               final retried = await ref
-                                  .read(chatControllerProvider.notifier)
+                                  .read(chatControllerProvider(widget.args.chatId).notifier)
                                   .retryFailedMessage(
                                     message.clientMessageId ??
                                         message.messageId,
@@ -820,7 +836,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               return;
                             }
                             final handled = await ref
-                                .read(chatMediaControllerProvider.notifier)
+                                .read(chatMediaControllerProvider(widget.args.chatId).notifier)
                                 .retryFailedMessage(
                                   failedMessage: message,
                                   entryArgs: entryArgs,
@@ -828,7 +844,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                 );
                             if (!handled) {
                               final error = ref
-                                  .read(chatMediaControllerProvider)
+                                  .read(chatMediaControllerProvider(widget.args.chatId))
                                   .error;
                               if (error != null && context.mounted) {
                                 if (_handleGroupLifecycleRequestError(
@@ -1023,7 +1039,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     _voicePlayedPendingSync.remove(messageId);
     ref
-        .read(chatTimelineControllerProvider.notifier)
+        .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
         .markVoicePlayed(messageId: messageId);
     unawaited(_persistVoicePlayed(messageId));
   }
@@ -1147,7 +1163,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _transientSystemNotifyKeys.add(eventKey);
     final now = DateTime.now();
     ref
-        .read(chatTimelineControllerProvider.notifier)
+        .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
         .appendSingleMessage(
           Message(
             messageId:
@@ -2160,7 +2176,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     try {
       final timelineController = ref.read(
-        chatTimelineControllerProvider.notifier,
+        chatTimelineControllerProvider(widget.args.chatId).notifier,
       );
       for (final message in selectedMessages) {
         final selectionKey = _messageSelectionKey(message);
@@ -2576,7 +2592,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     ref
-        .read(chatTimelineControllerProvider.notifier)
+        .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
         .markVoicePlayed(messageId: messageId);
     unawaited(_persistVoicePlayed(messageId));
     _scheduleVoicePlayedSync(messageId);
@@ -2718,7 +2734,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           _voicePlayedPendingSync.remove(playedId);
           await _persistVoicePlayed(playedId);
           ref
-              .read(chatTimelineControllerProvider.notifier)
+              .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
               .markVoicePlayed(messageId: playedId);
         }
       }
@@ -2735,7 +2751,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final seen = <String>{};
     final List<Message> messages;
     try {
-      messages = ref.read(chatTimelineControllerProvider).messages;
+      messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     } catch (_) {
       return <String>[];
     }
@@ -2943,7 +2959,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
 
-    final mediaController = ref.read(chatMediaControllerProvider.notifier);
+    final mediaController = ref.read(chatMediaControllerProvider(widget.args.chatId).notifier);
     ChatMorePanelResult result;
     switch (action) {
       case ChatMorePanelAction.album:
@@ -2954,12 +2970,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
         result = const ChatMorePanelResult();
       case ChatMorePanelAction.camera:
         await mediaController.captureAndUploadImage(
-          entryArgs: pageState.entryArgs,
-          chatTitle: chatTitle,
-        );
-        result = const ChatMorePanelResult();
-      case ChatMorePanelAction.video:
-        await mediaController.pickAndUploadVideo(
           entryArgs: pageState.entryArgs,
           chatTitle: chatTitle,
         );
@@ -2983,7 +2993,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         result = const ChatMorePanelResult();
     }
 
-    final error = ref.read(chatMediaControllerProvider).error;
+    final error = ref.read(chatMediaControllerProvider(widget.args.chatId)).error;
     if (error != null && mounted) {
       if (_handleGroupLifecycleRequestError(
         context,
@@ -3358,7 +3368,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     Message message, {
     Offset? globalPosition,
   }) {
-    final actionController = ref.read(chatMessageActionControllerProvider);
+    final actionController = ref.read(chatMessageActionControllerProvider(widget.args.chatId));
     final strings = ref.read(appStringsProvider);
     if (message.type == MessageType.system) {
       return Future.value();
@@ -4120,9 +4130,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       final recalled = _buildOptimisticRecalledMessage(message, strings);
       await _persistReeditHintForMessage(recalled);
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .applyRecalledMessage(recalled);
-      final pageState = ref.read(chatControllerProvider);
+      final pageState = ref.read(chatControllerProvider(widget.args.chatId));
       ref
           .read(conversationListControllerProvider.notifier)
           .upsertLocalMessage(
@@ -4198,7 +4208,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     try {
       final result = await ref
-          .read(chatMessageActionControllerProvider)
+          .read(chatMessageActionControllerProvider(widget.args.chatId))
           .handleAction(
             action: ChatMessageAction.delete,
             message: message,
@@ -4225,7 +4235,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (session.userId.isEmpty || session.tenantId.isEmpty) {
       return;
     }
-    final timeline = ref.read(chatTimelineControllerProvider);
+    final timeline = ref.read(chatTimelineControllerProvider(widget.args.chatId));
     if (timeline.messages.isEmpty) {
       return;
     }
@@ -4251,7 +4261,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     await ref
-        .read(chatTimelineControllerProvider.notifier)
+        .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
         .replaceAllMessages(hydrated);
   }
 
@@ -4339,7 +4349,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   bool _ensureConversationWritable(BuildContext context) {
-    final pageState = ref.read(chatControllerProvider);
+    final pageState = ref.read(chatControllerProvider(widget.args.chatId));
     if (pageState.isReadOnly) {
       _showAttachmentError(context, _resolveReadOnlyHint());
       return false;
@@ -4376,7 +4386,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   String _resolveReadOnlyHint() {
     final strings = ref.read(appStringsProvider);
     final serviceState = ref
-        .read(chatControllerProvider)
+        .read(chatControllerProvider(widget.args.chatId))
         .entryArgs
         .serviceState
         ?.trim()
@@ -4492,7 +4502,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (mounted) {
         // 最终降级：检查后端是否返回了锚点
         final currentViewport = ref
-            .read(chatTimelineControllerProvider)
+            .read(chatTimelineControllerProvider(widget.args.chatId))
             .viewportState;
         if (currentViewport?.anchorFound == false) {
           _showAttachmentError(
@@ -4541,12 +4551,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (targetId.isEmpty) {
       return;
     }
-    var messages = ref.read(chatTimelineControllerProvider).messages;
+    var messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     var matched = messages.any((item) => item.messageId == targetId);
     if (!matched) {
-      final pageState = ref.read(chatControllerProvider);
+      final pageState = ref.read(chatControllerProvider(widget.args.chatId));
       await ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .reloadLatest(
             command: OpenChatCommand(
               chatId: widget.args.chatId,
@@ -4560,12 +4570,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (!mounted) {
         return;
       }
-      messages = ref.read(chatTimelineControllerProvider).messages;
+      messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
       matched = messages.any((item) => item.messageId == targetId);
     }
     if (!matched) {
       final viewportState = ref
-          .read(chatTimelineControllerProvider)
+          .read(chatTimelineControllerProvider(widget.args.chatId))
           .viewportState;
       if (viewportState?.anchorFound == false) {
         _showAttachmentError(
@@ -4604,7 +4614,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       await _doScrollToContext(key!.currentContext!);
       return true;
     }
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     final index = messages.indexWhere(
       (item) =>
           item.messageId == messageId || item.clientMessageId == messageId,
@@ -4618,8 +4628,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   /// 以指定消息为锚点重新加载消息窗口
   Future<void> _reloadWithAnchor(String messageId) async {
-    final pageState = ref.read(chatControllerProvider);
-    await ref.read(chatTimelineControllerProvider.notifier).reloadLatest(
+    final pageState = ref.read(chatControllerProvider(widget.args.chatId));
+    await ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).reloadLatest(
           command: OpenChatCommand(
             chatId: widget.args.chatId,
             conversationType: pageState.entryArgs.conversationType,
@@ -4637,7 +4647,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       await _doScrollToContext(key!.currentContext!);
       return;
     }
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     final index = messages.indexWhere(
       (item) =>
           item.messageId == messageId || item.clientMessageId == messageId,
@@ -4698,7 +4708,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   /// 精确计算从列表顶部到目标消息的像素偏移量
   /// 通过累加已渲染消息的真实高度 + 未渲染消息的估算高度
   double? _calculateExactPixelOffset(int targetIndex) {
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     if (targetIndex < 0 || targetIndex >= messages.length) return null;
     // ListView padding top = 16
     double totalOffset = 16;
@@ -4738,7 +4748,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   GlobalKey? _resolveMessageItemKeyByIndex(int messageIndex) {
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     if (messageIndex < 0 || messageIndex >= messages.length) return null;
     final item = messages[messageIndex];
     final renderKey = _messageRenderKey(item, messageIndex);
@@ -4763,7 +4773,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return true;
       }
       // 在消息数据列表中查找目标索引
-      final messages = ref.read(chatTimelineControllerProvider).messages;
+      final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
       final index = messages.indexWhere(
         (item) =>
             item.messageId == messageId || item.clientMessageId == messageId,
@@ -4774,12 +4784,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return true;
       }
       // 消息还未加载，检查是否还有更早的历史消息
-      final viewport = ref.read(chatTimelineControllerProvider).viewportState;
+      final viewport = ref.read(chatTimelineControllerProvider(widget.args.chatId)).viewportState;
       if (viewport?.hasMoreBefore != true) {
         return false;
       }
       try {
-        await ref.read(chatTimelineControllerProvider.notifier).loadOlder(
+        await ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).loadOlder(
               chatId: widget.args.chatId,
             );
       } catch (_) {
@@ -4793,7 +4803,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   GlobalKey? _resolveMessageItemKey(String messageId) {
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     for (var index = 0; index < messages.length; index++) {
       final item = messages[index];
       if (item.messageId == messageId || item.clientMessageId == messageId) {
@@ -5109,7 +5119,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   List<Message> get _selectedMessages {
-    final messages = ref.read(chatTimelineControllerProvider).messages;
+    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
     return messages
         .where(
           (message) =>
@@ -5241,7 +5251,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (top > 48 || delta > 0) {
       return;
     }
-    final timelineState = ref.read(chatTimelineControllerProvider);
+    final timelineState = ref.read(chatTimelineControllerProvider(widget.args.chatId));
     if (timelineState.status == ChatTimelineStatus.loading ||
         timelineState.messages.isEmpty ||
         timelineState.viewportState?.hasMoreBefore == false) {
@@ -5251,11 +5261,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (now - _lastHistoryLoadTriggerAt < 500) {
       return;
     }
-    final pageState = ref.read(chatControllerProvider);
+    final pageState = ref.read(chatControllerProvider(widget.args.chatId));
     _lastHistoryLoadTriggerAt = now;
     unawaited(
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .loadOlder(chatId: pageState.entryArgs.chatId),
     );
   }
@@ -5290,11 +5300,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
               return false;
             }
             final sent = await ref
-                .read(chatControllerProvider.notifier)
+                .read(chatControllerProvider(widget.args.chatId).notifier)
                 .sendSticker(payload);
             if (!sent && context.mounted) {
               final strings = ref.read(appStringsProvider);
-              final error = ref.read(chatControllerProvider).error;
+              final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
               if (_handleGroupLifecycleRequestError(
                 context,
                 error,
@@ -5599,18 +5609,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final retryKey = localMessage.clientMessageId ?? localMessage.messageId;
     if (retryMessage == null) {
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .appendSingleMessage(localMessage);
     } else {
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .markSendingByClientMessageId(clientMessageId: retryKey);
     }
     ref
         .read(conversationListControllerProvider.notifier)
         .upsertLocalMessage(
           chatId: localMessage.chatId,
-          title: ref.read(chatControllerProvider).chatTitle ?? '',
+          title: ref.read(chatControllerProvider(widget.args.chatId)).chatTitle ?? '',
           conversationType: widget.args.conversationType,
           targetId: widget.args.targetId,
           messageId: retryKey,
@@ -5683,7 +5693,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         md5: upload.file.md5 ?? '',
       );
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .replaceSingleMessage(
             clientMessageId: retryKey,
             message: normalizedSent,
@@ -5692,7 +5702,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           .read(conversationListControllerProvider.notifier)
           .upsertLocalMessage(
             chatId: normalizedSent.chatId,
-            title: ref.read(chatControllerProvider).chatTitle ?? '',
+            title: ref.read(chatControllerProvider(widget.args.chatId)).chatTitle ?? '',
             conversationType: widget.args.conversationType,
             targetId: widget.args.targetId,
             messageId: normalizedSent.messageId,
@@ -5734,7 +5744,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return false;
       }
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
           .markFailedByClientMessageId(clientMessageId: retryKey);
       ref
           .read(conversationListControllerProvider.notifier)
@@ -5925,13 +5935,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     try {
       final sent = await ref
-          .read(chatControllerProvider.notifier)
+          .read(chatControllerProvider(widget.args.chatId).notifier)
           .sendContactCard(payload);
       if (!sent) {
         if (!context.mounted) {
           return;
         }
-        final error = ref.read(chatControllerProvider).error;
+        final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
         if (_handleGroupLifecycleRequestError(
           context,
           error,
@@ -5974,13 +5984,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     try {
       final sent = await ref
-          .read(chatControllerProvider.notifier)
+          .read(chatControllerProvider(widget.args.chatId).notifier)
           .sendLocation(payload);
       if (!sent) {
         if (!context.mounted) {
           return;
         }
-        final error = ref.read(chatControllerProvider).error;
+        final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
         if (_handleGroupLifecycleRequestError(
           context,
           error,

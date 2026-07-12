@@ -361,9 +361,9 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       await ref
           .read(messageRepositoryProvider)
           .clearConversationHistory(chatId: widget.args.chatId);
-      final currentChatId = ref.read(chatControllerProvider).entryArgs.chatId;
+      final currentChatId = ref.read(chatControllerProvider(widget.args.chatId)).entryArgs.chatId;
       if (currentChatId == widget.args.chatId) {
-        ref.read(chatTimelineControllerProvider.notifier).clearAll();
+        ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).clearAll();
       }
       ref
           .read(conversationListControllerProvider.notifier)

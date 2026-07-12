@@ -75,12 +75,20 @@ public class ImContactServiceImpl implements ImContactService {
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s));
 
+        // 通过 user_dept 映射表获取用户实际部门（与 getContactPageByDept 保持一致）
+        List<Long> allUserIds = users.stream()
+                .filter(user -> !user.getId().equals(userId))
+                .map(AdminUserDO::getId)
+                .collect(Collectors.toList());
+        Map<Long, Long> userToActualDeptMap = buildUserToActualDeptMap(allUserIds);
+
         // 转换为VO并填充设置信息，按 limit 截断
         return users.stream()
                 .filter(user -> !user.getId().equals(userId)) // 排除自己
                 .map(user -> {
-                    AppImContactRespVO respVO = buildContactRespVO(user);
-                    
+                    Long actualDeptId = userToActualDeptMap.get(user.getId());
+                    AppImContactRespVO respVO = buildContactRespVO(user, actualDeptId);
+
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
@@ -90,7 +98,7 @@ public class ImContactServiceImpl implements ImContactService {
                         respVO.setStar(false);
                         respVO.setNoDisturb(false);
                     }
-                    
+
                     return respVO;
                 })
                 .limit(limit)
@@ -332,11 +340,18 @@ public class ImContactServiceImpl implements ImContactService {
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
 
+        // 通过 user_dept 映射表获取用户实际部门
+        List<Long> matchedUserIds = users.stream()
+                .map(AdminUserDO::getId)
+                .collect(Collectors.toList());
+        Map<Long, Long> userToActualDeptMap = buildUserToActualDeptMap(matchedUserIds);
+
         // 过滤并转换
         List<AppImContactRespVO> list = users.stream()
                 .map(user -> {
-                    AppImContactRespVO respVO = buildContactRespVO(user);
-                    
+                    Long actualDeptId = userToActualDeptMap.get(user.getId());
+                    AppImContactRespVO respVO = buildContactRespVO(user, actualDeptId);
+
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
@@ -346,7 +361,7 @@ public class ImContactServiceImpl implements ImContactService {
                         respVO.setStar(false);
                         respVO.setNoDisturb(false);
                     }
-                    
+
                     return respVO;
                 })
                 .collect(Collectors.toList());
@@ -361,7 +376,10 @@ public class ImContactServiceImpl implements ImContactService {
             throw exception(CONTACT_NOT_EXISTS);
         }
 
-        AppImContactRespVO respVO = buildContactRespVO(user);
+        // 通过 user_dept 映射表获取用户实际部门
+        Map<Long, Long> userToActualDeptMap = buildUserToActualDeptMap(Collections.singletonList(contactId));
+        Long actualDeptId = userToActualDeptMap.get(contactId);
+        AppImContactRespVO respVO = buildContactRespVO(user, actualDeptId);
 
         // 查询个性化设置
         ImContactSettingDO setting = contactSettingMapper.selectByUserIdAndContactId(userId, contactId);
@@ -436,20 +454,53 @@ public class ImContactServiceImpl implements ImContactService {
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
                 .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s));
 
+        // 通过 user_dept 映射表获取用户实际部门（与 getContactPageByDept 保持一致）
+        Map<Long, Long> userToActualDeptMap = buildUserToActualDeptMap(contactIds);
+
         return users.stream()
                 .map(user -> {
-                    AppImContactRespVO respVO = buildContactRespVO(user);
-                    
+                    Long actualDeptId = userToActualDeptMap.get(user.getId());
+                    AppImContactRespVO respVO = buildContactRespVO(user, actualDeptId);
+
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     }
-                    
+
                     return respVO;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 通过 user_dept 映射表构建 userId -> 实际部门ID 的映射
+     * 对于没有映射关系的用户，回退到 user 主部门ID
+     */
+    private Map<Long, Long> buildUserToActualDeptMap(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<UserDeptRespVO> userDeptList = userDeptMapper.selectListByUserIds(userIds);
+        Map<Long, Long> userToActualDeptMap = new LinkedHashMap<>();
+        if (userDeptList != null && !userDeptList.isEmpty()) {
+            for (UserDeptRespVO ud : userDeptList) {
+                if (ud != null && ud.getUserId() != null && ud.getDeptId() != null) {
+                    userToActualDeptMap.putIfAbsent(ud.getUserId(), ud.getDeptId());
+                }
+            }
+        }
+        // 对于没有部门关联的用户，使用其主部门ID
+        List<AdminUserDO> users = userMapper.selectBatchIds(userIds);
+        if (users != null) {
+            for (AdminUserDO user : users) {
+                if (!userToActualDeptMap.containsKey(user.getId()) && user.getDeptId() != null) {
+                    userToActualDeptMap.put(user.getId(), user.getDeptId());
+                }
+            }
+        }
+        return userToActualDeptMap;
     }
 
     /**

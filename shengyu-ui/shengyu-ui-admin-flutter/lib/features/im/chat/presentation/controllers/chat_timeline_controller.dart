@@ -1006,10 +1006,11 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   MessageType _resolveMergedType(Message previous, Message next) {
-    if (next.type == MessageType.text &&
+    // 防止 text/custom 回显覆盖已有的富媒体类型（image/voice/video/file/location/contactCard/emoji/sticker）
+    if ((next.type == MessageType.text || next.type == MessageType.custom) &&
         previous.type != MessageType.text &&
-        next.content.trim().isEmpty &&
-        _hasMediaIdentity(previous)) {
+        previous.type != MessageType.custom &&
+        previous.type != MessageType.system) {
       return previous.type;
     }
     return next.type;

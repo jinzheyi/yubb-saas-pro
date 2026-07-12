@@ -42,6 +42,7 @@ class VideoMessageBubble extends ConsumerWidget {
     final fileName = message.extra.fileName?.trim() ?? '';
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: message.isOutgoing
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,

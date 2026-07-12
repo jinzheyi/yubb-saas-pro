@@ -262,8 +262,14 @@ class TenantSwitchService extends StateNotifier<TenantSwitchState> {
     ref.invalidate(conversationRealtimeBindingProvider);
     
     // ========== 聊天相关 ==========
+    // family-scoped provider 需要 invalidate 整个 family
     ref.invalidate(chatControllerProvider);
     ref.invalidate(chatTimelineControllerProvider);
+    ref.invalidate(chatMediaControllerProvider);
+    ref.invalidate(chatMessageActionControllerProvider);
+    ref.invalidate(chatRuntimeNoticeProvider);
+    ref.invalidate(chatRealtimeSignalProvider);
+    ref.invalidate(chatReceiptLastVisibleChatIdProvider);
     
     // ========== 通讯录相关 ==========
     ref.invalidate(contactsPageControllerProvider);

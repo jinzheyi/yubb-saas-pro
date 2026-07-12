@@ -457,6 +457,12 @@
   "chatQuoteMessageMissing": "The original message no longer exists",
   "chatVoiceFileUnavailable": "Voice file is unavailable",
   "chatVoicePlayUrlFailed": "Failed to get voice playback URL",
+  "chatFileTooLarge": "File exceeds size limit (max {maxSize})",
+  "@chatFileTooLarge": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionCopy": "Copy",

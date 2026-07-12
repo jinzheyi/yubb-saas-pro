@@ -54,6 +54,17 @@ abstract final class AppConfig {
   static const String fileUploadFieldName = 'file';
   static const int filePreviewExpirationSeconds = 600;
 
+  /// 文件上传大小限制（字节）。
+  ///
+  /// 对标企业微信/钉钉：
+  /// - 图片：20MB
+  /// - 视频：100MB
+  /// - 文件：100MB
+  /// 超过限制时，客户端直接拦截并提示友好错误信息，避免发送到后端后才报错。
+  static const int maxImageUploadSize = 20 * 1024 * 1024; // 20MB
+  static const int maxVideoUploadSize = 100 * 1024 * 1024; // 100MB
+  static const int maxFileUploadSize = 100 * 1024 * 1024; // 100MB
+
   /// 分片上传相关接口路径。
   static const String fileMultipartUploadInitPath = '/infra/file/upload-init';
   static const String fileMultipartUploadChunkPath = '/infra/file/upload-chunk';

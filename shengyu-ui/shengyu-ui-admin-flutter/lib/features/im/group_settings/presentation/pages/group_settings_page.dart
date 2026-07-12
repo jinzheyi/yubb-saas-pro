@@ -790,9 +790,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     try {
       await controller.clearChatHistory();
       if (state.chatId.isNotEmpty) {
-        final currentChatId = ref.read(chatControllerProvider).entryArgs.chatId;
+        final currentChatId = ref.read(chatControllerProvider(state.chatId)).entryArgs.chatId;
         if (currentChatId == state.chatId) {
-          ref.read(chatTimelineControllerProvider.notifier).clearAll();
+          ref.read(chatTimelineControllerProvider(state.chatId).notifier).clearAll();
         }
         ref
             .read(conversationListControllerProvider.notifier)
@@ -841,7 +841,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
         await controller.quitGroup();
       }
       if (state.chatId.isNotEmpty) {
-        ref.read(chatTimelineControllerProvider.notifier).clearAll();
+        ref.read(chatTimelineControllerProvider(state.chatId).notifier).clearAll();
         ref
             .read(conversationListControllerProvider.notifier)
             .clearConversationPreview(

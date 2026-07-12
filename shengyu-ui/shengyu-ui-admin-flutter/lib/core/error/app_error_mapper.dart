@@ -28,6 +28,7 @@ abstract final class AppErrorMapper {
       DioExceptionType.connectionTimeout => '服务器连接超时，请检查网络后重试',
       DioExceptionType.sendTimeout => '请求发送超时，请稍后重试',
       DioExceptionType.receiveTimeout => '服务器响应超时，请稍后重试',
+      DioExceptionType.transformTimeout => '数据转换超时，请稍后重试',
       DioExceptionType.badCertificate => '安全证书验证失败',
       DioExceptionType.badResponse => _mapBadResponse(e.response?.statusCode),
       DioExceptionType.cancel => '请求已取消',

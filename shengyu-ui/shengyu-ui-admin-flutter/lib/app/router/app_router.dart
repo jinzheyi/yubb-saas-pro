@@ -402,6 +402,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : const ChatEntryArgs.empty();
           return _buildRoutePage(state: state, child: ChatPage(args: args));
         },
+        onExit: (context, state) {
+          // 不在 onExit 中手动 invalidate provider
+          // 原因：多层同名 chatId 导航时（如名片分享链），onExit 会 invalidate
+          // 仍在被其他 ChatPage 使用的 provider 实例，导致状态被重置为 initial
+          // Riverpod family-scoped provider 在所有 listener 消失后会自动 GC
+          return true;
+        },
       ),
       GoRoute(
         path: RoutePaths.chatSelectContactCard,

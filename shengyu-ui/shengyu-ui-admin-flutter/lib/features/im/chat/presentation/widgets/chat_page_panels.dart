@@ -230,13 +230,6 @@ class ChatMorePanel extends StatelessWidget {
         iconColor: const Color(0xFF2F6BFF),
       ),
       _AttachmentAction(
-        action: ChatMorePanelAction.video,
-        icon: AppIconKind.video,
-        label: strings.favoriteDetailTypeVideo,
-        color: const Color(0xFFFFF2DE),
-        iconColor: const Color(0xFFFFA940),
-      ),
-      _AttachmentAction(
         action: ChatMorePanelAction.location,
         icon: AppIconKind.location,
         label: strings.chatMoreActionLocation,

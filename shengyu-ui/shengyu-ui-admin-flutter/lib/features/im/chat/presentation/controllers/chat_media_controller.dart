@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
+import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/core/platform/local_uri_bytes_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
@@ -9,6 +11,7 @@ import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/coordinators/chat_upload_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_upload_execution_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/services/optimistic_message_factory.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_file_too_large_exception.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_upload_input.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
@@ -92,25 +95,6 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       purpose: UploadPurpose.chatFile,
       upload: (input, onTaskChanged, clientMessageId) {
         return _chatUploadCoordinator.uploadFile(
-          input: input,
-          onTaskChanged: onTaskChanged,
-          clientMessageId: clientMessageId,
-        );
-      },
-    );
-  }
-
-  Future<void> pickAndUploadVideo({
-    required ChatEntryArgs entryArgs,
-    required String chatTitle,
-  }) {
-    return _pickAndUpload(
-      entryArgs: entryArgs,
-      chatTitle: chatTitle,
-      picker: _mediaPickerService.pickVideo,
-      purpose: UploadPurpose.chatVideo,
-      upload: (input, onTaskChanged, clientMessageId) {
-        return _chatUploadCoordinator.uploadVideo(
           input: input,
           onTaskChanged: onTaskChanged,
           clientMessageId: clientMessageId,
@@ -216,6 +200,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       }
 
       final resolvedPurpose = _resolveUploadPurpose(picked, fallback: purpose);
+      _validateFileSize(picked, resolvedPurpose);
       optimisticMessage = _createOptimisticMessage(
         chatId: entryArgs.chatId,
         picked: picked,
@@ -280,6 +265,18 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
           messageId: retryKey,
           status: MessageStatus.failed,
         );
+      }
+      // 文件过大异常：使用友好提示，避免走通用错误映射
+      if (error is ChatFileTooLargeException) {
+        state = state.copyWith(
+          isPicking: false,
+          error: AppError(
+            message: '文件"${error.fileName}"超过大小限制'
+                '（最大${_formatFileSize(error.maxSize)}）',
+            cause: error,
+          ),
+        );
+        return;
       }
       state = state.copyWith(
         isPicking: false,
@@ -538,6 +535,37 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       return 'video/*';
     }
     return 'application/octet-stream';
+  }
+
+  /// 校验文件大小，超过限制时抛出 [ChatFileTooLargeException]。
+  ///
+  /// 在创建乐观消息之前调用，避免超限文件先显示再报错的糟糕体验。
+  void _validateFileSize(PickedFile picked, UploadPurpose purpose) {
+    final maxSize = switch (purpose) {
+      UploadPurpose.chatImage => AppConfig.maxImageUploadSize,
+      UploadPurpose.chatVideo => AppConfig.maxVideoUploadSize,
+      _ => AppConfig.maxFileUploadSize,
+    };
+    if (picked.size > maxSize) {
+      throw ChatFileTooLargeException(
+        fileName: picked.name,
+        fileSize: picked.size,
+        maxSize: maxSize,
+      );
+    }
+  }
+
+  /// 将字节数格式化为人类可读的文件大小字符串。
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) {
+      return '$bytes B';
+    } else if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } else {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    }
   }
 
   Message _resolveUploadedMessage({

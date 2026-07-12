@@ -1,7 +1,6 @@
 enum ChatMorePanelAction {
   album,
   camera,
-  video,
   file,
   location,
   contact,

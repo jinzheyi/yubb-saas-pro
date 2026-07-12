@@ -73,8 +73,14 @@ class SessionCleanupService {
 
     _ref.invalidate(currentUserProfileProvider);
     _ref.invalidate(conversationListControllerProvider);
+    // family-scoped provider 需要 invalidate 整个 family
     _ref.invalidate(chatControllerProvider);
     _ref.invalidate(chatTimelineControllerProvider);
+    _ref.invalidate(chatMediaControllerProvider);
+    _ref.invalidate(chatMessageActionControllerProvider);
+    _ref.invalidate(chatRuntimeNoticeProvider);
+    _ref.invalidate(chatRealtimeSignalProvider);
+    _ref.invalidate(chatReceiptLastVisibleChatIdProvider);
     _ref.invalidate(contactsPageControllerProvider);
     _ref.invalidate(myDepartmentTreeProvider);
     _ref.invalidate(organizationTreeProvider);

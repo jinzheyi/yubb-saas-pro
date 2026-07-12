@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/bootstrap/app_bootstrap.dart';
+import 'package:shengyu_ui_admin_im/core/debug/provider_scope_checker.dart';
 import 'package:shengyu_ui_admin_im/core/lifecycle/app_lifecycle_manager.dart';
 import 'package:shengyu_ui_admin_im/core/network/network_monitor_service.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_session_coordinator.dart';
@@ -15,8 +17,16 @@ void main() async {
   // 初始化网络监控
   NetworkMonitorService().init();
 
+  // 构建 observers 列表
+  final observers = <ProviderObserver>[_LifecycleBindingObserver()];
+  
+  // 仅在 debug 模式下添加 Provider 作用域检查工具
+  if (kDebugMode) {
+    observers.add(ProviderScopeChecker());
+  }
+
   runApp(ProviderScope(
-    observers: [_LifecycleBindingObserver()],
+    observers: observers,
     child: const ShengyuImApp(),
   ));
 }

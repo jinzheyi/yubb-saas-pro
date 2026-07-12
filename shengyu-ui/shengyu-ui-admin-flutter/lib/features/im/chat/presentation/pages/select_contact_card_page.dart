@@ -251,11 +251,9 @@ class _SelectContactCardPageState extends ConsumerState<SelectContactCardPage> {
             ),
           )
         else
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
             child: Column(
               children: [
                 for (var index = 0; index < filteredContacts.length; index++) ...[

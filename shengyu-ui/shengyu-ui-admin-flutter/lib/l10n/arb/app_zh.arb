@@ -459,6 +459,12 @@
   "chatQuoteMessageMissing": "原消息已不存在",
   "chatVoiceFileUnavailable": "语音文件不可用",
   "chatVoicePlayUrlFailed": "语音播放地址获取失败",
+  "chatFileTooLarge": "文件超过大小限制（最大 {maxSize}）",
+  "@chatFileTooLarge": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionFavoriteSticker": "添加到表情",

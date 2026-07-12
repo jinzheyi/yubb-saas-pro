@@ -64,7 +64,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         return;
       }
       // 被踢/退群/群解散后忽略新消息
-      if (_isGroupLeftStatus(ref)) {
+      if (_isGroupLeftStatus(ref, chatId)) {
         return;
       }
       final currentUserId = ref.read(authSessionProvider).userId;
@@ -89,7 +89,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         return;
       }
       ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(chatId).notifier)
           .applyReadReceipt(messageId: messageId);
       ref
           .read(conversationListControllerProvider.notifier)
@@ -118,7 +118,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       if (!_belongsToCurrentConversation(ref, chatId, raw)) {
         return;
       }
-      ref.read(chatRealtimeSignalProvider.notifier).state = ChatRealtimeSignal(
+      ref.read(chatRealtimeSignalProvider(chatId).notifier).state = ChatRealtimeSignal(
         chatId: chatId,
         action: 'typing',
         payload: event.payload,
@@ -138,7 +138,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         MessageDto.fromJson(Map<String, dynamic>.from(event.payload)),
       );
       final existing = ref
-          .read(chatTimelineControllerProvider.notifier)
+          .read(chatTimelineControllerProvider(chatId).notifier)
           .findByAnyMessageId(recalled.messageId);
       final reeditContent = _extractReeditContent(existing);
       if (recalled.isOutgoing &&
@@ -164,12 +164,12 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         );
       }
       final timelineController = ref.read(
-        chatTimelineControllerProvider.notifier,
+        chatTimelineControllerProvider(chatId).notifier,
       );
       timelineController.applyRecalledMessage(recalled);
       final effectiveRecalled =
           timelineController.findByAnyMessageId(recalled.messageId) ?? recalled;
-      final pageState = ref.read(chatControllerProvider);
+      final pageState = ref.read(chatControllerProvider(chatId));
       ref
           .read(conversationListControllerProvider.notifier)
           .upsertLocalMessage(
@@ -216,7 +216,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         cacheQueue.onSocketReconnected();
       }
 
-      final entryArgs = ref.read(chatControllerProvider).entryArgs;
+      final entryArgs = ref.read(chatControllerProvider(chatId)).entryArgs;
       if (entryArgs.conversationType == ConversationType.direct) {
         _scheduleDirectPresenceRefresh(
           ref,
@@ -240,7 +240,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             );
       unawaited(
         ref
-            .read(chatTimelineControllerProvider.notifier)
+            .read(chatTimelineControllerProvider(chatId).notifier)
             .pullMessagesAfterReconnect(command: command),
       );
       unawaited(_rehydrateReeditHints(ref, chatId));
@@ -306,15 +306,15 @@ int? _tryParseInt(Object? value) {
   return int.tryParse(value?.toString() ?? '');
 }
 
-bool _isGroupLeftStatus(Ref ref) {
-  final pageState = ref.read(chatControllerProvider);
+bool _isGroupLeftStatus(Ref ref, String chatId) {
+  final pageState = ref.read(chatControllerProvider(chatId));
   final groupMemberStatus = pageState.groupMemberStatus;
   return groupMemberStatus == 1 || groupMemberStatus == 2 || groupMemberStatus == 3;
 }
 
 bool _belongsToCurrentConversation(
   Ref ref,
-  String currentChatId,
+  String chatId,
   Map<String, dynamic> raw,
 ) {
   final payloadChatId =
@@ -323,17 +323,17 @@ bool _belongsToCurrentConversation(
       '';
   if (payloadChatId.isNotEmpty &&
       payloadChatId != '0' &&
-      currentChatId.isNotEmpty &&
-      payloadChatId != currentChatId) {
+      chatId.isNotEmpty &&
+      payloadChatId != chatId) {
     return false;
   }
   if (payloadChatId.isNotEmpty &&
       payloadChatId != '0' &&
-      payloadChatId == currentChatId) {
+      payloadChatId == chatId) {
     return true;
   }
 
-  final entryArgs = ref.read(chatControllerProvider).entryArgs;
+  final entryArgs = ref.read(chatControllerProvider(chatId)).entryArgs;
   final currentTargetId = entryArgs.targetId?.trim() ?? '';
   if (entryArgs.conversationType == ConversationType.group) {
     final incomingGroupId = raw['groupId']?.toString().trim() ?? '';
@@ -377,7 +377,7 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
       action == 'group_member_removed' ||
       action == 'group_owner_transferred' ||
       action == 'group_disbanded') {
-    ref.read(chatRealtimeSignalProvider.notifier).state = ChatRealtimeSignal(
+    ref.read(chatRealtimeSignalProvider(chatId).notifier).state = ChatRealtimeSignal(
       chatId: chatId,
       action: action,
       payload: payload,
@@ -398,7 +398,7 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
     return;
   }
 
-  final timelineController = ref.read(chatTimelineControllerProvider.notifier);
+  final timelineController = ref.read(chatTimelineControllerProvider(chatId).notifier);
   final matchedMessage = candidates
       .map(timelineController.findByAnyMessageId)
       .whereType<Message>()
@@ -426,7 +426,7 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
     'GROUP_NOT_EXISTS',
     'GROUP_DISBANDED',
   ];
-  ref.read(chatRuntimeNoticeProvider.notifier).state = ChatRuntimeNotice(
+  ref.read(chatRuntimeNoticeProvider(chatId).notifier).state = ChatRuntimeNotice(
     chatId: chatId,
     message: denyMessage,
     code: denyCode.isEmpty ? null : denyCode,
@@ -440,7 +440,7 @@ void _handlePresenceUpdateNotify(
   String chatId,
   Map<String, Object?> payload,
 ) {
-  final pageState = ref.read(chatControllerProvider);
+  final pageState = ref.read(chatControllerProvider(chatId));
   if (pageState.entryArgs.conversationType != ConversationType.direct) {
     return;
   }
@@ -473,7 +473,7 @@ void _handleGroupInfoUpdatedNotify(
   String chatId,
   Map<String, Object?> payload,
 ) {
-  final pageState = ref.read(chatControllerProvider);
+  final pageState = ref.read(chatControllerProvider(chatId));
   if (pageState.entryArgs.conversationType != ConversationType.group) {
     return;
   }
@@ -489,7 +489,7 @@ void _handleGroupInfoUpdatedNotify(
     return;
   }
   ref
-      .read(chatControllerProvider.notifier)
+      .read(chatControllerProvider(chatId).notifier)
       .updateChatTitle(newName);
 }
 
@@ -564,7 +564,7 @@ void _handleReeditAfterRecallNotify(
         ),
   );
   ref
-      .read(chatTimelineControllerProvider.notifier)
+      .read(chatTimelineControllerProvider(chatId).notifier)
       .applyReeditHint(
         messageId: messageId,
         content: originalContent,
@@ -599,7 +599,7 @@ Future<void> _rehydrateReeditHints(Ref ref, String chatId) async {
   if (session.userId.isEmpty || session.tenantId.isEmpty) {
     return;
   }
-  final timeline = ref.read(chatTimelineControllerProvider);
+  final timeline = ref.read(chatTimelineControllerProvider(chatId));
   if (timeline.messages.isEmpty) {
     return;
   }
@@ -625,7 +625,7 @@ Future<void> _rehydrateReeditHints(Ref ref, String chatId) async {
     return;
   }
   await ref
-      .read(chatTimelineControllerProvider.notifier)
+      .read(chatTimelineControllerProvider(chatId).notifier)
       .replaceAllMessages(hydrated);
 }
 
@@ -704,7 +704,7 @@ void _flushMessageBatch(Ref ref, String chatId) {
   }
 
   // 调用批量添加方法（Controller 内部会去重合并）
-  final timelineController = ref.read(chatTimelineControllerProvider.notifier);
+  final timelineController = ref.read(chatTimelineControllerProvider(chatId).notifier);
   timelineController.appendMessagesBatch(messages);
 
   // 使用最后一条消息更新会话列表
@@ -717,7 +717,7 @@ void _flushMessageBatch(Ref ref, String chatId) {
           : null) ??
       lastMessage;
 
-  final pageState = ref.read(chatControllerProvider);
+  final pageState = ref.read(chatControllerProvider(chatId));
   ref
       .read(conversationListControllerProvider.notifier)
       .upsertLocalMessage(
@@ -793,7 +793,7 @@ void _scheduleDirectPresenceRefresh(
   String chatId, {
   required Duration delay,
 }) {
-  final entryArgs = ref.read(chatControllerProvider).entryArgs;
+  final entryArgs = ref.read(chatControllerProvider(chatId)).entryArgs;
   if (entryArgs.conversationType != ConversationType.direct) {
     _singleChatPresenceRefreshTimers.remove(chatId)?.cancel();
     return;

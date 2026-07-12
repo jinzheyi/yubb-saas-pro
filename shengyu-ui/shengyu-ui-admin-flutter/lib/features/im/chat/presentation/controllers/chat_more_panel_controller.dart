@@ -25,12 +25,6 @@ class ChatMorePanelController {
           chatTitle: chatTitle,
         );
         return const ChatMorePanelResult();
-      case ChatMorePanelAction.video:
-        await _chatMediaController.pickAndUploadVideo(
-          entryArgs: entryArgs,
-          chatTitle: chatTitle,
-        );
-        return const ChatMorePanelResult();
       case ChatMorePanelAction.file:
         await _chatMediaController.pickAndUploadFile(
           entryArgs: entryArgs,

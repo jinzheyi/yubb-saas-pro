@@ -748,6 +748,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatVoicePlayUrlFailed => 'Failed to get voice playback URL';
 
   @override
+  String chatFileTooLarge(String maxSize) {
+    return 'File exceeds size limit (max $maxSize)';
+  }
+
+  @override
   String get chatActionCopy => 'Copy';
 
   @override

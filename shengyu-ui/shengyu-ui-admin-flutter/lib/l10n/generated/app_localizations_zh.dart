@@ -699,6 +699,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatVoicePlayUrlFailed => '语音播放地址获取失败';
 
   @override
+  String chatFileTooLarge(String maxSize) {
+    return '文件超过大小限制（最大 $maxSize）';
+  }
+
+  @override
   String get chatActionCopy => '复制';
 
   @override
