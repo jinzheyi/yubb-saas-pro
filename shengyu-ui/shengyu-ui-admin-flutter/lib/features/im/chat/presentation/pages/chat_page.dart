@@ -2969,9 +2969,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
         result = const ChatMorePanelResult();
       case ChatMorePanelAction.camera:
-        await mediaController.captureAndUploadImage(
+        await mediaController.captureWithCustomCameraAndUpload(
           entryArgs: pageState.entryArgs,
           chatTitle: chatTitle,
+          context: context,
         );
         result = const ChatMorePanelResult();
       case ChatMorePanelAction.file:

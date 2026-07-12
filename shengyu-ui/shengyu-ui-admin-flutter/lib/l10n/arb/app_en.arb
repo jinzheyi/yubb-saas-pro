@@ -472,6 +472,23 @@
       "maxSize": {"type": "String"}
     }
   },
+  "chatCameraPhotoLimit": "Photo exceeds size limit (max {maxSize})",
+  "@chatCameraPhotoLimit": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
+  "chatCameraVideoLimit": "Video exceeds size limit (max {maxSize})",
+  "@chatCameraVideoLimit": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
+  "chatCameraInitFailed": "Camera initialization failed",
+  "chatCameraNotFound": "No camera available",
+  "chatCameraTakePhotoFailed": "Failed to take photo",
+  "chatCameraStartRecordFailed": "Failed to start recording",
+  "chatCameraStopRecordFailed": "Failed to stop recording",
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionCopy": "Copy",

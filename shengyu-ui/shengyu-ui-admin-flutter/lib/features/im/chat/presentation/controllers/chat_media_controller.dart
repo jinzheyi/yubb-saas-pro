@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
@@ -82,6 +84,128 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         );
       },
     );
+  }
+
+  /// 使用自定义相机进行拍摄并上传（支持拍照+录像）。
+  Future<void> captureWithCustomCameraAndUpload({
+    required ChatEntryArgs entryArgs,
+    required String chatTitle,
+    required BuildContext context,
+  }) async {
+    final filePath = await _mediaPickerService.captureWithCustomCamera(context);
+    if (filePath == null || filePath.isEmpty) {
+      return;
+    }
+
+    final file = File(filePath);
+    if (!await file.exists()) {
+      return;
+    }
+
+    final fileSize = await file.length();
+    final isVideo = _isVideoFile(filePath);
+    final maxSize = isVideo ? AppConfig.cameraMaxVideoSize : AppConfig.cameraMaxPhotoSize;
+
+    if (fileSize > maxSize) {
+      state = state.copyWith(
+        isPicking: false,
+        error: AppError(
+          message: '文件超过大小限制（最大${_formatFileSize(maxSize)}）',
+        ),
+      );
+      return;
+    }
+
+    final bytes = await file.readAsBytes();
+    final pickedFile = PickedFile(
+      path: filePath,
+      name: _fileNameFromPath(filePath),
+      mimeType: _resolveMimeTypeFromPath(filePath, bytes: bytes),
+      size: fileSize,
+      bytes: bytes,
+    );
+
+    final purpose = isVideo ? UploadPurpose.chatVideo : UploadPurpose.chatImage;
+
+    await _pickAndUpload(
+      entryArgs: entryArgs,
+      chatTitle: chatTitle,
+      picker: () async => pickedFile,
+      purpose: purpose,
+      upload: (input, onTaskChanged, clientMessageId) {
+        return isVideo
+            ? _chatUploadCoordinator.uploadVideo(
+                input: input,
+                onTaskChanged: onTaskChanged,
+                clientMessageId: clientMessageId,
+              )
+            : _chatUploadCoordinator.uploadImage(
+                input: input,
+                onTaskChanged: onTaskChanged,
+                clientMessageId: clientMessageId,
+              );
+      },
+    );
+  }
+
+  bool _isVideoFile(String path) {
+    final lower = path.toLowerCase();
+    return lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.webm');
+  }
+
+  String _fileNameFromPath(String path) {
+    final index = path.lastIndexOf('/');
+    if (index >= 0 && index < path.length - 1) {
+      return path.substring(index + 1);
+    }
+    return path;
+  }
+
+  String _resolveMimeTypeFromPath(String path, {Uint8List? bytes}) {
+    final extension = _extensionFromPath(path);
+    return _resolveMimeType(extension, bytes: bytes);
+  }
+
+  String _extensionFromPath(String path) {
+    final index = path.lastIndexOf('.');
+    if (index >= 0 && index < path.length - 1) {
+      return path.substring(index + 1);
+    }
+    return '';
+  }
+
+  String _resolveMimeType(String extension, {Uint8List? bytes}) {
+    switch (extension.toLowerCase()) {
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'm4v':
+        return 'video/x-m4v';
+      case 'avi':
+        return 'video/x-msvideo';
+      case 'mkv':
+        return 'video/x-matroska';
+      case 'webm':
+        return 'video/webm';
+      default:
+        return bytes != null && bytes.isNotEmpty
+            ? 'application/octet-stream'
+            : 'application/octet-stream';
+    }
   }
 
   Future<void> pickAndUploadFile({

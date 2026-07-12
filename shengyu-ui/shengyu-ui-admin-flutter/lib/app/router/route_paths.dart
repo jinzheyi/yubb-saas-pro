@@ -33,6 +33,7 @@ abstract final class RoutePaths {
   static const chatForwardTarget = '/chat/forward-target';
   static const chatForwardCombineDetail = '/chat/forward-combine-detail';
   static const chatVideoPlayer = '/chat/video-player';
+  static const chatCameraCapture = '/chat/camera-capture';
   static const filePreview = '/chat/file-preview';
   static const groupSettings = '/chat/group-settings';
   static const groupMembers = '/chat/group-members';

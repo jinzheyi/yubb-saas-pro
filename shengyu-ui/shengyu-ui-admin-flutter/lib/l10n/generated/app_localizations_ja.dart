@@ -753,6 +753,31 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String chatCameraPhotoLimit(String maxSize) {
+    return 'Photo exceeds size limit (max $maxSize)';
+  }
+
+  @override
+  String chatCameraVideoLimit(String maxSize) {
+    return 'Video exceeds size limit (max $maxSize)';
+  }
+
+  @override
+  String get chatCameraInitFailed => 'Camera initialization failed';
+
+  @override
+  String get chatCameraNotFound => 'No camera available';
+
+  @override
+  String get chatCameraTakePhotoFailed => 'Failed to take photo';
+
+  @override
+  String get chatCameraStartRecordFailed => 'Failed to start recording';
+
+  @override
+  String get chatCameraStopRecordFailed => 'Failed to stop recording';
+
+  @override
   String get chatActionCopy => 'Copy';
 
   @override

@@ -1354,6 +1354,48 @@ abstract class AppLocalizations {
   /// **'File exceeds size limit (max {maxSize})'**
   String chatFileTooLarge(String maxSize);
 
+  /// No description provided for @chatCameraPhotoLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo exceeds size limit (max {maxSize})'**
+  String chatCameraPhotoLimit(String maxSize);
+
+  /// No description provided for @chatCameraVideoLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Video exceeds size limit (max {maxSize})'**
+  String chatCameraVideoLimit(String maxSize);
+
+  /// No description provided for @chatCameraInitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera initialization failed'**
+  String get chatCameraInitFailed;
+
+  /// No description provided for @chatCameraNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No camera available'**
+  String get chatCameraNotFound;
+
+  /// No description provided for @chatCameraTakePhotoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to take photo'**
+  String get chatCameraTakePhotoFailed;
+
+  /// No description provided for @chatCameraStartRecordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start recording'**
+  String get chatCameraStartRecordFailed;
+
+  /// No description provided for @chatCameraStopRecordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to stop recording'**
+  String get chatCameraStopRecordFailed;
+
   /// No description provided for @chatActionCopy.
   ///
   /// In en, this message translates to:

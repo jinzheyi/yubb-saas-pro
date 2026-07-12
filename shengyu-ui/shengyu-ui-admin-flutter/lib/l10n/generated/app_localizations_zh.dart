@@ -704,6 +704,31 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String chatCameraPhotoLimit(String maxSize) {
+    return '照片超过大小限制（最大$maxSize）';
+  }
+
+  @override
+  String chatCameraVideoLimit(String maxSize) {
+    return '视频超过大小限制（最大$maxSize）';
+  }
+
+  @override
+  String get chatCameraInitFailed => '相机初始化失败';
+
+  @override
+  String get chatCameraNotFound => '未找到可用相机';
+
+  @override
+  String get chatCameraTakePhotoFailed => '拍照失败';
+
+  @override
+  String get chatCameraStartRecordFailed => '开始录像失败';
+
+  @override
+  String get chatCameraStopRecordFailed => '停止录像失败';
+
+  @override
   String get chatActionCopy => '复制';
 
   @override

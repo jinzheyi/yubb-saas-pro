@@ -65,6 +65,16 @@ abstract final class AppConfig {
   static const int maxVideoUploadSize = 100 * 1024 * 1024; // 100MB
   static const int maxFileUploadSize = 100 * 1024 * 1024; // 100MB
 
+  /// 自定义相机拍摄配置。
+  ///
+  /// 对标微信：
+  /// - 拍摄视频最大时长 60 秒（长按录制）
+  /// - 拍摄视频最大文件大小 100MB（与上传限制一致）
+  /// - 拍摄照片最大文件大小 20MB（与上传限制一致）
+  static const int cameraMaxVideoDurationSeconds = 60;
+  static const int cameraMaxVideoSize = 100 * 1024 * 1024; // 100MB
+  static const int cameraMaxPhotoSize = 20 * 1024 * 1024; // 20MB
+
   /// 分片上传相关接口路径。
   static const String fileMultipartUploadInitPath = '/infra/file/upload-init';
   static const String fileMultipartUploadChunkPath = '/infra/file/upload-chunk';

@@ -1,13 +1,22 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart' hide PickedFile;
+import 'package:shengyu_ui_admin_im/app/router/route_args/camera_capture_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
 
 abstract class MediaPickerService {
   Future<PickedFile?> pickImage();
 
   Future<PickedFile?> captureImage();
+
+  /// 使用自定义相机页面进行拍摄（支持拍照+录像）。
+  ///
+  /// 返回拍摄文件的本地路径，用户取消时返回 null。
+  Future<String?> captureWithCustomCamera(BuildContext context);
 
   Future<PickedFile?> pickFile();
 }
@@ -40,6 +49,11 @@ class FilePickerMediaPickerService implements MediaPickerService {
       size: bytes.lengthInBytes,
       bytes: bytes,
     );
+  }
+
+  @override
+  Future<String?> captureWithCustomCamera(BuildContext context) async {
+    return context.pushNamed<String>(RouteNames.chatCameraCapture);
   }
 
   @override

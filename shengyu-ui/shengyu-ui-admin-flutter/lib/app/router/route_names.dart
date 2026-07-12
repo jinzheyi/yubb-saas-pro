@@ -33,6 +33,7 @@ abstract final class RouteNames {
   static const chatForwardTarget = 'chatForwardTarget';
   static const chatForwardCombineDetail = 'chatForwardCombineDetail';
   static const chatVideoPlayer = 'chatVideoPlayer';
+  static const chatCameraCapture = 'chatCameraCapture';
   static const filePreview = 'filePreview';
   static const groupSettings = 'groupSettings';
   static const groupMembers = 'groupMembers';

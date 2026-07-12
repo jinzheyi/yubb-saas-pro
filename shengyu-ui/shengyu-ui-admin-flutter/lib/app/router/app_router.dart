@@ -16,6 +16,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/group_member_detail_ar
 import 'package:shengyu_ui_admin_im/app/router/route_args/group_setting_detail_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/initiate_group_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/read_receipt_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/camera_capture_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/video_player_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
@@ -40,6 +41,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/read_rec
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/select_location_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/select_contact_card_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/sticker_manage_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/camera_capture_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/video_player_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_session_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/chat_settings_page.dart';
@@ -522,6 +524,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _buildRoutePage(
             state: state,
             child: VideoPlayerPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.chatCameraCapture,
+        name: RouteNames.chatCameraCapture,
+        pageBuilder: (context, state) {
+          final args = state.extra is CameraCaptureRouteArgs
+              ? state.extra! as CameraCaptureRouteArgs
+              : const CameraCaptureRouteArgs();
+          return _buildRoutePage(
+            state: state,
+            child: CameraCapturePage(args: args),
           );
         },
       ),

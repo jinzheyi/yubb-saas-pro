@@ -465,6 +465,23 @@
       "maxSize": {"type": "String"}
     }
   },
+  "chatCameraPhotoLimit": "照片超过大小限制（最大{maxSize}）",
+  "@chatCameraPhotoLimit": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
+  "chatCameraVideoLimit": "视频超过大小限制（最大{maxSize}）",
+  "@chatCameraVideoLimit": {
+    "placeholders": {
+      "maxSize": {"type": "String"}
+    }
+  },
+  "chatCameraInitFailed": "相机初始化失败",
+  "chatCameraNotFound": "未找到可用相机",
+  "chatCameraTakePhotoFailed": "拍照失败",
+  "chatCameraStartRecordFailed": "开始录像失败",
+  "chatCameraStopRecordFailed": "停止录像失败",
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionFavoriteSticker": "添加到表情",

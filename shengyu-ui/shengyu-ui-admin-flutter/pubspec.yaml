@@ -25,6 +25,7 @@ dependencies:
   web: ^1.1.1
   file_picker: ^10.3.2
   image_picker: ^1.1.2
+  camera: ^0.11.1
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
   connectivity_plus: ^6.1.5
