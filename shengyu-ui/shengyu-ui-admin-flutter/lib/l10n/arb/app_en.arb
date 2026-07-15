@@ -489,6 +489,7 @@
   "chatCameraTakePhotoFailed": "Failed to take photo",
   "chatCameraStartRecordFailed": "Failed to start recording",
   "chatCameraStopRecordFailed": "Failed to stop recording",
+  "chatScanHint": "Place the QR code inside the frame to scan automatically",
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionCopy": "Copy",

@@ -143,8 +143,16 @@ public class FileServiceImpl implements FileService {
 
         // 2. 获取文件预签名地址
         FileClient fileClient = fileConfigService.getMasterFileClient();
-        String uploadUrl = fileClient.presignPutUrl(path);
-        String visitUrl = fileClient.presignGetUrl(path, null);
+        String uploadUrl;
+        String visitUrl;
+        try {
+            uploadUrl = fileClient.presignPutUrl(path);
+            visitUrl = fileClient.presignGetUrl(path, null);
+        } catch (UnsupportedOperationException e) {
+            // 非 S3 存储（例如 DB / 本地）不支持预签名，返回 null 让前端降级到普通上传
+            return new FilePresignedUrlRespVO().setConfigId(fileClient.getId())
+                    .setPath(path).setUploadUrl(null).setUrl(null);
+        }
         return new FilePresignedUrlRespVO().setConfigId(fileClient.getId())
                 .setPath(path).setUploadUrl(uploadUrl).setUrl(visitUrl);
     }

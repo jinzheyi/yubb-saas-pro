@@ -729,6 +729,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCameraStopRecordFailed => '停止录像失败';
 
   @override
+  String get chatScanHint => '将二维码放入框内，即可自动扫描';
+
+  @override
   String get chatActionCopy => '复制';
 
   @override

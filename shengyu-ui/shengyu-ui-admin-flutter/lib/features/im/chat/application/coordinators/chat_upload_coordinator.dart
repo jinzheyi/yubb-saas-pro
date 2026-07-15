@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_upload_execution_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/send_message_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/multipart_upload_use_case.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/presigned_url_upload_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_uploaded_message_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/upload_chat_asset_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_upload_input.dart';
@@ -21,12 +22,15 @@ class ChatUploadCoordinator {
     this._uuid, {
     UploadProgressTracker? progressTracker,
     MultipartUploadUseCase? multipartUploadUseCase,
+    PresignedUrlUploadUseCase? presignedUrlUploadUseCase,
   }) : _progressTracker = progressTracker,
-       _multipartUploadUseCase = multipartUploadUseCase;
+       _multipartUploadUseCase = multipartUploadUseCase,
+       _presignedUrlUploadUseCase = presignedUrlUploadUseCase;
 
   final UploadChatAssetUseCase _uploadChatAssetUseCase;
   final SendUploadedMessageUseCase _sendUploadedMessageUseCase;
   final MultipartUploadUseCase? _multipartUploadUseCase;
+  final PresignedUrlUploadUseCase? _presignedUrlUploadUseCase;
   final Uuid _uuid;
   final UploadProgressTracker? _progressTracker;
 
@@ -261,7 +265,12 @@ class ChatUploadCoordinator {
     return ChatUploadExecutionResult(task: task, message: sent.message);
   }
 
-  /// 执行实际上传（根据文件大小选择普通上传或分片上传）
+  /// 执行实际上传（根据配置选择预签名直传、分片上传或普通上传）
+  ///
+  /// 上传策略优先级：
+  /// 1. 预签名 URL 直传（S3/MinIO）：当 [_presignedUrlUploadUseCase] 不为空时使用
+  /// 2. 分片上传（本地存储）：当文件大于阈值且 [_multipartUploadUseCase] 不为空时使用
+  /// 3. 普通上传：默认方式
   Future<UploadResult> _doUpload({
     required UploadTask task,
     required ChatUploadInput input,
@@ -272,6 +281,17 @@ class ChatUploadCoordinator {
     final retryLabel =
         lastRetryAttempt > 0 ? '（重试$lastRetryAttempt次）' : '';
 
+    // 优先使用预签名 URL 直传（S3/MinIO 支持）
+    if (_presignedUrlUploadUseCase != null) {
+      return _doPresignedUpload(
+        task: task,
+        input: input,
+        onProgress: (progress) =>
+            onProgress((progress * 100).toInt(), retryLabel),
+      );
+    }
+
+    // 其次使用分片上传（本地存储支持）
     if (useMultipart) {
       return _doMultipartUpload(
         task: task,
@@ -281,6 +301,7 @@ class ChatUploadCoordinator {
       );
     }
 
+    // 最后使用普通上传
     return _uploadChatAssetUseCase.execute(
       taskId: task.taskId,
       input: input,
@@ -290,6 +311,60 @@ class ChatUploadCoordinator {
         onProgress(percent, retryLabel);
       },
     );
+  }
+
+  /// 执行预签名 URL 直传（S3/MinIO）
+  ///
+  /// 客户端先向后端请求预签名上传 URL，然后直接上传到 S3/MinIO，
+  /// 最后调用后端接口创建文件记录。
+  ///
+  /// 如果后端不支持预签名 URL（抛出 [PresignedUrlNotSupportedException]），
+  /// 则降级到普通上传方式。
+  Future<UploadResult> _doPresignedUpload({
+    required UploadTask task,
+    required ChatUploadInput input,
+    required void Function(double progress) onProgress,
+  }) async {
+    final directory = UploadDirectoryResolver.resolve(
+      purpose: input.purpose,
+      scope: input.scope,
+    ).value;
+
+    final file = File(input.localUri);
+
+    try {
+      final result = await _presignedUrlUploadUseCase!.execute(
+        file: file,
+        directory: directory,
+        fileName: input.displayName,
+        mimeType: input.mimeType,
+        onProgress: onProgress,
+      );
+
+      // 将预签名上传结果包装为 UploadResult，以与普通上传保持一致
+      return UploadResult(
+        taskId: task.taskId,
+        purpose: input.purpose,
+        scope: input.scope,
+        file: UploadedFile(
+          fileId: result.fileId.toString(),
+          url: result.url,
+          name: input.displayName,
+          size: input.fileSize,
+          mimeType: input.mimeType,
+        ),
+      );
+    } on PresignedUrlNotSupportedException {
+      // 后端不支持预签名 URL，降级到普通上传
+      return _uploadChatAssetUseCase.execute(
+        taskId: task.taskId,
+        input: input,
+        onProgress: (sent, total) {
+          final percent = total > 0 ? ((sent * 100) ~/ total) : 0;
+          onProgress(percent / 100);
+        },
+      );
+    }
   }
 
   /// 执行分片上传
@@ -304,7 +379,7 @@ class ChatUploadCoordinator {
     ).value;
 
     final file = File(input.localUri);
-    final url = await _multipartUploadUseCase!.execute(
+    final mergeResult = await _multipartUploadUseCase!.execute(
       file: file,
       directory: directory,
       onProgress: onProgress,
@@ -316,8 +391,8 @@ class ChatUploadCoordinator {
       purpose: input.purpose,
       scope: input.scope,
       file: UploadedFile(
-        fileId: '', // 分片上传暂时无法获取 fileId，后续可通过服务端返回
-        url: url,
+        fileId: mergeResult.fileId.toString(),
+        url: mergeResult.url,
         name: input.displayName,
         size: input.fileSize,
         mimeType: input.mimeType,

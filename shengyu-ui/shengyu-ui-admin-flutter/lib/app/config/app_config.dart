@@ -1,3 +1,5 @@
+import 'package:shengyu_ui_admin_im/core/platform/video_compression_config.dart';
+
 /// Flutter IM 统一配置文件
 ///
 /// 重要约束：
@@ -51,6 +53,8 @@ abstract final class AppConfig {
       '/infra/file/upload-and-return-id';
   static const String fileOpenStrategyPath = '/infra/file/open-strategy';
   static const String filePresignedGetUrlPath = '/infra/file/presigned-get-url';
+  static const String filePresignedUploadUrlPath = '/infra/file/presigned-url';
+  static const String fileCreatePath = '/infra/file/create';
   static const String fileUploadFieldName = 'file';
   static const int filePreviewExpirationSeconds = 600;
 
@@ -69,11 +73,8 @@ abstract final class AppConfig {
   ///
   /// 对标微信：
   /// - 拍摄视频最大时长 60 秒（长按录制）
-  /// - 拍摄视频最大文件大小 100MB（与上传限制一致）
-  /// - 拍摄照片最大文件大小 20MB（与上传限制一致）
+  /// - 拍摄文件大小限制复用通用上传配置（maxImageUploadSize/maxVideoUploadSize）
   static const int cameraMaxVideoDurationSeconds = 60;
-  static const int cameraMaxVideoSize = 100 * 1024 * 1024; // 100MB
-  static const int cameraMaxPhotoSize = 20 * 1024 * 1024; // 20MB
 
   /// 分片上传相关接口路径。
   static const String fileMultipartUploadInitPath = '/infra/file/upload-init';
@@ -82,6 +83,23 @@ abstract final class AppConfig {
   static const String fileMultipartUploadAbortPath = '/infra/file/upload-abort';
   static const String fileMultipartUploadStatusPath =
       '/infra/file/upload-status';
+
+  /// 视频压缩配置。
+  ///
+  /// 对标微信/钉钉视频压缩策略：
+  /// - 质量等级：medium（平衡画质和文件大小）
+  /// - 分辨率：720p（1280x720，适合移动端观看）
+  /// - 帧率：30fps（流畅度与文件大小平衡）
+  /// - 比特率：2Mbps（720p 视频推荐值）
+  /// - 压缩阈值：20MB（超过此大小的视频才进行压缩）
+  static const VideoCompressionConfig videoCompressionConfig =
+      VideoCompressionConfig(
+    quality: VideoCompressionQuality.medium,
+    resolution: VideoResolution.hd720,
+    frameRate: 30,
+    bitrate: 2000000, // 2Mbps
+    compressionThreshold: 20 * 1024 * 1024, // 20MB
+  );
 
   /// WebSocket 心跳与连接治理配置。
   ///

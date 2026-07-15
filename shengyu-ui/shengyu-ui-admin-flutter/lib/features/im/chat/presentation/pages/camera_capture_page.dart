@@ -3,18 +3,24 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/camera_capture_route_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:video_player/video_player.dart';
 
 /// 微信风格自定义相机页面。
 ///
 /// 交互对标微信：
-/// - 点击快门按钮：拍照
-/// - 长按快门按钮：录像（最长 60 秒）
-/// - 长按时有圆形进度动画环绕快门按钮（红色圆环从顶部顺时针填充）
-/// - 支持前后摄像头切换、闪光灯控制
+/// - 拍摄阶段：全屏预览，点击快门拍照，长按快门录像（最长 60 秒）
+/// - 预览阶段：拍摄完成后进入预览界面，显示"重拍"和"发送"按钮
+/// - 照片预览：全屏显示照片，底部两个按钮
+/// - 视频预览：全屏显示视频播放器（自动播放），底部两个按钮
 class CameraCapturePage extends StatefulWidget {
   const CameraCapturePage({super.key, required this.args});
 
@@ -46,6 +52,26 @@ class _CameraCapturePageState extends State<CameraCapturePage>
   // 录像进度动画（0→1 对应 0→60 秒，平滑驱动圆形进度环）
   late final AnimationController _progressAnimation;
 
+  // 预览模式状态
+  bool _isPreviewing = false;
+  String? _capturedFilePath;
+  bool _isCapturedVideo = false;
+  VideoPlayerController? _videoPlayerController;
+  bool _isVideoPlaying = false;
+
+  // 扫码模式状态
+  MobileScannerController? _mobileScannerController;
+  bool _isHandlingScanResult = false;
+  bool _isTorchEnabled = false;
+  bool _hasTorch = true; // 假设设备有手电筒，后续动态检测
+
+  bool get _isQrScanMode => widget.args.initialMode == CameraCaptureMode.qrScan;
+
+  bool get _supportsNativeScanner =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
   static const int _maxDuration = AppConfig.cameraMaxVideoDurationSeconds;
 
   @override
@@ -63,7 +89,11 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       duration: Duration(seconds: _maxDuration),
     );
 
-    _initializeCamera();
+    if (_isQrScanMode) {
+      _initializeScanner();
+    } else {
+      _initializeCamera();
+    }
   }
 
   @override
@@ -73,11 +103,115 @@ class _CameraCapturePageState extends State<CameraCapturePage>
     _controller?.dispose();
     _shrinkAnimation.dispose();
     _progressAnimation.dispose();
+    _videoPlayerController?.dispose();
+    _mobileScannerController?.dispose();
     super.dispose();
+  }
+
+  void _initializeScanner() {
+    if (!_supportsNativeScanner) return;
+    _mobileScannerController = MobileScannerController(
+      autoStart: false,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+      returnImage: false,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeStartScanner();
+    });
+  }
+
+  Future<void> _safeStartScanner() async {
+    final scanner = _mobileScannerController;
+    if (scanner == null || !_supportsNativeScanner || scanner.value.isRunning) return;
+    try {
+      await scanner.start();
+      // 检测设备是否支持手电筒
+      if (mounted) {
+        setState(() {
+          // torchState 为 unavailable 表示设备不支持手电筒
+          _hasTorch = scanner.value.torchState != TorchState.unavailable;
+        });
+      }
+    } catch (_) {
+      // 扫码启动失败，静默忽略
+    }
+  }
+
+  /// 切换扫码模式手电筒
+  Future<void> _toggleScannerTorch() async {
+    final scanner = _mobileScannerController;
+    if (scanner == null || !_hasTorch) return;
+    
+    try {
+      await scanner.toggleTorch();
+      if (mounted) {
+        setState(() {
+          _isTorchEnabled = !_isTorchEnabled;
+        });
+      }
+    } catch (e) {
+      // 手电筒切换失败，显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法开启手电筒：${e.toString()}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _safeStopScanner() async {
+    final scanner = _mobileScannerController;
+    if (scanner == null || !scanner.value.isRunning) return;
+    try {
+      await scanner.stop();
+    } catch (_) {
+      // 扫码停止失败，静默忽略
+    }
+  }
+
+  Future<void> _handleDetect(BarcodeCapture capture) async {
+    if (_isHandlingScanResult) return;
+    final rawValue = capture.barcodes
+        .map((barcode) => barcode.rawValue?.trim() ?? '')
+        .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    if (rawValue.isEmpty) return;
+    _isHandlingScanResult = true;
+    await _safeStopScanner();
+    if (!mounted) return;
+
+    // 判断是否是URL（http:// 或 https://）
+    final isUrl = rawValue.startsWith('http://') || rawValue.startsWith('https://');
+
+    if (isUrl) {
+      // 外部URL，跳转到浏览器页面
+      await context.pushNamed(
+        RouteNames.browser,
+        extra: BrowserPageArgs(
+          url: rawValue,
+          source: 'scan',
+          rawContent: rawValue,
+        ),
+      );
+    } else {
+      // 非URL，当作群二维码处理
+      await context.pushNamed(RouteNames.joinGroup, extra: rawValue);
+    }
+
+    if (!mounted) return;
+    _isHandlingScanResult = false;
+    await _safeStartScanner();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 预览模式下不处理生命周期
+    if (_isPreviewing) return;
+
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
       return;
@@ -174,18 +308,23 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       final file = File(image.path);
       final fileSize = await file.length();
 
-      if (fileSize > AppConfig.cameraMaxPhotoSize) {
+      if (fileSize > AppConfig.maxImageUploadSize) {
         if (!mounted) return;
         _showErrorSnackBar(
           AppLocalizations.of(context).chatCameraPhotoLimit(
-            _formatFileSize(AppConfig.cameraMaxPhotoSize),
+            _formatFileSize(AppConfig.maxImageUploadSize),
           ),
         );
         return;
       }
 
+      // 进入预览模式
       if (!mounted) return;
-      Navigator.of(context).pop(image.path);
+      setState(() {
+        _isPreviewing = true;
+        _capturedFilePath = image.path;
+        _isCapturedVideo = false;
+      });
     } catch (e) {
       if (!mounted) return;
       _showErrorSnackBar(
@@ -208,12 +347,16 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       // 启动进度动画（平滑驱动圆形进度环）
       _progressAnimation.forward(from: 0);
 
-      // 计时器仅用于更新秒数显示
+      // 计时器用于更新秒数显示，并在达到最大时长时自动停止
       _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (!mounted) return;
         setState(() {
           _recordingSeconds = timer.tick;
         });
+        // 达到最大录制时长时自动停止录制
+        if (timer.tick >= _maxDuration) {
+          _stopRecording();
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -242,18 +385,26 @@ class _CameraCapturePageState extends State<CameraCapturePage>
         _isRecording = false;
       });
 
-      if (fileSize > AppConfig.cameraMaxVideoSize) {
+      if (fileSize > AppConfig.maxVideoUploadSize) {
         if (!mounted) return;
         _showErrorSnackBar(
           AppLocalizations.of(context).chatCameraVideoLimit(
-            _formatFileSize(AppConfig.cameraMaxVideoSize),
+            _formatFileSize(AppConfig.maxVideoUploadSize),
           ),
         );
         return;
       }
 
+      // 进入预览模式
       if (!mounted) return;
-      Navigator.of(context).pop(video.path);
+      setState(() {
+        _isPreviewing = true;
+        _capturedFilePath = video.path;
+        _isCapturedVideo = true;
+      });
+
+      // 初始化视频播放器
+      await _initializeVideoPlayer(video.path);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -263,6 +414,48 @@ class _CameraCapturePageState extends State<CameraCapturePage>
         '${AppLocalizations.of(context).chatCameraStopRecordFailed}：${e.toString()}',
       );
     }
+  }
+
+  Future<void> _initializeVideoPlayer(String path) async {
+    try {
+      final videoController = VideoPlayerController.file(File(path));
+      await videoController.initialize();
+      await videoController.setLooping(true);
+      await videoController.play();
+
+      if (!mounted) {
+        await videoController.dispose();
+        return;
+      }
+
+      setState(() {
+        _videoPlayerController = videoController;
+        _isVideoPlaying = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar(
+        '视频预览初始化失败：${e.toString()}',
+      );
+    }
+  }
+
+  void _retake() {
+    // 释放视频播放器
+    _videoPlayerController?.dispose();
+    _videoPlayerController = null;
+
+    setState(() {
+      _isPreviewing = false;
+      _capturedFilePath = null;
+      _isCapturedVideo = false;
+      _isVideoPlaying = false;
+    });
+  }
+
+  void _confirmSend() {
+    if (_capturedFilePath == null) return;
+    Navigator.of(context).pop(_capturedFilePath);
   }
 
   void _showErrorSnackBar(String message) {
@@ -289,34 +482,139 @@ class _CameraCapturePageState extends State<CameraCapturePage>
 
   @override
   Widget build(BuildContext context) {
+    if (_isQrScanMode) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(child: _buildScannerUI()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
-          children: [
-            // 相机预览
-            Positioned.fill(
-              child: _buildCameraPreview(),
-            ),
-
-            // 顶部工具栏
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _buildTopBar(),
-            ),
-
-            // 底部控制区域
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomControls(),
-            ),
-          ],
-        ),
+        child: _isPreviewing ? _buildPreviewUI() : _buildCaptureUI(),
       ),
+    );
+  }
+
+  /// 扫码模式 UI
+  Widget _buildScannerUI() {
+    if (!_supportsNativeScanner) {
+      return Center(
+        child: Text(
+          AppLocalizations.of(context).chatCameraNotFound,
+          style: const TextStyle(color: Colors.white),
+        ),
+      );
+    }
+
+    final scanner = _mobileScannerController;
+    if (scanner == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: MobileScanner(
+            controller: scanner,
+            onDetect: _handleDetect,
+          ),
+        ),
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _ScannerOverlayPainter(),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                // 手电筒按钮（仅当设备支持时显示）
+                if (_hasTorch)
+                  IconButton(
+                    icon: Icon(
+                      _isTorchEnabled ? Icons.flash_on : Icons.flash_off,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: _toggleScannerTorch,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Text(
+              AppLocalizations.of(context).chatScanHint,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 拍摄阶段 UI
+  Widget _buildCaptureUI() {
+    return Stack(
+      children: [
+        // 相机预览
+        Positioned.fill(
+          child: _buildCameraPreview(),
+        ),
+
+        // 顶部工具栏
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _buildTopBar(),
+        ),
+
+        // 底部控制区域
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: _buildBottomControls(),
+        ),
+      ],
+    );
+  }
+
+  /// 预览阶段 UI
+  Widget _buildPreviewUI() {
+    return Stack(
+      children: [
+        // 预览内容
+        Positioned.fill(
+          child: _isCapturedVideo ? _buildVideoPreview() : _buildPhotoPreview(),
+        ),
+
+        // 底部按钮
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: _buildPreviewBottomControls(),
+        ),
+      ],
     );
   }
 
@@ -353,6 +651,66 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       child: AspectRatio(
         aspectRatio: controller.value.aspectRatio,
         child: CameraPreview(controller),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPreview() {
+    if (_capturedFilePath == null) {
+      return const SizedBox.shrink();
+    }
+
+    return InteractiveViewer(
+      minScale: 1.0,
+      maxScale: 5.0,
+      child: Image.file(
+        File(_capturedFilePath!),
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildVideoPreview() {
+    final videoController = _videoPlayerController;
+    if (videoController == null || !videoController.value.isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (_isVideoPlaying) {
+            _videoPlayerController?.pause();
+          } else {
+            _videoPlayerController?.play();
+          }
+          _isVideoPlaying = !_isVideoPlaying;
+        });
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AspectRatio(
+            aspectRatio: videoController.value.aspectRatio,
+            child: VideoPlayer(videoController),
+          ),
+          if (!_isVideoPlaying)
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 40,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -435,6 +793,31 @@ class _CameraCapturePageState extends State<CameraCapturePage>
     );
   }
 
+  Widget _buildPreviewBottomControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 重拍按钮
+          _buildPreviewButton(
+            icon: Icons.refresh,
+            label: '重拍',
+            onTap: _retake,
+          ),
+
+          // 发送按钮
+          _buildPreviewButton(
+            icon: Icons.check,
+            label: '发送',
+            onTap: _confirmSend,
+            isPrimary: true,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildIconButton({
     required IconData icon,
     required VoidCallback onTap,
@@ -449,6 +832,46 @@ class _CameraCapturePageState extends State<CameraCapturePage>
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Colors.white, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildPreviewButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: isPrimary
+                  ? const Color(0xFF07C160)
+                  : Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -568,4 +991,95 @@ class _CircularProgressPainter extends CustomPainter {
   bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
+}
+
+/// 扫码框绘制器（用于扫码模式的半透明遮罩和扫描框）。
+class _ScannerOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scanRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: size.width * 0.7,
+      height: size.width * 0.7,
+    );
+
+    // 绘制半透明遮罩
+    final backgroundPaint = Paint()
+      ..color = Colors.black.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRect(scanRect)
+      ..fillType = PathFillType.evenOdd;
+
+    canvas.drawPath(path, backgroundPaint);
+
+    // 绘制扫描框边框
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRect(scanRect, borderPaint);
+
+    // 绘制四个角的装饰线
+    final cornerPaint = Paint()
+      ..color = const Color(0xFF07C160)
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke;
+
+    const cornerLength = 20.0;
+
+    // 左上角
+    canvas.drawLine(
+      scanRect.topLeft,
+      scanRect.topLeft + const Offset(cornerLength, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      scanRect.topLeft,
+      scanRect.topLeft + const Offset(0, cornerLength),
+      cornerPaint,
+    );
+
+    // 右上角
+    canvas.drawLine(
+      scanRect.topRight,
+      scanRect.topRight + const Offset(-cornerLength, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      scanRect.topRight,
+      scanRect.topRight + const Offset(0, cornerLength),
+      cornerPaint,
+    );
+
+    // 左下角
+    canvas.drawLine(
+      scanRect.bottomLeft,
+      scanRect.bottomLeft + const Offset(cornerLength, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      scanRect.bottomLeft,
+      scanRect.bottomLeft + const Offset(0, -cornerLength),
+      cornerPaint,
+    );
+
+    // 右下角
+    canvas.drawLine(
+      scanRect.bottomRight,
+      scanRect.bottomRight + const Offset(-cornerLength, 0),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      scanRect.bottomRight,
+      scanRect.bottomRight + const Offset(0, -cornerLength),
+      cornerPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

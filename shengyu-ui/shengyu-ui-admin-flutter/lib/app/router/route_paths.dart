@@ -19,7 +19,6 @@ abstract final class RoutePaths {
   static const contactsSearchResult = '/contacts/search-result';
   static const globalChatSearch = '/search/chat-history';
   static const browser = '/browser';
-  static const scan = '/conversation/scan';
   static const joinGroup = '/conversation/join-group';
   static const initiateGroup = '/conversation/initiate-group';
   static const chat = '/chat';

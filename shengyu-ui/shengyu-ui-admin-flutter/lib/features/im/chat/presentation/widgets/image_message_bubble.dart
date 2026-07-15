@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/upload_progress_tracker.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
@@ -49,6 +50,17 @@ class ImageMessageBubble extends ConsumerWidget {
     final aspectRatio = width > 0 && height > 0 ? width / height : 1;
     final fileName = message.extra.fileName?.trim() ?? '';
 
+    // 查找上传进度
+    final clientMessageId = message.clientMessageId?.trim() ?? '';
+    final uploadProgress = clientMessageId.isNotEmpty
+        ? ref.watch(uploadProgressProvider(clientMessageId))
+        : null;
+    final isLargeFile = (message.extra.fileSize ?? 0) > 10 * 1024 * 1024; // 10MB
+    final showProgressBar = uploadProgress != null &&
+        isLargeFile &&
+        uploadProgress.status == UploadProgressStatus.uploading;
+    final retryLabel = uploadProgress?.errorMessage;
+
     return Column(
       crossAxisAlignment: message.isOutgoing
           ? CrossAxisAlignment.end
@@ -80,10 +92,45 @@ class ImageMessageBubble extends ConsumerWidget {
                   ),
                   clipBehavior: Clip.antiAlias,
                   alignment: Alignment.center,
-                  child: _buildImageContent(
-                    context: context,
-                    theme: theme,
-                    strings: strings,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _buildImageContent(
+                          context: context,
+                          theme: theme,
+                          strings: strings,
+                        ),
+                      ),
+                      // 大文件上传进度条
+                      if (showProgressBar)
+                        Positioned(
+                          left: 8,
+                          right: 8,
+                          bottom: 8,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              LinearProgressIndicator(
+                                value: uploadProgress.progress / 100,
+                                minHeight: 4,
+                                backgroundColor: const Color(0x80FFFFFF),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFFFFFFF),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (retryLabel != null && retryLabel.isNotEmpty)
+                                Text(
+                                  '${uploadProgress.progress}% $retryLabel',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

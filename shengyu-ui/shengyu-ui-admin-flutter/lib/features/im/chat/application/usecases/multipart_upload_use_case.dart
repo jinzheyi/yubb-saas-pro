@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/multipart_upload_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/file/domain/repositories/multipart_upload_repository.dart';
 
 /// 分片上传用例
@@ -21,8 +22,8 @@ class MultipartUploadUseCase {
   /// [file] 待上传的文件，[directory] 存储目录（可选），
   /// [onProgress] 整体上传进度回调（0.0 ~ 1.0）。
   ///
-  /// 返回上传完成后的文件 URL。
-  Future<String> execute({
+  /// 返回合并结果，包含 fileId、url 等信息。
+  Future<MergeResult> execute({
     required File file,
     String? directory,
     void Function(double progress)? onProgress,
@@ -58,7 +59,7 @@ class MultipartUploadUseCase {
       final mergeResult = await _repository.completeMultipartUpload(uploadId: uploadId);
 
       onProgress?.call(1.0);
-      return mergeResult.url;
+      return mergeResult;
     } catch (e) {
       // 上传异常时，尝试取消分片上传
       await _repository.abortMultipartUpload(uploadId: uploadId);

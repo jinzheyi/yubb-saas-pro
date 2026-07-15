@@ -23,6 +23,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_u
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/send_message_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/upload_chat_asset_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/multipart_upload_use_case.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/application/usecases/presigned_url_upload_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/file_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/sticker_repository.dart';
@@ -122,8 +123,13 @@ final messageRepositoryProvider = Provider<MessageRepository>((ref) {
   return MessageRepositoryImpl(MessageRemoteDataSource(dio: ref.read(dioProvider)));
 });
 
+/// 文件 HTTP 数据源 Provider
+final fileHttpDataSourceProvider = Provider<FileHttpDataSource>((ref) {
+  return FileHttpDataSource(dio: ref.read(dioProvider), uploadDio: ref.read(uploadDioProvider));
+});
+
 final fileRepositoryProvider = Provider<FileRepository>((ref) {
-  return FileRepositoryImpl(FileHttpDataSource(dio: ref.read(dioProvider), uploadDio: ref.read(uploadDioProvider)));
+  return FileRepositoryImpl(ref.read(fileHttpDataSourceProvider));
 });
 
 final stickerRepositoryProvider = Provider<StickerRepository>((ref) {
@@ -163,6 +169,11 @@ final multipartUploadUseCaseProvider = Provider<MultipartUploadUseCase>((ref) {
   return MultipartUploadUseCase(ref.read(multipartUploadRepositoryProvider));
 });
 
+/// 预签名 URL 直传用例 Provider
+final presignedUrlUploadUseCaseProvider = Provider<PresignedUrlUploadUseCase>((ref) {
+  return PresignedUrlUploadUseCase(ref.read(fileHttpDataSourceProvider));
+});
+
 final sendUploadedMessageUseCaseProvider = Provider<SendUploadedMessageUseCase>(
   (ref) {
     return SendUploadedMessageUseCase(ref.read(messageRepositoryProvider));
@@ -188,6 +199,7 @@ final chatUploadCoordinatorProvider = Provider<ChatUploadCoordinator>((ref) {
     const Uuid(),
     progressTracker: ref.read(uploadProgressTrackerProvider.notifier),
     multipartUploadUseCase: ref.read(multipartUploadUseCaseProvider),
+    presignedUrlUploadUseCase: ref.read(presignedUrlUploadUseCaseProvider),
   );
 });
 

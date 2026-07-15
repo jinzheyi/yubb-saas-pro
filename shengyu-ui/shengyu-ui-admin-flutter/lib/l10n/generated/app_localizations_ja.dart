@@ -778,6 +778,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatCameraStopRecordFailed => 'Failed to stop recording';
 
   @override
+  String get chatScanHint =>
+      'Place the QR code inside the frame to scan automatically';
+
+  @override
   String get chatActionCopy => 'Copy';
 
   @override

@@ -19,7 +19,6 @@ abstract final class RouteNames {
   static const contactsSearchResult = 'contactsSearchResult';
   static const globalChatSearch = 'globalChatSearch';
   static const browser = 'browser';
-  static const scan = 'scan';
   static const joinGroup = 'joinGroup';
   static const initiateGroup = 'initiateGroup';
   static const chat = 'chat';

@@ -2,12 +2,15 @@
 class CameraCaptureRouteArgs {
   const CameraCaptureRouteArgs({this.initialMode = CameraCaptureMode.photo});
 
-  /// 初始模式（拍照/录像）。
+  /// 初始模式（扫码/拍照/录像）。
   final CameraCaptureMode initialMode;
 }
 
 /// 相机拍摄模式。
 enum CameraCaptureMode {
+  /// 扫码模式。
+  qrScan,
+
   /// 拍照模式。
   photo,
 

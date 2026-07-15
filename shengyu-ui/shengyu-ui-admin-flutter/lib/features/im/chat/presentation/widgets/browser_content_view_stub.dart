@@ -21,6 +21,7 @@ class BrowserContentView extends StatefulWidget {
 
 class _BrowserContentViewState extends State<BrowserContentView> {
   late final WebViewController _controller;
+  bool _hasPageFinished = false;
 
   @override
   void initState() {
@@ -29,10 +30,27 @@ class _BrowserContentViewState extends State<BrowserContentView> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (_) => widget.onLoadStart(),
-          onPageFinished: (_) => widget.onLoadFinish(),
+          onPageStarted: (_) {
+            _hasPageFinished = false;
+            widget.onLoadStart();
+          },
+          onPageFinished: (_) {
+            _hasPageFinished = true;
+            widget.onLoadFinish();
+          },
           onWebResourceError: (error) {
-            widget.onLoadError(error.description.trim());
+            // 只处理主要页面加载失败，忽略子资源（favicon、广告等）加载失败
+            // 判断条件：
+            // 1. 页面尚未完成加载（_hasPageFinished == false）
+            // 2. 错误类型是主要页面错误（非子资源错误）
+            final isMainFrameError = error.errorType == WebResourceErrorType.hostLookup ||
+                error.errorType == WebResourceErrorType.connect ||
+                error.errorType == WebResourceErrorType.timeout ||
+                error.errorType == WebResourceErrorType.unknown;
+
+            if (!_hasPageFinished && isMainFrameError) {
+              widget.onLoadError(error.description.trim());
+            }
           },
         ),
       )

@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/core/platform/local_uri_bytes_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
+import 'package:shengyu_ui_admin_im/core/platform/video_compressor.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/coordinators/chat_upload_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/chat_upload_execution_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/services/optimistic_message_factory.dart';
@@ -104,9 +105,11 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
 
     final fileSize = await file.length();
     final isVideo = _isVideoFile(filePath);
-    final maxSize = isVideo ? AppConfig.cameraMaxVideoSize : AppConfig.cameraMaxPhotoSize;
+    final maxSize = isVideo ? AppConfig.maxVideoUploadSize : AppConfig.maxImageUploadSize;
 
-    if (fileSize > maxSize) {
+    // 先检查原始文件大小是否超限（避免压缩后才发现超限）
+    if (fileSize > maxSize && !isVideo) {
+      // 图片不压缩，直接判断
       state = state.copyWith(
         isPicking: false,
         error: AppError(
@@ -127,25 +130,171 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
 
     final purpose = isVideo ? UploadPurpose.chatVideo : UploadPurpose.chatImage;
 
-    await _pickAndUpload(
-      entryArgs: entryArgs,
-      chatTitle: chatTitle,
-      picker: () async => pickedFile,
+    // 视频文件：先创建乐观消息显示在聊天页面，然后在后台压缩和上传
+    // 这样用户点击发送后能立即看到消息气泡，不会感觉无响应
+    if (isVideo) {
+      await _uploadVideoWithBackgroundCompression(
+        entryArgs: entryArgs,
+        chatTitle: chatTitle,
+        pickedFile: pickedFile,
+        purpose: purpose,
+        maxSize: maxSize,
+      );
+    } else {
+      // 图片文件：直接上传
+      await _pickAndUpload(
+        entryArgs: entryArgs,
+        chatTitle: chatTitle,
+        picker: () async => pickedFile,
+        purpose: purpose,
+        upload: (input, onTaskChanged, clientMessageId) {
+          return _chatUploadCoordinator.uploadImage(
+            input: input,
+            onTaskChanged: onTaskChanged,
+            clientMessageId: clientMessageId,
+          );
+        },
+      );
+    }
+  }
+
+  /// 视频上传：先显示乐观消息，然后在后台压缩和上传
+  ///
+  /// 这样用户点击发送后能立即看到消息气泡，不会感觉无响应。
+  /// 压缩进度会通过乐观消息的状态更新反馈给用户。
+  Future<void> _uploadVideoWithBackgroundCompression({
+    required ChatEntryArgs entryArgs,
+    required String chatTitle,
+    required PickedFile pickedFile,
+    required UploadPurpose purpose,
+    required int maxSize,
+  }) async {
+    state = state.copyWith(isPicking: true, error: null);
+
+    // 1. 立即创建乐观消息并显示在聊天页面
+    final optimisticMessage = _createOptimisticMessage(
+      chatId: entryArgs.chatId,
+      picked: pickedFile,
       purpose: purpose,
-      upload: (input, onTaskChanged, clientMessageId) {
-        return isVideo
-            ? _chatUploadCoordinator.uploadVideo(
-                input: input,
-                onTaskChanged: onTaskChanged,
-                clientMessageId: clientMessageId,
-              )
-            : _chatUploadCoordinator.uploadImage(
-                input: input,
-                onTaskChanged: onTaskChanged,
-                clientMessageId: clientMessageId,
-              );
-      },
     );
+    final optimisticKey =
+        optimisticMessage.clientMessageId ?? optimisticMessage.messageId;
+    _timelineController.appendSingleMessage(optimisticMessage);
+    _patchConversation(
+      message: optimisticMessage,
+      chatTitle: chatTitle,
+      entryArgs: entryArgs,
+    );
+
+    // 2. 在后台执行压缩和上传
+    try {
+      // 2.1 压缩视频（带进度回调）
+      String finalFilePath = pickedFile.path;
+      int finalFileSize = pickedFile.size;
+
+      try {
+        final compressedPath = await VideoCompressionService.instance.compressVideo(
+          pickedFile.path,
+          onProgress: (progress) {
+            debugPrint('[VideoCompressor] 压缩进度: ${(progress * 100).toStringAsFixed(1)}%');
+            // 可选：更新乐观消息状态显示压缩进度
+          },
+        );
+        if (compressedPath != pickedFile.path) {
+          final compressedFile = File(compressedPath);
+          if (await compressedFile.exists()) {
+            finalFileSize = await compressedFile.length();
+            finalFilePath = compressedPath;
+            debugPrint('[VideoCompressor] 压缩完成: ${_formatFileSize(pickedFile.size)} -> ${_formatFileSize(finalFileSize)}');
+          }
+        }
+      } catch (e, stackTrace) {
+        debugPrint('[VideoCompressor] 压缩失败，使用原始文件: $e\n$stackTrace');
+        // 压缩失败，继续使用原始文件
+      }
+
+      // 2.2 校验压缩后的文件大小
+      if (finalFileSize > maxSize) {
+        _timelineController.markFailedByClientMessageId(
+          clientMessageId: optimisticKey,
+        );
+        _conversationListController.patchLastMessageStatus(
+          chatId: entryArgs.chatId,
+          messageId: optimisticKey,
+          status: MessageStatus.failed,
+        );
+        state = state.copyWith(
+          isPicking: false,
+          error: AppError(
+            message: '视频超过大小限制（最大${_formatFileSize(maxSize)}）',
+          ),
+        );
+        return;
+      }
+
+      // 2.3 读取压缩后的文件
+      final finalBytes = await File(finalFilePath).readAsBytes();
+      final compressedPickedFile = PickedFile(
+        path: finalFilePath,
+        name: pickedFile.name,
+        mimeType: pickedFile.mimeType,
+        size: finalFileSize,
+        bytes: finalBytes,
+      );
+
+      // 2.4 执行上传
+      final execution = await _uploadByPurpose(
+        purpose: purpose,
+        _buildUploadInput(
+          purpose: purpose,
+          scope: _resolveScope(entryArgs),
+          path: compressedPickedFile.path,
+          displayName: _displayNameForPickedFile(compressedPickedFile, purpose),
+          mimeType: _mimeTypeForPickedFile(compressedPickedFile, purpose),
+          fileSize: compressedPickedFile.size,
+          bytes: compressedPickedFile.bytes,
+        ),
+        (task) => _applyUploadTaskToLocalMessage(
+          optimisticKey,
+          optimisticMessage,
+          task,
+        ),
+        optimisticKey,
+      );
+
+      // 2.5 更新消息为已上传状态
+      final resolvedMessage = _resolveUploadedMessage(
+        base: optimisticMessage,
+        incoming: execution.message,
+        uploadedFileId: execution.task.uploadedFileId,
+        uploadedUrl: execution.task.uploadedUrl,
+        checksum: execution.task.checksum,
+      );
+      _timelineController.replaceSingleMessage(
+        clientMessageId: optimisticKey,
+        message: resolvedMessage,
+      );
+      _patchConversation(
+        message: resolvedMessage,
+        chatTitle: chatTitle,
+        entryArgs: entryArgs,
+      );
+      await _saveGroupFileIfNeeded(entryArgs: entryArgs, picked: compressedPickedFile);
+      state = state.copyWith(isPicking: false, error: null);
+    } catch (error, stackTrace) {
+      _timelineController.markFailedByClientMessageId(
+        clientMessageId: optimisticKey,
+      );
+      _conversationListController.patchLastMessageStatus(
+        chatId: entryArgs.chatId,
+        messageId: optimisticKey,
+        status: MessageStatus.failed,
+      );
+      state = state.copyWith(
+        isPicking: false,
+        error: AppErrorMapper.map(error, stackTrace),
+      );
+    }
   }
 
   bool _isVideoFile(String path) {

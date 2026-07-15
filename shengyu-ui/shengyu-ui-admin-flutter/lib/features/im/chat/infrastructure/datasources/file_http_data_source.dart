@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/core/platform/local_file_size_loader.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/presigned_url_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/upload_and_create_file_response_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/upload_request_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/infrastructure/dtos/file_open_strategy_response_dto.dart';
@@ -130,5 +133,77 @@ class FileHttpDataSource {
         data['presignedUrl']?.toString() ??
         '';
     return Uri.parse(resolvedUrl);
+  }
+
+  /// 获取预签名上传 URL
+  ///
+  /// [name] 文件名，[directory] 存储目录。
+  Future<PresignedUrlResponseDto> getPresignedUploadUrl({
+    required String name,
+    String? directory,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      AppConfig.filePresignedUploadUrlPath,
+      queryParameters: {
+        'name': name,
+        if (directory != null && directory.isNotEmpty) 'directory': directory,
+      },
+    );
+    final result = ApiResult.fromJson<PresignedUrlResponseDto>(
+      response.data ?? const <String, dynamic>{},
+      dataParser: (raw) {
+        return PresignedUrlResponseDto.fromJson(
+          raw as Map<String, dynamic>? ?? const <String, dynamic>{},
+        );
+      },
+    );
+    return result.requireData();
+  }
+
+  /// 直传文件到预签名 URL
+  ///
+  /// [file] 本地文件，[uploadUrl] 预签名上传 URL，
+  /// [contentType] MIME 类型，[onProgress] 上传进度回调。
+  Future<void> uploadToPresignedUrl({
+    required File file,
+    required String uploadUrl,
+    required String contentType,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    final fileSize = await file.length();
+    await _uploadDio.put(
+      uploadUrl,
+      data: file.openRead(),
+      options: Options(
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': fileSize,
+        },
+      ),
+      onSendProgress: onProgress,
+    );
+  }
+
+  /// 创建文件记录（配合预签名 URL 直传使用）
+  ///
+  /// 直传完成后调用此方法，在后端创建文件记录并返回 fileId。
+  Future<int> createFileRecord({
+    required FileCreateRequestDto request,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      AppConfig.fileCreatePath,
+      data: request.toJson(),
+    );
+    final result = ApiResult.fromJson<int>(
+      response.data ?? const <String, dynamic>{},
+      dataParser: (raw) {
+        if (raw is int) return raw;
+        if (raw is Map<String, dynamic>) {
+          return (raw['data'] as num?)?.toInt() ?? 0;
+        }
+        return 0;
+      },
+    );
+    return result.requireData();
   }
 }

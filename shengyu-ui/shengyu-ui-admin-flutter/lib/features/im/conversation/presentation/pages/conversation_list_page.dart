@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/camera_capture_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
@@ -739,7 +740,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       context.pushNamed(RouteNames.joinGroup);
       return;
     }
-    context.pushNamed(RouteNames.scan);
+    context.pushNamed(
+      RouteNames.chatCameraCapture,
+      extra: const CameraCaptureRouteArgs(initialMode: CameraCaptureMode.qrScan),
+    );
   }
 
   void _handleInitiateGroup() {

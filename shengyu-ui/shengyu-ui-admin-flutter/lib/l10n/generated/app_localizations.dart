@@ -1396,6 +1396,12 @@ abstract class AppLocalizations {
   /// **'Failed to stop recording'**
   String get chatCameraStopRecordFailed;
 
+  /// No description provided for @chatScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the QR code inside the frame to scan automatically'**
+  String get chatScanHint;
+
   /// No description provided for @chatActionCopy.
   ///
   /// In en, this message translates to:

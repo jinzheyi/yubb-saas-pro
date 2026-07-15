@@ -482,6 +482,7 @@
   "chatCameraTakePhotoFailed": "拍照失败",
   "chatCameraStartRecordFailed": "开始录像失败",
   "chatCameraStopRecordFailed": "停止录像失败",
+  "chatScanHint": "将二维码放入框内，即可自动扫描",
 
   "@@@CHAT_ACTION_MENU": "Section: Chat Action Menu",
   "chatActionFavoriteSticker": "添加到表情",
