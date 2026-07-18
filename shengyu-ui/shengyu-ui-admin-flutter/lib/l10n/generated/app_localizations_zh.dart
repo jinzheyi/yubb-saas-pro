@@ -1343,7 +1343,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatLocationCopied => '位置信息已复制';
+  String get chatLocationCopied => '位置详情已复制';
+
+  @override
+  String get chatLocationDetailTitle => '位置详情';
 
   @override
   String get chatMoreActionContactCard => '名片';

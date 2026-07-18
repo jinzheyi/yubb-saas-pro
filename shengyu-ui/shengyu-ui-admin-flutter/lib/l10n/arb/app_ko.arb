@@ -855,6 +855,7 @@
     }
   },
   "chatLocationCopied": "Location details copied",
+  "chatLocationDetailTitle": "위치 상세정보",
 
   "@@@CHAT_CONTACT_CARD": "Section: Chat Contact Card",
   "chatMoreActionContactCard": "Contact Card",

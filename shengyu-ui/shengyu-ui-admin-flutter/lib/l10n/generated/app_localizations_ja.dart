@@ -1466,6 +1466,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatLocationCopied => 'Location details copied';
 
   @override
+  String get chatLocationDetailTitle => '位置の詳細';
+
+  @override
   String get chatMoreActionContactCard => 'Contact Card';
 
   @override

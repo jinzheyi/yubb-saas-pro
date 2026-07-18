@@ -2251,7 +2251,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     if (message.type == MessageType.location) {
-      unawaited(_openLocationMessage(context, message));
+      _openLocationMessage(context, message);
       return;
     }
     if (message.type == MessageType.image) {
@@ -6006,10 +6006,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
         return;
       }
-      if (!context.mounted) {
-        return;
-      }
-      _showAttachmentSuccess(context, strings.chatLocationSendSuccess);
+      // 发送成功不显示提示（微信行为）
     } catch (error) {
       if (_handleGroupLifecycleRequestError(
         context,
@@ -6025,10 +6022,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
   }
 
-  Future<void> _openLocationMessage(
+  void _openLocationMessage(
     BuildContext context,
     Message message,
-  ) async {
+  ) {
     final strings = ref.read(appStringsProvider);
     final latitude = message.extra.locationLatitude;
     final longitude = message.extra.locationLongitude;
@@ -6038,56 +6035,20 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     final locationName = message.extra.locationName?.trim() ?? '';
     final address = message.extra.locationAddress?.trim() ?? '';
-    final confirmed = await _showLegacyConfirmDialog(
-      context,
-      title: locationName.isNotEmpty
-          ? locationName
-          : strings.chatLocationDefaultTitle,
-      content: address.isNotEmpty
-          ? address
-          : strings.chatLocationCoordinateFallback(
-              latitude.toStringAsFixed(6),
-              longitude.toStringAsFixed(6),
-            ),
-      confirmText: strings.chatLocationNavigateAction,
-    );
-    if (confirmed != true || !context.mounted) {
-      return;
-    }
-    final opened = await ref
-        .read(chatLocationOpenerServiceProvider)
-        .open(
-          latitude: latitude,
-          longitude: longitude,
-          name: locationName,
-          address: address,
-        );
-    if (opened || !context.mounted) {
-      return;
-    }
-    final shouldCopy = await _showLegacyConfirmDialog(
-      context,
-      title: strings.chatLocationOpenFailed,
-      content: strings.chatLocationOpenUnsupported,
-      confirmText: strings.chatLocationCopyAction,
-    );
-    if (shouldCopy != true || !context.mounted) {
-      return;
-    }
-    await Clipboard.setData(
-      ClipboardData(
-        text: _buildLocationClipboardPayload(
-          locationName: locationName,
-          address: address,
-          latitude: latitude,
-          longitude: longitude,
-        ),
+    
+    // 直接跳转到位置详情页
+    context.pushNamed(
+      RouteNames.chatLocationDetail,
+      extra: LocationSharePayload(
+        name: locationName.isNotEmpty
+            ? locationName
+            : strings.chatLocationDefaultTitle,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        provider: message.extra.locationProvider ?? 'unknown',
       ),
     );
-    if (!context.mounted) {
-      return;
-    }
-    _showAttachmentError(context, strings.chatLocationCopied);
   }
 
   String _buildLocationClipboardPayload({

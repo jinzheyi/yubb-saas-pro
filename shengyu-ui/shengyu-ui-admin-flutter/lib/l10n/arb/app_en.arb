@@ -883,6 +883,7 @@
     }
   },
   "chatLocationCopied": "Location details copied",
+  "chatLocationDetailTitle": "Location Details",
 
   "@@@CHAT_CONTACT_CARD": "Section: Chat Contact Card",
   "chatMoreActionContactCard": "Contact Card",

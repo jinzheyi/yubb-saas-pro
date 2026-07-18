@@ -1466,6 +1466,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatLocationCopied => 'Location details copied';
 
   @override
+  String get chatLocationDetailTitle => '위치 상세정보';
+
+  @override
   String get chatMoreActionContactCard => 'Contact Card';
 
   @override

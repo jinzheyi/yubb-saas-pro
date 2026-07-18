@@ -876,7 +876,8 @@
       }
     }
   },
-  "chatLocationCopied": "位置信息已复制",
+  "chatLocationCopied": "位置详情已复制",
+  "chatLocationDetailTitle": "位置详情",
 
   "@@@CHAT_CONTACT_CARD": "Section: Chat Contact Card",
   "chatMoreActionContactCard": "名片",

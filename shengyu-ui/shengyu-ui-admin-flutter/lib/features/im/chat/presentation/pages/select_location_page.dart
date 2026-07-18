@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
+import 'package:shengyu_ui_admin_im/core/platform/location_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/location_search_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/location_search_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/location_share_payload.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/map_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class SelectLocationPage extends ConsumerStatefulWidget {
@@ -19,20 +21,105 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
   static const double _defaultLongitude = 115.8579;
 
   final TextEditingController _controller = TextEditingController();
+  final LocationService _locationService = GeolocatorLocationService();
+  
   bool _loading = false;
   bool _quotaExhausted = false;
   bool _serviceDisabled = false;
+  bool _locationLoading = false;
+  bool _locationRelocating = false;
   String _keyword = '';
   String _noticeMessage = '';
   String _currentAddress = '';
   final String _locationError = '';
+  double _currentLatitude = _defaultLatitude;
+  double _currentLongitude = _defaultLongitude;
   List<LocationSearchItem> _items = const <LocationSearchItem>[];
   LocationSearchItem? _selectedItem;
+  
+  // Map center key - forces WebView rebuild when center changes
+  int _mapCenterKey = 0;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadNearby);
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    setState(() {
+      _locationLoading = true;
+    });
+
+    try {
+      final location = await _locationService.getCurrentLocation();
+      if (location != null && mounted) {
+        setState(() {
+          _currentLatitude = location.latitude;
+          _currentLongitude = location.longitude;
+          _locationLoading = false;
+        });
+        // 加载附近 POI
+        _loadNearby();
+      } else {
+        setState(() {
+          _locationLoading = false;
+        });
+        // 使用默认位置加载附近 POI
+        _loadNearby();
+      }
+    } catch (e) {
+      setState(() {
+        _locationLoading = false;
+      });
+      debugPrint('[SelectLocationPage] 获取定位失败: $e');
+      // 使用默认位置加载附近 POI
+      _loadNearby();
+    }
+  }
+
+  void _onMapDragEnd(double latitude, double longitude) {
+    setState(() {
+      _currentLatitude = latitude;
+      _currentLongitude = longitude;
+      _currentAddress = ''; // 清空地址，等待逆地理编码
+      _selectedItem = null; // 拖动后清除选中，等 POI 加载后自动选第一项
+    });
+    // 加载新位置的附近 POI
+    _loadNearby();
+  }
+
+  /// 一键定位到当前位置（微信风格）
+  Future<void> _relocateToCurrentPosition() async {
+    if (_locationRelocating) return;
+    setState(() {
+      _locationRelocating = true;
+    });
+    try {
+      final location = await _locationService.getCurrentLocation();
+      if (location != null && mounted) {
+        setState(() {
+          _currentLatitude = location.latitude;
+          _currentLongitude = location.longitude;
+          _currentAddress = '';
+          _selectedItem = null;
+          _mapCenterKey++;
+          _locationRelocating = false;
+        });
+        await _loadNearby();
+      } else if (mounted) {
+        setState(() {
+          _locationRelocating = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[SelectLocationPage] 重新定位失败: $e');
+      if (mounted) {
+        setState(() {
+          _locationRelocating = false;
+        });
+      }
+    }
   }
 
   @override
@@ -63,6 +150,68 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
       ),
       body: Column(
         children: [
+          // 地图预览区域
+          SizedBox(
+            height: 200,
+            child: Stack(
+              children: [
+                MapView(
+                  key: ValueKey('map_$_mapCenterKey'),
+                  latitude: _currentLatitude,
+                  longitude: _currentLongitude,
+                  zoom: 15,
+                  enableDrag: true,
+                  showMarker: true,
+                  onDragEnd: _onMapDragEnd,
+                ),
+                if (_locationLoading)
+                  Container(
+                    color: Colors.white.withOpacity(0.7),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                // 一键定位按钮（微信风格，右下角）
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: GestureDetector(
+                    onTap: _relocateToCurrentPosition,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: _locationRelocating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF246BFD)),
+                              ),
+                            )
+                          : const AppIcon(
+                              AppIconKind.myLocation,
+                              size: 22,
+                              color: Color(0xFF246BFD),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -233,6 +382,11 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
           onTap: () {
             setState(() {
               _selectedItem = item;
+              // 微信行为：点击 POI 后地图中心移动到该位置
+              _currentLatitude = item.latitude;
+              _currentLongitude = item.longitude;
+              _currentAddress = item.address;
+              _mapCenterKey++;
             });
           },
           title: Text(
@@ -282,8 +436,8 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
   Future<void> _loadNearby() async {
     await _loadLocationResult(
       keyword: '',
-      latitude: _defaultLatitude,
-      longitude: _defaultLongitude,
+      latitude: _currentLatitude,
+      longitude: _currentLongitude,
       pageSize: 10,
     );
   }
@@ -299,8 +453,8 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
     }
     await _loadLocationResult(
       keyword: keyword,
-      latitude: _defaultLatitude,
-      longitude: _defaultLongitude,
+      latitude: _currentLatitude,
+      longitude: _currentLongitude,
       pageSize: 20,
     );
   }
@@ -358,13 +512,28 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
         message.contains('额度') || message.toLowerCase().contains('quota');
     final enabled = result.enabled;
     final items = result.items;
+    
+    // 关键：必须在赋值前判断，否则 _selectedItem 已被覆盖为 items.first
+    // 微信行为：用户没有手动选择过（或拖动后），地图中心同步到第一项 POI
+    final hadNoManualSelection = _selectedItem == null;
+    final shouldSyncMapCenter = hadNoManualSelection && keywordIsNearby && items.isNotEmpty;
+    
     setState(() {
       _quotaExhausted = quota;
       _serviceDisabled = !enabled && !quota;
       _noticeMessage = (!quota && message.isNotEmpty) ? message : '';
       _items = (enabled && !quota) ? items : const <LocationSearchItem>[];
       _selectedItem = items.isNotEmpty ? items.first : null;
-      if (_currentAddress.isEmpty && keywordIsNearby && items.isNotEmpty) {
+      
+      if (shouldSyncMapCenter) {
+        // 地图中心同步到第一项 POI 位置
+        _currentLatitude = items.first.latitude;
+        _currentLongitude = items.first.longitude;
+        _currentAddress = items.first.name.trim().isNotEmpty
+            ? items.first.name
+            : items.first.address;
+        _mapCenterKey++; // 强制地图重建
+      } else if (_currentAddress.isEmpty && keywordIsNearby && items.isNotEmpty) {
         _currentAddress = items.first.name.trim().isNotEmpty
             ? items.first.name
             : items.first.address;
@@ -398,21 +567,32 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
 
   void _handleSendCurrentLocation() {
     final strings = ref.read(appStringsProvider);
-    final selected = _selectedItem;
-    if (selected == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.chatSelectLocationCurrentUnavailable)),
-      );
-      return;
+    
+    // 微信行为：如果用户点击了某个 POI，使用该 POI 的名称和地址
+    // 否则使用当前定位的实际地址（来自逆地理编码）
+    String name;
+    String address;
+    
+    if (_selectedItem != null) {
+      // 用户手动选择了 POI
+      name = _selectedItem!.name;
+      address = _selectedItem!.address;
+    } else if (_currentAddress.isNotEmpty) {
+      // 有实际地址（来自逆地理编码或 POI 加载）
+      name = _currentAddress;
+      address = _currentAddress;
+    } else {
+      // 兜底：显示"当前位置"
+      name = strings.chatCurrentLocationName;
+      address = '';
     }
+    
     Navigator.of(context).pop(
       LocationSharePayload(
-        name: _currentAddress.isNotEmpty
-            ? _currentAddress
-            : strings.chatCurrentLocationName,
-        address: _currentAddress,
-        latitude: selected.latitude,
-        longitude: selected.longitude,
+        name: name,
+        address: address,
+        latitude: _currentLatitude,
+        longitude: _currentLongitude,
         provider: 'device',
       ),
     );

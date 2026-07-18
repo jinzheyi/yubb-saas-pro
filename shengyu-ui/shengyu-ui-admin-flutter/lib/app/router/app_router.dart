@@ -39,6 +39,8 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/forward_
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/chat_media_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/read_receipt_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/select_location_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/location_detail_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/location_share_payload.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/select_contact_card_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/sticker_manage_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/camera_capture_page.dart';
@@ -418,6 +420,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.chatSelectLocation,
         pageBuilder: (context, state) =>
             _buildRoutePage(state: state, child: const SelectLocationPage()),
+      ),
+      GoRoute(
+        path: RoutePaths.chatLocationDetail,
+        name: RouteNames.chatLocationDetail,
+        pageBuilder: (context, state) {
+          final payload = state.extra as LocationSharePayload?;
+          if (payload == null) {
+            return _buildRoutePage(
+              state: state,
+              child: const SelectLocationPage(),
+            );
+          }
+          return _buildRoutePage(
+            state: state,
+            child: LocationDetailPage(payload: payload),
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.chatStickerManage,

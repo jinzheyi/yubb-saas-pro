@@ -855,6 +855,7 @@
     }
   },
   "chatLocationCopied": "Location details copied",
+  "chatLocationDetailTitle": "位置の詳細",
 
   "@@@CHAT_CONTACT_CARD": "Section: Chat Contact Card",
   "chatMoreActionContactCard": "Contact Card",

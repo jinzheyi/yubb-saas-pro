@@ -23,6 +23,7 @@ abstract final class RoutePaths {
   static const initiateGroup = '/conversation/initiate-group';
   static const chat = '/chat';
   static const chatSelectLocation = '/chat/select-location';
+  static const chatLocationDetail = '/chat/location-detail';
   static const chatSelectContactCard = '/chat/select-contact-card';
   static const chatStickerManage = '/chat/sticker-manage';
   static const chatSettings = '/chat/settings';

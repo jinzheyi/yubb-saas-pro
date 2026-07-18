@@ -2536,6 +2536,12 @@ abstract class AppLocalizations {
   /// **'Location details copied'**
   String get chatLocationCopied;
 
+  /// No description provided for @chatLocationDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location Details'**
+  String get chatLocationDetailTitle;
+
   /// No description provided for @chatMoreActionContactCard.
   ///
   /// In en, this message translates to:

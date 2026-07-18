@@ -1466,6 +1466,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatLocationCopied => 'Location details copied';
 
   @override
+  String get chatLocationDetailTitle => 'Location Details';
+
+  @override
   String get chatMoreActionContactCard => 'Contact Card';
 
   @override

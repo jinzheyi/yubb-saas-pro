@@ -23,6 +23,7 @@ abstract final class RouteNames {
   static const initiateGroup = 'initiateGroup';
   static const chat = 'chat';
   static const chatSelectLocation = 'chatSelectLocation';
+  static const chatLocationDetail = 'chatLocationDetail';
   static const chatSelectContactCard = 'chatSelectContactCard';
   static const chatStickerManage = 'chatStickerManage';
   static const chatSettings = 'chatSettings';

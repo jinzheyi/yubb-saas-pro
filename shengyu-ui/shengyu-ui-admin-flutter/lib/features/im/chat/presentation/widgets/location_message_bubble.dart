@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/map_thumbnail.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_status_footer.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -27,6 +28,46 @@ class LocationMessageBubble extends ConsumerWidget {
   final bool enableReadReceiptEntry;
   final bool showOutgoingStatusFooter;
   final String? outgoingFooterLabel;
+
+  Widget _buildMapThumbnail(BuildContext context, Message message) {
+    final latitude = message.extra.locationLatitude;
+    final longitude = message.extra.locationLongitude;
+    
+    // 如果没有经纬度，显示默认图标
+    if (latitude == null || longitude == null) {
+      return Container(
+        height: 100,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: message.isOutgoing
+              ? Colors.white.withValues(alpha: 0.16)
+              : const Color(0xFFF4F7FC),
+        ),
+        alignment: Alignment.center,
+        child: AppIcon(
+          AppIconKind.place,
+          size: 34,
+          color: message.isOutgoing
+              ? Colors.white
+              : const Color(0xFFFFA940),
+        ),
+      );
+    }
+
+    // 使用多端适配的地图缩略图组件
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(message.isOutgoing ? 10 : 5),
+        bottomRight: Radius.circular(message.isOutgoing ? 5 : 10),
+      ),
+      child: MapThumbnail(
+        latitude: latitude,
+        longitude: longitude,
+        isOutgoing: message.isOutgoing,
+        height: 100,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -113,23 +154,7 @@ class LocationMessageBubble extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    height: 100,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: message.isOutgoing
-                          ? Colors.white.withValues(alpha: 0.16)
-                          : const Color(0xFFF4F7FC),
-                    ),
-                    alignment: Alignment.center,
-                    child: AppIcon(
-                      AppIconKind.place,
-                      size: 34,
-                      color: message.isOutgoing
-                          ? Colors.white
-                          : const Color(0xFFFFA940),
-                    ),
-                  ),
+                  _buildMapThumbnail(context, message),
                 ],
               ),
             ),
