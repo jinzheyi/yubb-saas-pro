@@ -7,6 +7,8 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/con
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/repositories/conversation_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/cursor_version_store.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -15,10 +17,20 @@ void main() {
   late ConversationListController controller;
   late _FakeConversationRepository repository;
   late ActiveConversationService activeConversationService;
+  late UnifiedCacheManager unifiedCacheManager;
+  late CursorVersionStore cursorVersionStore;
 
   setUp(() {
     repository = _FakeConversationRepository();
     activeConversationService = ActiveConversationService();
+    final memoryCache = MemoryCacheManager();
+    final diskCache = DiskCacheManager();
+    cursorVersionStore = CursorVersionStore();
+    unifiedCacheManager = UnifiedCacheManager(
+      memoryCache: memoryCache,
+      diskCache: diskCache,
+      cursorVersionStore: cursorVersionStore,
+    );
     controller = ConversationListController(
       ConversationSyncCoordinator(
         _FakeLoadConversationListUseCase(repository),
@@ -27,6 +39,9 @@ void main() {
       _FakeSyncConversationsIncrementallyUseCase(repository),
       repository,
       activeConversationService,
+      unifiedCacheManager,
+      cursorVersionStore,
+      'test-user-id',
     );
   });
 

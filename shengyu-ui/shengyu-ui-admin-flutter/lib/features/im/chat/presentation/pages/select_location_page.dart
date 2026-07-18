@@ -171,45 +171,46 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
                       child: CircularProgressIndicator(),
                     ),
                   ),
-                // 一键定位按钮（微信风格，右下角）
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: GestureDetector(
-                    onTap: _relocateToCurrentPosition,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: _locationRelocating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF246BFD)),
-                              ),
-                            )
-                          : const AppIcon(
-                              AppIconKind.myLocation,
-                              size: 22,
-                              color: Color(0xFF246BFD),
-                            ),
-                    ),
-                  ),
-                ),
               ],
+            ),
+          ),
+          // 一键定位按钮（放在地图下方右侧，避免被 iframe 拦截）
+          Container(
+            height: 36,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _relocateToCurrentPosition,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: _locationRelocating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF246BFD)),
+                        ),
+                      )
+                    : const AppIcon(
+                        AppIconKind.myLocation,
+                        size: 20,
+                        color: Color(0xFF246BFD),
+                      ),
+              ),
             ),
           ),
           Container(
@@ -446,6 +447,7 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
     final keyword = _controller.text.trim();
     setState(() {
       _keyword = keyword;
+      _selectedItem = null; // 搜索前重置，确保新结果能触发地图同步
     });
     if (keyword.isEmpty) {
       await _loadNearby();
@@ -515,8 +517,9 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
     
     // 关键：必须在赋值前判断，否则 _selectedItem 已被覆盖为 items.first
     // 微信行为：用户没有手动选择过（或拖动后），地图中心同步到第一项 POI
+    // 搜索后也应该同步（移除 keywordIsNearby 限制）
     final hadNoManualSelection = _selectedItem == null;
-    final shouldSyncMapCenter = hadNoManualSelection && keywordIsNearby && items.isNotEmpty;
+    final shouldSyncMapCenter = hadNoManualSelection && items.isNotEmpty;
     
     setState(() {
       _quotaExhausted = quota;
@@ -533,7 +536,7 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
             ? items.first.name
             : items.first.address;
         _mapCenterKey++; // 强制地图重建
-      } else if (_currentAddress.isEmpty && keywordIsNearby && items.isNotEmpty) {
+      } else if (_currentAddress.isEmpty && items.isNotEmpty) {
         _currentAddress = items.first.name.trim().isNotEmpty
             ? items.first.name
             : items.first.address;

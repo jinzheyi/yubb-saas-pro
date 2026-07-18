@@ -48,6 +48,10 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
 
+  # 定位（腾讯地图，与后端保持一致）
+  geolocator: ^13.0.2
+  permission_handler: ^11.3.1
+
 dependency_overrides:
   extended_text_field:
     path: ./_packages/extended_text_field

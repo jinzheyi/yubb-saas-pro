@@ -101,6 +101,12 @@ abstract final class AppConfig {
     compressionThreshold: 20 * 1024 * 1024, // 20MB
   );
 
+  /// 腾讯地图 Key（用于静态地图、定位等功能）。
+  ///
+  /// 与后端保持一致，使用腾讯位置服务。
+  /// TODO: 生产环境替换为正式的腾讯地图 Key
+  static const String tencentLbsKey = 'AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA';
+
   /// WebSocket 心跳与连接治理配置。
   ///
   /// 说明：
