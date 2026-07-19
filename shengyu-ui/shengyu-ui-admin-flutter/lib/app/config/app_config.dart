@@ -101,11 +101,40 @@ abstract final class AppConfig {
     compressionThreshold: 20 * 1024 * 1024, // 20MB
   );
 
-  /// 腾讯地图 Key（用于静态地图、定位等功能）。
+  /// 腾讯地图相关配置。
   ///
-  /// 与后端保持一致，使用腾讯位置服务。
-  /// TODO: 生产环境替换为正式的腾讯地图 Key
+  /// 参考文档：
+  /// - JavaScript API GL: https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic
+  /// - Static Map API V2: https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+  ///
+  /// Key 在腾讯位置服务控制台创建：https://lbs.qq.com/dev/console/application/mine
+  /// JavaScript API GL 不需要勾选任何产品，直接创建 Key 即可使用。
   static const String tencentLbsKey = 'AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA';
+
+  /// JavaScript API GL 加载地址（Web 端 iframe / 移动端 WebView）。
+  static String get tencentJsApiUrl =>
+      'https://map.qq.com/api/gljs?v=1.exp&key=$tencentLbsKey';
+
+  /// 静态图 API V2 基础 URL。
+  static const String tencentStaticMapBaseUrl =
+      'https://apis.map.qq.com/ws/staticmap/v2/';
+
+  /// 逆地理编码 API 基础 URL。
+  static const String tencentGeocoderBaseUrl =
+      'https://apis.map.qq.com/ws/geocoder/v1/';
+
+  /// 地点搜索 API 基础 URL。
+  static const String tencentPlaceSearchBaseUrl =
+      'https://apis.map.qq.com/ws/place/v1/search';
+
+  /// 默认地图缩放级别。
+  static const int tencentMapDefaultZoom = 15;
+
+  /// 默认静态图尺寸（宽 x 高）。
+  static const String tencentMapDefaultStaticSize = '300x150';
+
+  /// 消息气泡缩略图尺寸。
+  static const String tencentMapThumbnailSize = '200x100';
 
   /// WebSocket 心跳与连接治理配置。
   ///

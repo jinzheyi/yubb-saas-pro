@@ -1,78 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/application/services/map_service.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 
-/// 移动端地图缩略图 - 使用 CachedNetworkImage 加载腾讯静态地图 API
+/// 移动端地图缩略图 - 使用 WebView 渲染腾讯地图
+/// 
+/// 与主地图使用相同的 JavaScript API GL，确保 Key 授权一致
 Widget createMapThumbnail({
   required double latitude,
   required double longitude,
   required bool isOutgoing,
   double height = 100,
 }) {
-  final mapUrl = MapService.generateThumbnailUrl(
+  return _MobileMapThumbnail(
     latitude: latitude,
     longitude: longitude,
+    isOutgoing: isOutgoing,
+    height: height,
   );
+}
 
-  if (mapUrl.isEmpty) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: isOutgoing
-            ? Colors.white.withValues(alpha: 0.16)
-            : const Color(0xFFF4F7FC),
+class _MobileMapThumbnail extends StatefulWidget {
+  final double latitude;
+  final double longitude;
+  final bool isOutgoing;
+  final double height;
+
+  const _MobileMapThumbnail({
+    required this.latitude,
+    required this.longitude,
+    required this.isOutgoing,
+    required this.height,
+  });
+
+  @override
+  State<_MobileMapThumbnail> createState() => _MobileMapThumbnailState();
+}
+
+class _MobileMapThumbnailState extends State<_MobileMapThumbnail> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadHtmlString(_buildHtml());
+  }
+
+  String _buildHtml() {
+    final lat = widget.latitude;
+    final lng = widget.longitude;
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="${AppConfig.tencentJsApiUrl}"></script>
+  <script>
+    if (typeof TMap !== 'undefined') {
+      new TMap.Map("map", {
+        center: new TMap.LatLng($lat, $lng),
+        zoom: 15,
+        viewMode: '2D',
+        draggable: false,
+        zoomControl: false,
+        scaleControl: false
+      });
+    }
+  </script>
+</body>
+</html>
+    ''';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(widget.isOutgoing ? 10 : 5),
+        bottomRight: Radius.circular(widget.isOutgoing ? 5 : 10),
       ),
-      alignment: Alignment.center,
-      child: AppIcon(
-        AppIconKind.place,
-        size: 34,
-        color: isOutgoing
-            ? Colors.white
-            : const Color(0xFFFFA940),
+      child: SizedBox(
+        height: widget.height,
+        width: double.infinity,
+        child: WebViewWidget(controller: _controller),
       ),
     );
   }
-
-  return ClipRRect(
-    borderRadius: BorderRadius.only(
-      bottomLeft: Radius.circular(isOutgoing ? 10 : 5),
-      bottomRight: Radius.circular(isOutgoing ? 5 : 10),
-    ),
-    child: CachedNetworkImage(
-      imageUrl: mapUrl,
-      height: height,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      placeholder: (context, url) => Container(
-        color: isOutgoing
-            ? Colors.white.withValues(alpha: 0.16)
-            : const Color(0xFFF4F7FC),
-        child: const Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8F96A3)),
-            ),
-          ),
-        ),
-      ),
-      errorWidget: (context, url, error) => Container(
-        color: isOutgoing
-            ? Colors.white.withValues(alpha: 0.16)
-            : const Color(0xFFF4F7FC),
-        alignment: Alignment.center,
-        child: AppIcon(
-          AppIconKind.place,
-          size: 34,
-          color: isOutgoing
-              ? Colors.white
-              : const Color(0xFFFFA940),
-        ),
-      ),
-    ),
-  );
 }

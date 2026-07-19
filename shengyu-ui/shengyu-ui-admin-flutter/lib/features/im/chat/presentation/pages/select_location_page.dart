@@ -31,7 +31,6 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
   String _keyword = '';
   String _noticeMessage = '';
   String _currentAddress = '';
-  final String _locationError = '';
   double _currentLatitude = _defaultLatitude;
   double _currentLongitude = _defaultLongitude;
   List<LocationSearchItem> _items = const <LocationSearchItem>[];
@@ -425,9 +424,6 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
     if (_currentAddress.isNotEmpty) {
       return _currentAddress;
     }
-    if (_locationError.isNotEmpty) {
-      return _locationError;
-    }
     if (_noticeMessage.isNotEmpty) {
       return _noticeMessage;
     }
@@ -544,8 +540,6 @@ class _SelectLocationPageState extends ConsumerState<SelectLocationPage> {
       _loading = false;
     });
   }
-
-  bool get keywordIsNearby => _keyword.isEmpty;
 
   void _handleConfirm() {
     final strings = ref.read(appStringsProvider);

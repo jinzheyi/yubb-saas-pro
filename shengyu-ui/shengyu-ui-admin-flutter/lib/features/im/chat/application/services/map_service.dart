@@ -4,9 +4,11 @@ import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 /// 地图服务
 class MapService {
   /// 生成静态地图 URL（腾讯地图）
-  /// 
+  ///
   /// 注意：Web 平台由于 CORS 限制，无法直接访问腾讯地图静态图 API，
   /// 返回空字符串，调用方需处理降级显示。
+  ///
+  /// 坐标格式：纬度在前，经度在后（lat,lng），与腾讯 API 文档一致
   static String generateStaticMapUrl({
     required double latitude,
     required double longitude,
@@ -21,23 +23,17 @@ class MapService {
       return '';
     }
 
-    // 腾讯地图静态图 API
-    // 文档：https://lbs.qq.com/webapi/static/staticguide/
-    final key = AppConfig.tencentLbsKey;
-    if (key.isEmpty) {
-      debugPrint('[MapService] 腾讯地图 Key 未配置');
-      return '';
-    }
-
-    // 腾讯地图静态图 API URL
-    // 注意：腾讯地图使用 lng,lat 格式
-    final markers = 'size:$markerSize|color:0xFF0000|label:A|position:$longitude,$latitude';
-    final url = 'https://apis.map.qq.com/ws/staticmap/v2/?'
-        'center=$longitude,$latitude'
+    // 腾讯地图静态图 API V2
+    // 文档：https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+    // 坐标格式：纬度在前，经度在后
+    final markers =
+        'size:$markerSize|color:0xFF0000|label:A|position:$latitude,$longitude';
+    final url = '${AppConfig.tencentStaticMapBaseUrl}'
+        '?center=$latitude,$longitude'
         '&zoom=$zoom'
         '&size=${width}x$height'
         '&markers=$markers'
-        '&key=$key';
+        '&key=${AppConfig.tencentLbsKey}';
 
     return url;
   }

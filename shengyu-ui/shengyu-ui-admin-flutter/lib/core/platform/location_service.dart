@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geolocator_android/geolocator_android.dart';
 
 /// 定位结果
 class LocationResult {
@@ -53,28 +54,26 @@ class GeolocatorLocationService implements LocationService {
   @override
   Future<bool> checkPermission() async {
     try {
-      final permission = await Geolocator.checkPermission();
-      
-      // Web 平台特殊处理
-      if (kIsWeb) {
-        // Web 端可能返回 denied 或 unableToDetermine
-        // 需要尝试请求权限
-        if (permission == LocationPermission.denied) {
-          return await requestPermission();
-        }
+      var permission = await Geolocator.checkPermission();
+
+      // 权限被拒绝时，主动弹窗请求（Web 和移动端都需要）
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
       }
-      
+
+      // deniedForever 表示用户永久拒绝，无法再弹窗
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[LocationService] 定位权限被永久拒绝，请到系统设置中开启');
+        return false;
+      }
+
       return permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse;
     } catch (e) {
       debugPrint('[LocationService] checkPermission error: $e');
-      
-      // Web 平台在某些浏览器中可能抛出异常
       if (kIsWeb) {
-        // 尝试直接请求权限
         return await requestPermission();
       }
-      
       return false;
     }
   }
@@ -113,8 +112,6 @@ class GeolocatorLocationService implements LocationService {
     try {
       // Web 平台特殊检查
       if (kIsWeb) {
-        // 检查是否是安全上下文（HTTPS 或 localhost）
-        // 这个检查在 Web 端很重要
         debugPrint('[LocationService] Web 端定位需要 HTTPS 环境（localhost 除外）');
       }
 
@@ -135,12 +132,24 @@ class GeolocatorLocationService implements LocationService {
       }
 
       // 获取当前位置
-      // 使用高精度定位，Web 端使用更宽松的超时设置
+      // 强制使用 Android LocationManager 直连 GPS，避免 Google Play Services
+      // 返回缓存的粗略位置（基站/WiFi 定位可能偏移几百米）
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
-          accuracy: LocationAccuracy.best,
-          timeLimit: Duration(seconds: kIsWeb ? 20 : 15),
-        ),
+        locationSettings: kIsWeb
+            ? LocationSettings(
+                accuracy: LocationAccuracy.best,
+                timeLimit: const Duration(seconds: 20),
+              )
+            : AndroidSettings(
+                accuracy: LocationAccuracy.best,
+                timeLimit: const Duration(seconds: 15),
+                forceLocationManager: true,
+              ),
+      );
+
+      debugPrint(
+        '[LocationService] 定位成功: lat=${position.latitude}, '
+        'lng=${position.longitude}, accuracy=${position.accuracy}m',
       );
 
       return LocationResult(
@@ -153,7 +162,7 @@ class GeolocatorLocationService implements LocationService {
       );
     } catch (e) {
       debugPrint('[LocationService] getCurrentLocation error: $e');
-      
+
       // Web 端提供更详细的错误信息
       if (kIsWeb) {
         final errorStr = e.toString().toLowerCase();
@@ -165,7 +174,7 @@ class GeolocatorLocationService implements LocationService {
           debugPrint('[LocationService] Web 端：浏览器不支持定位或不在 HTTPS 环境');
         }
       }
-      
+
       return null;
     }
   }

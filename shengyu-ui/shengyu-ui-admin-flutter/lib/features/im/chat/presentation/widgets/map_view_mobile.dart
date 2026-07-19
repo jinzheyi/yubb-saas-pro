@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 
 /// 移动端地图视图实现
 /// 
@@ -70,8 +71,11 @@ class _MobileMapViewState extends State<_MobileMapView> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
-          // 页面加载完成，但地图可能还在初始化
-          // 地图加载完成后会通过 JS 通道通知
+          debugPrint('[MobileMapView] 页面加载完成');
+        },
+        onWebResourceError: (error) {
+          debugPrint('[MobileMapView] 资源加载错误: ${error.description}');
+          debugPrint('[MobileMapView] 错误码: ${error.errorCode}');
         },
       ))
       ..addJavaScriptChannel(
@@ -120,10 +124,10 @@ class _MobileMapViewState extends State<_MobileMapView> {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; }
-    .marker { 
-      position: absolute; 
-      top: 50%; 
-      left: 50%; 
+    .marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -100%);
       width: 30px;
       height: 40px;
@@ -185,34 +189,42 @@ class _MobileMapViewState extends State<_MobileMapView> {
     <p>${_escapeHtml(address)}</p>
   </div>
   ''' : ''}
-  <script src="https://map.qq.com/api/gljs?v=1.exp&key=AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"></script>
+  <script src="${AppConfig.tencentJsApiUrl}"></script>
   <script>
-    var map = new TMap.Map("map", {
-      center: new TMap.LatLng($lat, $lng),
-      zoom: $zoom,
-      viewMode: '2D',
-      draggable: $enableDrag
-    });
-
-    ${enableDrag ? '''
-    map.on('dragend', function() {
-      var center = map.getCenter();
-      MapBridge.postMessage('dragEnd,' + center.lat + ',' + center.lng);
-    });
-    ''' : ''}
-    
-    // 等待地图渲染完成后通知
-    map.on('complete', function() {
-      MapBridge.postMessage('mapLoaded');
-    });
-    
-    // 备用方案：如果 complete 事件未触发，500ms 后发送
-    setTimeout(function() {
+    window.mapLoadedSent = false;
+    function notifyLoaded() {
       if (!window.mapLoadedSent) {
         window.mapLoadedSent = true;
-        MapBridge.postMessage('mapLoaded');
+        try { MapBridge.postMessage('mapLoaded'); } catch(e) {}
       }
-    }, 500);
+    }
+    try {
+      if (typeof TMap !== 'undefined') {
+        var map = new TMap.Map("map", {
+          center: new TMap.LatLng($lat, $lng),
+          zoom: $zoom,
+          viewMode: '2D',
+          draggable: $enableDrag
+        });
+        ${enableDrag ? '''
+        map.on('dragend', function() {
+          var center = map.getCenter();
+          try { MapBridge.postMessage('dragEnd,' + center.lat + ',' + center.lng); } catch(e) {}
+        });
+        ''' : ''}
+        map.on('complete', function() {
+          notifyLoaded();
+        });
+      } else {
+        console.error('TMap SDK not loaded');
+        notifyLoaded();
+      }
+    } catch(e) {
+      console.error('Map init error: ' + e.message);
+      notifyLoaded();
+    }
+    // 兜底：3秒后强制通知
+    setTimeout(notifyLoaded, 3000);
   </script>
 </body>
 </html>

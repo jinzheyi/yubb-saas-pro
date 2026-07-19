@@ -1,6 +1,7 @@
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 
 /// Web 平台地图视图实现
 /// 
@@ -172,7 +173,7 @@ class _WebMapViewState extends State<_WebMapView> {
     <p>${_escapeHtml(address)}</p>
   </div>
   ''' : ''}
-  <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&key=AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"></script>
+  <script charset="utf-8" src="${AppConfig.tencentJsApiUrl}"></script>
   <script charset="utf-8">
     var map;
     var marker;

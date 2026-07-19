@@ -64,7 +64,6 @@ class _WebMapThumbnailState extends State<_WebMapThumbnail> {
   }
 
   String _buildStaticMapHtml() {
-    final key = AppConfig.tencentLbsKey;
     final lat = widget.latitude;
     final lng = widget.longitude;
     return '''
@@ -79,7 +78,7 @@ class _WebMapThumbnailState extends State<_WebMapThumbnail> {
 </head>
 <body>
   <div id="map"></div>
-  <script src="https://map.qq.com/api/gljs?v=1.exp&key=$key"></script>
+  <script src="${AppConfig.tencentJsApiUrl}"></script>
   <script>
     var map = new TMap.Map("map", {
       center: new TMap.LatLng($lat, $lng),

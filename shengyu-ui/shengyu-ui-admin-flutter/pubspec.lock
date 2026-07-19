@@ -533,7 +533,7 @@ packages:
     source: hosted
     version: "13.0.4"
   geolocator_android:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: geolocator_android
       sha256: fcb1760a50d7500deca37c9a666785c047139b5f9ee15aa5469fae7dbbe3170d
