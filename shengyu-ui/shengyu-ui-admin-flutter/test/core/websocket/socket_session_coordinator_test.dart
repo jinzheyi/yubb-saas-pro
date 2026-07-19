@@ -37,7 +37,7 @@ void main() {
   test('disconnects when session becomes anonymous', () async {
     coordinator.onSessionChanged(
       _session(accessToken: 'token-a'),
-      const AuthSession.anonymous(),
+      AuthSession.anonymous(),
     );
     await coordinator.waitForIdle();
 

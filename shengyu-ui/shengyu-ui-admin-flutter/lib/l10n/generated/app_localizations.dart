@@ -5319,6 +5319,12 @@ abstract class AppLocalizations {
   /// **'{count} days ago'**
   String tenantTimeDaysAgo(int count);
 
+  /// No description provided for @deviceManagementBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Logged in on {count} other devices'**
+  String deviceManagementBanner(Object count);
+
   /// No description provided for @deviceListTitle.
   ///
   /// In en, this message translates to:

@@ -1576,6 +1576,12 @@
   },
 
   "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceManagementBanner": "Logged in on {count} other devices",
+  "@deviceManagementBanner": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "deviceListTitle": "Login Devices",
   "deviceListEmpty": "No logged-in devices",
   "deviceListCurrent": "Current",

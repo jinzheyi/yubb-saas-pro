@@ -1570,6 +1570,12 @@
   },
 
   "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceManagementBanner": "已登录 {count} 台其他设备",
+  "@deviceManagementBanner": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "deviceListTitle": "登录设备管理",
   "deviceListEmpty": "暂无登录设备",
   "deviceListCurrent": "当前设备",

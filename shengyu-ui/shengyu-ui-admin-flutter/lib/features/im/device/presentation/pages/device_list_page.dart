@@ -5,11 +5,27 @@ import 'package:shengyu_ui_admin_im/features/im/device/domain/device_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/device/presentation/providers/device_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
-class DeviceListPage extends ConsumerWidget {
+class DeviceListPage extends ConsumerStatefulWidget {
   const DeviceListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceListPage> createState() => _DeviceListPageState();
+}
+
+class _DeviceListPageState extends ConsumerState<DeviceListPage> {
+  @override
+  void initState() {
+    super.initState();
+    // 页面打开时自动加载设备列表
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(deviceListProvider.notifier).load();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final state = ref.watch(deviceListProvider);
 
@@ -138,7 +154,10 @@ class DeviceListPage extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    await ref.read(deviceListProvider.notifier).kickDevice(device.deviceType.value);
+    await ref.read(deviceListProvider.notifier).kickDevice(
+      device.deviceType.value,
+      deviceId: device.deviceId,
+    );
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -306,14 +325,10 @@ class _DeviceIcon extends StatelessWidget {
     switch (deviceType) {
       case DeviceType.web:
         return Icons.public_outlined;
-      case DeviceType.windows:
-        return Icons.desktop_windows_outlined;
-      case DeviceType.mac:
-        return Icons.laptop_mac_outlined;
-      case DeviceType.android:
-        return Icons.android_outlined;
       case DeviceType.ios:
         return Icons.phone_iphone_outlined;
+      case DeviceType.android:
+        return Icons.android_outlined;
       case DeviceType.miniProgram:
         return Icons.apps_outlined;
     }
@@ -323,14 +338,10 @@ class _DeviceIcon extends StatelessWidget {
     switch (deviceType) {
       case DeviceType.web:
         return const Color(0xFF246BFD);
-      case DeviceType.windows:
-        return const Color(0xFF00A4EF);
-      case DeviceType.mac:
-        return const Color(0xFF555555);
-      case DeviceType.android:
-        return const Color(0xFF3DDC84);
       case DeviceType.ios:
         return const Color(0xFF8E8E93);
+      case DeviceType.android:
+        return const Color(0xFF3DDC84);
       case DeviceType.miniProgram:
         return const Color(0xFF07C160);
     }

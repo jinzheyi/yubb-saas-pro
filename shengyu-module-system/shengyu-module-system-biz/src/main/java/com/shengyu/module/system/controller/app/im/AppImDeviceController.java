@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.app.im;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
@@ -15,6 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,15 +43,19 @@ public class AppImDeviceController {
 
     @GetMapping("/list")
     @Operation(summary = "获取当前用户登录设备列表")
-    public CommonResult<List<LoginDeviceRespVO>> getLoginDevices() {
+    public CommonResult<List<LoginDeviceRespVO>> getLoginDevices(HttpServletRequest request) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         if (userId == null) {
             return CommonResult.error(401, "未登录");
         }
 
+        // 获取当前请求的 access token，用于标记 isCurrentDevice
+        String currentAccessToken = SecurityFrameworkUtils.obtainAuthorization(
+                request, "Authorization", "token");
+
         List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
         List<LoginDeviceRespVO> devices = sessions.stream()
-                .map(this::toDeviceResp)
+                .map(session -> toDeviceResp(session, currentAccessToken))
                 .collect(Collectors.toList());
 
         return success(devices);
@@ -57,19 +63,28 @@ public class AppImDeviceController {
 
     @PostMapping("/kick")
     @Operation(summary = "踢出指定设备")
-    public CommonResult<Boolean> kickDevice(@RequestParam("deviceType") Integer deviceType) {
+    public CommonResult<Boolean> kickDevice(
+            @RequestParam("deviceType") Integer deviceType,
+            @RequestParam(value = "deviceId", required = false) String deviceId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         if (userId == null) {
             return CommonResult.error(401, "未登录");
         }
 
-        // 不允许踢当前设备（需要通过其他方式判断，这里仅做基本校验）
-        NettySession currentSession = sessionManager.getSessionByUserIdAndDeviceType(userId, deviceType);
-        if (currentSession == null || !currentSession.isActive()) {
-            return success(true); // 设备已离线，视为成功
+        // 优先按 deviceId 精确踢出，否则按 deviceType 踢出
+        if (StrUtil.isNotBlank(deviceId)) {
+            NettySession currentSession = sessionManager.getSessionByUserIdAndDevice(userId, deviceType, deviceId);
+            if (currentSession == null || !currentSession.isActive()) {
+                return success(true); // 设备已离线，视为成功
+            }
+            sessionManager.kickDeviceByDevice(userId, deviceType, deviceId, "您的账号主动踢出了该设备");
+        } else {
+            NettySession currentSession = sessionManager.getSessionByUserIdAndDeviceType(userId, deviceType);
+            if (currentSession == null || !currentSession.isActive()) {
+                return success(true); // 设备已离线，视为成功
+            }
+            sessionManager.kickDevice(userId, deviceType, "您的账号主动踢出了该设备");
         }
-
-        sessionManager.kickDevice(userId, deviceType, "您的账号主动踢出了该设备");
         return success(true);
     }
 
@@ -105,7 +120,7 @@ public class AppImDeviceController {
         return success(result);
     }
 
-    private LoginDeviceRespVO toDeviceResp(NettySession session) {
+    private LoginDeviceRespVO toDeviceResp(NettySession session, String currentAccessToken) {
         LoginDeviceRespVO vo = new LoginDeviceRespVO();
         vo.setDeviceType(session.getDeviceType());
         vo.setDeviceName(StrUtil.isNotBlank(session.getDeviceName()) ? session.getDeviceName() : null);
@@ -113,6 +128,10 @@ public class AppImDeviceController {
         vo.setLoginTime(session.getConnectTime());
         vo.setLastActiveTime(session.getLastBizActiveTime());
         vo.setIsActive(session.isActive());
+
+        // 标记是否为当前请求设备（通过 accessToken 匹配）
+        vo.setIsCurrentDevice(StrUtil.isNotBlank(currentAccessToken)
+                && currentAccessToken.equals(session.getAccessToken()));
 
         // 设备类型名称
         vo.setDeviceTypeName(getDeviceTypeName(session.getDeviceType()));

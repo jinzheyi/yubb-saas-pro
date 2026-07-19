@@ -22,7 +22,7 @@ final authSessionProvider =
 
 class AuthSessionController extends StateNotifier<AuthSession> {
   AuthSessionController(this._tokenStorage, this._deviceInfoService)
-    : super(const AuthSession.anonymous());
+    : super(AuthSession.anonymous());
 
   final TokenStorage _tokenStorage;
   final DeviceInfoService _deviceInfoService;
@@ -30,7 +30,7 @@ class AuthSessionController extends StateNotifier<AuthSession> {
   Future<void> restore() async {
     final persisted = await _tokenStorage.readSession();
     final deviceInfo = await _deviceInfoService.getOrCreate();
-    state = (persisted ?? const AuthSession.anonymous()).copyWith(
+    state = (persisted ?? AuthSession.anonymous()).copyWith(
       deviceId: deviceInfo.deviceId,
       deviceType: deviceInfo.deviceType,
       deviceName: deviceInfo.deviceName,

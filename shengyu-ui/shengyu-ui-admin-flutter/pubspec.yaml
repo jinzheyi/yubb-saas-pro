@@ -29,6 +29,7 @@ dependencies:
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
   connectivity_plus: ^6.1.5
+  device_info_plus: ^11.3.0
   mobile_scanner: ^7.2.0
   record: ^6.2.0
   just_audio: ^0.10.5

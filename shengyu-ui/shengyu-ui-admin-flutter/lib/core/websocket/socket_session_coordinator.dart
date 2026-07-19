@@ -53,7 +53,7 @@ class SocketSessionCoordinator {
   }
 
   Future<void> _syncSession(AuthSession? previous, AuthSession next) async {
-    final previousSession = previous ?? const AuthSession.anonymous();
+    final previousSession = previous ?? AuthSession.anonymous();
 
     if (!next.isAuthenticated) {
       if (previousSession.isAuthenticated ||

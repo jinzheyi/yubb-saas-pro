@@ -109,6 +109,8 @@ message AuthRequest {
   string clientVersion = 4;
   // 客户端语言（如 zh-CN / en）
   string locale = 5;
+  // 设备名称（如 iPhone 15、Huawei Mate 40）
+  string deviceName = 6;
 }
 
 // 认证响应

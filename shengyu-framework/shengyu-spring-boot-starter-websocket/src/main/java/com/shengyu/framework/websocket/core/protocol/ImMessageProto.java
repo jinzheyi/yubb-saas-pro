@@ -149,74 +149,74 @@ public final class ImMessageProto {
       "ssageType\030\002 \001(\0162\014.MessageType\022\020\n\010senderI" +
       "d\030\003 \001(\003\022\022\n\nreceiverId\030\004 \001(\003\022\017\n\007groupId\030\005" +
       " \001(\003\022\020\n\010tenantId\030\006 \001(\003\022\021\n\ttimestamp\030\007 \001(" +
-      "\003\022\020\n\010sequence\030\010 \001(\003\022\r\n\005extra\030\t \001(\t\"o\n\013Au" +
-      "thRequest\022\023\n\013accessToken\030\001 \001(\t\022\022\n\ndevice" +
-      "Type\030\002 \001(\005\022\020\n\010deviceId\030\003 \001(\t\022\025\n\rclientVe" +
-      "rsion\030\004 \001(\t\022\016\n\006locale\030\005 \001(\t\"`\n\014AuthRespo" +
-      "nse\022\017\n\007success\030\001 \001(\010\022\014\n\004code\030\002 \001(\005\022\017\n\007me" +
-      "ssage\030\003 \001(\t\022\016\n\006userId\030\004 \001(\003\022\020\n\010tenantId\030" +
-      "\005 \001(\003\"\207\001\n\nAckMessage\022\021\n\tmessageId\030\001 \001(\003\022" +
-      "\016\n\006chatId\030\002 \001(\003\022\020\n\010sequence\030\003 \001(\003\022\017\n\007ack" +
-      "Type\030\004 \001(\t\022\030\n\020clientReceivedAt\030\005 \001(\003\022\031\n\021" +
-      "originalTimestamp\030\006 \001(\003\"=\n\013AckResponse\022\017" +
-      "\n\007success\030\001 \001(\010\022\014\n\004code\030\002 \001(\005\022\017\n\007message" +
-      "\030\003 \001(\t\"U\n\013MentionUser\022\016\n\006userId\030\001 \001(\003\022\020\n" +
-      "\010nickname\030\002 \001(\t\022\022\n\nstartIndex\030\003 \001(\005\022\020\n\010e" +
-      "ndIndex\030\004 \001(\005\"Q\n\013TextMessage\022\017\n\007content\030" +
-      "\001 \001(\t\022\021\n\tatUserIds\030\002 \003(\003\022\036\n\010mentions\030\003 \003" +
-      "(\0132\014.MentionUser\"p\n\014ImageMessage\022\013\n\003url\030" +
-      "\001 \001(\t\022\024\n\014thumbnailUrl\030\002 \001(\t\022\r\n\005width\030\003 \001" +
-      "(\005\022\016\n\006height\030\004 \001(\005\022\014\n\004size\030\005 \001(\003\022\020\n\010file" +
-      "Name\030\006 \001(\t\";\n\014VoiceMessage\022\013\n\003url\030\001 \001(\t\022" +
-      "\020\n\010duration\030\002 \001(\005\022\014\n\004size\030\003 \001(\003\"l\n\014Video" +
-      "Message\022\013\n\003url\030\001 \001(\t\022\020\n\010coverUrl\030\002 \001(\t\022\020" +
-      "\n\010duration\030\003 \001(\005\022\r\n\005width\030\004 \001(\005\022\016\n\006heigh" +
-      "t\030\005 \001(\005\022\014\n\004size\030\006 \001(\003\"L\n\013FileMessage\022\013\n\003" +
-      "url\030\001 \001(\t\022\020\n\010fileName\030\002 \001(\t\022\014\n\004size\030\003 \001(" +
-      "\003\022\020\n\010fileType\030\004 \001(\t\"G\n\017LocationMessage\022\020" +
-      "\n\010latitude\030\001 \001(\001\022\021\n\tlongitude\030\002 \001(\001\022\017\n\007a" +
-      "ddress\030\003 \001(\t\"(\n\022ReadReceiptMessage\022\022\n\nme" +
-      "ssageIds\030\001 \003(\003\"\"\n\rRecallMessage\022\021\n\tmessa" +
-      "geId\030\001 \001(\003\"\272\001\n\021QuoteReplyMessage\022\026\n\016quot" +
-      "eMessageId\030\001 \001(\003\022\024\n\014quoteContent\030\002 \001(\t\022\025" +
-      "\n\rquoteSenderId\030\003 \001(\003\022\027\n\017quoteSenderName" +
-      "\030\004 \001(\t\022\024\n\014replyContent\030\005 \001(\t\022\021\n\tatUserId" +
-      "s\030\006 \003(\003\022\036\n\010mentions\030\007 \003(\0132\014.MentionUser\"" +
-      "H\n\rTypingMessage\022\024\n\014targetUserId\030\001 \001(\003\022\017" +
-      "\n\007groupId\030\002 \001(\003\022\020\n\010isTyping\030\003 \001(\010\"\216\001\n\022Ba" +
-      "dgeUpdateMessage\022\023\n\013unreadCount\030\001 \001(\005\022.\n" +
-      "\022conversationBadges\030\002 \003(\0132\022.Conversation" +
-      "Badge\022\036\n\nmenuBadges\030\003 \003(\0132\n.MenuBadge\022\023\n" +
-      "\013incremental\030\004 \001(\010\"@\n\021ConversationBadge\022" +
-      "\026\n\016conversationId\030\001 \001(\003\022\023\n\013unreadCount\030\002" +
-      " \001(\005\"/\n\tMenuBadge\022\016\n\006menuId\030\001 \001(\t\022\022\n\nbad" +
-      "geCount\030\002 \001(\005\"\226\001\n\021CallSignalMessage\022\016\n\006c" +
-      "allId\030\001 \001(\t\022\020\n\010callType\030\002 \001(\005\022\022\n\nsignalT" +
-      "ype\030\003 \001(\005\022\020\n\010callerId\030\004 \001(\003\022\020\n\010calleeId\030" +
-      "\005 \001(\003\022\024\n\014rejectReason\030\006 \001(\t\022\021\n\textraData" +
-      "\030\007 \001(\t\"\307\001\n\025WorkflowNotifyMessage\022\031\n\021proc" +
-      "essInstanceId\030\001 \001(\t\022\023\n\013processName\030\002 \001(\t" +
-      "\022\023\n\013initiatorId\030\003 \001(\003\022\025\n\rinitiatorName\030\004" +
-      " \001(\t\022\017\n\007content\030\005 \001(\t\022 \n\007buttons\030\006 \003(\0132\017" +
-      ".WorkflowButton\022\016\n\006status\030\007 \001(\005\022\017\n\007jumpU" +
-      "rl\030\010 \001(\t\"J\n\016WorkflowButton\022\020\n\010buttonId\030\001" +
-      " \001(\t\022\022\n\nbuttonText\030\002 \001(\t\022\022\n\nbuttonType\030\003" +
-      " \001(\005\"\215\001\n\023TodoReminderMessage\022\016\n\006todoId\030\001" +
-      " \001(\t\022\r\n\005title\030\002 \001(\t\022\017\n\007content\030\003 \001(\t\022\017\n\007" +
-      "dueTime\030\004 \001(\003\022\024\n\014reminderType\030\005 \001(\005\022\017\n\007j" +
-      "umpUrl\030\006 \001(\t\022\016\n\006status\030\007 \001(\005*\211\003\n\013Message" +
-      "Type\022\013\n\007UNKNOWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016" +
-      "HEARTBEAT_RESP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_R" +
-      "ESP\020\004\022\t\n\005CLOSE\020\005\022\007\n\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022" +
-      "\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f\022\t\n\005VIDEO" +
-      "\020g\022\010\n\004FILE\020h\022\014\n\010LOCATION\020i\022\n\n\006CUSTOM\020j\022\t" +
-      "\n\005EMOJI\020k\022\013\n\007STICKER\020l\022\022\n\rSYSTEM_NOTIFY\020" +
-      "\310\001\022\021\n\014READ_RECEIPT\020\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TY" +
-      "PING\020\313\001\022\021\n\014BADGE_UPDATE\020\314\001\022\020\n\013QUOTE_REPL" +
-      "Y\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001\022\024\n\017WORKFLOW_NOTIF" +
-      "Y\020\317\001\022\022\n\rTODO_REMINDER\020\320\001BA\n-com.shengyu." +
-      "framework.websocket.core.protocolB\016ImMes" +
-      "sageProtoP\001b\006proto3"
+      "\003\022\020\n\010sequence\030\010 \001(\003\022\r\n\005extra\030\t \001(\t\"\203\001\n\013A" +
+      "uthRequest\022\023\n\013accessToken\030\001 \001(\t\022\022\n\ndevic" +
+      "eType\030\002 \001(\005\022\020\n\010deviceId\030\003 \001(\t\022\025\n\rclientV" +
+      "ersion\030\004 \001(\t\022\016\n\006locale\030\005 \001(\t\022\022\n\ndeviceNa" +
+      "me\030\006 \001(\t\"`\n\014AuthResponse\022\017\n\007success\030\001 \001(" +
+      "\010\022\014\n\004code\030\002 \001(\005\022\017\n\007message\030\003 \001(\t\022\016\n\006user" +
+      "Id\030\004 \001(\003\022\020\n\010tenantId\030\005 \001(\003\"\207\001\n\nAckMessag" +
+      "e\022\021\n\tmessageId\030\001 \001(\003\022\016\n\006chatId\030\002 \001(\003\022\020\n\010" +
+      "sequence\030\003 \001(\003\022\017\n\007ackType\030\004 \001(\t\022\030\n\020clien" +
+      "tReceivedAt\030\005 \001(\003\022\031\n\021originalTimestamp\030\006" +
+      " \001(\003\"=\n\013AckResponse\022\017\n\007success\030\001 \001(\010\022\014\n\004" +
+      "code\030\002 \001(\005\022\017\n\007message\030\003 \001(\t\"U\n\013MentionUs" +
+      "er\022\016\n\006userId\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022\022\n\n" +
+      "startIndex\030\003 \001(\005\022\020\n\010endIndex\030\004 \001(\005\"Q\n\013Te" +
+      "xtMessage\022\017\n\007content\030\001 \001(\t\022\021\n\tatUserIds\030" +
+      "\002 \003(\003\022\036\n\010mentions\030\003 \003(\0132\014.MentionUser\"p\n" +
+      "\014ImageMessage\022\013\n\003url\030\001 \001(\t\022\024\n\014thumbnailU" +
+      "rl\030\002 \001(\t\022\r\n\005width\030\003 \001(\005\022\016\n\006height\030\004 \001(\005\022" +
+      "\014\n\004size\030\005 \001(\003\022\020\n\010fileName\030\006 \001(\t\";\n\014Voice" +
+      "Message\022\013\n\003url\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005\022\014" +
+      "\n\004size\030\003 \001(\003\"l\n\014VideoMessage\022\013\n\003url\030\001 \001(" +
+      "\t\022\020\n\010coverUrl\030\002 \001(\t\022\020\n\010duration\030\003 \001(\005\022\r\n" +
+      "\005width\030\004 \001(\005\022\016\n\006height\030\005 \001(\005\022\014\n\004size\030\006 \001" +
+      "(\003\"L\n\013FileMessage\022\013\n\003url\030\001 \001(\t\022\020\n\010fileNa" +
+      "me\030\002 \001(\t\022\014\n\004size\030\003 \001(\003\022\020\n\010fileType\030\004 \001(\t" +
+      "\"G\n\017LocationMessage\022\020\n\010latitude\030\001 \001(\001\022\021\n" +
+      "\tlongitude\030\002 \001(\001\022\017\n\007address\030\003 \001(\t\"(\n\022Rea" +
+      "dReceiptMessage\022\022\n\nmessageIds\030\001 \003(\003\"\"\n\rR" +
+      "ecallMessage\022\021\n\tmessageId\030\001 \001(\003\"\272\001\n\021Quot" +
+      "eReplyMessage\022\026\n\016quoteMessageId\030\001 \001(\003\022\024\n" +
+      "\014quoteContent\030\002 \001(\t\022\025\n\rquoteSenderId\030\003 \001" +
+      "(\003\022\027\n\017quoteSenderName\030\004 \001(\t\022\024\n\014replyCont" +
+      "ent\030\005 \001(\t\022\021\n\tatUserIds\030\006 \003(\003\022\036\n\010mentions" +
+      "\030\007 \003(\0132\014.MentionUser\"H\n\rTypingMessage\022\024\n" +
+      "\014targetUserId\030\001 \001(\003\022\017\n\007groupId\030\002 \001(\003\022\020\n\010" +
+      "isTyping\030\003 \001(\010\"\216\001\n\022BadgeUpdateMessage\022\023\n" +
+      "\013unreadCount\030\001 \001(\005\022.\n\022conversationBadges" +
+      "\030\002 \003(\0132\022.ConversationBadge\022\036\n\nmenuBadges" +
+      "\030\003 \003(\0132\n.MenuBadge\022\023\n\013incremental\030\004 \001(\010\"" +
+      "@\n\021ConversationBadge\022\026\n\016conversationId\030\001" +
+      " \001(\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n\tMenuBadge\022\016" +
+      "\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount\030\002 \001(\005\"\226\001\n\021C" +
+      "allSignalMessage\022\016\n\006callId\030\001 \001(\t\022\020\n\010call" +
+      "Type\030\002 \001(\005\022\022\n\nsignalType\030\003 \001(\005\022\020\n\010caller" +
+      "Id\030\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024\n\014rejectReas" +
+      "on\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"\307\001\n\025Workflow" +
+      "NotifyMessage\022\031\n\021processInstanceId\030\001 \001(\t" +
+      "\022\023\n\013processName\030\002 \001(\t\022\023\n\013initiatorId\030\003 \001" +
+      "(\003\022\025\n\rinitiatorName\030\004 \001(\t\022\017\n\007content\030\005 \001" +
+      "(\t\022 \n\007buttons\030\006 \003(\0132\017.WorkflowButton\022\016\n\006" +
+      "status\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(\t\"J\n\016Workflo" +
+      "wButton\022\020\n\010buttonId\030\001 \001(\t\022\022\n\nbuttonText\030" +
+      "\002 \001(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001\n\023TodoRemind" +
+      "erMessage\022\016\n\006todoId\030\001 \001(\t\022\r\n\005title\030\002 \001(\t" +
+      "\022\017\n\007content\030\003 \001(\t\022\017\n\007dueTime\030\004 \001(\003\022\024\n\014re" +
+      "minderType\030\005 \001(\005\022\017\n\007jumpUrl\030\006 \001(\t\022\016\n\006sta" +
+      "tus\030\007 \001(\005*\211\003\n\013MessageType\022\013\n\007UNKNOWN\020\000\022\021" +
+      "\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBEAT_RESP\020\002\022\014\n" +
+      "\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n\005CLOSE\020\005\022\007\n" +
+      "\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020" +
+      "e\022\t\n\005VOICE\020f\022\t\n\005VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010LOC" +
+      "ATION\020i\022\n\n\006CUSTOM\020j\022\t\n\005EMOJI\020k\022\013\n\007STICKE" +
+      "R\020l\022\022\n\rSYSTEM_NOTIFY\020\310\001\022\021\n\014READ_RECEIPT\020" +
+      "\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TYPING\020\313\001\022\021\n\014BADGE_UP" +
+      "DATE\020\314\001\022\020\n\013QUOTE_REPLY\020\315\001\022\020\n\013CALL_SIGNAL" +
+      "\020\316\001\022\024\n\017WORKFLOW_NOTIFY\020\317\001\022\022\n\rTODO_REMIND" +
+      "ER\020\320\001BA\n-com.shengyu.framework.websocket" +
+      ".core.protocolB\016ImMessageProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -239,7 +239,7 @@ public final class ImMessageProto {
     internal_static_AuthRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_AuthRequest_descriptor,
-        new java.lang.String[] { "AccessToken", "DeviceType", "DeviceId", "ClientVersion", "Locale", });
+        new java.lang.String[] { "AccessToken", "DeviceType", "DeviceId", "ClientVersion", "Locale", "DeviceName", });
     internal_static_AuthResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_AuthResponse_fieldAccessorTable = new

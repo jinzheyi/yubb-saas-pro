@@ -502,6 +502,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .nickname(loginUser.getNickname())
                 .deviceType(authRequest.getDeviceType())
                 .deviceId(authRequest.getDeviceId())
+                .deviceName(authRequest.getDeviceName())
                 .clientVersion(authRequest.getClientVersion())
                 .locale(locale)
                 .accessToken(accessToken)

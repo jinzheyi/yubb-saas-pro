@@ -1392,6 +1392,12 @@
   "@@@GLOBAL_ACTIONS": "Section: Global Actions",
 
   "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceManagementBanner": "{count} 대의 다른 기기에 로그인됨",
+  "@deviceManagementBanner": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "deviceListTitle": "로그인 기기 관리",
   "deviceListEmpty": "로그인된 기기가 없습니다",
   "deviceListCurrent": "현재 기기",

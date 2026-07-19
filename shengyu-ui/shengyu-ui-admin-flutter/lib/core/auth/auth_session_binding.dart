@@ -21,13 +21,16 @@ final authSessionBindingProvider = Provider<void>((ref) {
 void _handleSessionEvent(Ref ref, ImSocketEvent event) {
   switch (event.type) {
     case SocketEventTypes.sessionInvalidated:
-    case SocketEventTypes.sessionKicked:
     case SocketEventTypes.sessionLoggedOut:
     case SocketEventTypes.sessionRevoked:
     case SocketEventTypes.sessionReauthRequired:
       unawaited(ref.read(imSocketClientProvider).disconnect());
       unawaited(ref.read(authSessionProvider.notifier).clearSession());
       ref.read(sessionCleanupServiceProvider).forceClearAllUserScopes();
+      break;
+    case SocketEventTypes.sessionKicked:
+      // 被踢出事件由 AppShell 监听并显示弹窗，用户确认后才执行登出
+      // 此处不执行任何操作，避免与弹窗逻辑冲突
       break;
     case SocketEventTypes.tokenRenewSuggested:
       unawaited(_refreshSession(ref));

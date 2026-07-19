@@ -62,7 +62,9 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
             if (session == null || !session.isActive()) {
                 return;
             }
-            kickAndClose(session, action, reason);
+            String byDevice = StrUtil.blankToDefault(message.getByDevice(),
+                sessionManager.buildDeviceDisplay(session));
+            kickAndClose(session, action, reason, byDevice);
             return;
         }
 
@@ -72,7 +74,9 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
             if (session == null || !session.isActive()) {
                 return;
             }
-            kickAndClose(session, action, reason);
+            String byDevice = StrUtil.blankToDefault(message.getByDevice(),
+                sessionManager.buildDeviceDisplay(session));
+            kickAndClose(session, action, reason, byDevice);
             return;
         }
 
@@ -88,26 +92,28 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
         log.info("[ImSessionRevokeConsumer] revoke userId={}, sessions={}, action={}, reason={}",
             message.getUserId(), sessions.size(), action, reason);
 
+        String byDevice = StrUtil.blankToDefault(message.getByDevice(), "用户主动登出");
         for (NettySession session : sessions) {
             if (session == null || !session.isActive()) {
                 continue;
             }
-            kickAndClose(session, action, reason);
+            kickAndClose(session, action, reason, byDevice);
         }
     }
 
-    private void kickAndClose(NettySession session, String action, String reason) {
+    private void kickAndClose(NettySession session, String action, String reason, String byDevice) {
         Channel ch = session.getChannel();
         if (ch == null) {
             return;
         }
         session.setAuthState(NettySessionAuthState.REVOKED);
-        sendKicked(ch, 403, reason, action);
+        long kickedAt = System.currentTimeMillis();
+        sendKicked(ch, 403, reason, action, byDevice, kickedAt);
         sessionManager.removeSession(ch);
         ch.close();
     }
 
-    private void sendKicked(Channel channel, int code, String message, String action) {
+    private void sendKicked(Channel channel, int code, String message, String action, String byDevice, long kickedAt) {
         if (isWebSocketChannel(channel)) {
             String payload = JSONUtil.createObj()
                 .set("header", JSONUtil.createObj()
@@ -117,7 +123,9 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
                 .set("body", JSONUtil.createObj()
                     .set("action", action)
                     .set("code", code)
-                    .set("message", message))
+                    .set("message", message)
+                    .set("byDevice", byDevice)
+                    .set("kickedAt", kickedAt))
                 .toString();
             channel.writeAndFlush(new TextWebSocketFrame(payload));
             return;
@@ -131,6 +139,8 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
                 .set("action", action)
                 .set("code", code)
                 .set("message", message)
+                .set("byDevice", byDevice)
+                .set("kickedAt", kickedAt)
                 .toString())
             .build();
         channel.writeAndFlush(ImMessage.newBuilder().setHeader(header).build());

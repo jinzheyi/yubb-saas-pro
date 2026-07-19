@@ -94,6 +94,8 @@ public class NettySessionManager {
 
     private WebSocketMetrics metrics;
 
+    private CrossNodeKickPublisher crossNodeKickPublisher;
+
     @Autowired(required = false)
     public void setMetrics(WebSocketMetrics metrics) {
         this.metrics = metrics;
@@ -107,6 +109,11 @@ public class NettySessionManager {
     @Autowired(required = false)
     public void setAuditLogPublisher(AuditLogPublisher auditLogPublisher) {
         this.auditLogPublisher = auditLogPublisher;
+    }
+
+    @Autowired(required = false)
+    public void setCrossNodeKickPublisher(CrossNodeKickPublisher crossNodeKickPublisher) {
+        this.crossNodeKickPublisher = crossNodeKickPublisher;
     }
 
     private void notifySessionAdded(NettySession session) {
@@ -172,11 +179,16 @@ public class NettySessionManager {
             String oldChannelId = userDeviceChannelMap.get(userDeviceKey);
             
             if (oldChannelId != null && !oldChannelId.equals(channelId)) {
-                // 踢掉旧设备
+                // 本节点踢掉旧设备
                 NettySession oldSession = channelSessionMap.get(oldChannelId);
                 if (oldSession != null && oldSession.isActive()) {
                     kickOffDevice(oldSession, session);
                 }
+            } else if (crossNodeKickPublisher != null) {
+                // 本节点没有同类型设备，广播跨节点互踢消息
+                // 让其他节点检查并踢掉旧设备
+                String byDevice = buildDeviceDisplay(session);
+                crossNodeKickPublisher.publishKickMessage(userId, deviceType, byDevice);
             }
             
             // 保存新设备的映射
@@ -376,7 +388,32 @@ public class NettySessionManager {
         // 记录审计日志：设备被踢出
         publishKickAuditLog(session, AuditLogEvent.DEVICE_KICK, reason, null);
 
-        kickOffDeviceByReason(session, reason);
+        kickOffDeviceByReason(session, reason, buildDeviceDisplay(session));
+        return true;
+    }
+
+    /**
+     * 踢掉指定设备（按 deviceId 精确匹配）
+     *
+     * @param userId     用户ID
+     * @param deviceType 设备类型
+     * @param deviceId   设备ID
+     * @param reason     踢人原因
+     * @return true-成功踢掉或设备已不存在, false-设备不存在或已离线
+     */
+    public boolean kickDeviceByDevice(Long userId, Integer deviceType, String deviceId, String reason) {
+        if (userId == null || deviceType == null || deviceId == null) {
+            return false;
+        }
+        NettySession session = getSessionByUserIdAndDevice(userId, deviceType, deviceId);
+        if (session == null || !session.isActive()) {
+            return false;
+        }
+
+        // 记录审计日志：设备被踢出
+        publishKickAuditLog(session, AuditLogEvent.DEVICE_KICK, reason, null);
+
+        kickOffDeviceByReason(session, reason, buildDeviceDisplay(session));
         return true;
     }
 
@@ -392,16 +429,19 @@ public class NettySessionManager {
         // 记录审计日志：被踢下线
         publishKickAuditLog(kickedSession, AuditLogEvent.KICKED, reason, bySession);
 
-        kickOffDeviceByReason(kickedSession, reason);
+        kickOffDeviceByReason(kickedSession, reason, byDevice);
     }
 
     /**
      * 执行踢人操作（发送通知并关闭连接）
+     *
+     * @param kickedSession 被踢的会话
+     * @param reason        踢人原因文本
+     * @param byDevice      导致踢人的设备显示名（互踢场景为新登录设备；管理员踢人等场景为被踢设备自身）
      */
-    private void kickOffDeviceByReason(NettySession kickedSession, String reason) {
+    private void kickOffDeviceByReason(NettySession kickedSession, String reason, String byDevice) {
         long kickedAt = System.currentTimeMillis();
         String kickedAtText = KICK_TIME_FORMATTER.format(Instant.ofEpochMilli(kickedAt));
-        String byDevice = buildDeviceDisplay(kickedSession);
 
         log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}",
             kickedSession.getUserId(), kickedSession.getDeviceType(), reason);
@@ -493,7 +533,7 @@ public class NettySessionManager {
         }
     }
 
-    private String buildDeviceDisplay(NettySession session) {
+    public String buildDeviceDisplay(NettySession session) {
         if (session == null) {
             return "未知";
         }

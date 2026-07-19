@@ -24,10 +24,14 @@ class DeviceRemoteDataSource {
     return result.requireData();
   }
 
-  Future<void> kickDevice(int deviceType) async {
+  Future<void> kickDevice(int deviceType, {String? deviceId}) async {
+    final queryParameters = <String, dynamic>{'deviceType': deviceType};
+    if (deviceId != null) {
+      queryParameters['deviceId'] = deviceId;
+    }
     await dio.post(
       '/system/im/device/kick',
-      queryParameters: {'deviceType': deviceType},
+      queryParameters: queryParameters,
     );
   }
 

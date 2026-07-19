@@ -62,4 +62,9 @@ public class ImSessionRevokeMessage extends AbstractRedisChannelMessage {
      */
     private String accessToken;
 
+    /**
+     * 可选：踢人设备显示名（用于被踢弹窗展示）
+     */
+    private String byDevice;
+
 }

@@ -33,4 +33,7 @@ public class LoginDeviceRespVO {
 
     @Schema(description = "是否活跃", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
     private Boolean isActive;
+
+    @Schema(description = "是否为当前设备", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
+    private Boolean isCurrentDevice;
 }

@@ -96,4 +96,24 @@ public interface AuthRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getLocaleBytes();
+
+  /**
+   * <pre>
+   * 设备名称（如 iPhone 15、Huawei Mate 40）
+   * </pre>
+   *
+   * <code>string deviceName = 6;</code>
+   * @return The deviceName.
+   */
+  java.lang.String getDeviceName();
+  /**
+   * <pre>
+   * 设备名称（如 iPhone 15、Huawei Mate 40）
+   * </pre>
+   *
+   * <code>string deviceName = 6;</code>
+   * @return The bytes for deviceName.
+   */
+  com.google.protobuf.ByteString
+      getDeviceNameBytes();
 }

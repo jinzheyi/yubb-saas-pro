@@ -2979,6 +2979,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String deviceManagementBanner(Object count) {
+    return 'Logged in on $count other devices';
+  }
+
+  @override
   String get deviceListTitle => 'Login Devices';
 
   @override

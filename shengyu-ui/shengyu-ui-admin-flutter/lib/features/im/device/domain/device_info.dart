@@ -1,10 +1,10 @@
+/// 设备类型枚举（与后端保持一致）
+/// 1-Web 2-iOS 3-Android 4-小程序
 enum DeviceType {
   web(1, 'Web'),
-  windows(2, 'Windows'),
-  mac(3, 'macOS'),
-  android(4, 'Android'),
-  ios(5, 'iOS'),
-  miniProgram(6, '小程序');
+  ios(2, 'iOS'),
+  android(3, 'Android'),
+  miniProgram(4, '小程序');
 
   const DeviceType(this.value, this.label);
 
@@ -54,7 +54,7 @@ class DeviceInfo {
       deviceName: json['deviceName']?.toString() ?? '',
       loginTime: _parseDateTime(loginTimeRaw),
       lastActiveTime: _parseDateTime(lastActiveRaw),
-      isCurrentDevice: _parseBool(json['isCurrentDevice']),
+      isCurrentDevice: _parseBool(json['isCurrentDevice'] ?? json['isActive']),
       ipAddress: json['ipAddress']?.toString() ?? '',
       location: json['location']?.toString() ?? '',
     );

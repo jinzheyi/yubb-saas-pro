@@ -1,17 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_paths.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_event.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_event_types.dart';
 import 'package:shengyu_ui_admin_im/core/widgets/connection_status_notice_bar.dart';
+import 'package:shengyu_ui_admin_im/core/widgets/kicked_dialog.dart';
 import 'package:shengyu_ui_admin_im/core/widgets/network_status_notice_bar.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
-import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
     required this.child,
@@ -24,22 +29,62 @@ class AppShell extends StatelessWidget {
   final AppLocalizations strings;
 
   @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  StreamSubscription<ImSocketEvent>? _kickedSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _kickedSubscription = ref
+        .read(socketMessageDispatcherProvider)
+        .stream
+        .listen(_handleSocketEvent);
+  }
+
+  void _handleSocketEvent(ImSocketEvent event) {
+    if (event.type == SocketEventTypes.sessionKicked) {
+      _showKickedDialog(event.payload);
+    }
+  }
+
+  void _showKickedDialog(Map<String, Object?> payload) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => KickedDialog(
+        message: payload['message'] as String? ?? '你的账号已被迫下线',
+        byDevice: payload['byDevice'] as String?,
+        kickedAt: payload['kickedAt'] as int?,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _kickedSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final shouldShowBottomNav = _isPrimaryTabLocation(currentLocation);
+    final shouldShowBottomNav = _isPrimaryTabLocation(widget.currentLocation);
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             const NetworkStatusNoticeBar(),
             const ConnectionStatusNoticeBar(),
-            Expanded(child: child),
+            Expanded(child: widget.child),
           ],
         ),
       ),
       bottomNavigationBar: shouldShowBottomNav
           ? _AppBottomNavigationBar(
-              currentLocation: currentLocation,
-              strings: strings,
+              currentLocation: widget.currentLocation,
+              strings: widget.strings,
             )
           : null,
     );

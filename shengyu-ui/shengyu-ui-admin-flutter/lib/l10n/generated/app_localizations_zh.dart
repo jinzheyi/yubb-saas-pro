@@ -2800,6 +2800,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String deviceManagementBanner(Object count) {
+    return '已登录 $count 台其他设备';
+  }
+
+  @override
   String get deviceListTitle => '登录设备管理';
 
   @override

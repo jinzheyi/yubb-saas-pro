@@ -24,6 +24,7 @@ private static final long serialVersionUID = 0L;
     deviceId_ = "";
     clientVersion_ = "";
     locale_ = "";
+    deviceName_ = "";
   }
 
   @java.lang.Override
@@ -250,6 +251,52 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int DEVICENAME_FIELD_NUMBER = 6;
+  private volatile java.lang.Object deviceName_;
+  /**
+   * <pre>
+   * 设备名称（如 iPhone 15、Huawei Mate 40）
+   * </pre>
+   *
+   * <code>string deviceName = 6;</code>
+   * @return The deviceName.
+   */
+  @java.lang.Override
+  public java.lang.String getDeviceName() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deviceName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * 设备名称（如 iPhone 15、Huawei Mate 40）
+   * </pre>
+   *
+   * <code>string deviceName = 6;</code>
+   * @return The bytes for deviceName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceNameBytes() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deviceName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -279,6 +326,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(locale_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 5, locale_);
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceName_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 6, deviceName_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -303,6 +353,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(locale_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, locale_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceName_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, deviceName_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -329,6 +382,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getClientVersion())) return false;
     if (!getLocale()
         .equals(other.getLocale())) return false;
+    if (!getDeviceName()
+        .equals(other.getDeviceName())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -350,6 +405,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getClientVersion().hashCode();
     hash = (37 * hash) + LOCALE_FIELD_NUMBER;
     hash = (53 * hash) + getLocale().hashCode();
+    hash = (37 * hash) + DEVICENAME_FIELD_NUMBER;
+    hash = (53 * hash) + getDeviceName().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -492,6 +549,8 @@ private static final long serialVersionUID = 0L;
 
       locale_ = "";
 
+      deviceName_ = "";
+
       return this;
     }
 
@@ -523,6 +582,7 @@ private static final long serialVersionUID = 0L;
       result.deviceId_ = deviceId_;
       result.clientVersion_ = clientVersion_;
       result.locale_ = locale_;
+      result.deviceName_ = deviceName_;
       onBuilt();
       return result;
     }
@@ -590,6 +650,10 @@ private static final long serialVersionUID = 0L;
         locale_ = other.locale_;
         onChanged();
       }
+      if (!other.getDeviceName().isEmpty()) {
+        deviceName_ = other.deviceName_;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -641,6 +705,11 @@ private static final long serialVersionUID = 0L;
 
               break;
             } // case 42
+            case 50: {
+              deviceName_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1080,6 +1149,102 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       
       locale_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object deviceName_ = "";
+    /**
+     * <pre>
+     * 设备名称（如 iPhone 15、Huawei Mate 40）
+     * </pre>
+     *
+     * <code>string deviceName = 6;</code>
+     * @return The deviceName.
+     */
+    public java.lang.String getDeviceName() {
+      java.lang.Object ref = deviceName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deviceName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备名称（如 iPhone 15、Huawei Mate 40）
+     * </pre>
+     *
+     * <code>string deviceName = 6;</code>
+     * @return The bytes for deviceName.
+     */
+    public com.google.protobuf.ByteString
+        getDeviceNameBytes() {
+      java.lang.Object ref = deviceName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deviceName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备名称（如 iPhone 15、Huawei Mate 40）
+     * </pre>
+     *
+     * <code>string deviceName = 6;</code>
+     * @param value The deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceName(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      deviceName_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备名称（如 iPhone 15、Huawei Mate 40）
+     * </pre>
+     *
+     * <code>string deviceName = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeviceName() {
+      
+      deviceName_ = getDefaultInstance().getDeviceName();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备名称（如 iPhone 15、Huawei Mate 40）
+     * </pre>
+     *
+     * <code>string deviceName = 6;</code>
+     * @param value The bytes for deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      deviceName_ = value;
       onChanged();
       return this;
     }

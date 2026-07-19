@@ -2979,6 +2979,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String deviceManagementBanner(Object count) {
+    return '$count 台の他のデバイスにログイン中';
+  }
+
+  @override
   String get deviceListTitle => 'ログインデバイス管理';
 
   @override

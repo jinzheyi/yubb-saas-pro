@@ -25,6 +25,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/provid
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_skeleton.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_tile.dart';
+import 'package:shengyu_ui_admin_im/features/im/device/presentation/providers/device_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -100,6 +101,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() async {
+      // 加载设备列表（用于显示设备管理入口）
+      await ref.read(deviceListProvider.notifier).load();
+      if (!mounted) return;
+      
       // 先执行 load（有缓存时跳过 API）
       final error = await ref
           .read(conversationListControllerProvider.notifier)
@@ -175,6 +180,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     final listError = ref.watch(conversationListControllerProvider.select((state) => state.error));
     // 精确订阅：仅监听 conversations 字段，避免 status/error 变化触发不必要的 rebuild
     final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    // 监听设备列表状态（用于显示设备管理入口）
+    final deviceState = ref.watch(deviceListProvider);
+    final otherDeviceCount = deviceState.devices.where((d) => !d.isCurrentDevice).length;
+    
     final filteredConversations = _applyFilter(conversations);
     final pinnedConversations = filteredConversations
         .where((item) => item.isPinned)
@@ -196,6 +205,12 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
               children: [
                 // 租户切换栏（飞书风格）
                 _buildTenantSwitcher(context, ref),
+                // 设备管理入口横幅（微信风格：已登录X台其他设备）
+                if (otherDeviceCount > 0)
+                  _DeviceManagementBanner(
+                    otherDeviceCount: otherDeviceCount,
+                    onTap: () => context.pushNamed(RouteNames.deviceList),
+                  ),
                 Container(
                   color: ThemeColors.surface(context),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -1238,3 +1253,61 @@ class _MenuTextButton extends StatelessWidget {
 }
 
 enum _ConversationMenuAction { pin, unread, delete }
+
+/// 设备管理入口横幅（微信风格）
+/// 显示在会话列表顶部，提示用户已登录的其他设备数量
+class _DeviceManagementBanner extends StatelessWidget {
+  const _DeviceManagementBanner({
+    required this.otherDeviceCount,
+    required this.onTap,
+  });
+
+  final int otherDeviceCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: ThemeColors.surface(context),
+          border: Border(
+            bottom: BorderSide(
+              color: ThemeColors.divider(context),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.devices_outlined,
+              size: 18,
+              color: ThemeColors.textSecondary(context),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                strings.deviceManagementBanner(otherDeviceCount),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ThemeColors.textSecondary(context),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: ThemeColors.textSecondary(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

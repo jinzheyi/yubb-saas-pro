@@ -1,3 +1,31 @@
+import 'package:flutter/foundation.dart';
+
+/// 根据当前平台获取设备类型（与 DeviceType.current 保持一致）
+int _currentDeviceTypeValue() {
+  if (kIsWeb) return 1;
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+      return 2;
+    case TargetPlatform.android:
+      return 3;
+    default:
+      return 1;
+  }
+}
+
+/// 根据当前平台获取设备名称
+String _currentDeviceName() {
+  if (kIsWeb) return 'Web 浏览器';
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+      return 'iOS 设备';
+    case TargetPlatform.android:
+      return 'Android 设备';
+    default:
+      return 'Web 浏览器';
+  }
+}
+
 class AuthSession {
   const AuthSession({
     required this.userId,
@@ -12,17 +40,18 @@ class AuthSession {
     required this.locale,
   });
 
-  const AuthSession.anonymous()
-    : userId = '',
-      accessToken = '',
-      refreshToken = '',
-      tenantId = '',
-      tenantName = null,
-      deviceId = 'flutter-debug-device',
-      deviceType = 1,
-      deviceName = 'Flutter Client',
-      clientVersion = '1.0.0',
-      locale = 'zh-CN';
+  factory AuthSession.anonymous() => AuthSession(
+    userId: '',
+    accessToken: '',
+    refreshToken: '',
+    tenantId: '',
+    tenantName: null,
+    deviceId: 'flutter-debug-device',
+    deviceType: _currentDeviceTypeValue(),
+    deviceName: _currentDeviceName(),
+    clientVersion: '1.0.0',
+    locale: 'zh-CN',
+  );
 
   final String userId;
   final String accessToken;

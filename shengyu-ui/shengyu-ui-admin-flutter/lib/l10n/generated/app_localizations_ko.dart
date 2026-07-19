@@ -2979,6 +2979,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String deviceManagementBanner(Object count) {
+    return '$count 대의 다른 기기에 로그인됨';
+  }
+
+  @override
   String get deviceListTitle => '로그인 기기 관리';
 
   @override

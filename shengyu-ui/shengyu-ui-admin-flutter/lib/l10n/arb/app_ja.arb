@@ -1392,6 +1392,12 @@
   "@@@GLOBAL_ACTIONS": "Section: Global Actions",
 
   "@@@DEVICE_LIST": "Section: Device Management",
+  "deviceManagementBanner": "{count} 台の他のデバイスにログイン中",
+  "@deviceManagementBanner": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "deviceListTitle": "ログインデバイス管理",
   "deviceListEmpty": "ログインデバイスはありません",
   "deviceListCurrent": "現在のデバイス",

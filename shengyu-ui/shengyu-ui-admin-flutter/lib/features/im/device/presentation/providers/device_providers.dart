@@ -73,10 +73,10 @@ class DeviceListController extends StateNotifier<DeviceListState> {
 
   Future<void> refresh() => load();
 
-  Future<void> kickDevice(int deviceType) async {
+  Future<void> kickDevice(int deviceType, {String? deviceId}) async {
     state = state.copyWith(kickingDeviceType: deviceType);
     try {
-      await _dataSource.kickDevice(deviceType);
+      await _dataSource.kickDevice(deviceType, deviceId: deviceId);
       // 踢出后刷新列表
       await load();
     } catch (error, stackTrace) {
