@@ -1,8 +1,8 @@
 # 圣钰 IM 企业级实时音视频通话系统设计文档
 
-**版本**: v2.1  
-**日期**: 2026-07-19  
-**状态**: 设计阶段（基于源码验证 + 边界场景完善）
+**版本**: v2.2  
+**日期**: 2026-07-20  
+**状态**: 设计阶段（基于源码深度验证 + 边界场景完善 + 微信/大厂经验对标）
 
 ---
 
@@ -742,31 +742,41 @@ public class TokenService {
 
 #### 6.2.3 CallSignalProcessor 实现
 
-**实际实现说明**：通话信令通过 `SYSTEM_NOTIFY` (200) 消息类型传输，使用 `action=call.*` 前缀区分不同信令。后端通过 `WebSocketMessageSender.sendToUser()` 方法向指定用户的所有设备广播信令。
+**实际实现说明**：通话信令通过 `SYSTEM_NOTIFY` (200) 消息类型传输，使用 `action=call.*` 前缀区分不同信令。后端通过 `NettyMessageSender.sendToUser()` 方法向指定用户的所有设备广播信令。
+
+**消息处理链路**（基于源码验证）：
+```
+WebSocket 收到消息
+  → JsonWebSocketMessageHandler.handleTextMessage()
+    → 解析 JsonWebSocketMessage（type + content）
+    → 根据 type 查找对应的 WebSocketMessageListener
+    → 调用 listener.onMessage(session, messageObj)
+      → SystemNotifyProcessor（处理 SYSTEM_NOTIFY 类型）
+        → 根据 action 字段分发（action=call.* → CallService）
+```
 
 ```java
-// CallSignalProcessor.java
+// CallSignalProcessor.java（实际实现）
 @Component
 @Slf4j
-public class CallSignalProcessor implements MessageProcessor {
+public class CallSignalProcessor implements WebSocketMessageListener<CallSignalMessage> {
     
     @Autowired
     private CallService callService;
     
     @Autowired
-    private WebSocketMessageSender messageSender;
+    private NettyMessageSender messageSender;
     
     @Override
-    public void process(ChannelHandlerContext ctx, ImMessage message) {
+    public void onMessage(NettySession session, CallSignalMessage signal) {
         try {
-            // 解析通话信令消息
-            CallSignalMessage signal = CallSignalMessage.parseFrom(message.getBody());
-            Long userId = WebSocketFrameworkUtils.getUserId(ctx);
+            Long userId = session.getUserId();
+            Long tenantId = session.getTenantId();
             
             // 根据信令类型分发处理
             switch (signal.getSignalType()) {
                 case 1:  // 发起呼叫
-                    handleCallInitiate(userId, signal);
+                    handleCallInitiate(userId, tenantId, signal);
                     break;
                 case 2:  // 接听
                     handleCallAccept(userId, signal);
@@ -789,6 +799,11 @@ public class CallSignalProcessor implements MessageProcessor {
         } catch (Exception e) {
             log.error("[CallProcessor] 处理通话信令失败", e);
         }
+    }
+    
+    @Override
+    public String getType() {
+        return "call_signal";  // 对应 JsonWebSocketMessage.type
     }
     
     /**
@@ -992,18 +1007,48 @@ public class CallService {
     
     /**
      * 发送 SYSTEM_NOTIFY 消息给指定用户（所有设备）
+     * 
+     * 实际实现说明：
+     * 1. 使用 NettyMessageSender.sendToUser() 方法
+     * 2. 需要传入 MessageType、MessageLite（Proto 消息）、senderId、tenantId 等参数
+     * 3. 实际调用时需要构建 CallSignalMessage 或其他 Proto 消息体
      */
-    private void sendSystemNotify(Long userId, Map<String, Object> payload) {
-        ImMessage message = ImMessage.newBuilder()
-            .setHeader(MessageHeader.newBuilder()
-                .setMessageId(SnowflakeIdGenerator.nextId())
-                .setMessageType(MessageType.SYSTEM_NOTIFY)
-                .setTimestamp(System.currentTimeMillis())
-                .build())
-            .setBody(ByteString.copyFromUtf8(JSON.toJSONString(payload)))
+    private void sendSystemNotify(Long userId, Long tenantId, Map<String, Object> payload) {
+        // 构建 CallSignalMessage（或其他 Proto 消息）
+        CallSignalMessage signal = CallSignalMessage.newBuilder()
+            .setCallId(payload.get("callId").toString())
+            .setCallType((Integer) payload.get("callType"))
+            .setSignalType(getSignalTypeFromAction(payload.get("action").toString()))
+            .setCallerId((Long) payload.get("callerId"))
+            .setCalleeId((Long) payload.get("calleeId"))
+            .setExtraData(JSON.toJSONString(payload))
             .build();
         
-        messageSender.sendToUser(userId, message);
+        // 使用 NettyMessageSender 发送
+        messageSender.sendToUser(
+            userId,
+            MessageType.SYSTEM_NOTIFY,
+            signal,
+            null,  // senderId
+            userId,  // receiverId
+            null,  // groupId
+            tenantId,
+            null   // messageId
+        );
+    }
+    
+    /**
+     * 从 action 字段提取信令类型
+     */
+    private int getSignalTypeFromAction(String action) {
+        switch (action) {
+            case "call.invite": return 1;
+            case "call.accepted": return 2;
+            case "call.rejected": return 3;
+            case "call.ended": return 4;
+            case "call.busy": return 5;
+            default: return 0;
+        }
     }
     
     /**
@@ -1138,12 +1183,12 @@ class CallController extends StateNotifier<CallState> {
 
 **CallSocketDataSource 扩展**（增加对 `call.record` 的支持）：
 
+**现有实现**（基于源码验证 `call_socket_data_source.dart`）：
 ```dart
-// call_socket_data_source.dart（扩展）
+// call_socket_data_source.dart（当前实现）
 CallSignalEventDto? _toCallSignalEvent(Map<String, Object?> payload) {
   final eventType =
       payload['type']?.toString() ??
-      payload['action']?.toString() ??     // ← 兼容后端 action 字段
       payload['eventType']?.toString() ??
       payload['event']?.toString() ??
       '';
@@ -1153,7 +1198,45 @@ CallSignalEventDto? _toCallSignalEvent(Map<String, Object?> payload) {
 
   final callSessionId =
       payload['callSessionId']?.toString() ??
-      payload['callId']?.toString() ??      // ← 兼容后端 callId 字段
+      payload['sessionId']?.toString() ??
+      '';
+  if (callSessionId.isEmpty) {
+    return null;
+  }
+
+  final nestedPayload = payload['payload'];
+  final mergedPayload = <String, Object?>{
+    ...payload,
+    if (nestedPayload is Map<String, dynamic>) ...nestedPayload,
+    if (nestedPayload is Map<Object?, Object?>)
+      ...nestedPayload.cast<String, Object?>(),
+  };
+
+  return CallSignalEventDto(
+    type: eventType,
+    callSessionId: callSessionId,
+    payload: mergedPayload,
+  );
+}
+```
+
+**需要扩展**（增加对后端 `action` 和 `callId` 字段的兼容）：
+```dart
+// call_socket_data_source.dart（扩展后）
+CallSignalEventDto? _toCallSignalEvent(Map<String, Object?> payload) {
+  final eventType =
+      payload['type']?.toString() ??
+      payload['action']?.toString() ??     // ← 新增：兼容后端 action 字段
+      payload['eventType']?.toString() ??
+      payload['event']?.toString() ??
+      '';
+  if (!eventType.startsWith('call.')) {
+    return null;
+  }
+
+  final callSessionId =
+      payload['callSessionId']?.toString() ??
+      payload['callId']?.toString() ??      // ← 新增：兼容后端 callId 字段
       payload['sessionId']?.toString() ??
       '';
   if (callSessionId.isEmpty) {
@@ -2071,7 +2154,7 @@ class CallRecordTable extends Table {
 ### 10.1 查询通话记录列表
 
 ```
-GET /app-api/im/call/records
+GET /system/im/call/records
 
 请求参数:
 - page: 页码（默认 1）
@@ -2109,7 +2192,7 @@ GET /app-api/im/call/records
 ### 10.2 查询聊天窗口通话记录
 
 ```
-GET /app-api/im/call/records/by-chat
+GET /system/im/call/records/by-chat
 
 请求参数:
 - chatId: 聊天窗口 ID
@@ -2139,7 +2222,7 @@ GET /app-api/im/call/records/by-chat
 ### 10.3 获取 Janus Token
 
 ```
-POST /app-api/im/call/token
+POST /system/im/call/token
 
 请求体:
 {
@@ -2163,7 +2246,7 @@ POST /app-api/im/call/token
 ```java
 // AppCallController.java
 @RestController
-@RequestMapping("/app-api/im/call")
+@RequestMapping("/system/im/call")
 @Tag(name = "用户 APP - 通话记录")
 public class AppCallController {
 
@@ -2223,11 +2306,11 @@ abstract final class AppConfig {
 }
 ```
 
-**新增通话相关配置**：
+**新增通话相关配置**（基于源码验证 `app_config.dart` 现有结构）：
 ```dart
 // app_config.dart（扩展）
 abstract final class AppConfig {
-  // ... 现有配置
+  // ... 现有配置保持不变 ...
   
   // ===== 通话相关配置 =====
   
@@ -2238,6 +2321,10 @@ abstract final class AppConfig {
   /// Janus HTTP API 地址
   /// TODO: 生产环境替换为 https://janus.yourdomain.com
   static const String janusHttpUrl = 'http://MacBook-Pro-3.local:8088';
+  
+  /// Janus API Secret（用于生成 Token）
+  /// TODO: 生产环境从环境变量或配置文件读取
+  static const String janusApiSecret = 'your-janus-api-secret';
   
   /// 通话超时时间（秒）
   static const int callTimeoutSeconds = 30;
@@ -2256,6 +2343,16 @@ abstract final class AppConfig {
   
   /// 通话录制质量（1-5，5 为最高）
   static const int callRecordingQuality = 3;
+  
+  /// 通话视频码率配置（bps）
+  static const int callVideoMinBitrate = 300 * 1000;   // 300 kbps
+  static const int callVideoStartBitrate = 1000 * 1000; // 1 Mbps
+  static const int callVideoMaxBitrate = 2000 * 1000;  // 2 Mbps
+  
+  /// 通话房间人数限制
+  static const int callMaxParticipantsOneOnOne = 2;
+  static const int callMaxParticipantsGroupCall = 9;
+  static const int callMaxParticipantsVideoMeeting = 20;
 }
 ```
 
