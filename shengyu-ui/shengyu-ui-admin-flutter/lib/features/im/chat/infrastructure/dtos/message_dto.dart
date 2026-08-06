@@ -63,6 +63,17 @@ class MessageDto {
     this.reeditDeadlineTs,
     this.systemEventKey,
     this.systemEventParams,
+    // 通话记录相关字段
+    this.callId,
+    this.callType,
+    this.callStatus,
+    this.callerId,
+    this.calleeId,
+    this.callerName,
+    this.calleeName,
+    this.initiateTime,
+    this.isGroupCall,
+    this.inviteeNames,
   });
 
   final String messageId;
@@ -113,6 +124,17 @@ class MessageDto {
   final int? reeditDeadlineTs;
   final String? systemEventKey;
   final Map<String, String>? systemEventParams;
+  // 通话记录相关字段
+  final String? callId;
+  final int? callType;
+  final int? callStatus;
+  final String? callerId;
+  final String? calleeId;
+  final String? callerName;
+  final String? calleeName;
+  final int? initiateTime;
+  final bool? isGroupCall;
+  final List<String>? inviteeNames;
 
   factory MessageDto.fromJson(Map<String, dynamic> json) {
     final extra = _readExtra(json['extra']);
@@ -179,7 +201,10 @@ class MessageDto {
           ? null
           : (json['senderAvatar']?.toString() ??
                 json['avatarUrl']?.toString() ??
-                json['avatar']?.toString()),
+                json['avatar']?.toString() ??
+                extra['callerAvatar']?.toString() ??
+                extra['senderAvatar']?.toString() ??
+                extra['avatar']?.toString()),
       type: resolvedType,
       status: status,
       content: resolvedContent,
@@ -194,7 +219,10 @@ class MessageDto {
           DateTime.fromMillisecondsSinceEpoch(0),
       isOutgoing: isSystemTip
           ? false
-          : json['isOutgoing'] == true || json['isSelf'] == true,
+          : (json['isOutgoing'] as bool? ?? false) || 
+            (json['isSelf'] as bool? ?? false) ||
+            json['isOutgoing']?.toString() == 'true' ||
+            json['isSelf']?.toString() == 'true',
       sequence:
           json['sequence']?.toString() ?? json['sortKey']?.toString() ?? '',
       revision: json['rev']?.toString(),
@@ -276,6 +304,17 @@ class MessageDto {
       reeditDeadlineTs: _pickInt(json, structuredFields, ['reeditDeadlineTs']),
       systemEventKey: systemEventKey,
       systemEventParams: systemEventParams,
+      // 通话记录相关字段
+      callId: _pickString(json, structuredFields, ['callId']),
+      callType: _pickInt(json, structuredFields, ['callType']),
+      callStatus: _pickInt(json, structuredFields, ['callStatus', 'status']),
+      callerId: _pickString(json, structuredFields, ['callerId']),
+      calleeId: _pickString(json, structuredFields, ['calleeId']),
+      callerName: _pickString(json, structuredFields, ['callerName']),
+      calleeName: _pickString(json, structuredFields, ['calleeName']),
+      initiateTime: _pickInt(json, structuredFields, ['initiateTime', 'startTime']),
+      isGroupCall: _pickBool(json, structuredFields, ['isGroupCall']),
+      inviteeNames: _parseInviteeNames(json, structuredFields),
     );
   }
 
@@ -337,6 +376,22 @@ class MessageDto {
         .map((item) => item?.toString().trim() ?? '')
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  /// 解析通话记录中的被邀请人昵称列表
+  static List<String>? _parseInviteeNames(
+    Map<String, dynamic> json,
+    Map<String, dynamic> extra,
+  ) {
+    final source = json['inviteeNames'] ?? extra['inviteeNames'];
+    if (source is! List) {
+      return null;
+    }
+    final names = source
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+    return names.isEmpty ? null : names;
   }
 
   static List<MentionSegment> _parseMentions(
@@ -759,6 +814,12 @@ class MessageDto {
       case 'system':
       case 'SYSTEM':
         return MessageType.system;
+      case 'callRecord':
+      case 'CALL_RECORD':
+      case 'call_record':
+      case '11':
+      case '209':
+        return MessageType.callRecord;
       case 'quoteReply':
       case 'QUOTE_REPLY':
       case '205':

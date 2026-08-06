@@ -142,6 +142,8 @@ String _formatMessagePreview({
       return content;
     case MessageType.text:
       return content;
+    case MessageType.callRecord:
+      return _t(locale, '[Call Record]', '[通话记录]');
   }
 }
 
@@ -308,6 +310,8 @@ class MessagePreviewFormatterWithContext {
         return content;
       case MessageType.text:
         return content;
+      case MessageType.callRecord:
+        return _l10n.messagePreviewCallRecord;
     }
   }
 

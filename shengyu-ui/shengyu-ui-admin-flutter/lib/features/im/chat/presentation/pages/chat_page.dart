@@ -22,6 +22,7 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/group_call_member_select_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/file_preview_route_args.dart';
@@ -63,6 +64,8 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_composer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_page_panels.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_timeline.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/group_call_status_bar.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
@@ -146,6 +149,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   StreamSubscription<Duration>? _voicePositionSubscription;
   StreamSubscription<Duration?>? _voiceDurationSubscription;
   StreamSubscription<PlayerState>? _voicePlayerStateSubscription;
+  StreamSubscription<Message>? _callRecordSubscription;
   /// 统一 Timer 管理器（替代分散的 Timer? 字段）
   late final ChatPageTimerManager _timerManager;
   late final TextEditingController _mentionSearchController;
@@ -190,6 +194,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
         _handleTimelineStateChanged(previous, next);
       },
     );
+
+    // 监听通话记录消息（从 CallController 接收）
+    _callRecordSubscription = ref
+        .read(callControllerProvider.notifier)
+        .onCallRecordReceived
+        .listen(_handleCallRecordReceived);
 
     // ===== 关键路径：首帧前初始化 =====
     // 1. 立即启动非阻塞型 Timer（打字清理、语音补偿等）
@@ -291,6 +301,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _voicePositionSubscription?.cancel();
     _voiceDurationSubscription?.cancel();
     _voicePlayerStateSubscription?.cancel();
+    _callRecordSubscription?.cancel();
     _timelineSubscription?.close();
     unawaited(_flushVoicePlayedSyncQueue(force: true));
     _timelineScrollController.dispose();
@@ -309,6 +320,34 @@ class _ChatPageState extends ConsumerState<ChatPage>
     } else {
       // 无法 pop 时（如直接从外部 deep link 进入），降级到会话列表
       context.goNamed(RouteNames.conversations);
+    }
+  }
+
+  /// 处理通话记录消息
+  ///
+  /// 当 CallController 收到 call.record 事件时，将通话记录转换为 Message 对象，
+  /// 并插入到当前聊天时间线中。
+  void _handleCallRecordReceived(Message message) {
+    if (!mounted) return;
+
+    // 仅处理当前聊天窗口的通话记录
+    if (message.chatId != widget.args.chatId) return;
+
+    debugPrint('[ChatPage] 收到通话记录消息: ${message.messageId}, chatId=${message.chatId}');
+
+    // 将通话记录插入到时间线
+    final timelineController = ref.read(
+      chatTimelineControllerProvider(widget.args.chatId).notifier,
+    );
+    timelineController.appendSingleMessage(message);
+
+    // 如果在底部，自动滚动到新消息
+    if (_isTimelineAtBottom) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollTimelineToBottom();
+        }
+      });
     }
   }
 
@@ -753,6 +792,45 @@ class _ChatPageState extends ConsumerState<ChatPage>
               )
             : Column(
                 children: [
+                  // 群聊通话状态栏（微信风格：群内有通话时显示在消息列表顶部）
+                  if (isGroupChat && groupId != null && !_isSelectionMode)
+                    GroupCallStatusBar(
+                      groupId: groupId,
+                      onTap: () {
+                        // 点击状态栏跳转到群通话页面
+                        final callState = ref.read(callControllerProvider);
+                        final callArgs = CallLaunchArgs(
+                          callSessionId: callState.callSessionId,
+                          chatId: widget.args.chatId,
+                          callType: callState.callType ?? CallType.video,
+                          entryMode: CallEntryMode.restore,
+                          title: chatTitle,
+                          isGroupCall: true,
+                          groupId: groupId,
+                        );
+                        context.pushNamed(
+                          RouteNames.groupCallSession,
+                          extra: callArgs,
+                        );
+                      },
+                      onJoinTap: () {
+                        // 点击"加入"按钮加入群通话
+                        final callState = ref.read(callControllerProvider);
+                        final callArgs = CallLaunchArgs(
+                          callSessionId: callState.callSessionId,
+                          chatId: widget.args.chatId,
+                          callType: callState.callType ?? CallType.video,
+                          entryMode: CallEntryMode.incoming,
+                          title: chatTitle,
+                          isGroupCall: true,
+                          groupId: groupId,
+                        );
+                        context.pushNamed(
+                          RouteNames.groupCallSession,
+                          extra: callArgs,
+                        );
+                      },
+                    ),
                   if (!_isSelectionMode && groupNoticeText.isNotEmpty)
                     ChatGroupNoticeBanner(
                       notice: groupNoticeText,
@@ -2947,11 +3025,14 @@ class _ChatPageState extends ConsumerState<ChatPage>
     required String chatTitle,
   }) async {
     if (action != ChatMorePanelAction.favorite &&
+        action != ChatMorePanelAction.call &&
         !_ensureConversationWritable(context)) {
       return;
     }
     if (action == ChatMorePanelAction.call) {
-      _openCallPage(context, chatTitle: chatTitle, callType: CallType.video);
+      final isGroupChat = widget.args.conversationType == ConversationType.group;
+      final groupId = _resolveGroupId(isGroupChat);
+      _showCallOptions(context, chatTitle: chatTitle, isGroupChat: isGroupChat, groupId: groupId);
       return;
     }
     if (action == ChatMorePanelAction.favorite) {
@@ -3350,18 +3431,128 @@ class _ChatPageState extends ConsumerState<ChatPage>
     );
   }
 
+  void _showCallOptions(
+    BuildContext context, {
+    required String chatTitle,
+    required bool isGroupChat,
+    String? groupId,
+  }) {
+    final strings = ref.read(appStringsProvider);
+    final pageContext = context; // 保存页面的 context
+
+    showModalBottomSheet<CallType>(
+      context: context,
+      backgroundColor: ThemeColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ThemeColors.divider(dialogContext),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                chatTitle,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: ThemeColors.textPrimary(dialogContext),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.phone_outlined),
+                title: Text(strings.callVoice),
+                onTap: () {
+                  Navigator.of(dialogContext).pop(CallType.audio);
+                  _openCallPage(pageContext, chatTitle: chatTitle, callType: CallType.audio, isGroupChat: isGroupChat, groupId: groupId);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam_outlined),
+                title: Text(strings.callVideo),
+                onTap: () {
+                  Navigator.of(dialogContext).pop(CallType.video);
+                  _openCallPage(pageContext, chatTitle: chatTitle, callType: CallType.video, isGroupChat: isGroupChat, groupId: groupId);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _openCallPage(
     BuildContext context, {
     required String chatTitle,
     required CallType callType,
+    required bool isGroupChat,
+    String? groupId,
   }) {
-    final args = CallLaunchArgs.outgoing(
-      callSessionId: '',
-      chatId: widget.args.chatId,
-      callType: callType,
-      title: chatTitle,
-    );
-    context.pushNamed(RouteNames.callOutgoing, extra: args);
+    // 通话中拦截：检查是否有正在进行的通话
+    // 参考微信逻辑：通话中不允许发起新的通话
+    final activeCallRegistry = ref.read(activeCallRegistryProvider);
+    if (activeCallRegistry.hasActiveCall()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('您正在通话中'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (isGroupChat && groupId != null) {
+      // 群聊：跳转到成员选择页
+      final currentUserId = ref.read(authSessionProvider).userId;
+      context.pushNamed(
+        RouteNames.groupCallMemberSelect,
+        extra: GroupCallMemberSelectArgs(
+          groupId: groupId,
+          groupName: chatTitle,
+          callType: callType,
+          currentUserId: currentUserId,
+        ),
+      ).then((result) {
+        // 成员选择页返回选中的成员ID列表
+        if (result != null && result is List<String> && result.isNotEmpty) {
+          // 跳转到群通话等待页
+          final args = CallLaunchArgs.outgoing(
+            callSessionId: '',
+            chatId: widget.args.chatId,
+            callType: callType,
+            title: chatTitle,
+            isGroupCall: true,
+            groupId: groupId,
+            inviteeIds: result,
+          );
+          context.pushNamed(RouteNames.groupOutgoingCall, extra: args);
+        }
+      });
+    } else {
+      // 单聊：跳转到1v1去电页
+      final calleeId = widget.args.chatId;
+      final args = CallLaunchArgs.outgoing(
+        callSessionId: '',
+        chatId: widget.args.chatId,
+        callType: callType,
+        title: chatTitle,
+        toUserId: calleeId,
+      );
+      context.pushNamed(RouteNames.callOutgoing, extra: args);
+    }
   }
 
   Future<void> _showMessageActions(

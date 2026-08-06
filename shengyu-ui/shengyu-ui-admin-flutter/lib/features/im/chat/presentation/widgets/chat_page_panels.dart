@@ -257,6 +257,13 @@ class ChatMorePanel extends StatelessWidget {
         color: const Color(0xFFFFF2DE),
         iconColor: const Color(0xFFFFA940),
       ),
+      _AttachmentAction(
+        action: ChatMorePanelAction.call,
+        icon: AppIconKind.mic,
+        label: strings.contactsDetailCall,
+        color: const Color(0xFFE8FAF3),
+        iconColor: const Color(0xFF25B67B),
+      ),
     ];
 
     return Container(

@@ -1,6 +1,9 @@
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.module.system.dal.dataobject.im.ImCallEventDO;
 import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
+import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
+import com.shengyu.module.system.service.im.vo.GroupInviteResultVO;
 
 import java.util.List;
 
@@ -18,9 +21,10 @@ public interface ImCallService {
      * @param callerId 呼叫者ID
      * @param calleeId 被叫者ID
      * @param callType 通话类型(1-语音 2-视频)
+     * @param deviceId 设备ID
      * @return 通话ID
      */
-    String initiateCall(Long callerId, Long calleeId, Integer callType);
+    String initiateCall(Long callerId, Long calleeId, Integer callType, String deviceId);
 
     /**
      * 接听通话
@@ -28,8 +32,9 @@ public interface ImCallService {
      *
      * @param callId 通话ID
      * @param userId 用户ID
+     * @param deviceId 设备ID
      */
-    void acceptCall(String callId, Long userId);
+    void acceptCall(String callId, Long userId, String deviceId);
 
     /**
      * 拒绝通话
@@ -42,13 +47,24 @@ public interface ImCallService {
     void rejectCall(String callId, Long userId, String reason);
 
     /**
+     * 取消通话（主叫方）
+     * 更新通话记录状态为已取消
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID（必须是主叫方）
+     * @param reason 取消原因
+     */
+    void cancelCall(String callId, Long userId, String reason);
+
+    /**
      * 挂断通话
      * 更新通话记录状态并计算通话时长
      *
      * @param callId 通话ID
      * @param userId 用户ID
+     * @param reason 结束原因
      */
-    void hangupCall(String callId, Long userId);
+    void hangupCall(String callId, Long userId, String reason);
 
     /**
      * 转发通话信令
@@ -110,5 +126,183 @@ public interface ImCallService {
      * @param callId 通话ID
      */
     void calculateAndUpdateDuration(String callId);
+
+    /**
+     * 更新通话状态机状态
+     *
+     * @param callId 通话ID
+     * @param newState 新状态
+     * @param expectedState 期望的当前状态（用于CAS）
+     * @return 是否更新成功
+     */
+    boolean updateCallState(String callId, String newState, String expectedState);
+
+    /**
+     * 检查用户是否忙线
+     *
+     * @param userId 用户ID
+     * @return 是否忙线
+     */
+    boolean isUserBusy(Long userId);
+
+    /**
+     * 记录通话事件
+     *
+     * @param event 通话事件
+     */
+    void recordCallEvent(ImCallEventDO event);
+
+    /**
+     * 获取通话事件列表
+     *
+     * @param callId 通话ID
+     * @return 事件列表
+     */
+    List<ImCallEventDO> getCallEvents(String callId);
+
+    /**
+     * 更新接听设备ID
+     *
+     * @param callId 通话ID
+     * @param deviceId 设备ID
+     */
+    void updateAcceptedDeviceId(String callId, String deviceId);
+
+    /**
+     * 更新关联会话ID
+     *
+     * @param callId 通话ID
+     * @param chatId 会话ID
+     */
+    void updateChatId(String callId, Long chatId);
+
+    /**
+     * 更新通话记录消息ID
+     *
+     * @param callId 通话ID
+     * @param messageId 消息ID
+     */
+    void updateRecordMessageId(String callId, Long messageId);
+
+    /**
+     * 处理用户登出时的通话清理
+     * 终止用户所有进行中的通话，保存通话记录
+     *
+     * @param userId 用户ID
+     * @param deviceId 设备ID
+     */
+    void handleUserLogout(Long userId, String deviceId);
+
+    /**
+     * 处理设备被踢下线时的通话清理
+     * 终止该设备上的所有通话，保存通话记录
+     *
+     * @param userId 用户ID
+     * @param deviceId 设备ID
+     * @param reason 踢出原因
+     */
+    void handleDeviceKicked(Long userId, String deviceId, String reason);
+
+    /**
+     * 创建通话邀请
+     * 创建 Janus 房间、生成 Token、保存通话记录
+     *
+     * @param callerId 呼叫者ID
+     * @param calleeId 被叫者ID
+     * @param chatId 会话ID
+     * @param callType 通话类型(1-语音 2-视频)
+     * @return 通话邀请结果
+     */
+    CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType);
+
+    /**
+     * 群组通话邀请成员加入
+     * 发送 WebSocket 通知给被邀请者
+     *
+     * @param callSessionId 通话会话ID
+     * @param groupId 群组ID
+     * @param inviterId 邀请者ID
+     * @param inviteeIds 被邀请者ID列表
+     * @return 群组通话邀请结果
+     */
+    GroupInviteResultVO inviteGroupMembers(String callSessionId, String groupId, Long inviterId, List<Long> inviteeIds);
+
+    /**
+     * 发起通话转接
+     *
+     * @param callId 通话ID
+     * @param fromUserId 转接发起者ID
+     * @param targetUserId 目标用户ID
+     * @param targetUserName 目标用户名称
+     */
+    void initiateCallTransfer(String callId, Long fromUserId, Long targetUserId, String targetUserName);
+
+    /**
+     * 接受通话转接
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID
+     */
+    void acceptCallTransfer(String callId, Long userId);
+
+    /**
+     * 拒绝通话转接
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID
+     */
+    void rejectCallTransfer(String callId, Long userId);
+
+    /**
+     * 取消通话转接
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID
+     */
+    void cancelCallTransfer(String callId, Long userId);
+
+    /**
+     * 开始通话录制
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID
+     */
+    void startCallRecording(String callId, Long userId);
+
+    /**
+     * 停止通话录制
+     *
+     * @param callId 通话ID
+     * @param userId 用户ID
+     * @param recordingFilePath 录制文件路径
+     */
+    void stopCallRecording(String callId, Long userId, String recordingFilePath);
+
+    /**
+     * 根据用户ID分页查询通话记录
+     *
+     * @param userId 用户ID
+     * @param callType 通话类型（可选）
+     * @param startTime 开始时间（可选）
+     * @param endTime 结束时间（可选）
+     * @param chatId 会话ID（可选）
+     * @param pageNo 页码
+     * @param pageSize 每页大小
+     * @return 通话记录分页结果
+     */
+    com.shengyu.framework.common.pojo.PageResult<com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO> getCallRecordPageByUserId(
+            Long userId, Integer callType, java.time.LocalDateTime startTime,
+            java.time.LocalDateTime endTime, Long chatId, Integer pageNo, Integer pageSize);
+
+    /**
+     * 更新媒体状态（摄像头/麦克风开关）
+     * 通过 WebSocket 广播给对端
+     *
+     * @param callSessionId 通话会话ID
+     * @param userId 用户ID
+     * @param cameraEnabled 摄像头是否开启
+     * @param microphoneEnabled 麦克风是否开启
+     */
+    void updateMediaState(String callSessionId, Long userId, Boolean cameraEnabled, Boolean microphoneEnabled);
 
 }

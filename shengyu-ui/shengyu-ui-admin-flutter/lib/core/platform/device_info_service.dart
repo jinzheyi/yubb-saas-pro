@@ -23,6 +23,14 @@ enum DeviceType {
 
   const DeviceType(this.value, this.label);
 
+  /// 根据数值获取设备类型
+  static DeviceType fromValue(int value) {
+    return DeviceType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => DeviceType.web,
+    );
+  }
+
   /// 根据当前平台获取设备类型
   static DeviceType get current {
     if (kIsWeb) return DeviceType.web;

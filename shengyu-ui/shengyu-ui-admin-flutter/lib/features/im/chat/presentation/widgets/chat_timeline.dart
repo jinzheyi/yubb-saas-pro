@@ -308,6 +308,19 @@ class _ChatMessageItem extends StatelessWidget {
       );
     }
 
+    // 通话记录消息：群聊居中显示，1v1 气泡显示
+    if (message.type == MessageType.callRecord) {
+      final isGroupCall = message.extra.isGroupCall ?? false;
+      if (isGroupCall) {
+        // 群聊通话记录：居中系统消息样式
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: _CallRecordCenteredMessage(message: message),
+        );
+      }
+      // 1v1 通话记录：走正常气泡渲染流程
+    }
+
     final voiceState = _computeVoiceState();
     // 直接使用预计算的引用链，无需在 build 中遍历引用链
     final senderDisplayName = _senderDisplayName(message);
@@ -829,6 +842,127 @@ class _SystemMessage extends StatelessWidget {
       return false;
     }
     return reeditNowTs <= reeditDeadlineTs;
+  }
+}
+
+/// 群聊通话记录居中消息组件
+///
+/// 参考微信群聊通话记录显示逻辑：
+/// - 发起通话："{发起人}发起了{语音/视频}通话"
+/// - 通话结束："{语音/视频}通话已经结束"
+/// - 邀请成员："{发起人}邀请{成员1}、{成员2}加入了群聊"
+/// 样式：居中显示，灰色文字，无气泡背景
+class _CallRecordCenteredMessage extends StatelessWidget {
+  const _CallRecordCenteredMessage({required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText = _buildDisplayText();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          displayText,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF999999),
+            height: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建展示文本（微信风格）
+  String _buildDisplayText() {
+    final extra = message.extra;
+    final callTypeText = (extra.callType ?? 1) == 2 ? '视频' : '语音';
+    // 优先使用 extra.callerName，其次才是 senderName
+    final callerName = extra.callerName?.isNotEmpty == true
+        ? extra.callerName!
+        : (message.senderName.isNotEmpty ? message.senderName : '对方');
+    final callStatus = extra.callStatus ?? 1;
+    final isGroupCall = extra.isGroupCall ?? false;
+    final duration = extra.duration ?? 0;
+
+    // 群通话特殊处理
+    if (isGroupCall) {
+      return _buildGroupCallText(callerName, callTypeText, callStatus, duration);
+    }
+
+    // 1v1 通话（虽然 1v1 走气泡流程，但保留此方法以防万一）
+    return _buildOneToOneCallText(callerName, callTypeText, callStatus, duration);
+  }
+
+  /// 构建1v1通话展示文本
+  String _buildOneToOneCallText(
+    String callerName,
+    String callTypeText,
+    int callStatus,
+    int duration,
+  ) {
+    switch (callStatus) {
+      case 1: // 已接通
+        final durationText = _formatDuration(duration);
+        return '$callTypeText通话时长 $durationText';
+      case 2: // 未接听
+        return '未接听';
+      case 3: // 已拒绝
+        return '$callTypeText通话已拒绝';
+      case 4: // 忙线
+        return '对方忙线中';
+      case 5: // 已取消
+        return '$callTypeText通话已取消';
+      default:
+        return '$callTypeText通话';
+    }
+  }
+
+  /// 构建群通话展示文本
+  String _buildGroupCallText(
+    String callerName,
+    String callTypeText,
+    int callStatus,
+    int duration,
+  ) {
+    switch (callStatus) {
+      case 1: // 已接通 - 显示通话时长
+        final durationText = _formatDuration(duration);
+        return '$callTypeText通话时长 $durationText';
+      case 2: // 未接听
+      case 3: // 已拒绝
+      case 5: // 已取消
+        // 显示邀请信息
+        final inviteeNames = message.extra.inviteeNames;
+        if (inviteeNames != null && inviteeNames.isNotEmpty) {
+          final inviteeList =
+              inviteeNames.map((name) => '"$name"').join('、');
+          return '"$callerName"邀请你和$inviteeList加入了群聊';
+        }
+        return '"$callerName"发起了$callTypeText通话';
+      case 4: // 忙线
+        return '对方忙线中';
+      default:
+        return '$callTypeText通话';
+    }
+  }
+
+  /// 格式化通话时长
+  String _formatDuration(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    } else if (minutes > 0) {
+      return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    } else {
+      return '00:${secs.toString().padLeft(2, '0')}';
+    }
   }
 }
 

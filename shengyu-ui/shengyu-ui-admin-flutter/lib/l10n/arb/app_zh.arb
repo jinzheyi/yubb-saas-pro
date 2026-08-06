@@ -111,6 +111,7 @@
   "messagePreviewContactCard": "[名片]",
   "messagePreviewForward": "[聊天记录]",
   "messagePreviewSystem": "[系统消息]",
+  "messagePreviewCallRecord": "[通话记录]",
   "messagePreviewMePrefix": "我",
   "messagePreviewMePrefixColon": "我:{summary}",
   "@messagePreviewMePrefixColon": {
@@ -143,8 +144,6 @@
   "conversationDeleteDialogTitle": "删除会话",
   "conversationDeleteDialogContent": "删除后将从当前用户会话列表移除。",
   "conversationDeletedNotice": "会话已删除",
-  "cancelAction": "取消",
-  "confirmAction": "确定",
   "operationFailed": "操作失败: {error}",
 
   "@@@SYSTEM_EVENT_PREVIEWS": "Section: System Event Preview Texts (Conversation List)",
@@ -818,7 +817,6 @@
   "chatRecordingReleaseToCancelShort": "松开 取消",
 
   "@@@CHAT_EMOJI_STICKER": "Section: Chat Emoji & Sticker",
-  "chatActionFavoriteSticker": "添加到表情",
   "chatStickerCannotAdd": "当前消息不可添加",
   "chatStickerAdded": "已添加到表情",
   "chatStickerExists": "已在表情库中",
@@ -1461,6 +1459,55 @@
 
   "@@@CALL": "Section: Call",
   "callSwitch": "切换",
+  "callIncoming": "来电",
+  "callOutgoing": "去电",
+  "callVoice": "语音通话",
+  "callVideo": "视频通话",
+  "callAccept": "接听",
+  "callReject": "拒绝",
+  "callHangup": "挂断",
+  "callCancel": "取消",
+  "callBusy": "对方忙线中",
+  "callNoAnswer": "未接听",
+  "callRejected": "已拒绝",
+  "callCancelled": "已取消",
+  "callDuration": "通话时长 {duration}",
+  "@callDuration": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "callMissed": "未接来电",
+  "callEnded": "通话结束",
+  "callConnecting": "连接中...",
+  "callReconnecting": "重新连接中...",
+  "callNetworkPoor": "网络质量差",
+  "callEncryptionEnabled": "端到端加密",
+  "callScreenShare": "屏幕共享",
+  "callSwitchCamera": "切换摄像头",
+  "callMute": "静音",
+  "callUnmute": "取消静音",
+  "callSpeaker": "扬声器",
+  "callEarpiece": "听筒",
+  "callCameraOn": "开启视频",
+  "callCameraOff": "关闭视频",
+  "callHistoryTitle": "通话记录",
+  "callHistoryEmpty": "暂无通话记录",
+  "callHistoryFilterAll": "全部",
+  "callHistoryFilterVoice": "语音通话",
+  "callHistoryFilterVideo": "视频通话",
+  "callRecordCompleted": "通话时长 {duration}",
+  "@callRecordCompleted": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "callRecordMissed": "未接听",
+  "callRecordRejected": "已拒绝",
+  "callRecordBusy": "对方忙线中",
+  "callRecordCancelled": "已取消",
+  "callRecordOutgoing": "已拨出",
+  "callRecordIncoming": "已接听",
 
   "@@@TOAST": "Section: Toast/Snackbar",
   "torchToggleFailed": "切换手电筒失败: {error}",

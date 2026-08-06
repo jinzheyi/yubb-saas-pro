@@ -1,5 +1,6 @@
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_participant_profile.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/rtc_room_bundle.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/infrastructure/dtos/call_record_dto.dart';
 
 class CallSocketPayloadSnapshot {
   const CallSocketPayloadSnapshot({
@@ -83,5 +84,17 @@ class CallSocketPayloadResolver {
       turnCredential: raw['turnCredential']?.toString() ?? '',
       token: raw['token']?.toString() ?? '',
     );
+  }
+
+  /// 解析通话记录事件的 payload
+  ///
+  /// 用于将 call.record 事件的 payload 转换为 CallRecordDto
+  CallRecordDto resolveCallRecord(Map<String, Object?> payload) {
+    // 安全转换：创建新的 Map 而不是使用 cast，避免运行时类型异常
+    final converted = <String, dynamic>{};
+    payload.forEach((key, value) {
+      converted[key] = value;
+    });
+    return CallRecordDto.fromJson(converted);
   }
 }

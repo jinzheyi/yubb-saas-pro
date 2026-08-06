@@ -65,4 +65,42 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
         return selectList(wrapper);
     }
 
+    /**
+     * 按会话ID查询通话记录
+     *
+     * @param chatId  会话ID
+     * @param userId  当前用户ID（必须是通话参与者）
+     * @param limit   限制数量
+     * @return 通话记录列表
+     */
+    default List<ImCallRecordDO> selectByChatId(Long chatId, Long userId, Integer limit) {
+        LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ImCallRecordDO::getChatId, chatId);
+        // 确保当前用户是通话参与者
+        wrapper.and(w -> w.eq(ImCallRecordDO::getCallerId, userId)
+                .or()
+                .eq(ImCallRecordDO::getCalleeId, userId));
+        wrapper.orderByDesc(ImCallRecordDO::getStartTime);
+        if (limit != null && limit > 0) {
+            wrapper.last("LIMIT " + limit);
+        }
+        return selectList(wrapper);
+    }
+
+    /**
+     * 检查用户是否存在忙线通话（RINGING/CONNECTING/CONNECTED 状态）
+     *
+     * @param userId 用户ID
+     * @param states 状态列表
+     * @return 是否存在
+     */
+    default boolean existsBusyCall(Long userId, String... states) {
+        LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w.eq(ImCallRecordDO::getCallerId, userId)
+                .or()
+                .eq(ImCallRecordDO::getCalleeId, userId));
+        wrapper.in(ImCallRecordDO::getState, (Object[]) states);
+        return selectCount(wrapper) > 0;
+    }
+
 }

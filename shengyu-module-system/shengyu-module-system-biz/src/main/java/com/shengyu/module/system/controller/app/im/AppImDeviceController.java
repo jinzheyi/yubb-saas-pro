@@ -9,6 +9,7 @@ import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.module.system.controller.app.im.vo.device.LoginDeviceRespVO;
 import com.shengyu.module.system.controller.app.im.vo.device.UserOnlineStatusRespVO;
+import com.shengyu.module.system.enums.im.ImDeviceTypeEnum;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.BAD_REQUEST;
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 /**
@@ -46,7 +49,7 @@ public class AppImDeviceController {
     public CommonResult<List<LoginDeviceRespVO>> getLoginDevices(HttpServletRequest request) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         if (userId == null) {
-            return CommonResult.error(401, "未登录");
+            return CommonResult.error(UNAUTHORIZED);
         }
 
         // 获取当前请求的 access token，用于标记 isCurrentDevice
@@ -68,7 +71,13 @@ public class AppImDeviceController {
             @RequestParam(value = "deviceId", required = false) String deviceId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         if (userId == null) {
-            return CommonResult.error(401, "未登录");
+            return CommonResult.error(UNAUTHORIZED);
+        }
+
+        // 验证设备类型是否有效
+        ImDeviceTypeEnum deviceTypeEnum = ImDeviceTypeEnum.valueOfType(deviceType);
+        if (deviceTypeEnum == null) {
+            return CommonResult.error(BAD_REQUEST.getCode(), "无效的设备类型");
         }
 
         // 优先按 deviceId 精确踢出，否则按 deviceType 踢出
@@ -97,7 +106,7 @@ public class AppImDeviceController {
             return success(Collections.emptyList());
         }
         if (userIds.size() > 100) {
-            return CommonResult.error(400, "最多查询 100 个用户");
+            return CommonResult.error(BAD_REQUEST.getCode(), "最多查询 100 个用户");
         }
 
         List<UserOnlineStatusRespVO> result = new ArrayList<>();
@@ -140,20 +149,6 @@ public class AppImDeviceController {
     }
 
     private String getDeviceTypeName(Integer deviceType) {
-        if (deviceType == null) {
-            return "未知";
-        }
-        switch (deviceType) {
-            case 1:
-                return "Web";
-            case 2:
-                return "iOS";
-            case 3:
-                return "Android";
-            case 4:
-                return "小程序";
-            default:
-                return "未知";
-        }
+        return ImDeviceTypeEnum.getNameByType(deviceType);
     }
 }

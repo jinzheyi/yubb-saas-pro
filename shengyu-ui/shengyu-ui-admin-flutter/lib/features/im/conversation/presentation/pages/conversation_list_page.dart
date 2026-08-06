@@ -26,6 +26,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_skeleton.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_tile.dart';
 import 'package:shengyu_ui_admin_im/features/im/device/presentation/providers/device_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_incoming_banner.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -321,6 +322,8 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                   ),
                 ),
                 const SizedBox(height: 8),
+                // 来电横幅通知（微信风格：显示在会话列表顶部）
+                const CallIncomingBanner(),
                 if (_inlineNoticeVisible)
                   Container(
                     color: ThemeColors.noticeBg(context),

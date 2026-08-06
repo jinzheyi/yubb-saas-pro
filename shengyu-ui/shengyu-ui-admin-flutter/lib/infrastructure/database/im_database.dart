@@ -3,22 +3,24 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import 'tables/messages_table.dart';
 import 'tables/conversations_table.dart';
+import 'tables/call_record_table.dart';
 import 'daos/message_dao.dart';
 import 'daos/conversation_dao.dart';
+import 'daos/call_record_dao.dart';
 
 part 'im_database.g.dart';
 
 /// IM 数据库单例
 /// 使用 drift_flutter 初始化，提供数据库连接管理和升级支持
 @DriftDatabase(
-  tables: [Messages, Conversations],
-  daos: [MessageDao, ConversationDao],
+  tables: [Messages, Conversations, CallRecords],
+  daos: [MessageDao, ConversationDao, CallRecordDao],
 )
 class ImDatabase extends _$ImDatabase {
   ImDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -80,6 +82,11 @@ class ImDatabase extends _$ImDatabase {
             ),
           );
         }
+        
+        if (from < 3) {
+          // 版本 2 → 3：添加通话记录表
+          await m.createTable(callRecords);
+        }
       },
     );
   }
@@ -113,6 +120,9 @@ class ImDatabase extends _$ImDatabase {
       
       // 清理会话表（drift 语法）
       await delete(conversations).go();
+      
+      // 清理通话记录表（drift 语法）
+      await delete(callRecords).go();
     } catch (e) {
       rethrow;
     }

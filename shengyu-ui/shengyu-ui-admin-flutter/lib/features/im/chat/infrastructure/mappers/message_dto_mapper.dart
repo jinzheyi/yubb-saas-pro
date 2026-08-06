@@ -62,6 +62,17 @@ abstract final class MessageDtoMapper {
         reeditDeadlineTs: dto.reeditDeadlineTs,
         systemEventKey: dto.systemEventKey,
         systemEventParams: dto.systemEventParams,
+        // 通话记录相关字段
+        callId: dto.callId,
+        callType: dto.callType,
+        callStatus: dto.callStatus,
+        callerId: dto.callerId,
+        calleeId: dto.calleeId,
+        callerName: dto.callerName,
+        calleeName: dto.calleeName,
+        initiateTime: dto.initiateTime,
+        isGroupCall: dto.isGroupCall,
+        inviteeNames: dto.inviteeNames,
       ),
     ));
   }

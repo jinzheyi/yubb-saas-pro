@@ -1,0 +1,39 @@
+general:
+  configs_folder = "/usr/local/etc/janus"
+  plugins_folder = "/usr/local/lib/janus/plugins"
+  log_to_stdout = true
+  debug_level = 4
+  admin_secret = "shengyu-janus-admin-secret-2026"
+
+media:
+  rtp_port_range = "10000-10200"
+
+nat:
+  stun_server = "stun.l.google.com"
+  stun_port = 19302
+  nice_debug = false
+  ice_tcp = false
+  turn_server = "coturn"
+  turn_port = 3478
+  turn_type = "udp"
+  turn_user = "turnuser"
+  turn_pwd = "turnpassword"
+  nat_1_1_mapping = "127.0.0.1"
+
+plugins:
+  enabled = "libjanus_videoroom.so,libjanus_streaming.so,libjanus_textroom.so"
+
+transports:
+  enabled = "libjanus_http.so,libjanus_websockets.so"
+
+websockets:
+  ws = true
+  ws_port = 8188
+  ws_ip = "0.0.0.0"
+  ws_secure = false
+
+http:
+  http = true
+  http_port = 8088
+  http_ip = "0.0.0.0"
+  base_path = "/janus"

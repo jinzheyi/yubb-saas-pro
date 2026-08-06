@@ -111,6 +111,7 @@
   "messagePreviewContactCard": "[Contact Card]",
   "messagePreviewForward": "[Chat History]",
   "messagePreviewSystem": "[System]",
+  "messagePreviewCallRecord": "[Call Record]",
   "messagePreviewMePrefix": "Me",
   "messagePreviewMePrefixColon": "Me:{summary}",
   "@messagePreviewMePrefixColon": {
@@ -143,8 +144,6 @@
   "conversationDeleteDialogTitle": "Delete Conversation",
   "conversationDeleteDialogContent": "This will remove the conversation from your list.",
   "conversationDeletedNotice": "Conversation deleted",
-  "cancelAction": "Cancel",
-  "confirmAction": "OK",
   "operationFailed": "Operation failed: {error}",
   "@operationFailed": {
     "description": "Generic error toast message with technical detail",
@@ -1467,6 +1466,55 @@
 
   "@@@CALL": "Section: Call",
   "callSwitch": "Switch",
+  "callIncoming": "Incoming Call",
+  "callOutgoing": "Outgoing Call",
+  "callVoice": "Voice Call",
+  "callVideo": "Video Call",
+  "callAccept": "Accept",
+  "callReject": "Reject",
+  "callHangup": "Hang Up",
+  "callCancel": "Cancel",
+  "callBusy": "Line Busy",
+  "callNoAnswer": "No Answer",
+  "callRejected": "Rejected",
+  "callCancelled": "Cancelled",
+  "callDuration": "Duration {duration}",
+  "@callDuration": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "callMissed": "Missed Call",
+  "callEnded": "Call Ended",
+  "callConnecting": "Connecting...",
+  "callReconnecting": "Reconnecting...",
+  "callNetworkPoor": "Poor Network Quality",
+  "callEncryptionEnabled": "End-to-End Encrypted",
+  "callScreenShare": "Screen Share",
+  "callSwitchCamera": "Switch Camera",
+  "callMute": "Mute",
+  "callUnmute": "Unmute",
+  "callSpeaker": "Speaker",
+  "callEarpiece": "Earpiece",
+  "callCameraOn": "Camera On",
+  "callCameraOff": "Camera Off",
+  "callHistoryTitle": "Call History",
+  "callHistoryEmpty": "No call history",
+  "callHistoryFilterAll": "All",
+  "callHistoryFilterVoice": "Voice Call",
+  "callHistoryFilterVideo": "Video Call",
+  "callRecordCompleted": "Duration {duration}",
+  "@callRecordCompleted": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "callRecordMissed": "No Answer",
+  "callRecordRejected": "Rejected",
+  "callRecordBusy": "Line Busy",
+  "callRecordCancelled": "Cancelled",
+  "callRecordOutgoing": "Outgoing",
+  "callRecordIncoming": "Answered",
 
   "@@@TOAST": "Section: Toast/Snackbar",
   "torchToggleFailed": "Failed to toggle flashlight: {error}",

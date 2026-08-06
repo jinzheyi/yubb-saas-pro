@@ -101,6 +101,88 @@ abstract final class AppConfig {
     compressionThreshold: 20 * 1024 * 1024, // 20MB
   );
 
+  /// ===== 通话相关配置 =====
+
+  /// Janus WebSocket 地址。
+  ///
+  /// 用于 WebRTC 媒体流传输的信令通道。
+  /// TODO: 生产环境替换为 wss://janus.yourdomain.com/ws
+  static const String janusWsUrl = 'ws://MacBook-Pro-3.local:8188/ws';
+
+  /// Janus HTTP API 地址。
+  ///
+  /// 用于 Janus 房间管理、Token 生成等操作。
+  /// TODO: 生产环境替换为 https://janus.yourdomain.com
+  static const String janusHttpUrl = 'http://MacBook-Pro-3.local:8088';
+
+  /// Janus API Secret。
+  ///
+  /// 用于生成 Janus Token，客户端加入房间时需要。
+  /// TODO: 生产环境从环境变量或配置文件读取，不要硬编码
+  static const String janusApiSecret = 'shengyu-janus-api-secret-2026';
+
+  /// 通话超时时间。
+  ///
+  /// 被叫方未在此时间内接听，则自动取消通话。
+  /// 对标微信/钉钉：30 秒
+  static const Duration callTimeout = Duration(seconds: 30);
+
+  /// 通话最长时长。
+  ///
+  /// 超过此时长自动结束通话，避免资源占用。
+  /// 企业级场景建议 24 小时
+  static const Duration callMaxDuration = Duration(hours: 24);
+
+  /// 通话铃声资源路径。
+  ///
+  /// 来电时播放的铃声，需要循环播放直到接听或拒绝。
+  static const String callRingtoneAsset = 'assets/sounds/call_ringtone.mp3';
+
+  /// 通话结束铃声资源路径。
+  ///
+  /// 通话结束时播放的提示音。
+  static const String callEndSoundAsset = 'assets/sounds/call_end.mp3';
+
+  /// 是否启用通话录制。
+  ///
+  /// 企业级场景可根据合规要求开启通话录制。
+  /// 注意：开启录制需要告知用户并符合隐私政策。
+  static const bool callRecordingEnabled = false;
+
+  /// 通话录制质量。
+  ///
+  /// 取值范围 1-5，5 为最高质量。
+  /// 建议企业场景使用 3（平衡质量和存储空间）。
+  static const int callRecordingQuality = 3;
+
+  /// 通话视频最小码率（bps）。
+  ///
+  /// 弱网环境下保证最低视频质量。
+  static const int callVideoMinBitrate = 300 * 1000; // 300 kbps
+
+  /// 通话视频起始码率（bps）。
+  ///
+  /// 正常网络环境下的初始视频码率。
+  static const int callVideoStartBitrate = 1000 * 1000; // 1 Mbps
+
+  /// 通话视频最大码率（bps）。
+  ///
+  /// 良好网络环境下的最高视频码率。
+  static const int callVideoMaxBitrate = 2000 * 1000; // 2 Mbps
+
+  /// 1v1 通话最大参与人数。
+  static const int callMaxParticipantsOneOnOne = 2;
+
+  /// 群组通话最大参与人数。
+  ///
+  /// 对标微信/钉钉群组通话上限。
+  static const int callMaxParticipantsGroupCall = 9;
+
+  /// 视频会议最大参与人数。
+  ///
+  /// 企业级视频会议场景，支持更多参与者。
+  static const int callMaxParticipantsVideoMeeting = 20;
+
   /// 腾讯地图相关配置。
   ///
   /// 参考文档：

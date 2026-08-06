@@ -1057,6 +1057,10 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     }
                     return "[自定义消息]";
                 }
+                case CALL_RECORD:
+                    // 通话记录消息：直接使用 messageDO.content（如 "[语音通话]" / "[视频通话]"）
+                    return messageDO != null && StrUtil.isNotBlank(messageDO.getContent())
+                            ? messageDO.getContent() : "[通话记录]";
                 default:
                     return "[消息]";
             }

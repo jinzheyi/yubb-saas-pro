@@ -74,10 +74,10 @@ public class AppImMessageController {
 
     @PostMapping("/send")
     @Operation(summary = "发送消息（REST兜底）")
-    public CommonResult<String> sendMessage(@Valid @RequestBody AppImMessageSendReqVO sendReqVO) {
+    public CommonResult<Long> sendMessage(@Valid @RequestBody AppImMessageSendReqVO sendReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         Long messageId = messageService.sendMessage(userId, sendReqVO);
-        return success(messageId == null ? "0" : String.valueOf(messageId));
+        return success(messageId);
     }
 
     @GetMapping("/list-by-chat")
@@ -237,34 +237,20 @@ public class AppImMessageController {
     @Operation(summary = "查询语音已播放状态（推送丢失补偿）")
     @Parameter(name = "chatId", description = "会话ID", required = true)
     @Parameter(name = "messageIds", description = "语音消息ID列表", required = true)
-    public CommonResult<List<String>> getVoicePlayedStatus(
+    public CommonResult<List<Long>> getVoicePlayedStatus(
             @RequestParam("chatId") Long chatId,
             @RequestParam("messageIds") List<Long> messageIds) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         List<Long> playedIds = messageService.getVoicePlayedMessageIds(userId, chatId, messageIds);
-        List<String> result = new ArrayList<>();
-        if (playedIds != null) {
-            for (Long id : playedIds) {
-                if (id != null) {
-                    result.add(String.valueOf(id));
-                }
-            }
-        }
-        return success(result);
+        return success(playedIds);
     }
 
     @PostMapping("/forward")
     @Operation(summary = "转发消息（支持逐条转发和合并转发）")
-    public CommonResult<List<String>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {
+    public CommonResult<List<Long>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         List<Long> newMessageIds = messageService.forwardMessages(userId, forwardReqVO);
-        List<String> result = new ArrayList<>();
-        for (Long id : newMessageIds) {
-            if (id != null) {
-                result.add(String.valueOf(id));
-            }
-        }
-        return success(result);
+        return success(newMessageIds);
     }
 
     @PostMapping("/forward-single")

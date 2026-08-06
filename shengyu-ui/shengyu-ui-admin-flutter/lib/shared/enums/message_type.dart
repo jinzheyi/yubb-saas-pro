@@ -10,4 +10,5 @@ enum MessageType {
   custom,
   contactCard,
   system,
+  callRecord,
 }

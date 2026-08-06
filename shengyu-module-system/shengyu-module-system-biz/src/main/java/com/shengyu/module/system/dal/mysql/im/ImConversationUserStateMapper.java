@@ -175,7 +175,7 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
             "VALUES(" +
             "#{tenantId}, #{chatId}, #{userId}, #{cursorVersion}, 1, " +
             "0, #{lastReadSequence}, #{lastReadTime}, " +
-            "#{lastMessageId}, #{lastMessageSequence}, NULL, #{lastMessageType}, #{lastMessageContent}, #{lastMessageTime}, " +
+            "#{lastMessageId}, #{lastMessageSequence}, NULL, #{lastMessageType}, #{lastMessageContent}, b'0', #{lastMessageTime}, " +
             "#{isPinned}, #{noDisturb}, #{draft}, 0, 0) " +
             "ON DUPLICATE KEY UPDATE " +
             "cursor_version = VALUES(cursor_version), " +

@@ -15,11 +15,12 @@ public interface ImGroupFileService {
     /**
      * 上传群文件
      *
+     * @param userId 上传用户ID
      * @param groupId 群组ID
      * @param file 文件
      * @return 文件信息
      */
-    AppImGroupFileRespVO uploadFile(Long groupId, MultipartFile file) throws Exception;
+    AppImGroupFileRespVO uploadFile(Long userId, Long groupId, MultipartFile file) throws Exception;
 
     /**
      * 获取群文件列表（分页）

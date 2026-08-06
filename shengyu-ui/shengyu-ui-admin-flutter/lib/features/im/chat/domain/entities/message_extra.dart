@@ -42,6 +42,17 @@ class MessageExtra {
     this.reeditDeadlineTs,
     this.systemEventKey,
     this.systemEventParams,
+    // 通话记录相关字段
+    this.callId,
+    this.callType,
+    this.callStatus,
+    this.callerId,
+    this.calleeId,
+    this.callerName,
+    this.calleeName,
+    this.initiateTime,
+    this.isGroupCall,
+    this.inviteeNames,
   });
 
   final String? revision;
@@ -84,7 +95,17 @@ class MessageExtra {
   final int? reeditDeadlineTs;
   final String? systemEventKey;
   final Map<String, String>? systemEventParams;
-
+  // 通话记录相关字段
+  final String? callId;
+  final int? callType;
+  final int? callStatus;
+  final String? callerId;
+  final String? calleeId;
+  final String? callerName;
+  final String? calleeName;
+  final int? initiateTime;
+  final bool? isGroupCall;
+  final List<String>? inviteeNames;
   MessageExtra copyWith({
     String? revision,
     String? localId,
@@ -126,6 +147,18 @@ class MessageExtra {
     int? reeditDeadlineTs,
     String? systemEventKey,
     Map<String, String>? systemEventParams,
+    // 通话记录相关字段
+    String? callId,
+    int? callType,
+    int? callStatus,
+    String? callerId,
+    String? calleeId,
+    String? callerName,
+    String? calleeName,
+    int? initiateTime,
+    bool? isGroupCall,
+    List<String>? inviteeNames,
+    int? callDuration,
   }) {
     return MessageExtra(
       revision: revision ?? this.revision,
@@ -169,6 +202,17 @@ class MessageExtra {
       reeditDeadlineTs: reeditDeadlineTs ?? this.reeditDeadlineTs,
       systemEventKey: systemEventKey ?? this.systemEventKey,
       systemEventParams: systemEventParams ?? this.systemEventParams,
+      // 通话记录相关字段
+      callId: callId ?? this.callId,
+      callType: callType ?? this.callType,
+      callStatus: callStatus ?? this.callStatus,
+      callerId: callerId ?? this.callerId,
+      calleeId: calleeId ?? this.calleeId,
+      callerName: callerName ?? this.callerName,
+      calleeName: calleeName ?? this.calleeName,
+      initiateTime: initiateTime ?? this.initiateTime,
+      isGroupCall: isGroupCall ?? this.isGroupCall,
+      inviteeNames: inviteeNames ?? this.inviteeNames,
     );
   }
 
@@ -220,6 +264,19 @@ class MessageExtra {
     _putIf(map, 'systemEventKey', systemEventKey);
     if (systemEventParams != null && systemEventParams!.isNotEmpty) {
       map['systemEventParams'] = systemEventParams;
+    }
+    // 通话记录相关字段
+    _putIf(map, 'callId', callId);
+    _putIf(map, 'callType', callType);
+    _putIf(map, 'callStatus', callStatus);
+    _putIf(map, 'callerId', callerId);
+    _putIf(map, 'calleeId', calleeId);
+    _putIf(map, 'callerName', callerName);
+    _putIf(map, 'calleeName', calleeName);
+    _putIf(map, 'initiateTime', initiateTime);
+    _putIf(map, 'isGroupCall', isGroupCall);
+    if (inviteeNames != null && inviteeNames!.isNotEmpty) {
+      map['inviteeNames'] = inviteeNames;
     }
     return map;
   }
@@ -277,6 +334,19 @@ class MessageExtra {
           ? (json['systemEventParams'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(k.toString(), v.toString()),
             )
+          : null,
+      // 通话记录相关字段
+      callId: json['callId']?.toString(),
+      callType: (json['callType'] as num?)?.toInt(),
+      callStatus: (json['callStatus'] as num?)?.toInt(),
+      callerId: json['callerId']?.toString(),
+      calleeId: json['calleeId']?.toString(),
+      callerName: json['callerName']?.toString(),
+      calleeName: json['calleeName']?.toString(),
+      initiateTime: (json['initiateTime'] as num?)?.toInt(),
+      isGroupCall: json['isGroupCall'] as bool?,
+      inviteeNames: json['inviteeNames'] is List
+          ? (json['inviteeNames'] as List).map((e) => e.toString()).toList()
           : null,
     );
   }

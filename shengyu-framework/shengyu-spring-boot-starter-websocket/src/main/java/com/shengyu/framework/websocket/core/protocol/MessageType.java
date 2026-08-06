@@ -223,6 +223,14 @@ public enum MessageType
    * <code>TODO_REMINDER = 208;</code>
    */
   TODO_REMINDER(208),
+  /**
+   * <pre>
+   * 通话记录消息
+   * </pre>
+   *
+   * <code>CALL_RECORD = 209;</code>
+   */
+  CALL_RECORD(209),
   UNRECOGNIZED(-1),
   ;
 
@@ -437,6 +445,14 @@ public enum MessageType
    * <code>TODO_REMINDER = 208;</code>
    */
   public static final int TODO_REMINDER_VALUE = 208;
+  /**
+   * <pre>
+   * 通话记录消息
+   * </pre>
+   *
+   * <code>CALL_RECORD = 209;</code>
+   */
+  public static final int CALL_RECORD_VALUE = 209;
 
 
   public final int getNumber() {
@@ -489,6 +505,7 @@ public enum MessageType
       case 206: return CALL_SIGNAL;
       case 207: return WORKFLOW_NOTIFY;
       case 208: return TODO_REMINDER;
+      case 209: return CALL_RECORD;
       default: return null;
     }
   }

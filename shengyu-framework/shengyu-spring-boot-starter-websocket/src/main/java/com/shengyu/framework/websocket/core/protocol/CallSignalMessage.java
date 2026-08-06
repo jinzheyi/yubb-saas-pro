@@ -23,6 +23,11 @@ private static final long serialVersionUID = 0L;
     callId_ = "";
     rejectReason_ = "";
     extraData_ = "";
+    inviteeIds_ = emptyLongList();
+    roomId_ = "";
+    janusToken_ = "";
+    deviceId_ = "";
+    deviceName_ = "";
   }
 
   @java.lang.Override
@@ -248,6 +253,260 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int GROUPID_FIELD_NUMBER = 8;
+  private long groupId_;
+  /**
+   * <pre>
+   * 群组ID（群通话时使用）
+   * </pre>
+   *
+   * <code>int64 groupId = 8;</code>
+   * @return The groupId.
+   */
+  @java.lang.Override
+  public long getGroupId() {
+    return groupId_;
+  }
+
+  public static final int INVITEEIDS_FIELD_NUMBER = 9;
+  private com.google.protobuf.Internal.LongList inviteeIds_;
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @return A list containing the inviteeIds.
+   */
+  @java.lang.Override
+  public java.util.List<java.lang.Long>
+      getInviteeIdsList() {
+    return inviteeIds_;
+  }
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @return The count of inviteeIds.
+   */
+  public int getInviteeIdsCount() {
+    return inviteeIds_.size();
+  }
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @param index The index of the element to return.
+   * @return The inviteeIds at the given index.
+   */
+  public long getInviteeIds(int index) {
+    return inviteeIds_.getLong(index);
+  }
+  private int inviteeIdsMemoizedSerializedSize = -1;
+
+  public static final int ROOMID_FIELD_NUMBER = 10;
+  private volatile java.lang.Object roomId_;
+  /**
+   * <pre>
+   * Janus Room ID（通话建立后生成）
+   * </pre>
+   *
+   * <code>string roomId = 10;</code>
+   * @return The roomId.
+   */
+  @java.lang.Override
+  public java.lang.String getRoomId() {
+    java.lang.Object ref = roomId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      roomId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Janus Room ID（通话建立后生成）
+   * </pre>
+   *
+   * <code>string roomId = 10;</code>
+   * @return The bytes for roomId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRoomIdBytes() {
+    java.lang.Object ref = roomId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      roomId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int JANUSTOKEN_FIELD_NUMBER = 11;
+  private volatile java.lang.Object janusToken_;
+  /**
+   * <pre>
+   * Janus Token（客户端加入房间用）
+   * </pre>
+   *
+   * <code>string janusToken = 11;</code>
+   * @return The janusToken.
+   */
+  @java.lang.Override
+  public java.lang.String getJanusToken() {
+    java.lang.Object ref = janusToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      janusToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Janus Token（客户端加入房间用）
+   * </pre>
+   *
+   * <code>string janusToken = 11;</code>
+   * @return The bytes for janusToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getJanusTokenBytes() {
+    java.lang.Object ref = janusToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      janusToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int INITIATETIME_FIELD_NUMBER = 12;
+  private long initiateTime_;
+  /**
+   * <pre>
+   * 通话发起时间戳（毫秒）
+   * </pre>
+   *
+   * <code>int64 initiateTime = 12;</code>
+   * @return The initiateTime.
+   */
+  @java.lang.Override
+  public long getInitiateTime() {
+    return initiateTime_;
+  }
+
+  public static final int DEVICEID_FIELD_NUMBER = 13;
+  private volatile java.lang.Object deviceId_;
+  /**
+   * <pre>
+   * 设备ID（用于多设备区分）
+   * </pre>
+   *
+   * <code>string deviceId = 13;</code>
+   * @return The deviceId.
+   */
+  @java.lang.Override
+  public java.lang.String getDeviceId() {
+    java.lang.Object ref = deviceId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deviceId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * 设备ID（用于多设备区分）
+   * </pre>
+   *
+   * <code>string deviceId = 13;</code>
+   * @return The bytes for deviceId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceIdBytes() {
+    java.lang.Object ref = deviceId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deviceId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DEVICENAME_FIELD_NUMBER = 14;
+  private volatile java.lang.Object deviceName_;
+  /**
+   * <pre>
+   * 设备名称（用于多设备显示）
+   * </pre>
+   *
+   * <code>string deviceName = 14;</code>
+   * @return The deviceName.
+   */
+  @java.lang.Override
+  public java.lang.String getDeviceName() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deviceName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * 设备名称（用于多设备显示）
+   * </pre>
+   *
+   * <code>string deviceName = 14;</code>
+   * @return The bytes for deviceName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceNameBytes() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deviceName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -262,6 +521,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
+    getSerializedSize();
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(callId_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 1, callId_);
     }
@@ -282,6 +542,31 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(extraData_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 7, extraData_);
+    }
+    if (groupId_ != 0L) {
+      output.writeInt64(8, groupId_);
+    }
+    if (getInviteeIdsList().size() > 0) {
+      output.writeUInt32NoTag(74);
+      output.writeUInt32NoTag(inviteeIdsMemoizedSerializedSize);
+    }
+    for (int i = 0; i < inviteeIds_.size(); i++) {
+      output.writeInt64NoTag(inviteeIds_.getLong(i));
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(roomId_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 10, roomId_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(janusToken_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 11, janusToken_);
+    }
+    if (initiateTime_ != 0L) {
+      output.writeInt64(12, initiateTime_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceId_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 13, deviceId_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceName_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 14, deviceName_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -317,6 +602,40 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(extraData_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(7, extraData_);
     }
+    if (groupId_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(8, groupId_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < inviteeIds_.size(); i++) {
+        dataSize += com.google.protobuf.CodedOutputStream
+          .computeInt64SizeNoTag(inviteeIds_.getLong(i));
+      }
+      size += dataSize;
+      if (!getInviteeIdsList().isEmpty()) {
+        size += 1;
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt32SizeNoTag(dataSize);
+      }
+      inviteeIdsMemoizedSerializedSize = dataSize;
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(roomId_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(10, roomId_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(janusToken_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(11, janusToken_);
+    }
+    if (initiateTime_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(12, initiateTime_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceId_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(13, deviceId_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(deviceName_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(14, deviceName_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -346,6 +665,20 @@ private static final long serialVersionUID = 0L;
         .equals(other.getRejectReason())) return false;
     if (!getExtraData()
         .equals(other.getExtraData())) return false;
+    if (getGroupId()
+        != other.getGroupId()) return false;
+    if (!getInviteeIdsList()
+        .equals(other.getInviteeIdsList())) return false;
+    if (!getRoomId()
+        .equals(other.getRoomId())) return false;
+    if (!getJanusToken()
+        .equals(other.getJanusToken())) return false;
+    if (getInitiateTime()
+        != other.getInitiateTime()) return false;
+    if (!getDeviceId()
+        .equals(other.getDeviceId())) return false;
+    if (!getDeviceName()
+        .equals(other.getDeviceName())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -373,6 +706,24 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getRejectReason().hashCode();
     hash = (37 * hash) + EXTRADATA_FIELD_NUMBER;
     hash = (53 * hash) + getExtraData().hashCode();
+    hash = (37 * hash) + GROUPID_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getGroupId());
+    if (getInviteeIdsCount() > 0) {
+      hash = (37 * hash) + INVITEEIDS_FIELD_NUMBER;
+      hash = (53 * hash) + getInviteeIdsList().hashCode();
+    }
+    hash = (37 * hash) + ROOMID_FIELD_NUMBER;
+    hash = (53 * hash) + getRoomId().hashCode();
+    hash = (37 * hash) + JANUSTOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getJanusToken().hashCode();
+    hash = (37 * hash) + INITIATETIME_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getInitiateTime());
+    hash = (37 * hash) + DEVICEID_FIELD_NUMBER;
+    hash = (53 * hash) + getDeviceId().hashCode();
+    hash = (37 * hash) + DEVICENAME_FIELD_NUMBER;
+    hash = (53 * hash) + getDeviceName().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -519,6 +870,20 @@ private static final long serialVersionUID = 0L;
 
       extraData_ = "";
 
+      groupId_ = 0L;
+
+      inviteeIds_ = emptyLongList();
+      bitField0_ = (bitField0_ & ~0x00000001);
+      roomId_ = "";
+
+      janusToken_ = "";
+
+      initiateTime_ = 0L;
+
+      deviceId_ = "";
+
+      deviceName_ = "";
+
       return this;
     }
 
@@ -545,6 +910,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.shengyu.framework.websocket.core.protocol.CallSignalMessage buildPartial() {
       com.shengyu.framework.websocket.core.protocol.CallSignalMessage result = new com.shengyu.framework.websocket.core.protocol.CallSignalMessage(this);
+      int from_bitField0_ = bitField0_;
       result.callId_ = callId_;
       result.callType_ = callType_;
       result.signalType_ = signalType_;
@@ -552,6 +918,17 @@ private static final long serialVersionUID = 0L;
       result.calleeId_ = calleeId_;
       result.rejectReason_ = rejectReason_;
       result.extraData_ = extraData_;
+      result.groupId_ = groupId_;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        inviteeIds_.makeImmutable();
+        bitField0_ = (bitField0_ & ~0x00000001);
+      }
+      result.inviteeIds_ = inviteeIds_;
+      result.roomId_ = roomId_;
+      result.janusToken_ = janusToken_;
+      result.initiateTime_ = initiateTime_;
+      result.deviceId_ = deviceId_;
+      result.deviceName_ = deviceName_;
       onBuilt();
       return result;
     }
@@ -624,6 +1001,38 @@ private static final long serialVersionUID = 0L;
         extraData_ = other.extraData_;
         onChanged();
       }
+      if (other.getGroupId() != 0L) {
+        setGroupId(other.getGroupId());
+      }
+      if (!other.inviteeIds_.isEmpty()) {
+        if (inviteeIds_.isEmpty()) {
+          inviteeIds_ = other.inviteeIds_;
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          ensureInviteeIdsIsMutable();
+          inviteeIds_.addAll(other.inviteeIds_);
+        }
+        onChanged();
+      }
+      if (!other.getRoomId().isEmpty()) {
+        roomId_ = other.roomId_;
+        onChanged();
+      }
+      if (!other.getJanusToken().isEmpty()) {
+        janusToken_ = other.janusToken_;
+        onChanged();
+      }
+      if (other.getInitiateTime() != 0L) {
+        setInitiateTime(other.getInitiateTime());
+      }
+      if (!other.getDeviceId().isEmpty()) {
+        deviceId_ = other.deviceId_;
+        onChanged();
+      }
+      if (!other.getDeviceName().isEmpty()) {
+        deviceName_ = other.deviceName_;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -685,6 +1094,52 @@ private static final long serialVersionUID = 0L;
 
               break;
             } // case 58
+            case 64: {
+              groupId_ = input.readInt64();
+
+              break;
+            } // case 64
+            case 72: {
+              long v = input.readInt64();
+              ensureInviteeIdsIsMutable();
+              inviteeIds_.addLong(v);
+              break;
+            } // case 72
+            case 74: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              ensureInviteeIdsIsMutable();
+              while (input.getBytesUntilLimit() > 0) {
+                inviteeIds_.addLong(input.readInt64());
+              }
+              input.popLimit(limit);
+              break;
+            } // case 74
+            case 82: {
+              roomId_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 82
+            case 90: {
+              janusToken_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 90
+            case 96: {
+              initiateTime_ = input.readInt64();
+
+              break;
+            } // case 96
+            case 106: {
+              deviceId_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 106
+            case 114: {
+              deviceName_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 114
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -700,6 +1155,7 @@ private static final long serialVersionUID = 0L;
       } // finally
       return this;
     }
+    private int bitField0_;
 
     private java.lang.Object callId_ = "";
     /**
@@ -1157,6 +1613,583 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       
       extraData_ = value;
+      onChanged();
+      return this;
+    }
+
+    private long groupId_ ;
+    /**
+     * <pre>
+     * 群组ID（群通话时使用）
+     * </pre>
+     *
+     * <code>int64 groupId = 8;</code>
+     * @return The groupId.
+     */
+    @java.lang.Override
+    public long getGroupId() {
+      return groupId_;
+    }
+    /**
+     * <pre>
+     * 群组ID（群通话时使用）
+     * </pre>
+     *
+     * <code>int64 groupId = 8;</code>
+     * @param value The groupId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setGroupId(long value) {
+      
+      groupId_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 群组ID（群通话时使用）
+     * </pre>
+     *
+     * <code>int64 groupId = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearGroupId() {
+      
+      groupId_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Internal.LongList inviteeIds_ = emptyLongList();
+    private void ensureInviteeIdsIsMutable() {
+      if (!((bitField0_ & 0x00000001) != 0)) {
+        inviteeIds_ = mutableCopy(inviteeIds_);
+        bitField0_ |= 0x00000001;
+       }
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @return A list containing the inviteeIds.
+     */
+    public java.util.List<java.lang.Long>
+        getInviteeIdsList() {
+      return ((bitField0_ & 0x00000001) != 0) ?
+               java.util.Collections.unmodifiableList(inviteeIds_) : inviteeIds_;
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @return The count of inviteeIds.
+     */
+    public int getInviteeIdsCount() {
+      return inviteeIds_.size();
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @param index The index of the element to return.
+     * @return The inviteeIds at the given index.
+     */
+    public long getInviteeIds(int index) {
+      return inviteeIds_.getLong(index);
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @param index The index to set the value at.
+     * @param value The inviteeIds to set.
+     * @return This builder for chaining.
+     */
+    public Builder setInviteeIds(
+        int index, long value) {
+      ensureInviteeIdsIsMutable();
+      inviteeIds_.setLong(index, value);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @param value The inviteeIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addInviteeIds(long value) {
+      ensureInviteeIdsIsMutable();
+      inviteeIds_.addLong(value);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @param values The inviteeIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllInviteeIds(
+        java.lang.Iterable<? extends java.lang.Long> values) {
+      ensureInviteeIdsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, inviteeIds_);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 被邀请人列表（群通话时使用）
+     * </pre>
+     *
+     * <code>repeated int64 inviteeIds = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearInviteeIds() {
+      inviteeIds_ = emptyLongList();
+      bitField0_ = (bitField0_ & ~0x00000001);
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object roomId_ = "";
+    /**
+     * <pre>
+     * Janus Room ID（通话建立后生成）
+     * </pre>
+     *
+     * <code>string roomId = 10;</code>
+     * @return The roomId.
+     */
+    public java.lang.String getRoomId() {
+      java.lang.Object ref = roomId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        roomId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Janus Room ID（通话建立后生成）
+     * </pre>
+     *
+     * <code>string roomId = 10;</code>
+     * @return The bytes for roomId.
+     */
+    public com.google.protobuf.ByteString
+        getRoomIdBytes() {
+      java.lang.Object ref = roomId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        roomId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Janus Room ID（通话建立后生成）
+     * </pre>
+     *
+     * <code>string roomId = 10;</code>
+     * @param value The roomId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoomId(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      roomId_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Janus Room ID（通话建立后生成）
+     * </pre>
+     *
+     * <code>string roomId = 10;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoomId() {
+      
+      roomId_ = getDefaultInstance().getRoomId();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Janus Room ID（通话建立后生成）
+     * </pre>
+     *
+     * <code>string roomId = 10;</code>
+     * @param value The bytes for roomId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoomIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      roomId_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object janusToken_ = "";
+    /**
+     * <pre>
+     * Janus Token（客户端加入房间用）
+     * </pre>
+     *
+     * <code>string janusToken = 11;</code>
+     * @return The janusToken.
+     */
+    public java.lang.String getJanusToken() {
+      java.lang.Object ref = janusToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        janusToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Janus Token（客户端加入房间用）
+     * </pre>
+     *
+     * <code>string janusToken = 11;</code>
+     * @return The bytes for janusToken.
+     */
+    public com.google.protobuf.ByteString
+        getJanusTokenBytes() {
+      java.lang.Object ref = janusToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        janusToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Janus Token（客户端加入房间用）
+     * </pre>
+     *
+     * <code>string janusToken = 11;</code>
+     * @param value The janusToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setJanusToken(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      janusToken_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Janus Token（客户端加入房间用）
+     * </pre>
+     *
+     * <code>string janusToken = 11;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearJanusToken() {
+      
+      janusToken_ = getDefaultInstance().getJanusToken();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Janus Token（客户端加入房间用）
+     * </pre>
+     *
+     * <code>string janusToken = 11;</code>
+     * @param value The bytes for janusToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setJanusTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      janusToken_ = value;
+      onChanged();
+      return this;
+    }
+
+    private long initiateTime_ ;
+    /**
+     * <pre>
+     * 通话发起时间戳（毫秒）
+     * </pre>
+     *
+     * <code>int64 initiateTime = 12;</code>
+     * @return The initiateTime.
+     */
+    @java.lang.Override
+    public long getInitiateTime() {
+      return initiateTime_;
+    }
+    /**
+     * <pre>
+     * 通话发起时间戳（毫秒）
+     * </pre>
+     *
+     * <code>int64 initiateTime = 12;</code>
+     * @param value The initiateTime to set.
+     * @return This builder for chaining.
+     */
+    public Builder setInitiateTime(long value) {
+      
+      initiateTime_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 通话发起时间戳（毫秒）
+     * </pre>
+     *
+     * <code>int64 initiateTime = 12;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearInitiateTime() {
+      
+      initiateTime_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object deviceId_ = "";
+    /**
+     * <pre>
+     * 设备ID（用于多设备区分）
+     * </pre>
+     *
+     * <code>string deviceId = 13;</code>
+     * @return The deviceId.
+     */
+    public java.lang.String getDeviceId() {
+      java.lang.Object ref = deviceId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deviceId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备ID（用于多设备区分）
+     * </pre>
+     *
+     * <code>string deviceId = 13;</code>
+     * @return The bytes for deviceId.
+     */
+    public com.google.protobuf.ByteString
+        getDeviceIdBytes() {
+      java.lang.Object ref = deviceId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deviceId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备ID（用于多设备区分）
+     * </pre>
+     *
+     * <code>string deviceId = 13;</code>
+     * @param value The deviceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceId(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      deviceId_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备ID（用于多设备区分）
+     * </pre>
+     *
+     * <code>string deviceId = 13;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeviceId() {
+      
+      deviceId_ = getDefaultInstance().getDeviceId();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备ID（用于多设备区分）
+     * </pre>
+     *
+     * <code>string deviceId = 13;</code>
+     * @param value The bytes for deviceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      deviceId_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object deviceName_ = "";
+    /**
+     * <pre>
+     * 设备名称（用于多设备显示）
+     * </pre>
+     *
+     * <code>string deviceName = 14;</code>
+     * @return The deviceName.
+     */
+    public java.lang.String getDeviceName() {
+      java.lang.Object ref = deviceName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deviceName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备名称（用于多设备显示）
+     * </pre>
+     *
+     * <code>string deviceName = 14;</code>
+     * @return The bytes for deviceName.
+     */
+    public com.google.protobuf.ByteString
+        getDeviceNameBytes() {
+      java.lang.Object ref = deviceName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deviceName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 设备名称（用于多设备显示）
+     * </pre>
+     *
+     * <code>string deviceName = 14;</code>
+     * @param value The deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceName(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      deviceName_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备名称（用于多设备显示）
+     * </pre>
+     *
+     * <code>string deviceName = 14;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeviceName() {
+      
+      deviceName_ = getDefaultInstance().getDeviceName();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 设备名称（用于多设备显示）
+     * </pre>
+     *
+     * <code>string deviceName = 14;</code>
+     * @param value The bytes for deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      deviceName_ = value;
       onChanged();
       return this;
     }

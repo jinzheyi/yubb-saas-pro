@@ -22,4 +22,5 @@ abstract final class SocketMessageType {
   static const badgeUpdate = 204;
   static const quoteReply = 205;
   static const callSignal = 206;
+  static const callRecord = 209;
 }

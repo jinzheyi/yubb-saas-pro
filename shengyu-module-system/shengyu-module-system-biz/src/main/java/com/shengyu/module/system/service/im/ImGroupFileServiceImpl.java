@@ -51,9 +51,7 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AppImGroupFileRespVO uploadFile(Long groupId, MultipartFile file) throws Exception {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        
+    public AppImGroupFileRespVO uploadFile(Long userId, Long groupId, MultipartFile file) throws Exception {
         // 1. 验证权限：用户必须是群成员
         validateGroupMember(groupId, userId);
         

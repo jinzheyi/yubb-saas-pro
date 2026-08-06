@@ -33,6 +33,8 @@ class SocketInboundMapper {
         return <ImSocketEvent>[
           ImSocketEvent(type: SocketEventTypes.badgeUpdated, payload: body),
         ];
+      case SocketMessageType.callRecord:
+        return _mapCallRecordMessage(envelope);
       default:
         if (header.messageType >= 100 && header.messageType < 200) {
           return _mapBusinessMessage(envelope);
@@ -259,6 +261,59 @@ class SocketInboundMapper {
           type: SocketEventTypes.conversationHint,
           chatId: header.chatId,
           payload: {'messageId': merged['messageId']},
+        ),
+    ];
+  }
+
+  /// 映射通话记录消息（type=209）
+  ///
+  /// 后端在通话结束时创建通话记录消息并广播，前端需要将其解析为 Message 对象，
+  /// 并在聊天时间线中显示（1v1 气泡样式，群聊居中样式）。
+  List<ImSocketEvent> _mapCallRecordMessage(SocketEnvelope envelope) {
+    final header = envelope.header;
+    final extra = _decodeExtra(header.extra);
+    final bodyExtra = _decodeExtra(envelope.body['extra']?.toString());
+    final merged = <String, Object?>{
+      ...extra,
+      ...bodyExtra,
+      ...envelope.body,
+      'messageId': envelope.body['messageId']?.toString() ?? header.messageId,
+      'clientMessageId': '',
+      'chatId': envelope.body['chatId']?.toString() ?? (header.chatId ?? ''),
+      'senderId': envelope.body['senderId']?.toString() ?? (header.senderId ?? ''),
+      'senderName': envelope.body['senderName']?.toString() ?? 
+          envelope.body['senderNickname']?.toString() ?? 
+          (header.senderNickname ?? ''),
+      'senderAvatar': bodyExtra['callerAvatar']?.toString() ??  // 优先从 bodyExtra 中获取 callerAvatar（权威来源）
+          envelope.body['senderAvatar']?.toString() ?? 
+          envelope.body['avatarUrl']?.toString() ?? 
+          header.senderAvatar ?? 
+          '',
+      'sequence': envelope.body['sequence']?.toString() ?? (header.sequence ?? ''),
+      'rev': envelope.body['rev']?.toString() ?? extra['rev']?.toString() ?? '1',
+      'type': 'callRecord',  // 明确设置为 callRecord 类型
+      'isOutgoing': false,
+      'isSelf': false,
+      'status': 'delivered',
+      'createdAt': envelope.body['createdAt']?.toString() ?? 
+          envelope.body['sendTime']?.toString() ?? 
+          (header.timestamp ?? ''),
+      'sentAt': envelope.body['sentAt']?.toString() ?? 
+          envelope.body['sendTime']?.toString() ?? 
+          (header.timestamp ?? ''),
+    };
+    return <ImSocketEvent>[
+      ImSocketEvent(
+        type: SocketEventTypes.messageReceived,
+        chatId: header.chatId,
+        messageId: header.messageId,
+        payload: merged,
+      ),
+      if (header.chatId != null && header.chatId!.isNotEmpty)
+        ImSocketEvent(
+          type: SocketEventTypes.conversationHint,
+          chatId: header.chatId,
+          payload: {'messageId': header.messageId},
         ),
     ];
   }

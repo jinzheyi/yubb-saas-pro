@@ -12,6 +12,9 @@ class CallLaunchArgs {
     this.fromUserId,
     this.toUserId,
     this.title,
+    this.isGroupCall = false,
+    this.groupId,
+    this.inviteeIds = const [],
   });
 
   final String callSessionId;
@@ -22,6 +25,11 @@ class CallLaunchArgs {
   final String? fromUserId;
   final String? toUserId;
   final String? title;
+  
+  // 群组通话相关
+  final bool isGroupCall;
+  final String? groupId;
+  final List<String> inviteeIds;
 
   const CallLaunchArgs.empty()
     : callSessionId = '',
@@ -31,20 +39,31 @@ class CallLaunchArgs {
       inviteId = null,
       fromUserId = null,
       toUserId = null,
-      title = null;
+      title = null,
+      isGroupCall = false,
+      groupId = null,
+      inviteeIds = const [];
 
   factory CallLaunchArgs.outgoing({
     required String callSessionId,
     required String chatId,
     required CallType callType,
+    String? toUserId,
     String? title,
+    bool isGroupCall = false,
+    String? groupId,
+    List<String> inviteeIds = const [],
   }) {
     return CallLaunchArgs(
       callSessionId: callSessionId,
       chatId: chatId,
       callType: callType,
       entryMode: CallEntryMode.outgoing,
+      toUserId: toUserId,
       title: title,
+      isGroupCall: isGroupCall,
+      groupId: groupId,
+      inviteeIds: inviteeIds,
     );
   }
 
@@ -57,6 +76,9 @@ class CallLaunchArgs {
     String? fromUserId,
     String? toUserId,
     String? title,
+    bool? isGroupCall,
+    String? groupId,
+    List<String>? inviteeIds,
   }) {
     return CallLaunchArgs(
       callSessionId: callSessionId ?? this.callSessionId,
@@ -67,6 +89,9 @@ class CallLaunchArgs {
       fromUserId: fromUserId ?? this.fromUserId,
       toUserId: toUserId ?? this.toUserId,
       title: title ?? this.title,
+      isGroupCall: isGroupCall ?? this.isGroupCall,
+      groupId: groupId ?? this.groupId,
+      inviteeIds: inviteeIds ?? this.inviteeIds,
     );
   }
 }

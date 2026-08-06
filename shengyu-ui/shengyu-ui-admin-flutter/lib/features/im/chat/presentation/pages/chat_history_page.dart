@@ -1413,8 +1413,62 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       MessageType.custom => strings.chatHistoryPreviewMessage,
       MessageType.contactCard => strings.chatMoreActionContactCard,
       MessageType.system => strings.chatHistoryPreviewSystem,
+      MessageType.callRecord => _buildCallRecordPreviewText(item),
       MessageType.text => strings.chatHistoryPreviewMessage,
     };
+  }
+
+  String _buildCallRecordPreviewText(ChatHistoryItem item) {
+    final content = item.content.trim();
+    if (content.isEmpty) {
+      return '通话记录';
+    }
+    
+    // 尝试解析 JSON 格式的通话记录
+    if (content.startsWith('{') && content.endsWith('}')) {
+      try {
+        final map = jsonDecode(content) as Map<String, dynamic>;
+        final status = map['status']?.toString() ?? '';
+        final duration = map['duration'] as int? ?? 0;
+        final callType = map['callType']?.toString() ?? '';
+        
+        final typeText = callType == 'video' || callType == '2' ? '视频通话' : '语音通话';
+        
+        // 根据状态显示不同文本
+        if (status == 'completed' || status == '1') {
+          final durationText = _formatCallDuration(duration);
+          return '$typeText · 通话时长 $durationText';
+        } else if (status == 'missed' || status == '2') {
+          return '$typeText · 未接听';
+        } else if (status == 'rejected' || status == '3') {
+          return '$typeText · 已拒绝';
+        } else if (status == 'busy' || status == '4') {
+          return '$typeText · 对方忙线中';
+        } else if (status == 'cancelled' || status == '5') {
+          return '$typeText · 已取消';
+        }
+        
+        return '$typeText · 通话记录';
+      } catch (e) {
+        debugPrint('[ChatHistory] parse call record failed: $e');
+      }
+    }
+    
+    return '通话记录';
+  }
+
+  String _formatCallDuration(int seconds) {
+    if (seconds <= 0) {
+      return '00:00';
+    }
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   Color _avatarColorFor(String seed) {
@@ -1668,7 +1722,8 @@ enum _HistoryFilter {
   image('image'),
   video('video'),
   file('file'),
-  link('link');
+  link('link'),
+  call('call');
 
   const _HistoryFilter(this.apiValue);
 
@@ -1682,6 +1737,7 @@ enum _HistoryFilter {
       _HistoryFilter.video => strings.groupHistoryFilterVideo,
       _HistoryFilter.file => strings.groupHistoryFilterFile,
       _HistoryFilter.link => strings.groupHistoryFilterLink,
+      _HistoryFilter.call => '通话',
     };
   }
 }

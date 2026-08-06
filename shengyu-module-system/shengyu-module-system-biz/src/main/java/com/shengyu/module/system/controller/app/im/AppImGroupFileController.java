@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.app.im;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFilePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFileRespVO;
 import com.shengyu.module.system.service.im.ImGroupFileService;
@@ -42,7 +43,8 @@ public class AppImGroupFileController {
     public CommonResult<AppImGroupFileRespVO> uploadFile(
             @RequestParam("groupId") Long groupId,
             @RequestParam("file") MultipartFile file) throws Exception {
-        return success(groupFileService.uploadFile(groupId, file));
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(groupFileService.uploadFile(userId, groupId, file));
     }
 
     @GetMapping("/list")

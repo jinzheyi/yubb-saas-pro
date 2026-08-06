@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_record_message.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_record_message_bubble.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_preview_entry.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/contact_card_message_bubble.dart';
@@ -181,6 +183,23 @@ abstract final class MessageBubbleFactory {
           enableReadReceiptEntry: enableReadReceiptEntry,
           showOutgoingStatusFooter: showOutgoingStatusFooter,
           outgoingFooterLabel: outgoingFooterLabel,
+        );
+      case MessageType.callRecord:
+        return CallRecordMessageBubble(
+          message: CallRecordMessage.fromJson({
+            'callId': message.extra.callId,
+            'callType': message.extra.callType,
+            'status': message.extra.callStatus,
+            'duration': message.extra.duration,
+            'callerId': message.extra.callerId,
+            'calleeId': message.extra.calleeId,
+            'initiateTime': message.extra.initiateTime,
+            'callerName': message.extra.callerName ?? message.senderName,
+            'calleeName': message.extra.calleeName,
+            'isGroupCall': message.extra.isGroupCall,
+            'inviteeNames': message.extra.inviteeNames,
+          }),
+          isOutgoing: message.isOutgoing,
         );
     }
   }

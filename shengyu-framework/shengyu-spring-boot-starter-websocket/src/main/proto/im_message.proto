@@ -95,6 +95,8 @@ enum MessageType {
   WORKFLOW_NOTIFY = 207;
   // 待办提醒
   TODO_REMINDER = 208;
+  // 通话记录消息
+  CALL_RECORD = 209;
 }
 
 // 认证请求
@@ -319,6 +321,68 @@ message CallSignalMessage {
   string rejectReason = 6;
   // 扩展数据（JSON格式，用于传递WebRTC信令）
   string extraData = 7;
+  
+  // ===== 新增字段（v2.0）=====
+  
+  // 群组ID（群通话时使用）
+  int64 groupId = 8;
+  
+  // 被邀请人列表（群通话时使用）
+  repeated int64 inviteeIds = 9;
+  
+  // Janus Room ID（通话建立后生成）
+  string roomId = 10;
+  
+  // Janus Token（客户端加入房间用）
+  string janusToken = 11;
+  
+  // 通话发起时间戳（毫秒）
+  int64 initiateTime = 12;
+  
+  // 设备ID（用于多设备区分）
+  string deviceId = 13;
+  
+  // 设备名称（用于多设备显示）
+  string deviceName = 14;
+}
+
+// 通话记录消息
+message CallRecordMessage {
+  // 通话ID
+  string callId = 1;
+  
+  // 通话类型（1-语音 2-视频）
+  int32 callType = 2;
+  
+  // 通话状态（1-未接听 2-已接听 3-已拒绝 4-忙线 5-已取消）
+  int32 status = 3;
+  
+  // 通话时长（秒）
+  int32 duration = 4;
+  
+  // 主叫方ID
+  int64 callerId = 5;
+  
+  // 被叫方ID
+  int64 calleeId = 6;
+  
+  // 主叫方昵称
+  string callerName = 7;
+  
+  // 主叫方头像
+  string callerAvatar = 8;
+  
+  // 被叫方昵称
+  string calleeName = 9;
+  
+  // 被叫方头像
+  string calleeAvatar = 10;
+  
+  // 通话发起时间戳
+  int64 initiateTime = 11;
+  
+  // 群组ID（群通话时使用）
+  int64 groupId = 12;
 }
 
 // 流程通知消息

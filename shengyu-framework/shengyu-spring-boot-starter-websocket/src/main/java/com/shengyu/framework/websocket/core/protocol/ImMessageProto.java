@@ -120,6 +120,11 @@ public final class ImMessageProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_CallSignalMessage_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_CallRecordMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_CallRecordMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_WorkflowNotifyMessage_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -190,32 +195,42 @@ public final class ImMessageProto {
       "\030\003 \003(\0132\n.MenuBadge\022\023\n\013incremental\030\004 \001(\010\"" +
       "@\n\021ConversationBadge\022\026\n\016conversationId\030\001" +
       " \001(\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n\tMenuBadge\022\016" +
-      "\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount\030\002 \001(\005\"\226\001\n\021C" +
+      "\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount\030\002 \001(\005\"\233\002\n\021C" +
       "allSignalMessage\022\016\n\006callId\030\001 \001(\t\022\020\n\010call" +
       "Type\030\002 \001(\005\022\022\n\nsignalType\030\003 \001(\005\022\020\n\010caller" +
       "Id\030\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024\n\014rejectReas" +
-      "on\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"\307\001\n\025Workflow" +
-      "NotifyMessage\022\031\n\021processInstanceId\030\001 \001(\t" +
-      "\022\023\n\013processName\030\002 \001(\t\022\023\n\013initiatorId\030\003 \001" +
-      "(\003\022\025\n\rinitiatorName\030\004 \001(\t\022\017\n\007content\030\005 \001" +
-      "(\t\022 \n\007buttons\030\006 \003(\0132\017.WorkflowButton\022\016\n\006" +
-      "status\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(\t\"J\n\016Workflo" +
-      "wButton\022\020\n\010buttonId\030\001 \001(\t\022\022\n\nbuttonText\030" +
-      "\002 \001(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001\n\023TodoRemind" +
-      "erMessage\022\016\n\006todoId\030\001 \001(\t\022\r\n\005title\030\002 \001(\t" +
-      "\022\017\n\007content\030\003 \001(\t\022\017\n\007dueTime\030\004 \001(\003\022\024\n\014re" +
-      "minderType\030\005 \001(\005\022\017\n\007jumpUrl\030\006 \001(\t\022\016\n\006sta" +
-      "tus\030\007 \001(\005*\211\003\n\013MessageType\022\013\n\007UNKNOWN\020\000\022\021" +
-      "\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBEAT_RESP\020\002\022\014\n" +
-      "\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n\005CLOSE\020\005\022\007\n" +
-      "\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020" +
-      "e\022\t\n\005VOICE\020f\022\t\n\005VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010LOC" +
-      "ATION\020i\022\n\n\006CUSTOM\020j\022\t\n\005EMOJI\020k\022\013\n\007STICKE" +
-      "R\020l\022\022\n\rSYSTEM_NOTIFY\020\310\001\022\021\n\014READ_RECEIPT\020" +
-      "\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TYPING\020\313\001\022\021\n\014BADGE_UP" +
-      "DATE\020\314\001\022\020\n\013QUOTE_REPLY\020\315\001\022\020\n\013CALL_SIGNAL" +
-      "\020\316\001\022\024\n\017WORKFLOW_NOTIFY\020\317\001\022\022\n\rTODO_REMIND" +
-      "ER\020\320\001BA\n-com.shengyu.framework.websocket" +
+      "on\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\022\017\n\007groupId\030\010" +
+      " \001(\003\022\022\n\ninviteeIds\030\t \003(\003\022\016\n\006roomId\030\n \001(\t" +
+      "\022\022\n\njanusToken\030\013 \001(\t\022\024\n\014initiateTime\030\014 \001" +
+      "(\003\022\020\n\010deviceId\030\r \001(\t\022\022\n\ndeviceName\030\016 \001(\t" +
+      "\"\366\001\n\021CallRecordMessage\022\016\n\006callId\030\001 \001(\t\022\020" +
+      "\n\010callType\030\002 \001(\005\022\016\n\006status\030\003 \001(\005\022\020\n\010dura" +
+      "tion\030\004 \001(\005\022\020\n\010callerId\030\005 \001(\003\022\020\n\010calleeId" +
+      "\030\006 \001(\003\022\022\n\ncallerName\030\007 \001(\t\022\024\n\014callerAvat" +
+      "ar\030\010 \001(\t\022\022\n\ncalleeName\030\t \001(\t\022\024\n\014calleeAv" +
+      "atar\030\n \001(\t\022\024\n\014initiateTime\030\013 \001(\003\022\017\n\007grou" +
+      "pId\030\014 \001(\003\"\307\001\n\025WorkflowNotifyMessage\022\031\n\021p" +
+      "rocessInstanceId\030\001 \001(\t\022\023\n\013processName\030\002 " +
+      "\001(\t\022\023\n\013initiatorId\030\003 \001(\003\022\025\n\rinitiatorNam" +
+      "e\030\004 \001(\t\022\017\n\007content\030\005 \001(\t\022 \n\007buttons\030\006 \003(" +
+      "\0132\017.WorkflowButton\022\016\n\006status\030\007 \001(\005\022\017\n\007ju" +
+      "mpUrl\030\010 \001(\t\"J\n\016WorkflowButton\022\020\n\010buttonI" +
+      "d\030\001 \001(\t\022\022\n\nbuttonText\030\002 \001(\t\022\022\n\nbuttonTyp" +
+      "e\030\003 \001(\005\"\215\001\n\023TodoReminderMessage\022\016\n\006todoI" +
+      "d\030\001 \001(\t\022\r\n\005title\030\002 \001(\t\022\017\n\007content\030\003 \001(\t\022" +
+      "\017\n\007dueTime\030\004 \001(\003\022\024\n\014reminderType\030\005 \001(\005\022\017" +
+      "\n\007jumpUrl\030\006 \001(\t\022\016\n\006status\030\007 \001(\005*\233\003\n\013Mess" +
+      "ageType\022\013\n\007UNKNOWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022" +
+      "\022\n\016HEARTBEAT_RESP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUT" +
+      "H_RESP\020\004\022\t\n\005CLOSE\020\005\022\007\n\003ACK\020\010\022\014\n\010ACK_RESP" +
+      "\020\t\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f\022\t\n\005VI" +
+      "DEO\020g\022\010\n\004FILE\020h\022\014\n\010LOCATION\020i\022\n\n\006CUSTOM\020" +
+      "j\022\t\n\005EMOJI\020k\022\013\n\007STICKER\020l\022\022\n\rSYSTEM_NOTI" +
+      "FY\020\310\001\022\021\n\014READ_RECEIPT\020\311\001\022\013\n\006RECALL\020\312\001\022\013\n" +
+      "\006TYPING\020\313\001\022\021\n\014BADGE_UPDATE\020\314\001\022\020\n\013QUOTE_R" +
+      "EPLY\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001\022\024\n\017WORKFLOW_NO" +
+      "TIFY\020\317\001\022\022\n\rTODO_REMINDER\020\320\001\022\020\n\013CALL_RECO" +
+      "RD\020\321\001BA\n-com.shengyu.framework.websocket" +
       ".core.protocolB\016ImMessageProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
@@ -347,21 +362,27 @@ public final class ImMessageProto {
     internal_static_CallSignalMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_CallSignalMessage_descriptor,
-        new java.lang.String[] { "CallId", "CallType", "SignalType", "CallerId", "CalleeId", "RejectReason", "ExtraData", });
-    internal_static_WorkflowNotifyMessage_descriptor =
+        new java.lang.String[] { "CallId", "CallType", "SignalType", "CallerId", "CalleeId", "RejectReason", "ExtraData", "GroupId", "InviteeIds", "RoomId", "JanusToken", "InitiateTime", "DeviceId", "DeviceName", });
+    internal_static_CallRecordMessage_descriptor =
       getDescriptor().getMessageTypes().get(21);
+    internal_static_CallRecordMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_CallRecordMessage_descriptor,
+        new java.lang.String[] { "CallId", "CallType", "Status", "Duration", "CallerId", "CalleeId", "CallerName", "CallerAvatar", "CalleeName", "CalleeAvatar", "InitiateTime", "GroupId", });
+    internal_static_WorkflowNotifyMessage_descriptor =
+      getDescriptor().getMessageTypes().get(22);
     internal_static_WorkflowNotifyMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_WorkflowNotifyMessage_descriptor,
         new java.lang.String[] { "ProcessInstanceId", "ProcessName", "InitiatorId", "InitiatorName", "Content", "Buttons", "Status", "JumpUrl", });
     internal_static_WorkflowButton_descriptor =
-      getDescriptor().getMessageTypes().get(22);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_WorkflowButton_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_WorkflowButton_descriptor,
         new java.lang.String[] { "ButtonId", "ButtonText", "ButtonType", });
     internal_static_TodoReminderMessage_descriptor =
-      getDescriptor().getMessageTypes().get(23);
+      getDescriptor().getMessageTypes().get(24);
     internal_static_TodoReminderMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_TodoReminderMessage_descriptor,

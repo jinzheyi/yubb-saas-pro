@@ -53,6 +53,11 @@ dependencies:
   geolocator: ^13.0.2
   geolocator_android: ^4.6.2
   permission_handler: ^11.3.1
+  
+  # WebRTC 音视频通话
+  flutter_webrtc: ^1.5.2
+  audio_session: ^0.1.18
+  flutter_local_notifications: ^18.0.1
 
 dependency_overrides:
   extended_text_field:
@@ -84,6 +89,7 @@ flutter:
     - assets/images/emoji_safe/animal/
     - assets/images/emoji_safe/blessing/
     - assets/images/emoji_safe/other/
+    - assets/sounds/
 
   fonts:
     - family: AppSans

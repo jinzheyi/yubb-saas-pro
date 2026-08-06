@@ -10,6 +10,7 @@ import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversa
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
+import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImConversationService;
 import com.shengyu.module.system.service.im.ImConversationSyncRateLimitService;
@@ -108,6 +109,12 @@ public class AppImConversationController {
     public CommonResult<List<AppImConversationRespVO>> getConversationListByType(
             @RequestParam("conversationType") Integer conversationType) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
+
+        // 验证会话类型是否有效
+        if (!ImConversationTypeEnum.isSingle(conversationType) && !ImConversationTypeEnum.isGroup(conversationType)) {
+            return CommonResult.error(400, "无效的会话类型");
+        }
+
         return success(conversationService.getConversationListByType(userId, conversationType));
     }
 

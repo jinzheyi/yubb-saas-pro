@@ -1243,6 +1243,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         return content.isNotEmpty && !content.startsWith('im.system.')
             ? content
             : '[系统消息]';
+      case MessageType.callRecord:
+        return '[通话记录]';
     }
   }
 

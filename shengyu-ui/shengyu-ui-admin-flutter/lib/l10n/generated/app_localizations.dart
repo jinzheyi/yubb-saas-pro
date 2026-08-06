@@ -135,7 +135,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmAction.
   ///
   /// In en, this message translates to:
-  /// **'OK'**
+  /// **'Confirm'**
   String get confirmAction;
 
   /// No description provided for @doneAction.
@@ -575,6 +575,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'[System]'**
   String get messagePreviewSystem;
+
+  /// No description provided for @messagePreviewCallRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'[Call Record]'**
+  String get messagePreviewCallRecord;
 
   /// No description provided for @messagePreviewMePrefix.
   ///
@@ -4904,6 +4910,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Switch'**
   String get callSwitch;
+
+  /// No description provided for @callIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming Call'**
+  String get callIncoming;
+
+  /// No description provided for @callOutgoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Outgoing Call'**
+  String get callOutgoing;
+
+  /// No description provided for @callVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Call'**
+  String get callVoice;
+
+  /// No description provided for @callVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Call'**
+  String get callVideo;
+
+  /// No description provided for @callAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get callAccept;
+
+  /// No description provided for @callReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get callReject;
+
+  /// No description provided for @callHangup.
+  ///
+  /// In en, this message translates to:
+  /// **'Hang Up'**
+  String get callHangup;
+
+  /// No description provided for @callCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get callCancel;
+
+  /// No description provided for @callBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Busy'**
+  String get callBusy;
+
+  /// No description provided for @callNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'No Answer'**
+  String get callNoAnswer;
+
+  /// No description provided for @callRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get callRejected;
+
+  /// No description provided for @callCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get callCancelled;
+
+  /// No description provided for @callDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration {duration}'**
+  String callDuration(String duration);
+
+  /// No description provided for @callMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed Call'**
+  String get callMissed;
+
+  /// No description provided for @callEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Ended'**
+  String get callEnded;
+
+  /// No description provided for @callConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get callConnecting;
+
+  /// No description provided for @callReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting...'**
+  String get callReconnecting;
+
+  /// No description provided for @callNetworkPoor.
+  ///
+  /// In en, this message translates to:
+  /// **'Poor Network Quality'**
+  String get callNetworkPoor;
+
+  /// No description provided for @callEncryptionEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-End Encrypted'**
+  String get callEncryptionEnabled;
+
+  /// No description provided for @callScreenShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Share'**
+  String get callScreenShare;
+
+  /// No description provided for @callSwitchCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Camera'**
+  String get callSwitchCamera;
+
+  /// No description provided for @callMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get callMute;
+
+  /// No description provided for @callUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get callUnmute;
+
+  /// No description provided for @callSpeaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get callSpeaker;
+
+  /// No description provided for @callEarpiece.
+  ///
+  /// In en, this message translates to:
+  /// **'Earpiece'**
+  String get callEarpiece;
+
+  /// No description provided for @callCameraOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera On'**
+  String get callCameraOn;
+
+  /// No description provided for @callCameraOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera Off'**
+  String get callCameraOff;
+
+  /// No description provided for @callHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Call History'**
+  String get callHistoryTitle;
+
+  /// No description provided for @callHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No call history'**
+  String get callHistoryEmpty;
+
+  /// No description provided for @callHistoryFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get callHistoryFilterAll;
+
+  /// No description provided for @callHistoryFilterVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Call'**
+  String get callHistoryFilterVoice;
+
+  /// No description provided for @callHistoryFilterVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Call'**
+  String get callHistoryFilterVideo;
+
+  /// No description provided for @callRecordCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration {duration}'**
+  String callRecordCompleted(String duration);
+
+  /// No description provided for @callRecordMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'No Answer'**
+  String get callRecordMissed;
+
+  /// No description provided for @callRecordRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get callRecordRejected;
+
+  /// No description provided for @callRecordBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Busy'**
+  String get callRecordBusy;
+
+  /// No description provided for @callRecordCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get callRecordCancelled;
+
+  /// No description provided for @callRecordOutgoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Outgoing'**
+  String get callRecordOutgoing;
+
+  /// No description provided for @callRecordIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get callRecordIncoming;
 
   /// No description provided for @torchToggleFailed.
   ///

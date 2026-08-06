@@ -8,6 +8,8 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/domain/repositories
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/memory_cache_manager.dart';
+import 'package:shengyu_ui_admin_im/infrastructure/cache/disk_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/cursor_version_store.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';

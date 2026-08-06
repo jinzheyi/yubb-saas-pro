@@ -480,6 +480,7 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
     MessageType.contactCard => '[${strings.chatContactCardLabel}]',
     MessageType.system => strings.chatHistoryPreviewSystem,
     MessageType.text => strings.chatHistoryPreviewMessage,
+    MessageType.callRecord => '[通话记录]',
   };
 }
 

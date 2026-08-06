@@ -1,0 +1,14 @@
+general:
+  admin_key = "shengyu-janus-admin-secret-2026"
+  events = true
+
+rooms:
+  # 默认房间配置（可通过 API 动态创建）
+  - room_id = 1
+    description = "Default Room"
+    is_private = false
+    secret = "default-room-secret"
+    publishers = 9
+    bitrate = 128000
+    fir_secs = 10
+    save_pvtfiles = false

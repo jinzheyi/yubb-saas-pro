@@ -252,6 +252,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messagePreviewSystem => '[系统消息]';
 
   @override
+  String get messagePreviewCallRecord => '[通话记录]';
+
+  @override
   String get messagePreviewMePrefix => '我';
 
   @override
@@ -2571,6 +2574,127 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get callSwitch => '切换';
+
+  @override
+  String get callIncoming => '来电';
+
+  @override
+  String get callOutgoing => '去电';
+
+  @override
+  String get callVoice => '语音通话';
+
+  @override
+  String get callVideo => '视频通话';
+
+  @override
+  String get callAccept => '接听';
+
+  @override
+  String get callReject => '拒绝';
+
+  @override
+  String get callHangup => '挂断';
+
+  @override
+  String get callCancel => '取消';
+
+  @override
+  String get callBusy => '对方忙线中';
+
+  @override
+  String get callNoAnswer => '未接听';
+
+  @override
+  String get callRejected => '已拒绝';
+
+  @override
+  String get callCancelled => '已取消';
+
+  @override
+  String callDuration(String duration) {
+    return '通话时长 $duration';
+  }
+
+  @override
+  String get callMissed => '未接来电';
+
+  @override
+  String get callEnded => '通话结束';
+
+  @override
+  String get callConnecting => '连接中...';
+
+  @override
+  String get callReconnecting => '重新连接中...';
+
+  @override
+  String get callNetworkPoor => '网络质量差';
+
+  @override
+  String get callEncryptionEnabled => '端到端加密';
+
+  @override
+  String get callScreenShare => '屏幕共享';
+
+  @override
+  String get callSwitchCamera => '切换摄像头';
+
+  @override
+  String get callMute => '静音';
+
+  @override
+  String get callUnmute => '取消静音';
+
+  @override
+  String get callSpeaker => '扬声器';
+
+  @override
+  String get callEarpiece => '听筒';
+
+  @override
+  String get callCameraOn => '开启视频';
+
+  @override
+  String get callCameraOff => '关闭视频';
+
+  @override
+  String get callHistoryTitle => '通话记录';
+
+  @override
+  String get callHistoryEmpty => '暂无通话记录';
+
+  @override
+  String get callHistoryFilterAll => '全部';
+
+  @override
+  String get callHistoryFilterVoice => '语音通话';
+
+  @override
+  String get callHistoryFilterVideo => '视频通话';
+
+  @override
+  String callRecordCompleted(String duration) {
+    return '通话时长 $duration';
+  }
+
+  @override
+  String get callRecordMissed => '未接听';
+
+  @override
+  String get callRecordRejected => '已拒绝';
+
+  @override
+  String get callRecordBusy => '对方忙线中';
+
+  @override
+  String get callRecordCancelled => '已取消';
+
+  @override
+  String get callRecordOutgoing => '已拨出';
+
+  @override
+  String get callRecordIncoming => '已接听';
 
   @override
   String torchToggleFailed(Object error) {

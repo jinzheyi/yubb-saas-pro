@@ -147,6 +147,13 @@ public interface ErrorCodeConstants {
     ErrorCode TENANT_PACKAGE_USED = new ErrorCode(1_002_016_001, "租户正在使用该套餐，请给租户重新设置套餐后再尝试删除");
     ErrorCode TENANT_PACKAGE_DISABLE = new ErrorCode(1_002_016_002, "名字为【{}】的租户套餐已被禁用");
 
+    // ========== IM 通话模块 1-002-050-000 ==========
+    ErrorCode IM_CALL_NOT_EXISTS = new ErrorCode(1_002_050_000, "通话记录不存在");
+    ErrorCode IM_CALL_CALLEE_ID_REQUIRED = new ErrorCode(1_002_050_001, "被叫方ID不能为空");
+    ErrorCode IM_CALL_NO_PERMISSION = new ErrorCode(1_002_050_002, "无权操作该通话");
+    ErrorCode IM_CALL_USER_BUSY = new ErrorCode(1_002_050_003, "用户正在通话中");
+    ErrorCode IM_CALL_INVALID_STATE = new ErrorCode(1_002_050_004, "通话状态异常");
+
     // ========== 错误码模块 1-002-017-000 ==========
     ErrorCode ERROR_CODE_NOT_EXISTS = new ErrorCode(1_002_017_000, "错误码不存在");
     ErrorCode ERROR_CODE_DUPLICATE = new ErrorCode(1_002_017_001, "已经存在编码为【{}】的错误码");

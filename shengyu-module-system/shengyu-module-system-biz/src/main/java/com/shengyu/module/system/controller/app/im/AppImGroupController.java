@@ -6,6 +6,8 @@ import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
+import com.shengyu.module.system.enums.im.ImGroupJoinRequestStatusEnum;
+import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.service.im.ImGroupService;
 import com.shengyu.module.system.service.im.ImGroupOrchestrationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -141,6 +143,12 @@ public class AppImGroupController {
             @RequestParam("memberUserId") Long memberUserId,
             @RequestParam("role") Integer role) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
+
+        // 验证角色类型是否有效
+        if (!ImGroupMemberRoleEnum.isMember(role) && !ImGroupMemberRoleEnum.isAdmin(role) && !ImGroupMemberRoleEnum.isOwner(role)) {
+            return CommonResult.error(400, "无效的群成员角色");
+        }
+
         groupService.setGroupMemberRole(userId, groupId, memberUserId, role);
         return success(true);
     }
@@ -252,6 +260,14 @@ public class AppImGroupController {
             @RequestParam(value = "status", required = false) Integer status,
             @RequestParam(value = "limit", required = false, defaultValue = "100") Integer limit) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
+
+        // 验证状态参数是否有效
+        if (status != null && !ImGroupJoinRequestStatusEnum.isPending(status)
+                && !status.equals(ImGroupJoinRequestStatusEnum.APPROVED.getStatus())
+                && !status.equals(ImGroupJoinRequestStatusEnum.REJECTED.getStatus())) {
+            return CommonResult.error(400, "无效的加群申请状态");
+        }
+
         if (limit > 500) {
             limit = 500;
         }

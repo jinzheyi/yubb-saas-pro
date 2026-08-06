@@ -532,6 +532,11 @@ CREATE TABLE `im_call_record` (
   `end_time` datetime NULL DEFAULT NULL COMMENT '通话结束时间',
   `duration` int NOT NULL DEFAULT 0 COMMENT '通话时长(秒)',
   `status` tinyint NOT NULL COMMENT '通话状态(1-未接听 2-已接听 3-已拒绝 4-忙线 5-已取消)',
+  `state` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'INIT' COMMENT '状态机状态(INIT/RINGING/CONNECTING/CONNECTED/ENDED)',
+  `end_reason` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '结束原因(HANGUP/REJECT/TIMEOUT/BUSY/CANCEL/CALLEE_OFFLINE/ERROR)',
+  `accepted_device_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '接听设备ID（CAS 裁决写入，用于 SDP/ICE 定向转发）',
+  `chat_id` bigint NULL DEFAULT NULL COMMENT '关联会话ID（通话结束时填入）',
+  `record_message_id` bigint NULL DEFAULT NULL COMMENT '通话记录消息ID（CALL_RECORD=209 生成后回填）',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
@@ -542,8 +547,35 @@ CREATE TABLE `im_call_record` (
   UNIQUE INDEX `idx_tenant_call_id`(`tenant_id` ASC, `call_id` ASC) USING BTREE COMMENT '租户+通话ID唯一索引',
   INDEX `idx_caller`(`caller_id` ASC, `start_time` DESC) USING BTREE COMMENT '呼叫者+时间索引',
   INDEX `idx_callee`(`callee_id` ASC, `start_time` DESC) USING BTREE COMMENT '被叫者+时间索引',
+  INDEX `idx_callee_state`(`callee_id` ASC, `state` ASC) USING BTREE COMMENT '被叫者+状态索引（忙线检测）',
+  INDEX `idx_chat_started_at`(`chat_id` ASC, `start_time` DESC) USING BTREE COMMENT '会话+时间索引（通话记录查询）',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM通话记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for im_call_event
+-- 通话事件表: 记录通话过程中的所有信令事件
+-- 说明:
+-- 1. 记录通话过程中的所有信令事件（呼叫、接听、拒绝、挂断等）
+-- 2. 支持事件幂等性（通过 event_id 唯一索引）
+-- 3. 用于通话状态回溯和问题排查
+-- ----------------------------
+DROP TABLE IF EXISTS `im_call_event`;
+CREATE TABLE `im_call_event` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '事件ID',
+  `call_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通话ID',
+  `event_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件ID（messageId，用于幂等）',
+  `signal_type` tinyint NOT NULL COMMENT '信令类型(1-呼叫 2-接听 3-拒绝 4-挂断 5-忙线 6-切换摄像头)',
+  `sender_id` bigint NOT NULL COMMENT '发送者用户ID',
+  `device_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '设备ID',
+  `payload_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '事件载荷（extraData，JSON格式）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_call_event`(`call_id` ASC, `event_id` ASC) USING BTREE COMMENT '通话+事件唯一索引',
+  INDEX `idx_call_id`(`call_id` ASC) USING BTREE COMMENT '通话ID索引',
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM通话事件表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for im_notification

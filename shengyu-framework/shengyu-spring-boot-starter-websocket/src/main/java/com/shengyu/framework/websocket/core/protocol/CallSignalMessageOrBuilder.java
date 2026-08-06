@@ -106,4 +106,133 @@ public interface CallSignalMessageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getExtraDataBytes();
+
+  /**
+   * <pre>
+   * 群组ID（群通话时使用）
+   * </pre>
+   *
+   * <code>int64 groupId = 8;</code>
+   * @return The groupId.
+   */
+  long getGroupId();
+
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @return A list containing the inviteeIds.
+   */
+  java.util.List<java.lang.Long> getInviteeIdsList();
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @return The count of inviteeIds.
+   */
+  int getInviteeIdsCount();
+  /**
+   * <pre>
+   * 被邀请人列表（群通话时使用）
+   * </pre>
+   *
+   * <code>repeated int64 inviteeIds = 9;</code>
+   * @param index The index of the element to return.
+   * @return The inviteeIds at the given index.
+   */
+  long getInviteeIds(int index);
+
+  /**
+   * <pre>
+   * Janus Room ID（通话建立后生成）
+   * </pre>
+   *
+   * <code>string roomId = 10;</code>
+   * @return The roomId.
+   */
+  java.lang.String getRoomId();
+  /**
+   * <pre>
+   * Janus Room ID（通话建立后生成）
+   * </pre>
+   *
+   * <code>string roomId = 10;</code>
+   * @return The bytes for roomId.
+   */
+  com.google.protobuf.ByteString
+      getRoomIdBytes();
+
+  /**
+   * <pre>
+   * Janus Token（客户端加入房间用）
+   * </pre>
+   *
+   * <code>string janusToken = 11;</code>
+   * @return The janusToken.
+   */
+  java.lang.String getJanusToken();
+  /**
+   * <pre>
+   * Janus Token（客户端加入房间用）
+   * </pre>
+   *
+   * <code>string janusToken = 11;</code>
+   * @return The bytes for janusToken.
+   */
+  com.google.protobuf.ByteString
+      getJanusTokenBytes();
+
+  /**
+   * <pre>
+   * 通话发起时间戳（毫秒）
+   * </pre>
+   *
+   * <code>int64 initiateTime = 12;</code>
+   * @return The initiateTime.
+   */
+  long getInitiateTime();
+
+  /**
+   * <pre>
+   * 设备ID（用于多设备区分）
+   * </pre>
+   *
+   * <code>string deviceId = 13;</code>
+   * @return The deviceId.
+   */
+  java.lang.String getDeviceId();
+  /**
+   * <pre>
+   * 设备ID（用于多设备区分）
+   * </pre>
+   *
+   * <code>string deviceId = 13;</code>
+   * @return The bytes for deviceId.
+   */
+  com.google.protobuf.ByteString
+      getDeviceIdBytes();
+
+  /**
+   * <pre>
+   * 设备名称（用于多设备显示）
+   * </pre>
+   *
+   * <code>string deviceName = 14;</code>
+   * @return The deviceName.
+   */
+  java.lang.String getDeviceName();
+  /**
+   * <pre>
+   * 设备名称（用于多设备显示）
+   * </pre>
+   *
+   * <code>string deviceName = 14;</code>
+   * @return The bytes for deviceName.
+   */
+  com.google.protobuf.ByteString
+      getDeviceNameBytes();
 }

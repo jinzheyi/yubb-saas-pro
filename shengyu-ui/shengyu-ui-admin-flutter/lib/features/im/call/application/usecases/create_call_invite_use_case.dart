@@ -10,7 +10,12 @@ class CreateCallInviteUseCase {
   Future<CallInviteResult> execute({
     required String chatId,
     required CallType callType,
+    required String calleeId,
   }) {
-    return _repository.createInvite(chatId: chatId, callType: callType);
+    return _repository.createInvite(
+      chatId: chatId,
+      callType: callType,
+      calleeId: calleeId,
+    );
   }
 }

@@ -3170,6 +3170,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             case "link":
                 // 链接本质上是文本消息，搜索文本类型中携带URL的内容
                 return Collections.singletonList(ImMessageTypeEnum.TEXT.getType());
+            case "call":
+                // 通话记录消息
+                return Collections.singletonList(ImMessageTypeEnum.CALL_RECORD.getType());
             default:
                 return null;
         }

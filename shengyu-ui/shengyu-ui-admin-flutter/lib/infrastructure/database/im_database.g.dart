@@ -2402,11 +2402,954 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
   }
 }
 
+class $CallRecordsTable extends CallRecords
+    with TableInfo<$CallRecordsTable, CallRecordData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CallRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _callIdMeta = const VerificationMeta('callId');
+  @override
+  late final GeneratedColumn<String> callId = GeneratedColumn<String>(
+    'call_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _chatIdMeta = const VerificationMeta('chatId');
+  @override
+  late final GeneratedColumn<String> chatId = GeneratedColumn<String>(
+    'chat_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _callTypeMeta = const VerificationMeta(
+    'callType',
+  );
+  @override
+  late final GeneratedColumn<int> callType = GeneratedColumn<int>(
+    'call_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMeta = const VerificationMeta(
+    'duration',
+  );
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>(
+    'duration',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _callerIdMeta = const VerificationMeta(
+    'callerId',
+  );
+  @override
+  late final GeneratedColumn<String> callerId = GeneratedColumn<String>(
+    'caller_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _calleeIdMeta = const VerificationMeta(
+    'calleeId',
+  );
+  @override
+  late final GeneratedColumn<String> calleeId = GeneratedColumn<String>(
+    'callee_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _callerNameMeta = const VerificationMeta(
+    'callerName',
+  );
+  @override
+  late final GeneratedColumn<String> callerName = GeneratedColumn<String>(
+    'caller_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _callerAvatarMeta = const VerificationMeta(
+    'callerAvatar',
+  );
+  @override
+  late final GeneratedColumn<String> callerAvatar = GeneratedColumn<String>(
+    'caller_avatar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _calleeNameMeta = const VerificationMeta(
+    'calleeName',
+  );
+  @override
+  late final GeneratedColumn<String> calleeName = GeneratedColumn<String>(
+    'callee_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _calleeAvatarMeta = const VerificationMeta(
+    'calleeAvatar',
+  );
+  @override
+  late final GeneratedColumn<String> calleeAvatar = GeneratedColumn<String>(
+    'callee_avatar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startTimeMeta = const VerificationMeta(
+    'startTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startTime = GeneratedColumn<DateTime>(
+    'start_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endTimeMeta = const VerificationMeta(
+    'endTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endTime = GeneratedColumn<DateTime>(
+    'end_time',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isCallerMeta = const VerificationMeta(
+    'isCaller',
+  );
+  @override
+  late final GeneratedColumn<bool> isCaller = GeneratedColumn<bool>(
+    'is_caller',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_caller" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<int> cachedAt = GeneratedColumn<int>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    callId,
+    chatId,
+    callType,
+    status,
+    duration,
+    callerId,
+    calleeId,
+    callerName,
+    callerAvatar,
+    calleeName,
+    calleeAvatar,
+    startTime,
+    endTime,
+    isCaller,
+    userId,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'call_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CallRecordData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('call_id')) {
+      context.handle(
+        _callIdMeta,
+        callId.isAcceptableOrUnknown(data['call_id']!, _callIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_callIdMeta);
+    }
+    if (data.containsKey('chat_id')) {
+      context.handle(
+        _chatIdMeta,
+        chatId.isAcceptableOrUnknown(data['chat_id']!, _chatIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chatIdMeta);
+    }
+    if (data.containsKey('call_type')) {
+      context.handle(
+        _callTypeMeta,
+        callType.isAcceptableOrUnknown(data['call_type']!, _callTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_callTypeMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('duration')) {
+      context.handle(
+        _durationMeta,
+        duration.isAcceptableOrUnknown(data['duration']!, _durationMeta),
+      );
+    }
+    if (data.containsKey('caller_id')) {
+      context.handle(
+        _callerIdMeta,
+        callerId.isAcceptableOrUnknown(data['caller_id']!, _callerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_callerIdMeta);
+    }
+    if (data.containsKey('callee_id')) {
+      context.handle(
+        _calleeIdMeta,
+        calleeId.isAcceptableOrUnknown(data['callee_id']!, _calleeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_calleeIdMeta);
+    }
+    if (data.containsKey('caller_name')) {
+      context.handle(
+        _callerNameMeta,
+        callerName.isAcceptableOrUnknown(data['caller_name']!, _callerNameMeta),
+      );
+    }
+    if (data.containsKey('caller_avatar')) {
+      context.handle(
+        _callerAvatarMeta,
+        callerAvatar.isAcceptableOrUnknown(
+          data['caller_avatar']!,
+          _callerAvatarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('callee_name')) {
+      context.handle(
+        _calleeNameMeta,
+        calleeName.isAcceptableOrUnknown(data['callee_name']!, _calleeNameMeta),
+      );
+    }
+    if (data.containsKey('callee_avatar')) {
+      context.handle(
+        _calleeAvatarMeta,
+        calleeAvatar.isAcceptableOrUnknown(
+          data['callee_avatar']!,
+          _calleeAvatarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(
+        _startTimeMeta,
+        startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startTimeMeta);
+    }
+    if (data.containsKey('end_time')) {
+      context.handle(
+        _endTimeMeta,
+        endTime.isAcceptableOrUnknown(data['end_time']!, _endTimeMeta),
+      );
+    }
+    if (data.containsKey('is_caller')) {
+      context.handle(
+        _isCallerMeta,
+        isCaller.isAcceptableOrUnknown(data['is_caller']!, _isCallerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isCallerMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {callId};
+  @override
+  CallRecordData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CallRecordData(
+      callId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}call_id'],
+      )!,
+      chatId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chat_id'],
+      )!,
+      callType: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}call_type'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      duration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration'],
+      )!,
+      callerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caller_id'],
+      )!,
+      calleeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}callee_id'],
+      )!,
+      callerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caller_name'],
+      ),
+      callerAvatar: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caller_avatar'],
+      ),
+      calleeName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}callee_name'],
+      ),
+      calleeAvatar: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}callee_avatar'],
+      ),
+      startTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_time'],
+      )!,
+      endTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_time'],
+      ),
+      isCaller: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_caller'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CallRecordsTable createAlias(String alias) {
+    return $CallRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class CallRecordData extends DataClass implements Insertable<CallRecordData> {
+  /// 通话ID（主键）
+  final String callId;
+
+  /// 会话ID
+  final String chatId;
+
+  /// 通话类型（1-语音 2-视频）
+  final int callType;
+
+  /// 通话状态（1-已接通 2-未接听 3-已拒绝 4-忙线 5-已取消）
+  final int status;
+
+  /// 通话时长（秒）
+  final int duration;
+
+  /// 主叫用户ID
+  final String callerId;
+
+  /// 被叫用户ID
+  final String calleeId;
+
+  /// 主叫昵称（冗余字段）
+  final String? callerName;
+
+  /// 主叫头像（冗余字段）
+  final String? callerAvatar;
+
+  /// 被叫昵称（冗余字段）
+  final String? calleeName;
+
+  /// 被叫头像（冗余字段）
+  final String? calleeAvatar;
+
+  /// 通话开始时间
+  final DateTime startTime;
+
+  /// 通话结束时间
+  final DateTime? endTime;
+
+  /// 是否为主叫方
+  final bool isCaller;
+
+  /// 用户隔离字段
+  final String userId;
+
+  /// 缓存时间戳（毫秒级）
+  final int cachedAt;
+  const CallRecordData({
+    required this.callId,
+    required this.chatId,
+    required this.callType,
+    required this.status,
+    required this.duration,
+    required this.callerId,
+    required this.calleeId,
+    this.callerName,
+    this.callerAvatar,
+    this.calleeName,
+    this.calleeAvatar,
+    required this.startTime,
+    this.endTime,
+    required this.isCaller,
+    required this.userId,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['call_id'] = Variable<String>(callId);
+    map['chat_id'] = Variable<String>(chatId);
+    map['call_type'] = Variable<int>(callType);
+    map['status'] = Variable<int>(status);
+    map['duration'] = Variable<int>(duration);
+    map['caller_id'] = Variable<String>(callerId);
+    map['callee_id'] = Variable<String>(calleeId);
+    if (!nullToAbsent || callerName != null) {
+      map['caller_name'] = Variable<String>(callerName);
+    }
+    if (!nullToAbsent || callerAvatar != null) {
+      map['caller_avatar'] = Variable<String>(callerAvatar);
+    }
+    if (!nullToAbsent || calleeName != null) {
+      map['callee_name'] = Variable<String>(calleeName);
+    }
+    if (!nullToAbsent || calleeAvatar != null) {
+      map['callee_avatar'] = Variable<String>(calleeAvatar);
+    }
+    map['start_time'] = Variable<DateTime>(startTime);
+    if (!nullToAbsent || endTime != null) {
+      map['end_time'] = Variable<DateTime>(endTime);
+    }
+    map['is_caller'] = Variable<bool>(isCaller);
+    map['user_id'] = Variable<String>(userId);
+    map['cached_at'] = Variable<int>(cachedAt);
+    return map;
+  }
+
+  CallRecordsCompanion toCompanion(bool nullToAbsent) {
+    return CallRecordsCompanion(
+      callId: Value(callId),
+      chatId: Value(chatId),
+      callType: Value(callType),
+      status: Value(status),
+      duration: Value(duration),
+      callerId: Value(callerId),
+      calleeId: Value(calleeId),
+      callerName: callerName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(callerName),
+      callerAvatar: callerAvatar == null && nullToAbsent
+          ? const Value.absent()
+          : Value(callerAvatar),
+      calleeName: calleeName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(calleeName),
+      calleeAvatar: calleeAvatar == null && nullToAbsent
+          ? const Value.absent()
+          : Value(calleeAvatar),
+      startTime: Value(startTime),
+      endTime: endTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endTime),
+      isCaller: Value(isCaller),
+      userId: Value(userId),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory CallRecordData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CallRecordData(
+      callId: serializer.fromJson<String>(json['callId']),
+      chatId: serializer.fromJson<String>(json['chatId']),
+      callType: serializer.fromJson<int>(json['callType']),
+      status: serializer.fromJson<int>(json['status']),
+      duration: serializer.fromJson<int>(json['duration']),
+      callerId: serializer.fromJson<String>(json['callerId']),
+      calleeId: serializer.fromJson<String>(json['calleeId']),
+      callerName: serializer.fromJson<String?>(json['callerName']),
+      callerAvatar: serializer.fromJson<String?>(json['callerAvatar']),
+      calleeName: serializer.fromJson<String?>(json['calleeName']),
+      calleeAvatar: serializer.fromJson<String?>(json['calleeAvatar']),
+      startTime: serializer.fromJson<DateTime>(json['startTime']),
+      endTime: serializer.fromJson<DateTime?>(json['endTime']),
+      isCaller: serializer.fromJson<bool>(json['isCaller']),
+      userId: serializer.fromJson<String>(json['userId']),
+      cachedAt: serializer.fromJson<int>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'callId': serializer.toJson<String>(callId),
+      'chatId': serializer.toJson<String>(chatId),
+      'callType': serializer.toJson<int>(callType),
+      'status': serializer.toJson<int>(status),
+      'duration': serializer.toJson<int>(duration),
+      'callerId': serializer.toJson<String>(callerId),
+      'calleeId': serializer.toJson<String>(calleeId),
+      'callerName': serializer.toJson<String?>(callerName),
+      'callerAvatar': serializer.toJson<String?>(callerAvatar),
+      'calleeName': serializer.toJson<String?>(calleeName),
+      'calleeAvatar': serializer.toJson<String?>(calleeAvatar),
+      'startTime': serializer.toJson<DateTime>(startTime),
+      'endTime': serializer.toJson<DateTime?>(endTime),
+      'isCaller': serializer.toJson<bool>(isCaller),
+      'userId': serializer.toJson<String>(userId),
+      'cachedAt': serializer.toJson<int>(cachedAt),
+    };
+  }
+
+  CallRecordData copyWith({
+    String? callId,
+    String? chatId,
+    int? callType,
+    int? status,
+    int? duration,
+    String? callerId,
+    String? calleeId,
+    Value<String?> callerName = const Value.absent(),
+    Value<String?> callerAvatar = const Value.absent(),
+    Value<String?> calleeName = const Value.absent(),
+    Value<String?> calleeAvatar = const Value.absent(),
+    DateTime? startTime,
+    Value<DateTime?> endTime = const Value.absent(),
+    bool? isCaller,
+    String? userId,
+    int? cachedAt,
+  }) => CallRecordData(
+    callId: callId ?? this.callId,
+    chatId: chatId ?? this.chatId,
+    callType: callType ?? this.callType,
+    status: status ?? this.status,
+    duration: duration ?? this.duration,
+    callerId: callerId ?? this.callerId,
+    calleeId: calleeId ?? this.calleeId,
+    callerName: callerName.present ? callerName.value : this.callerName,
+    callerAvatar: callerAvatar.present ? callerAvatar.value : this.callerAvatar,
+    calleeName: calleeName.present ? calleeName.value : this.calleeName,
+    calleeAvatar: calleeAvatar.present ? calleeAvatar.value : this.calleeAvatar,
+    startTime: startTime ?? this.startTime,
+    endTime: endTime.present ? endTime.value : this.endTime,
+    isCaller: isCaller ?? this.isCaller,
+    userId: userId ?? this.userId,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  CallRecordData copyWithCompanion(CallRecordsCompanion data) {
+    return CallRecordData(
+      callId: data.callId.present ? data.callId.value : this.callId,
+      chatId: data.chatId.present ? data.chatId.value : this.chatId,
+      callType: data.callType.present ? data.callType.value : this.callType,
+      status: data.status.present ? data.status.value : this.status,
+      duration: data.duration.present ? data.duration.value : this.duration,
+      callerId: data.callerId.present ? data.callerId.value : this.callerId,
+      calleeId: data.calleeId.present ? data.calleeId.value : this.calleeId,
+      callerName: data.callerName.present
+          ? data.callerName.value
+          : this.callerName,
+      callerAvatar: data.callerAvatar.present
+          ? data.callerAvatar.value
+          : this.callerAvatar,
+      calleeName: data.calleeName.present
+          ? data.calleeName.value
+          : this.calleeName,
+      calleeAvatar: data.calleeAvatar.present
+          ? data.calleeAvatar.value
+          : this.calleeAvatar,
+      startTime: data.startTime.present ? data.startTime.value : this.startTime,
+      endTime: data.endTime.present ? data.endTime.value : this.endTime,
+      isCaller: data.isCaller.present ? data.isCaller.value : this.isCaller,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CallRecordData(')
+          ..write('callId: $callId, ')
+          ..write('chatId: $chatId, ')
+          ..write('callType: $callType, ')
+          ..write('status: $status, ')
+          ..write('duration: $duration, ')
+          ..write('callerId: $callerId, ')
+          ..write('calleeId: $calleeId, ')
+          ..write('callerName: $callerName, ')
+          ..write('callerAvatar: $callerAvatar, ')
+          ..write('calleeName: $calleeName, ')
+          ..write('calleeAvatar: $calleeAvatar, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('isCaller: $isCaller, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    callId,
+    chatId,
+    callType,
+    status,
+    duration,
+    callerId,
+    calleeId,
+    callerName,
+    callerAvatar,
+    calleeName,
+    calleeAvatar,
+    startTime,
+    endTime,
+    isCaller,
+    userId,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CallRecordData &&
+          other.callId == this.callId &&
+          other.chatId == this.chatId &&
+          other.callType == this.callType &&
+          other.status == this.status &&
+          other.duration == this.duration &&
+          other.callerId == this.callerId &&
+          other.calleeId == this.calleeId &&
+          other.callerName == this.callerName &&
+          other.callerAvatar == this.callerAvatar &&
+          other.calleeName == this.calleeName &&
+          other.calleeAvatar == this.calleeAvatar &&
+          other.startTime == this.startTime &&
+          other.endTime == this.endTime &&
+          other.isCaller == this.isCaller &&
+          other.userId == this.userId &&
+          other.cachedAt == this.cachedAt);
+}
+
+class CallRecordsCompanion extends UpdateCompanion<CallRecordData> {
+  final Value<String> callId;
+  final Value<String> chatId;
+  final Value<int> callType;
+  final Value<int> status;
+  final Value<int> duration;
+  final Value<String> callerId;
+  final Value<String> calleeId;
+  final Value<String?> callerName;
+  final Value<String?> callerAvatar;
+  final Value<String?> calleeName;
+  final Value<String?> calleeAvatar;
+  final Value<DateTime> startTime;
+  final Value<DateTime?> endTime;
+  final Value<bool> isCaller;
+  final Value<String> userId;
+  final Value<int> cachedAt;
+  final Value<int> rowid;
+  const CallRecordsCompanion({
+    this.callId = const Value.absent(),
+    this.chatId = const Value.absent(),
+    this.callType = const Value.absent(),
+    this.status = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.callerId = const Value.absent(),
+    this.calleeId = const Value.absent(),
+    this.callerName = const Value.absent(),
+    this.callerAvatar = const Value.absent(),
+    this.calleeName = const Value.absent(),
+    this.calleeAvatar = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.endTime = const Value.absent(),
+    this.isCaller = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CallRecordsCompanion.insert({
+    required String callId,
+    required String chatId,
+    required int callType,
+    required int status,
+    this.duration = const Value.absent(),
+    required String callerId,
+    required String calleeId,
+    this.callerName = const Value.absent(),
+    this.callerAvatar = const Value.absent(),
+    this.calleeName = const Value.absent(),
+    this.calleeAvatar = const Value.absent(),
+    required DateTime startTime,
+    this.endTime = const Value.absent(),
+    required bool isCaller,
+    this.userId = const Value.absent(),
+    required int cachedAt,
+    this.rowid = const Value.absent(),
+  }) : callId = Value(callId),
+       chatId = Value(chatId),
+       callType = Value(callType),
+       status = Value(status),
+       callerId = Value(callerId),
+       calleeId = Value(calleeId),
+       startTime = Value(startTime),
+       isCaller = Value(isCaller),
+       cachedAt = Value(cachedAt);
+  static Insertable<CallRecordData> custom({
+    Expression<String>? callId,
+    Expression<String>? chatId,
+    Expression<int>? callType,
+    Expression<int>? status,
+    Expression<int>? duration,
+    Expression<String>? callerId,
+    Expression<String>? calleeId,
+    Expression<String>? callerName,
+    Expression<String>? callerAvatar,
+    Expression<String>? calleeName,
+    Expression<String>? calleeAvatar,
+    Expression<DateTime>? startTime,
+    Expression<DateTime>? endTime,
+    Expression<bool>? isCaller,
+    Expression<String>? userId,
+    Expression<int>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (callId != null) 'call_id': callId,
+      if (chatId != null) 'chat_id': chatId,
+      if (callType != null) 'call_type': callType,
+      if (status != null) 'status': status,
+      if (duration != null) 'duration': duration,
+      if (callerId != null) 'caller_id': callerId,
+      if (calleeId != null) 'callee_id': calleeId,
+      if (callerName != null) 'caller_name': callerName,
+      if (callerAvatar != null) 'caller_avatar': callerAvatar,
+      if (calleeName != null) 'callee_name': calleeName,
+      if (calleeAvatar != null) 'callee_avatar': calleeAvatar,
+      if (startTime != null) 'start_time': startTime,
+      if (endTime != null) 'end_time': endTime,
+      if (isCaller != null) 'is_caller': isCaller,
+      if (userId != null) 'user_id': userId,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CallRecordsCompanion copyWith({
+    Value<String>? callId,
+    Value<String>? chatId,
+    Value<int>? callType,
+    Value<int>? status,
+    Value<int>? duration,
+    Value<String>? callerId,
+    Value<String>? calleeId,
+    Value<String?>? callerName,
+    Value<String?>? callerAvatar,
+    Value<String?>? calleeName,
+    Value<String?>? calleeAvatar,
+    Value<DateTime>? startTime,
+    Value<DateTime?>? endTime,
+    Value<bool>? isCaller,
+    Value<String>? userId,
+    Value<int>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return CallRecordsCompanion(
+      callId: callId ?? this.callId,
+      chatId: chatId ?? this.chatId,
+      callType: callType ?? this.callType,
+      status: status ?? this.status,
+      duration: duration ?? this.duration,
+      callerId: callerId ?? this.callerId,
+      calleeId: calleeId ?? this.calleeId,
+      callerName: callerName ?? this.callerName,
+      callerAvatar: callerAvatar ?? this.callerAvatar,
+      calleeName: calleeName ?? this.calleeName,
+      calleeAvatar: calleeAvatar ?? this.calleeAvatar,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      isCaller: isCaller ?? this.isCaller,
+      userId: userId ?? this.userId,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (callId.present) {
+      map['call_id'] = Variable<String>(callId.value);
+    }
+    if (chatId.present) {
+      map['chat_id'] = Variable<String>(chatId.value);
+    }
+    if (callType.present) {
+      map['call_type'] = Variable<int>(callType.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (duration.present) {
+      map['duration'] = Variable<int>(duration.value);
+    }
+    if (callerId.present) {
+      map['caller_id'] = Variable<String>(callerId.value);
+    }
+    if (calleeId.present) {
+      map['callee_id'] = Variable<String>(calleeId.value);
+    }
+    if (callerName.present) {
+      map['caller_name'] = Variable<String>(callerName.value);
+    }
+    if (callerAvatar.present) {
+      map['caller_avatar'] = Variable<String>(callerAvatar.value);
+    }
+    if (calleeName.present) {
+      map['callee_name'] = Variable<String>(calleeName.value);
+    }
+    if (calleeAvatar.present) {
+      map['callee_avatar'] = Variable<String>(calleeAvatar.value);
+    }
+    if (startTime.present) {
+      map['start_time'] = Variable<DateTime>(startTime.value);
+    }
+    if (endTime.present) {
+      map['end_time'] = Variable<DateTime>(endTime.value);
+    }
+    if (isCaller.present) {
+      map['is_caller'] = Variable<bool>(isCaller.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<int>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CallRecordsCompanion(')
+          ..write('callId: $callId, ')
+          ..write('chatId: $chatId, ')
+          ..write('callType: $callType, ')
+          ..write('status: $status, ')
+          ..write('duration: $duration, ')
+          ..write('callerId: $callerId, ')
+          ..write('calleeId: $calleeId, ')
+          ..write('callerName: $callerName, ')
+          ..write('callerAvatar: $callerAvatar, ')
+          ..write('calleeName: $calleeName, ')
+          ..write('calleeAvatar: $calleeAvatar, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('isCaller: $isCaller, ')
+          ..write('userId: $userId, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ImDatabase extends GeneratedDatabase {
   _$ImDatabase(QueryExecutor e) : super(e);
   $ImDatabaseManager get managers => $ImDatabaseManager(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $ConversationsTable conversations = $ConversationsTable(this);
+  late final $CallRecordsTable callRecords = $CallRecordsTable(this);
   late final Index idxMessagesChatId = Index(
     'idx_messages_chat_id',
     'CREATE INDEX idx_messages_chat_id ON messages (chat_id)',
@@ -2423,10 +3366,27 @@ abstract class _$ImDatabase extends GeneratedDatabase {
     'idx_messages_client_message_id',
     'CREATE UNIQUE INDEX idx_messages_client_message_id ON messages (client_message_id)',
   );
+  late final Index idxCallRecordsChatId = Index(
+    'idx_call_records_chat_id',
+    'CREATE INDEX idx_call_records_chat_id ON call_records (chat_id)',
+  );
+  late final Index idxCallRecordsUserId = Index(
+    'idx_call_records_user_id',
+    'CREATE INDEX idx_call_records_user_id ON call_records (user_id)',
+  );
+  late final Index idxCallRecordsStartTime = Index(
+    'idx_call_records_start_time',
+    'CREATE INDEX idx_call_records_start_time ON call_records (start_time)',
+  );
+  late final Index idxCallRecordsCallId = Index(
+    'idx_call_records_call_id',
+    'CREATE UNIQUE INDEX idx_call_records_call_id ON call_records (call_id)',
+  );
   late final MessageDao messageDao = MessageDao(this as ImDatabase);
   late final ConversationDao conversationDao = ConversationDao(
     this as ImDatabase,
   );
+  late final CallRecordDao callRecordDao = CallRecordDao(this as ImDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2434,10 +3394,15 @@ abstract class _$ImDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     messages,
     conversations,
+    callRecords,
     idxMessagesChatId,
     idxMessagesChatSequence,
     idxMessagesUserChat,
     idxMessagesClientMessageId,
+    idxCallRecordsChatId,
+    idxCallRecordsUserId,
+    idxCallRecordsStartTime,
+    idxCallRecordsCallId,
   ];
 }
 
@@ -3448,6 +4413,423 @@ typedef $$ConversationsTableProcessedTableManager =
       Conversation,
       PrefetchHooks Function()
     >;
+typedef $$CallRecordsTableCreateCompanionBuilder =
+    CallRecordsCompanion Function({
+      required String callId,
+      required String chatId,
+      required int callType,
+      required int status,
+      Value<int> duration,
+      required String callerId,
+      required String calleeId,
+      Value<String?> callerName,
+      Value<String?> callerAvatar,
+      Value<String?> calleeName,
+      Value<String?> calleeAvatar,
+      required DateTime startTime,
+      Value<DateTime?> endTime,
+      required bool isCaller,
+      Value<String> userId,
+      required int cachedAt,
+      Value<int> rowid,
+    });
+typedef $$CallRecordsTableUpdateCompanionBuilder =
+    CallRecordsCompanion Function({
+      Value<String> callId,
+      Value<String> chatId,
+      Value<int> callType,
+      Value<int> status,
+      Value<int> duration,
+      Value<String> callerId,
+      Value<String> calleeId,
+      Value<String?> callerName,
+      Value<String?> callerAvatar,
+      Value<String?> calleeName,
+      Value<String?> calleeAvatar,
+      Value<DateTime> startTime,
+      Value<DateTime?> endTime,
+      Value<bool> isCaller,
+      Value<String> userId,
+      Value<int> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$CallRecordsTableFilterComposer
+    extends Composer<_$ImDatabase, $CallRecordsTable> {
+  $$CallRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get callId => $composableBuilder(
+    column: $table.callId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get chatId => $composableBuilder(
+    column: $table.chatId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get callType => $composableBuilder(
+    column: $table.callType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get callerId => $composableBuilder(
+    column: $table.callerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get calleeId => $composableBuilder(
+    column: $table.calleeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get callerName => $composableBuilder(
+    column: $table.callerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get callerAvatar => $composableBuilder(
+    column: $table.callerAvatar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get calleeName => $composableBuilder(
+    column: $table.calleeName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get calleeAvatar => $composableBuilder(
+    column: $table.calleeAvatar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endTime => $composableBuilder(
+    column: $table.endTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCaller => $composableBuilder(
+    column: $table.isCaller,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CallRecordsTableOrderingComposer
+    extends Composer<_$ImDatabase, $CallRecordsTable> {
+  $$CallRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get callId => $composableBuilder(
+    column: $table.callId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get chatId => $composableBuilder(
+    column: $table.chatId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get callType => $composableBuilder(
+    column: $table.callType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get callerId => $composableBuilder(
+    column: $table.callerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get calleeId => $composableBuilder(
+    column: $table.calleeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get callerName => $composableBuilder(
+    column: $table.callerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get callerAvatar => $composableBuilder(
+    column: $table.callerAvatar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get calleeName => $composableBuilder(
+    column: $table.calleeName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get calleeAvatar => $composableBuilder(
+    column: $table.calleeAvatar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endTime => $composableBuilder(
+    column: $table.endTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCaller => $composableBuilder(
+    column: $table.isCaller,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CallRecordsTableAnnotationComposer
+    extends Composer<_$ImDatabase, $CallRecordsTable> {
+  $$CallRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get callId =>
+      $composableBuilder(column: $table.callId, builder: (column) => column);
+
+  GeneratedColumn<String> get chatId =>
+      $composableBuilder(column: $table.chatId, builder: (column) => column);
+
+  GeneratedColumn<int> get callType =>
+      $composableBuilder(column: $table.callType, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get duration =>
+      $composableBuilder(column: $table.duration, builder: (column) => column);
+
+  GeneratedColumn<String> get callerId =>
+      $composableBuilder(column: $table.callerId, builder: (column) => column);
+
+  GeneratedColumn<String> get calleeId =>
+      $composableBuilder(column: $table.calleeId, builder: (column) => column);
+
+  GeneratedColumn<String> get callerName => $composableBuilder(
+    column: $table.callerName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get callerAvatar => $composableBuilder(
+    column: $table.callerAvatar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get calleeName => $composableBuilder(
+    column: $table.calleeName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get calleeAvatar => $composableBuilder(
+    column: $table.calleeAvatar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startTime =>
+      $composableBuilder(column: $table.startTime, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endTime =>
+      $composableBuilder(column: $table.endTime, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCaller =>
+      $composableBuilder(column: $table.isCaller, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<int> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$CallRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$ImDatabase,
+          $CallRecordsTable,
+          CallRecordData,
+          $$CallRecordsTableFilterComposer,
+          $$CallRecordsTableOrderingComposer,
+          $$CallRecordsTableAnnotationComposer,
+          $$CallRecordsTableCreateCompanionBuilder,
+          $$CallRecordsTableUpdateCompanionBuilder,
+          (
+            CallRecordData,
+            BaseReferences<_$ImDatabase, $CallRecordsTable, CallRecordData>,
+          ),
+          CallRecordData,
+          PrefetchHooks Function()
+        > {
+  $$CallRecordsTableTableManager(_$ImDatabase db, $CallRecordsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CallRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CallRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CallRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> callId = const Value.absent(),
+                Value<String> chatId = const Value.absent(),
+                Value<int> callType = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<int> duration = const Value.absent(),
+                Value<String> callerId = const Value.absent(),
+                Value<String> calleeId = const Value.absent(),
+                Value<String?> callerName = const Value.absent(),
+                Value<String?> callerAvatar = const Value.absent(),
+                Value<String?> calleeName = const Value.absent(),
+                Value<String?> calleeAvatar = const Value.absent(),
+                Value<DateTime> startTime = const Value.absent(),
+                Value<DateTime?> endTime = const Value.absent(),
+                Value<bool> isCaller = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<int> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CallRecordsCompanion(
+                callId: callId,
+                chatId: chatId,
+                callType: callType,
+                status: status,
+                duration: duration,
+                callerId: callerId,
+                calleeId: calleeId,
+                callerName: callerName,
+                callerAvatar: callerAvatar,
+                calleeName: calleeName,
+                calleeAvatar: calleeAvatar,
+                startTime: startTime,
+                endTime: endTime,
+                isCaller: isCaller,
+                userId: userId,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String callId,
+                required String chatId,
+                required int callType,
+                required int status,
+                Value<int> duration = const Value.absent(),
+                required String callerId,
+                required String calleeId,
+                Value<String?> callerName = const Value.absent(),
+                Value<String?> callerAvatar = const Value.absent(),
+                Value<String?> calleeName = const Value.absent(),
+                Value<String?> calleeAvatar = const Value.absent(),
+                required DateTime startTime,
+                Value<DateTime?> endTime = const Value.absent(),
+                required bool isCaller,
+                Value<String> userId = const Value.absent(),
+                required int cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CallRecordsCompanion.insert(
+                callId: callId,
+                chatId: chatId,
+                callType: callType,
+                status: status,
+                duration: duration,
+                callerId: callerId,
+                calleeId: calleeId,
+                callerName: callerName,
+                callerAvatar: callerAvatar,
+                calleeName: calleeName,
+                calleeAvatar: calleeAvatar,
+                startTime: startTime,
+                endTime: endTime,
+                isCaller: isCaller,
+                userId: userId,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CallRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ImDatabase,
+      $CallRecordsTable,
+      CallRecordData,
+      $$CallRecordsTableFilterComposer,
+      $$CallRecordsTableOrderingComposer,
+      $$CallRecordsTableAnnotationComposer,
+      $$CallRecordsTableCreateCompanionBuilder,
+      $$CallRecordsTableUpdateCompanionBuilder,
+      (
+        CallRecordData,
+        BaseReferences<_$ImDatabase, $CallRecordsTable, CallRecordData>,
+      ),
+      CallRecordData,
+      PrefetchHooks Function()
+    >;
 
 class $ImDatabaseManager {
   final _$ImDatabase _db;
@@ -3456,4 +4838,6 @@ class $ImDatabaseManager {
       $$MessagesTableTableManager(_db, _db.messages);
   $$ConversationsTableTableManager get conversations =>
       $$ConversationsTableTableManager(_db, _db.conversations);
+  $$CallRecordsTableTableManager get callRecords =>
+      $$CallRecordsTableTableManager(_db, _db.callRecords);
 }

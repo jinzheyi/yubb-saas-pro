@@ -265,6 +265,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagePreviewSystem => '[System]';
 
   @override
+  String get messagePreviewCallRecord => '[Call Record]';
+
+  @override
   String get messagePreviewMePrefix => '나';
 
   @override
@@ -2747,6 +2750,127 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get callSwitch => 'Switch';
+
+  @override
+  String get callIncoming => 'Incoming Call';
+
+  @override
+  String get callOutgoing => 'Outgoing Call';
+
+  @override
+  String get callVoice => 'Voice Call';
+
+  @override
+  String get callVideo => 'Video Call';
+
+  @override
+  String get callAccept => 'Accept';
+
+  @override
+  String get callReject => 'Reject';
+
+  @override
+  String get callHangup => 'Hang Up';
+
+  @override
+  String get callCancel => 'Cancel';
+
+  @override
+  String get callBusy => 'Line Busy';
+
+  @override
+  String get callNoAnswer => 'No Answer';
+
+  @override
+  String get callRejected => 'Rejected';
+
+  @override
+  String get callCancelled => 'Cancelled';
+
+  @override
+  String callDuration(String duration) {
+    return 'Duration $duration';
+  }
+
+  @override
+  String get callMissed => 'Missed Call';
+
+  @override
+  String get callEnded => 'Call Ended';
+
+  @override
+  String get callConnecting => 'Connecting...';
+
+  @override
+  String get callReconnecting => 'Reconnecting...';
+
+  @override
+  String get callNetworkPoor => 'Poor Network Quality';
+
+  @override
+  String get callEncryptionEnabled => 'End-to-End Encrypted';
+
+  @override
+  String get callScreenShare => 'Screen Share';
+
+  @override
+  String get callSwitchCamera => 'Switch Camera';
+
+  @override
+  String get callMute => 'Mute';
+
+  @override
+  String get callUnmute => 'Unmute';
+
+  @override
+  String get callSpeaker => 'Speaker';
+
+  @override
+  String get callEarpiece => 'Earpiece';
+
+  @override
+  String get callCameraOn => 'Camera On';
+
+  @override
+  String get callCameraOff => 'Camera Off';
+
+  @override
+  String get callHistoryTitle => 'Call History';
+
+  @override
+  String get callHistoryEmpty => 'No call history';
+
+  @override
+  String get callHistoryFilterAll => 'All';
+
+  @override
+  String get callHistoryFilterVoice => 'Voice Call';
+
+  @override
+  String get callHistoryFilterVideo => 'Video Call';
+
+  @override
+  String callRecordCompleted(String duration) {
+    return 'Duration $duration';
+  }
+
+  @override
+  String get callRecordMissed => 'No Answer';
+
+  @override
+  String get callRecordRejected => 'Rejected';
+
+  @override
+  String get callRecordBusy => 'Line Busy';
+
+  @override
+  String get callRecordCancelled => 'Cancelled';
+
+  @override
+  String get callRecordOutgoing => 'Outgoing';
+
+  @override
+  String get callRecordIncoming => 'Answered';
 
   @override
   String torchToggleFailed(Object error) {

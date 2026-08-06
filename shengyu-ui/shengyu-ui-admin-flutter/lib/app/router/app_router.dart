@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/group_call_member_select_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/contact_department_args.dart';
@@ -46,6 +47,10 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/sticker_
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/camera_capture_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/video_player_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_session_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_transfer_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_member_select_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_session_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_outgoing_call_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/chat_settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/conversation_list_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/initiate_group_page.dart';
@@ -140,6 +145,59 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _buildRoutePage(
             state: state,
             child: CallSessionPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.groupCallSession,
+        name: RouteNames.groupCallSession,
+        pageBuilder: (context, state) {
+          final args = state.extra is CallLaunchArgs
+              ? state.extra! as CallLaunchArgs
+              : const CallLaunchArgs.empty();
+          return _buildRoutePage(
+            state: state,
+            child: GroupCallSessionPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.groupCallMemberSelect,
+        name: RouteNames.groupCallMemberSelect,
+        pageBuilder: (context, state) {
+          final args = state.extra is GroupCallMemberSelectArgs
+              ? state.extra! as GroupCallMemberSelectArgs
+              : const GroupCallMemberSelectArgs(
+                  groupId: '',
+                  groupName: '',
+                  callType: CallType.audio,
+                );
+          return _buildRoutePage(
+            state: state,
+            child: GroupCallMemberSelectPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.groupOutgoingCall,
+        name: RouteNames.groupOutgoingCall,
+        pageBuilder: (context, state) {
+          final args = state.extra is CallLaunchArgs
+              ? state.extra! as CallLaunchArgs
+              : const CallLaunchArgs.empty();
+          return _buildRoutePage(
+            state: state,
+            child: GroupOutgoingCallPage(args: args),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.callTransfer,
+        name: RouteNames.callTransfer,
+        pageBuilder: (context, state) {
+          return _buildRoutePage(
+            state: state,
+            child: const CallTransferPage(),
           );
         },
       ),

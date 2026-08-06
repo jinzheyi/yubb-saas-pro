@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/forward_target_route_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
@@ -227,9 +228,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                           _FooterAction(
                             icon: Icons.phone_outlined,
                             label: strings.contactsDetailCall,
-                            onTap: () => _showMessage(
-                              strings.contactsDetailCallInDevelopment,
-                            ),
+                            onTap: _showCallOptions,
                           ),
                         ],
                       ),
@@ -313,6 +312,90 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
               : conversation.title.trim(),
         ),
       );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
+    }
+  }
+
+  Future<void> _showCallOptions() async {
+    if (widget.userId.trim().isEmpty) {
+      return;
+    }
+    final strings = AppLocalizations.of(context);
+    final displayName = _displayName(strings);
+
+    final callType = await showModalBottomSheet<CallType>(
+      context: context,
+      backgroundColor: ThemeColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ThemeColors.divider(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                displayName,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: ThemeColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _CallOptionTile(
+                icon: Icons.phone_outlined,
+                label: strings.callVoice,
+                onTap: () => Navigator.of(context).pop(CallType.audio),
+              ),
+              _CallOptionTile(
+                icon: Icons.videocam_outlined,
+                label: strings.callVideo,
+                onTap: () => Navigator.of(context).pop(CallType.video),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || callType == null) {
+      return;
+    }
+
+    // 获取或创建会话，然后发起通话
+    try {
+      final conversation = await ref.read(
+        directConversationProvider(widget.userId).future,
+      );
+      if (!mounted) {
+        return;
+      }
+      final chatTitle = conversation.title.trim().isEmpty
+          ? displayName
+          : conversation.title.trim();
+      final args = CallLaunchArgs.outgoing(
+        callSessionId: '',
+        chatId: conversation.chatId,
+        callType: callType,
+        title: chatTitle,
+      );
+      context.pushNamed(RouteNames.callOutgoing, extra: args);
     } catch (error) {
       if (!mounted) {
         return;
@@ -529,6 +612,41 @@ class _FooterAction extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CallOptionTile extends StatelessWidget {
+  const _CallOptionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: ThemeColors.textPrimary(context)),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                color: ThemeColors.textPrimary(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
