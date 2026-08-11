@@ -20,6 +20,11 @@ const tenantEnable = import.meta.env.VITE_APP_TENANT_ENABLE
 const { result_code, base_url, request_timeout } = config
 const { wsCache } = useCache()
 
+// 需要忽略的提示。忽略后，自动 Promise.reject('error')
+const ignoreMsgs = [
+  '无效的刷新令牌', // 刷新令牌被删除时，不用提示
+  '刷新令牌已过期' // 使用刷新令牌，刷新获取新的访问令牌时，结果因为过期失败，此时需要忽略。否则，会导致继续 401，无法跳转到登出界面
+]
 // 是否显示重新登录
 export const isRelogin = { show: false }
 // Axios 无感知刷新令牌，参考 https://www.dashingdog.cn/article/11 与 https://segmentfault.com/a/1190000020210980 实现
