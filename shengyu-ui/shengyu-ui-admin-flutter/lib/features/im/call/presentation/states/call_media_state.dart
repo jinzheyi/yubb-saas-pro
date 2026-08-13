@@ -32,9 +32,6 @@ class CallMediaState {
     this.remoteVideoRenderer,
     this.screenShareEnabled = false,
     this.screenShareStream,
-    this.recordingEnabled = false,
-    this.recordingFilePath,
-    this.recordingDuration = Duration.zero,
     this.networkQuality = NetworkQuality.unknown,
     this.roundTripTime,
     this.packetLossRate,
@@ -62,11 +59,6 @@ class CallMediaState {
   final bool screenShareEnabled;
   final MediaStream? screenShareStream;
   
-  // 通话录制
-  final bool recordingEnabled;
-  final String? recordingFilePath;
-  final Duration recordingDuration;
-  
   // 网络质量监控
   final NetworkQuality networkQuality;
   final int? roundTripTime; // RTT (ms)
@@ -74,7 +66,7 @@ class CallMediaState {
   final int? availableOutgoingBitrate; // 可用上行码率 (bps)
   final int? availableIncomingBitrate; // 可用下行码率 (bps)
 
-  /// Sentinel value to distinguish between "not provided" and "explicitly null"
+  /// 哨兵值，用来区分“未提供”和“显式传入 null”。
   static const Object _sentinel = Object();
 
   CallMediaState copyWith({
@@ -91,9 +83,6 @@ class CallMediaState {
     Object? remoteVideoRenderer = _sentinel,
     bool? screenShareEnabled,
     Object? screenShareStream = _sentinel,
-    bool? recordingEnabled,
-    String? recordingFilePath,
-    Duration? recordingDuration,
     NetworkQuality? networkQuality,
     int? roundTripTime,
     double? packetLossRate,
@@ -114,9 +103,6 @@ class CallMediaState {
       remoteVideoRenderer: identical(remoteVideoRenderer, _sentinel) ? this.remoteVideoRenderer : remoteVideoRenderer as RTCVideoRenderer?,
       screenShareEnabled: screenShareEnabled ?? this.screenShareEnabled,
       screenShareStream: identical(screenShareStream, _sentinel) ? this.screenShareStream : screenShareStream as MediaStream?,
-      recordingEnabled: recordingEnabled ?? this.recordingEnabled,
-      recordingFilePath: recordingFilePath ?? this.recordingFilePath,
-      recordingDuration: recordingDuration ?? this.recordingDuration,
       networkQuality: networkQuality ?? this.networkQuality,
       roundTripTime: roundTripTime ?? this.roundTripTime,
       packetLossRate: packetLossRate ?? this.packetLossRate,

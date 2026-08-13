@@ -2,6 +2,8 @@ package com.shengyu.module.system.controller.app.im;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.exception.ErrorCode;
@@ -12,10 +14,15 @@ import com.shengyu.module.system.api.user.AdminUserApi;
 import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 import com.shengyu.module.system.controller.app.im.vo.call.*;
 import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
+import com.shengyu.module.system.dal.dataobject.im.ImCallParticipantDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
+import com.shengyu.module.system.dal.mysql.im.ImCallParticipantMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.enums.im.ImCallStatusEnum;
 import com.shengyu.module.system.enums.im.ImCallTypeEnum;
 import com.shengyu.module.system.service.im.CallTokenService;
 import com.shengyu.module.system.service.im.ImCallService;
+import com.shengyu.module.system.service.im.GroupCallService;
 import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
 import com.shengyu.module.system.service.im.vo.GroupInviteResultVO;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
@@ -23,12 +30,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,10 +62,25 @@ public class AppCallController {
     private ImCallService callService;
 
     @Resource
+    private GroupCallService groupCallService;
+
+    @Resource
     private CallTokenService callTokenService;
 
     @Resource
     private AdminUserApi adminUserApi;
+
+    @Resource
+    private com.shengyu.module.system.service.im.CallPushService callPushService;
+
+    @Resource
+    private ImCallParticipantMapper callParticipantMapper;
+
+    @Resource
+    private ImChatMapper chatMapper;
+
+    @Value("${janus.url:}")
+    private String janusUrl;
 
     // ==================== 通话基础操作 ====================
 
@@ -79,6 +103,10 @@ public class AppCallController {
         try {
             CallInviteResultVO result = callService.createCallInvite(callerId, reqVO.getCalleeId(), reqVO.getChatId(), callType);
 
+            // App 端的通话动作通过 HTTP 发起，单纯落库还不够：
+            // 被叫方还必须收到实时的 call.invite 事件。
+            publishInvite(result, callerId, reqVO.getCalleeId());
+
             log.info("[createInvite] 创建通话邀请成功, callerId={}, calleeId={}, callType={}",
                     callerId, reqVO.getCalleeId(), callType);
 
@@ -100,9 +128,15 @@ public class AppCallController {
         if (StrUtil.isBlank(reqVO.getCallSessionId())) {
             return CommonResult.error(400, "通话会话ID不能为空");
         }
+        if (StrUtil.isBlank(reqVO.getDeviceId())) {
+            return CommonResult.error(400, "接听设备ID不能为空");
+        }
 
         try {
-            callService.acceptCall(reqVO.getCallSessionId(), userId, null);
+            callService.acceptCall(reqVO.getCallSessionId(), userId, reqVO.getDeviceId());
+            publishStateEvent(reqVO.getCallSessionId(), "call.accepted", userId, null);
+            publishGroupJoinIfNeeded(reqVO.getCallSessionId(), userId);
+            publishMediaTokenEvents(reqVO.getCallSessionId(), userId);
             log.info("[acceptCall] 接听通话, callSessionId={}, userId={}", reqVO.getCallSessionId(), userId);
             return success(true);
         } catch (Exception e) {
@@ -125,6 +159,12 @@ public class AppCallController {
 
         try {
             callService.rejectCall(reqVO.getCallSessionId(), userId, "REJECT");
+            ImCallRecordDO record = callService.getCallRecord(reqVO.getCallSessionId());
+            if (record != null && record.getGroupId() != null) {
+                publishGroupLeaveIfNeeded(reqVO.getCallSessionId(), userId);
+            } else {
+                publishStateEvent(reqVO.getCallSessionId(), "call.rejected", userId, "REJECT");
+            }
             log.info("[rejectCall] 拒绝通话, callSessionId={}, userId={}", reqVO.getCallSessionId(), userId);
             return success(true);
         } catch (Exception e) {
@@ -147,6 +187,7 @@ public class AppCallController {
 
         try {
             callService.cancelCall(reqVO.getCallSessionId(), userId, "CANCEL");
+            publishStateEvent(reqVO.getCallSessionId(), "call.cancelled", userId, "CANCEL");
             log.info("[cancelCall] 取消通话, callSessionId={}, userId={}", reqVO.getCallSessionId(), userId);
             return success(true);
         } catch (Exception e) {
@@ -169,6 +210,7 @@ public class AppCallController {
 
         try {
             callService.hangupCall(reqVO.getCallSessionId(), userId, "HANGUP");
+            publishStateEvent(reqVO.getCallSessionId(), "call.ended", userId, "HANGUP");
             log.info("[hangupCall] 挂断通话, callSessionId={}, userId={}", reqVO.getCallSessionId(), userId);
             return success(true);
         } catch (Exception e) {
@@ -182,6 +224,10 @@ public class AppCallController {
     @Operation(summary = "同步通话状态")
     @Parameter(name = "callSessionId", description = "通话会话ID", required = true)
     public CommonResult<AppCallStateRespVO> syncCallState(@RequestParam("callSessionId") String callSessionId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (userId == null) {
+            return CommonResult.error(401, "用户未登录");
+        }
         if (StrUtil.isBlank(callSessionId)) {
             return CommonResult.error(400, "通话会话ID不能为空");
         }
@@ -190,6 +236,12 @@ public class AppCallController {
             ImCallRecordDO callRecord = callService.getCallRecord(callSessionId);
             if (callRecord == null) {
                 return success(null);
+            }
+            boolean directParticipant = userId.equals(callRecord.getCallerId()) || userId.equals(callRecord.getCalleeId());
+            boolean groupParticipant = callRecord.getGroupId() != null
+                    && callParticipantMapper.selectByCallIdAndUserId(callSessionId, userId) != null;
+            if (!directParticipant && !groupParticipant) {
+                return CommonResult.error(403, "无权查看该通话状态");
             }
 
             AppCallStateRespVO respVO = buildCallStateRespVO(callRecord);
@@ -289,6 +341,20 @@ public class AppCallController {
         if (userId == null) {
             return CommonResult.error(401, "用户未登录");
         }
+        if (StrUtil.isBlank(roomId)) {
+            return CommonResult.error(400, "房间ID不能为空");
+        }
+        ImCallRecordDO callRecord = callService.getCallRecordByRoomId(roomId);
+        if (callRecord == null) {
+            return CommonResult.error(404, "通话房间不存在");
+        }
+        boolean directParticipant = Objects.equals(userId, callRecord.getCallerId())
+                || Objects.equals(userId, callRecord.getCalleeId());
+        boolean groupParticipant = callRecord.getGroupId() != null
+                && callParticipantMapper.selectByCallIdAndUserId(callRecord.getCallId(), userId) != null;
+        if (!directParticipant && !groupParticipant) {
+            return CommonResult.error(403, "无权获取该通话房间令牌");
+        }
         Long tenantId = TenantContextHolder.getTenantId();
 
         try {
@@ -299,146 +365,6 @@ public class AppCallController {
             log.error("[getCallToken] 生成通话 Token 失败, userId={}, roomId={}, error={}",
                     userId, roomId, e.getMessage(), e);
             return CommonResult.error(500, "生成通话 Token 失败: " + e.getMessage());
-        }
-    }
-
-    // ==================== 通话转接 ====================
-
-    @PostMapping("/transfer/initiate")
-    @Operation(summary = "发起通话转接")
-    public CommonResult<Boolean> initiateTransfer(@Valid @RequestBody AppCallTransferReqVO reqVO) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(reqVO.getCallId())) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-        if (reqVO.getTargetUserId() == null) {
-            return CommonResult.error(400, "目标用户ID不能为空");
-        }
-
-        try {
-            callService.initiateCallTransfer(reqVO.getCallId(), userId, reqVO.getTargetUserId(), reqVO.getTargetUserName());
-            log.info("[initiateTransfer] 发起通话转接, callId={}, fromUserId={}, targetUserId={}",
-                    reqVO.getCallId(), userId, reqVO.getTargetUserId());
-            return success(true);
-        } catch (Exception e) {
-            log.error("[initiateTransfer] 发起通话转接失败, callId={}, userId={}, error={}",
-                    reqVO.getCallId(), userId, e.getMessage(), e);
-            return CommonResult.error(500, "发起通话转接失败: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/transfer/accept")
-    @Operation(summary = "接受通话转接")
-    public CommonResult<Boolean> acceptTransfer(@RequestParam("callId") String callId) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(callId)) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-
-        try {
-            callService.acceptCallTransfer(callId, userId);
-            log.info("[acceptTransfer] 接受通话转接, callId={}, userId={}", callId, userId);
-            return success(true);
-        } catch (Exception e) {
-            log.error("[acceptTransfer] 接受通话转接失败, callId={}, userId={}, error={}",
-                    callId, userId, e.getMessage(), e);
-            return CommonResult.error(500, "接受通话转接失败: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/transfer/reject")
-    @Operation(summary = "拒绝通话转接")
-    public CommonResult<Boolean> rejectTransfer(@RequestParam("callId") String callId) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(callId)) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-
-        try {
-            callService.rejectCallTransfer(callId, userId);
-            log.info("[rejectTransfer] 拒绝通话转接, callId={}, userId={}", callId, userId);
-            return success(true);
-        } catch (Exception e) {
-            log.error("[rejectTransfer] 拒绝通话转接失败, callId={}, userId={}, error={}",
-                    callId, userId, e.getMessage(), e);
-            return CommonResult.error(500, "拒绝通话转接失败: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/transfer/cancel")
-    @Operation(summary = "取消通话转接")
-    public CommonResult<Boolean> cancelTransfer(@RequestParam("callId") String callId) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(callId)) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-
-        try {
-            callService.cancelCallTransfer(callId, userId);
-            log.info("[cancelTransfer] 取消通话转接, callId={}, userId={}", callId, userId);
-            return success(true);
-        } catch (Exception e) {
-            log.error("[cancelTransfer] 取消通话转接失败, callId={}, userId={}, error={}",
-                    callId, userId, e.getMessage(), e);
-            return CommonResult.error(500, "取消通话转接失败: " + e.getMessage());
-        }
-    }
-
-    // ==================== 通话录制 ====================
-
-    @PostMapping("/recording/start")
-    @Operation(summary = "开始通话录制")
-    public CommonResult<Boolean> startRecording(@RequestParam("callId") String callId) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(callId)) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-
-        try {
-            callService.startCallRecording(callId, userId);
-            log.info("[startRecording] 开始通话录制, callId={}, userId={}", callId, userId);
-            return success(true);
-        } catch (Exception e) {
-            log.error("[startRecording] 开始通话录制失败, callId={}, userId={}, error={}",
-                    callId, userId, e.getMessage(), e);
-            return CommonResult.error(500, "开始通话录制失败: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/recording/stop")
-    @Operation(summary = "停止通话录制")
-    public CommonResult<Boolean> stopRecording(@Valid @RequestBody AppCallRecordingReqVO reqVO) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        if (userId == null) {
-            return CommonResult.error(401, "用户未登录");
-        }
-        if (StrUtil.isBlank(reqVO.getCallId())) {
-            return CommonResult.error(400, "通话ID不能为空");
-        }
-
-        try {
-            callService.stopCallRecording(reqVO.getCallId(), userId, reqVO.getRecordingFilePath());
-            log.info("[stopRecording] 停止通话录制, callId={}, userId={}", reqVO.getCallId(), userId);
-            return success(true);
-        } catch (Exception e) {
-            log.error("[stopRecording] 停止通话录制失败, callId={}, userId={}, error={}",
-                    reqVO.getCallId(), userId, e.getMessage(), e);
-            return CommonResult.error(500, "停止通话录制失败: " + e.getMessage());
         }
     }
 
@@ -501,6 +427,186 @@ public class AppCallController {
 
     // ==================== 私有转换方法 ====================
 
+    private void publishInvite(CallInviteResultVO result, Long callerId, Long calleeId) {
+        AdminUserRespDTO caller = adminUserApi.getUser(callerId);
+        JSONObject callerProfile = JSONUtil.createObj()
+                .set("userId", String.valueOf(callerId))
+                .set("displayName", caller != null ? caller.getNickname() : "")
+                .set("avatarUrl", caller != null ? caller.getAvatar() : null);
+        JSONObject payload = JSONUtil.createObj()
+                .set("type", "call.invite")
+                .set("callSessionId", result.getCallSessionId())
+                .set("callId", result.getCallSessionId())
+                .set("chatId", result.getChatId())
+                .set("callType", result.getCallType())
+                .set("callerId", String.valueOf(callerId))
+                .set("calleeId", String.valueOf(calleeId))
+                .set("callerProfile", callerProfile)
+                .set("initiateTime", System.currentTimeMillis());
+        callPushService.publishCallEvent(Collections.singleton(calleeId), callerId,
+                TenantContextHolder.getTenantId(), payload);
+    }
+
+    @PostMapping("/group/create-invite")
+    @Operation(summary = "原子创建群组通话邀请")
+    public CommonResult<AppCallCreateInviteRespVO> createGroupInvite(@Valid @RequestBody AppCallGroupCreateInviteReqVO reqVO) {
+        Long callerId = SecurityFrameworkUtils.getLoginUserId();
+        if (callerId == null) return CommonResult.error(401, "用户未登录");
+        try {
+            Long groupId = Long.valueOf(reqVO.getGroupId());
+            Long chatId = Long.valueOf(reqVO.getChatId());
+            ImChatDO chat = chatMapper.selectById(chatId);
+            if (chat == null || !Objects.equals(chat.getGroupId(), groupId)) {
+                return CommonResult.error(400, "会话与群组不匹配");
+            }
+            if (!"audio".equalsIgnoreCase(reqVO.getCallType())
+                    && !"video".equalsIgnoreCase(reqVO.getCallType())) {
+                return CommonResult.error(400, "通话类型仅支持 audio 或 video");
+            }
+            Integer callType = convertCallTypeToInt(reqVO.getCallType());
+            String callId = groupCallService.initiateGroupCall(callerId, chatId, groupId,
+                    reqVO.getInviteeIds(), callType, reqVO.getDeviceId());
+            AppCallCreateInviteRespVO response = new AppCallCreateInviteRespVO();
+            response.setCallSessionId(callId);
+            response.setInviteId(callId);
+            response.setChatId(reqVO.getChatId());
+            response.setCallType(reqVO.getCallType());
+            response.setStatus("ringing");
+            log.info("[createGroupInvite] 原子创建群通话, callId={}, groupId={}, invitees={}", callId, groupId, reqVO.getInviteeIds().size());
+            return success(response);
+        } catch (Exception e) {
+            log.error("[createGroupInvite] 创建群通话失败, callerId={}, groupId={}", callerId, reqVO.getGroupId(), e);
+            return CommonResult.error(500, "创建群通话失败: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/group/leave")
+    @Operation(summary = "离开群组通话")
+    public CommonResult<Boolean> leaveGroupCall(@Valid @RequestBody AppCallSessionReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (userId == null) {
+            return CommonResult.error(401, "用户未登录");
+        }
+        ImCallRecordDO record = callService.getCallRecord(reqVO.getCallSessionId());
+        if (record == null || record.getGroupId() == null) {
+            return CommonResult.error(400, "不是有效的群组通话");
+        }
+        groupCallService.leaveGroupCall(reqVO.getCallSessionId(), userId);
+        return success(true);
+    }
+
+    /** 广播终态/接听态，确保双方以及双方的所有设备状态收敛。 */
+    private void publishStateEvent(String callSessionId, String eventType, Long actorId, String reason) {
+        ImCallRecordDO record = callService.getCallRecord(callSessionId);
+        if (record == null) {
+            return;
+        }
+        // 业务动作使用数据库 CAS；如果本次请求竞争失败，就不要
+        // 基于实际胜出的状态再发布本次请求的事件。
+        if ("call.accepted".equals(eventType)
+                && !com.shengyu.module.system.enums.im.ImCallStateEnum.CONNECTED.getState().equals(record.getState())) {
+            return;
+        }
+        if (("call.rejected".equals(eventType) || "call.cancelled".equals(eventType) || "call.ended".equals(eventType))
+                && (!com.shengyu.module.system.enums.im.ImCallStateEnum.ENDED.getState().equals(record.getState())
+                || !Objects.equals(reason, record.getEndReason()))) {
+            return;
+        }
+        JSONObject payload = JSONUtil.createObj()
+                .set("type", eventType)
+                .set("callSessionId", callSessionId)
+                .set("callId", callSessionId)
+                .set("actorId", String.valueOf(actorId))
+                .set("acceptedDeviceId", record.getAcceptedDeviceId())
+                .set("duration", record.getDuration())
+                .set("reason", reason)
+                .set("eventTime", System.currentTimeMillis());
+        List<Long> recipients = record.getGroupId() == null
+                ? Arrays.asList(record.getCallerId(), record.getCalleeId())
+                : callParticipantMapper.selectByCallId(callSessionId).stream()
+                .map(ImCallParticipantDO::getUserId).collect(Collectors.toList());
+        callPushService.publishCallEvent(recipients, actorId,
+                TenantContextHolder.getTenantId(), payload);
+    }
+
+    /**
+     * 仅在通话被接听后才签发面向接收方的 RTC 令牌。
+     * 这样可以把媒体资源分配留在振铃阶段之后，并为双方提供
+     * CallController.onMediaTokenIssued() 消费的房间信息包。
+     */
+    private void publishMediaTokenEvents(String callSessionId, Long acceptedBy) {
+        ImCallRecordDO record = callService.getCallRecord(callSessionId);
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (record == null || tenantId == null || StrUtil.isBlank(record.getRoomId()) || StrUtil.isBlank(janusUrl)) {
+            log.error("[publishMediaTokenEvents] RTC 房间配置缺失, callSessionId={}", callSessionId);
+            return;
+        }
+        List<Long> recipients = record.getGroupId() == null
+                ? Arrays.asList(record.getCallerId(), record.getCalleeId())
+                : Arrays.asList(record.getCallerId(), acceptedBy);
+        for (Long recipientId : recipients) {
+            if (recipientId == null) {
+                continue;
+            }
+            String token = callTokenService.generateToken(recipientId, tenantId, record.getRoomId());
+            JSONObject rtcRoom = JSONUtil.createObj()
+                    .set("callSessionId", callSessionId)
+                    .set("roomId", record.getRoomId())
+                    .set("publisherId", String.valueOf(recipientId))
+                    .set("displayName", "")
+                    .set("janusUrl", janusUrl)
+                    .set("turnUrls", Collections.emptyList())
+                    .set("turnUsername", "")
+                    .set("turnCredential", "")
+                    .set("token", token);
+            JSONObject payload = JSONUtil.createObj()
+                    .set("type", "call.media-token-issued")
+                    .set("callSessionId", callSessionId)
+                    .set("callId", callSessionId)
+                    .set("acceptedDeviceId", record.getAcceptedDeviceId())
+                    .set("rtcRoom", rtcRoom);
+            callPushService.publishCallEvent(Collections.singleton(recipientId), acceptedBy, tenantId, payload);
+        }
+    }
+
+    private void publishGroupJoinIfNeeded(String callSessionId, Long userId) {
+        ImCallRecordDO record = callService.getCallRecord(callSessionId);
+        if (record == null || record.getGroupId() == null) {
+            return;
+        }
+        AdminUserRespDTO user = adminUserApi.getUser(userId);
+        JSONObject payload = JSONUtil.createObj()
+                .set("type", "call.group-join")
+                .set("callSessionId", callSessionId)
+                .set("callId", callSessionId)
+                .set("groupId", String.valueOf(record.getGroupId()))
+                .set("userId", String.valueOf(userId))
+                .set("userName", user != null ? user.getNickname() : "")
+                .set("avatarUrl", user != null ? user.getAvatar() : null)
+                .set("joinTime", System.currentTimeMillis());
+        List<Long> recipients = callParticipantMapper.selectByCallId(callSessionId).stream()
+                .map(ImCallParticipantDO::getUserId).collect(Collectors.toList());
+        callPushService.publishCallEvent(recipients, userId, TenantContextHolder.getTenantId(), payload);
+    }
+
+    /** 群邀请被拒绝时，在成员花名册上的效果等同于“加入前离开”。 */
+    private void publishGroupLeaveIfNeeded(String callSessionId, Long userId) {
+        ImCallRecordDO record = callService.getCallRecord(callSessionId);
+        if (record == null || record.getGroupId() == null) {
+            return;
+        }
+        JSONObject payload = JSONUtil.createObj()
+                .set("type", "call.group-leave")
+                .set("callSessionId", callSessionId)
+                .set("callId", callSessionId)
+                .set("groupId", String.valueOf(record.getGroupId()))
+                .set("userId", String.valueOf(userId))
+                .set("leaveTime", System.currentTimeMillis());
+        List<Long> recipients = callParticipantMapper.selectByCallId(callSessionId).stream()
+                .map(ImCallParticipantDO::getUserId).collect(Collectors.toList());
+        callPushService.publishCallEvent(recipients, userId, TenantContextHolder.getTenantId(), payload);
+    }
+
     /**
      * 通话类型字符串转整数
      * 使用枚举消除魔法值
@@ -519,10 +625,23 @@ public class AppCallController {
         AppCallStateRespVO respVO = new AppCallStateRespVO();
         respVO.setCallSessionId(callRecord.getCallId());
         respVO.setCallType(convertCallTypeToString(callRecord.getCallType()));
-        respVO.setStatus(getStatusName(callRecord.getStatus()));
+        respVO.setStatus(toClientPageStatus(callRecord));
         respVO.setState(callRecord.getState() != null ? callRecord.getState().toLowerCase() : "init");
         respVO.setDuration(callRecord.getDuration());
         return respVO;
+    }
+
+    private String toClientPageStatus(ImCallRecordDO callRecord) {
+        if (com.shengyu.module.system.enums.im.ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            return "ended";
+        }
+        if (com.shengyu.module.system.enums.im.ImCallStateEnum.CONNECTED.getState().equals(callRecord.getState())) {
+            return "connected";
+        }
+        if (com.shengyu.module.system.enums.im.ImCallStateEnum.RINGING.getState().equals(callRecord.getState())) {
+            return "ringing";
+        }
+        return "connecting";
     }
 
     /**

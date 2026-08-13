@@ -85,14 +85,14 @@ class _CallHistoryPageState extends ConsumerState<CallHistoryPage> {
                   ? '${_dateRange!.start.toString().split(' ')[0]} - ${_dateRange!.end.toString().split(' ')[0]}'
                   : '全部'),
               onTap: () async {
-                // Store the dialog context in a local variable
+                // 先把弹窗 context 存到局部变量里，避免异步后失效。
                 final ctx = dialogContext;
                 final range = await showDateRangePicker(
                   context: ctx,
                   firstDate: DateTime(2020),
                   lastDate: DateTime.now(),
                 );
-                // Check if the dialog context is still valid after the async operation
+                // 异步操作结束后，先确认这个 context 仍然有效。
                 if (range != null && ctx.mounted) {
                   Navigator.pop(ctx);
                   setState(() => _dateRange = range);

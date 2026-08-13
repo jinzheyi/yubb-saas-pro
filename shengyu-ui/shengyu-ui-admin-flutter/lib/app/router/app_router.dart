@@ -47,7 +47,6 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/sticker_
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/camera_capture_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/video_player_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_session_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_transfer_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_member_select_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_session_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_outgoing_call_page.dart';
@@ -188,16 +187,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _buildRoutePage(
             state: state,
             child: GroupOutgoingCallPage(args: args),
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.callTransfer,
-        name: RouteNames.callTransfer,
-        pageBuilder: (context, state) {
-          return _buildRoutePage(
-            state: state,
-            child: const CallTransferPage(),
           );
         },
       ),

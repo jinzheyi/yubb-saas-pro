@@ -5,7 +5,7 @@ class AcceptCallUseCase {
 
   final CallRepository _repository;
 
-  Future<void> execute({required String callSessionId}) {
-    return _repository.accept(callSessionId: callSessionId);
+  Future<void> execute({required String callSessionId, required String deviceId}) {
+    return _repository.accept(callSessionId: callSessionId, deviceId: deviceId);
   }
 }

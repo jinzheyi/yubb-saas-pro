@@ -12,4 +12,7 @@ public class AppCallSessionReqVO {
     @Schema(description = "通话会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "abc123def456")
     @NotBlank(message = "通话会话ID不能为空")
     private String callSessionId;
+
+    @Schema(description = "当前接听设备 ID（多端互斥接听）", example = "android-abc123")
+    private String deviceId;
 }

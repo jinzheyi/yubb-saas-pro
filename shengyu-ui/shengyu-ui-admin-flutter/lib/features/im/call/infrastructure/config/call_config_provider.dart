@@ -19,19 +19,9 @@ final callInviteTimeoutProvider = Provider<Duration>((ref) {
   return ref.watch(callConfigProvider).callInviteTimeout;
 });
 
-/// 是否启用通话录制 Provider
-final enableCallRecordingProvider = Provider<bool>((ref) {
-  return ref.watch(callConfigProvider).enableCallRecording;
-});
-
 /// 是否启用屏幕共享 Provider
 final enableScreenShareConfigProvider = Provider<bool>((ref) {
   return ref.watch(callConfigProvider).enableScreenShare;
-});
-
-/// 是否启用通话转接 Provider
-final enableCallTransferConfigProvider = Provider<bool>((ref) {
-  return ref.watch(callConfigProvider).enableCallTransfer;
 });
 
 

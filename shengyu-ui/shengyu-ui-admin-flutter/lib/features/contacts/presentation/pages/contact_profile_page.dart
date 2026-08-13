@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
@@ -35,6 +36,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
   ContactProfile? _profile;
   var _loading = true;
   var _followLoading = false;
+  var _callLaunchInProgress = false;
   var _isFollowing = false;
   String? _error;
 
@@ -324,6 +326,10 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
     if (widget.userId.trim().isEmpty) {
       return;
     }
+    if (_callLaunchInProgress || ref.read(activeCallRegistryProvider).hasActiveCall()) {
+      _showMessage('您正在通话中');
+      return;
+    }
     final strings = AppLocalizations.of(context);
     final displayName = _displayName(strings);
 
@@ -380,6 +386,7 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
 
     // 获取或创建会话，然后发起通话
     try {
+      setState(() => _callLaunchInProgress = true);
       final conversation = await ref.read(
         directConversationProvider(widget.userId).future,
       );
@@ -394,12 +401,16 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
         chatId: conversation.chatId,
         callType: callType,
         title: chatTitle,
+        toUserId: widget.userId.trim(),
       );
-      context.pushNamed(RouteNames.callOutgoing, extra: args);
+      context.pushNamed(RouteNames.callOutgoing, extra: args).whenComplete(() {
+        if (mounted) setState(() => _callLaunchInProgress = false);
+      });
     } catch (error) {
       if (!mounted) {
         return;
       }
+      setState(() => _callLaunchInProgress = false);
       _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
     }
   }

@@ -70,7 +70,14 @@ public class CallDurationLimiter {
      * @param callId 通话 ID
      */
     public void registerCallStart(String callId) {
-        callStartTimes.put(callId, LocalDateTime.now());
+        registerCallStart(callId, LocalDateTime.now());
+    }
+
+    /**
+     * 注册已持久化的接通时间。重连/故障恢复不能重新从当前时间开始计时。
+     */
+    public void registerCallStart(String callId, LocalDateTime startTime) {
+        callStartTimes.put(callId, startTime);
         log.info("[registerCallStart] 注册通话开始: callId={}, startTime={}", callId, callStartTimes.get(callId));
     }
 

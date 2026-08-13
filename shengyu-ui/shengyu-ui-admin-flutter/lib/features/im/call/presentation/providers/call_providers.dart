@@ -13,8 +13,6 @@ import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/create
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/hangup_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/reject_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/sync_active_call_state_use_case.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/transfer_call_use_case.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/record_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/repositories/call_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/infrastructure/datasources/call_remote_data_source.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/infrastructure/datasources/call_socket_data_source.dart';
@@ -153,14 +151,6 @@ final syncActiveCallStateUseCaseProvider = Provider<SyncActiveCallStateUseCase>(
   },
 );
 
-final transferCallUseCaseProvider = Provider<TransferCallUseCase>((ref) {
-  return TransferCallUseCase(ref.read(callRepositoryProvider));
-});
-
-final recordCallUseCaseProvider = Provider<RecordCallUseCase>((ref) {
-  return RecordCallUseCase(ref.read(callRepositoryProvider));
-});
-
 final callControllerProvider =
     StateNotifierProvider<CallController, CallState>((ref) {
       final repository = ref.read(callRepositoryProvider);
@@ -173,8 +163,6 @@ final callControllerProvider =
         ref.read(cancelCallUseCaseProvider),
         ref.read(hangupCallUseCaseProvider),
         ref.read(syncActiveCallStateUseCaseProvider),
-        ref.read(transferCallUseCaseProvider),
-        ref.read(recordCallUseCaseProvider),
         ref.read(callMediaControllerProvider),
         ref.read(callCoordinatorProvider),
         ref.read(activeCallRegistryProvider),
@@ -255,33 +243,6 @@ final canToggleScreenShareProvider = Provider<bool>((ref) {
   final canToggle = ref.watch(canToggleCallControlsProvider);
   final isVideoEnabled = ref.watch(isCallVideoEnabledProvider);
   return canToggle && isVideoEnabled;
-});
-
-final isRecordingEnabledProvider = Provider<bool>((ref) {
-  return ref.watch(
-    callControllerProvider.select(
-      (state) => state.mediaState.recordingEnabled,
-    ),
-  );
-});
-
-final canToggleRecordingProvider = Provider<bool>((ref) {
-  final canToggle = ref.watch(canToggleCallControlsProvider);
-  return canToggle;
-});
-
-final callTransferStatusProvider = Provider<CallTransferStatus>((ref) {
-  return ref.watch(
-    callControllerProvider.select(
-      (state) => state.transferStatus,
-    ),
-  );
-});
-
-final canInitiateTransferProvider = Provider<bool>((ref) {
-  final canToggle = ref.watch(canToggleCallControlsProvider);
-  final transferStatus = ref.watch(callTransferStatusProvider);
-  return canToggle && transferStatus == CallTransferStatus.none;
 });
 
 final networkQualityProvider = Provider<NetworkQuality>((ref) {

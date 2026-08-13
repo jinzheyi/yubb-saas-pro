@@ -374,7 +374,7 @@ class CallMediaController {
     required RtcRoomBundle roomBundle,
   }) async {
     // 关键修复：在创建新连接前，先清理旧的连接资源（防止重连场景下的资源泄漏）
-    // 例如：网络断开重连、通话转接等场景，旧的 Janus 连接可能还存在
+    // 例如网络断开重连时，旧的 Janus 连接可能还存在
     if (_janusClient != null || _videoRoomPlugin != null) {
       debugPrint('[CallMediaController] prepareJoin: 检测到旧连接，先清理');
       await _cleanupExistingConnection();
@@ -442,7 +442,7 @@ class CallMediaController {
 
   /// 清理已存在的 Janus 连接（不释放本地媒体流）
   ///
-  /// 关键修复：用于重连、通话转接等场景，旧连接需要被替换但本地流需要保留
+  /// 关键修复：用于重连场景，旧连接需要被替换但本地流需要保留
   Future<void> _cleanupExistingConnection() async {
     await _remoteStreamSubscription?.cancel();
     _remoteStreamSubscription = null;
@@ -534,9 +534,6 @@ class CallMediaController {
       remoteVideoRenderer: null,
       screenShareEnabled: false,
       screenShareStream: null,
-      recordingEnabled: false,
-      recordingFilePath: null,
-      recordingDuration: Duration.zero,
       rtcConnectionStatus: RtcConnectionStatus.disconnected,
     );
   }

@@ -41,7 +41,7 @@ class NetworkRecoveryManager {
   int _retryAttempts = 0;
   bool _isReconnecting = false;
   
-  /// connectivity_plus 网络监听
+  /// `connectivity_plus` 网络监听。
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   
   /// 上次已知的网络状态
@@ -231,7 +231,7 @@ class NetworkRecoveryManager {
   /// 计算指数退避延迟
   /// 
   /// 公式: 2^attempt 秒，最大 30 秒
-  /// attempt=1 -> 2s, attempt=2 -> 4s, attempt=3 -> 8s, attempt=4 -> 16s, attempt=5 -> 30s
+  /// 重试退避：attempt=1 -> 2s，attempt=2 -> 4s，attempt=3 -> 8s，attempt=4 -> 16s，attempt=5 -> 30s。
   int _calculateBackoffDelay(int attempt) {
     final delay = (1 << attempt).clamp(1, 30);
     return delay;

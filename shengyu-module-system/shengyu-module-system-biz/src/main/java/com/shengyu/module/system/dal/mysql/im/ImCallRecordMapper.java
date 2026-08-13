@@ -1,10 +1,12 @@
 package com.shengyu.module.system.dal.mysql.im;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -23,6 +25,10 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
      */
     default ImCallRecordDO selectByCallId(String callId) {
         return selectOne(ImCallRecordDO::getCallId, callId);
+    }
+
+    default ImCallRecordDO selectByRoomId(String roomId) {
+        return selectOne(ImCallRecordDO::getRoomId, roomId);
     }
 
     /**
@@ -101,6 +107,52 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
                 .eq(ImCallRecordDO::getCalleeId, userId));
         wrapper.in(ImCallRecordDO::getState, (Object[]) states);
         return selectCount(wrapper) > 0;
+    }
+
+    /** 查询在指定时刻之前进入某状态的通话，用于服务端权威的超时回收。 */
+    default List<ImCallRecordDO> selectByStateBefore(String state, LocalDateTime before) {
+        LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ImCallRecordDO::getState, state);
+        wrapper.le(ImCallRecordDO::getStartTime, before);
+        return selectList(wrapper);
+    }
+
+    /**
+     * 接听的数据库 CAS：同一通话只有一个 RINGING -> CONNECTED 可以成功。
+     */
+    default boolean acceptIfRinging(String callId, String deviceId, LocalDateTime acceptedAt, Integer answeredStatus) {
+        LambdaUpdateWrapper<ImCallRecordDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(ImCallRecordDO::getCallId, callId)
+                .eq(ImCallRecordDO::getState, "RINGING")
+                .set(ImCallRecordDO::getState, "CONNECTED")
+                .set(ImCallRecordDO::getStatus, answeredStatus)
+                .set(ImCallRecordDO::getStartTime, acceptedAt)
+                .set(ImCallRecordDO::getAcceptedDeviceId, deviceId);
+        return update(null, wrapper) == 1;
+    }
+
+    /**
+     * 终态数据库 CAS。返回 false 表示已被另一设备/节点处理，无需重复推送。
+     */
+    default boolean endIfState(String callId, String expectedState, Integer status,
+                               LocalDateTime endTime, Integer duration, String reason) {
+        LambdaUpdateWrapper<ImCallRecordDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(ImCallRecordDO::getCallId, callId)
+                .eq(ImCallRecordDO::getState, expectedState)
+                .set(ImCallRecordDO::getState, "ENDED")
+                .set(ImCallRecordDO::getStatus, status)
+                .set(ImCallRecordDO::getEndTime, endTime)
+                .set(ImCallRecordDO::getDuration, duration)
+                .set(ImCallRecordDO::getEndReason, reason);
+        return update(null, wrapper) == 1;
+    }
+
+    default boolean transitionState(String callId, String expectedState, String targetState) {
+        LambdaUpdateWrapper<ImCallRecordDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(ImCallRecordDO::getCallId, callId)
+                .eq(ImCallRecordDO::getState, expectedState)
+                .set(ImCallRecordDO::getState, targetState);
+        return update(null, wrapper) == 1;
     }
 
 }

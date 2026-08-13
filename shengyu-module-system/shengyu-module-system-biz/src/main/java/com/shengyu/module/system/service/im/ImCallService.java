@@ -93,6 +93,8 @@ public interface ImCallService {
      */
     ImCallRecordDO getCallRecord(String callId);
 
+    ImCallRecordDO getCallRecordByRoomId(String roomId);
+
     /**
      * 获取用户的通话记录列表
      *
@@ -226,57 +228,6 @@ public interface ImCallService {
      * @return 群组通话邀请结果
      */
     GroupInviteResultVO inviteGroupMembers(String callSessionId, String groupId, Long inviterId, List<Long> inviteeIds);
-
-    /**
-     * 发起通话转接
-     *
-     * @param callId 通话ID
-     * @param fromUserId 转接发起者ID
-     * @param targetUserId 目标用户ID
-     * @param targetUserName 目标用户名称
-     */
-    void initiateCallTransfer(String callId, Long fromUserId, Long targetUserId, String targetUserName);
-
-    /**
-     * 接受通话转接
-     *
-     * @param callId 通话ID
-     * @param userId 用户ID
-     */
-    void acceptCallTransfer(String callId, Long userId);
-
-    /**
-     * 拒绝通话转接
-     *
-     * @param callId 通话ID
-     * @param userId 用户ID
-     */
-    void rejectCallTransfer(String callId, Long userId);
-
-    /**
-     * 取消通话转接
-     *
-     * @param callId 通话ID
-     * @param userId 用户ID
-     */
-    void cancelCallTransfer(String callId, Long userId);
-
-    /**
-     * 开始通话录制
-     *
-     * @param callId 通话ID
-     * @param userId 用户ID
-     */
-    void startCallRecording(String callId, Long userId);
-
-    /**
-     * 停止通话录制
-     *
-     * @param callId 通话ID
-     * @param userId 用户ID
-     * @param recordingFilePath 录制文件路径
-     */
-    void stopCallRecording(String callId, Long userId, String recordingFilePath);
 
     /**
      * 根据用户ID分页查询通话记录

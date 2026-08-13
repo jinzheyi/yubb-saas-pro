@@ -4,15 +4,13 @@
 /// - 群通话最大参与人数
 /// - 通话邀请超时时间
 /// - 铃声播放时长
-/// - 功能开关（录制、屏幕共享、转接等）
+/// - 功能开关（屏幕共享等）
 class CallConfig {
   const CallConfig({
     this.maxGroupCallParticipants = 9,
     this.callInviteTimeout = const Duration(seconds: 30),
     this.ringtoneDuration = const Duration(seconds: 30),
-    this.enableCallRecording = true,
     this.enableScreenShare = true,
-    this.enableCallTransfer = true,
   });
 
   /// 群通话最大参与人数（包含发起人）
@@ -27,14 +25,8 @@ class CallConfig {
   /// 超过此时间自动停止铃声，默认 30 秒
   final Duration ringtoneDuration;
 
-  /// 是否启用通话录制功能
-  final bool enableCallRecording;
-
   /// 是否启用屏幕共享功能
   final bool enableScreenShare;
-
-  /// 是否启用通话转接功能
-  final bool enableCallTransfer;
 
   /// 创建默认配置
   factory CallConfig.defaultConfig() => const CallConfig();
@@ -47,18 +39,14 @@ class CallConfig {
           maxGroupCallParticipants == other.maxGroupCallParticipants &&
           callInviteTimeout == other.callInviteTimeout &&
           ringtoneDuration == other.ringtoneDuration &&
-          enableCallRecording == other.enableCallRecording &&
-          enableScreenShare == other.enableScreenShare &&
-          enableCallTransfer == other.enableCallTransfer;
+          enableScreenShare == other.enableScreenShare;
 
   @override
   int get hashCode =>
       maxGroupCallParticipants.hashCode ^
       callInviteTimeout.hashCode ^
       ringtoneDuration.hashCode ^
-      enableCallRecording.hashCode ^
-      enableScreenShare.hashCode ^
-      enableCallTransfer.hashCode;
+      enableScreenShare.hashCode;
 
   @override
   String toString() {
@@ -66,8 +54,6 @@ class CallConfig {
         'maxGroupCallParticipants: $maxGroupCallParticipants, '
         'callInviteTimeout: $callInviteTimeout, '
         'ringtoneDuration: $ringtoneDuration, '
-        'enableCallRecording: $enableCallRecording, '
-        'enableScreenShare: $enableScreenShare, '
-        'enableCallTransfer: $enableCallTransfer)';
+        'enableScreenShare: $enableScreenShare)';
   }
 }

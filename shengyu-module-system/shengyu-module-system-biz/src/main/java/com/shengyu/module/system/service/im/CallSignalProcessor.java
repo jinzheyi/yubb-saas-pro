@@ -26,19 +26,13 @@ import java.util.List;
 /**
  * 通话信令处理器
  * 
- * 处理 CALL_SIGNAL (206) 消息类型，根据 signalType 分发处理不同信令：
- * - 1: 发起呼叫 (CALL_INITIATE)
- * - 2: 接听 (CALL_ACCEPT)
- * - 3: 拒绝 (CALL_REJECT)
- * - 4: 挂断 (CALL_HANGUP)
- * - 5: 忙线 (CALL_BUSY)
- * - 6: 媒体控制 (MEDIA_CONTROL)
+ * 处理 CALL_SIGNAL (206) 的媒体控制信令（仅 signalType=6）。
+ * 通话生命周期必须通过 REST + 数据库 CAS 处理，避免产生第二条状态迁移路径。
  * 
  * 处理流程：
  * 1. 解析 CallSignalMessage
- * 2. 根据 signalType 分发处理
- * 3. 调用 ImCallService 进行业务处理
- * 4. 使用 NettyMessageSender 向客户端发送 SYSTEM_NOTIFY 消息（action=call.*）
+ * 2. 验证当前通话参与者
+ * 3. 转发媒体控制状态
  *
  * @author 圣钰科技
  */
@@ -93,17 +87,18 @@ public class CallSignalProcessor implements MessageProcessor {
                 return;
             }
 
-            // 安全检查 2: 信令频率限制（发起呼叫时检查）
-            if (signalType == 1) {
-                if (!callSecurityService.checkSignalRateLimit(userId, callId)) {
-                    log.warn("[CallSignal] 信令频率超限, userId={}, callId={}", userId, callId);
-                    callSecurityService.logSecurityAudit(userId, callId, "RATE_LIMIT_CHECK", "FAILED");
-                    return;
-                }
+            // CALL_SIGNAL is deliberately not a call-lifecycle API. Lifecycle
+            // changes use REST + database CAS so all clients follow one state
+            // machine.  This channel only transports in-call media controls.
+            if (signalType != 6) {
+                log.warn("[CallSignal] 拒绝生命周期信令, userId={}, callId={}, signalType={}；请使用 REST 通话接口",
+                        userId, callId, signalType);
+                callSecurityService.logSecurityAudit(userId, callId, "LIFECYCLE_SIGNAL_REJECTED", "FAILED");
+                return;
             }
 
-            // 安全检查 3: 通话参与者权限验证（非发起呼叫时检查）
-            if (signalType > 1 && !callId.isEmpty()) {
+            // 媒体控制必须来自当前通话参与者。
+            if (!callId.isEmpty()) {
                 if (!callSecurityService.isCallParticipant(callId, userId)) {
                     log.warn("[CallSignal] 用户不是通话参与者, userId={}, callId={}", userId, callId);
                     callSecurityService.logSecurityAudit(userId, callId, "PARTICIPANT_CHECK", "FAILED");
@@ -114,29 +109,7 @@ public class CallSignalProcessor implements MessageProcessor {
             // 记录安全检查通过
             callSecurityService.logSecurityAudit(userId, callId, "SECURITY_CHECK", "PASSED");
 
-            // 根据信令类型分发处理
-            switch (signalType) {
-                case 1:  // 发起呼叫
-                    handleCallInitiate(userId, tenantId, deviceId, signal);
-                    break;
-                case 2:  // 接听
-                    handleCallAccept(userId, tenantId, deviceId, signal);
-                    break;
-                case 3:  // 拒绝
-                    handleCallReject(userId, tenantId, deviceId, signal);
-                    break;
-                case 4:  // 挂断
-                    handleCallHangup(userId, tenantId, deviceId, signal);
-                    break;
-                case 5:  // 忙线
-                    handleCallBusy(userId, tenantId, deviceId, signal);
-                    break;
-                case 6:  // 媒体控制
-                    handleMediaControl(userId, tenantId, signal);
-                    break;
-                default:
-                    log.warn("[CallSignal] 未知信令类型：{}", signalType);
-            }
+            handleMediaControl(userId, tenantId, signal);
         } catch (InvalidProtocolBufferException e) {
             log.error("[CallSignal] 解析通话信令消息失败", e);
         } catch (Exception e) {

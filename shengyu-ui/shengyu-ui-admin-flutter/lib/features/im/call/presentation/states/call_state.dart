@@ -29,17 +29,6 @@ enum CallEndReason {
   networkTimeout,
   rtcError,
   permissionDenied,
-  transferred, // 通话已转接
-}
-
-enum CallTransferStatus {
-  none, // 无转接
-  initiating, // 正在发起转接
-  waitingAccept, // 等待被转接方接受
-  accepted, // 被转接方已接受
-  rejected, // 被转接方已拒绝
-  cancelled, // 转接已取消
-  completed, // 转接已完成
 }
 
 /// 待处理来电信息（通话等待场景）
@@ -84,9 +73,6 @@ class CallState {
     this.roomBundle,
     this.error,
     this.mediaState = const CallMediaState(),
-    this.transferStatus = CallTransferStatus.none,
-    this.transferTargetId,
-    this.transferTargetName,
     this.isGroupCall = false,
     this.groupId,
     this.participants = const [],
@@ -114,11 +100,6 @@ class CallState {
   final RtcRoomBundle? roomBundle;
   final AppError? error;
   final CallMediaState mediaState;
-  
-  // 通话转接相关
-  final CallTransferStatus transferStatus;
-  final String? transferTargetId;
-  final String? transferTargetName;
   
   // 群组通话相关
   final bool isGroupCall;
@@ -152,9 +133,6 @@ class CallState {
     RtcRoomBundle? roomBundle,
     Object? error = _noChange,
     CallMediaState? mediaState,
-    CallTransferStatus? transferStatus,
-    String? transferTargetId,
-    String? transferTargetName,
     bool? isGroupCall,
     String? groupId,
     List<CallParticipantProfile>? participants,
@@ -182,9 +160,6 @@ class CallState {
       roomBundle: roomBundle ?? this.roomBundle,
       error: identical(error, _noChange) ? this.error : error as AppError?,
       mediaState: mediaState ?? this.mediaState,
-      transferStatus: transferStatus ?? this.transferStatus,
-      transferTargetId: transferTargetId ?? this.transferTargetId,
-      transferTargetName: transferTargetName ?? this.transferTargetName,
       isGroupCall: isGroupCall ?? this.isGroupCall,
       groupId: groupId ?? this.groupId,
       participants: participants ?? this.participants,

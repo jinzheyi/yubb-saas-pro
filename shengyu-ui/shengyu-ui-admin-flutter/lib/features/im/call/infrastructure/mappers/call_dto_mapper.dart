@@ -93,7 +93,7 @@ class CallDtoMapper {
 
   CallSocketEventType _eventTypeFromServer(String type) {
     // 关键修复：后端事件命名存在连字符和下划线两种风格混用
-    // 例如：CallSignalProcessor 用 call.transfer_requested（下划线）
+    // 例如：CallSignalProcessor 用 call.media_control（下划线）
     //       ImCallServiceImpl 用 call.group-invite（连字符）
     // 统一将下划线转换为连字符后再匹配，兼容两种命名风格
     final normalized = type.replaceAll('_', '-');
@@ -123,31 +123,23 @@ class CallDtoMapper {
         return CallSocketEventType.callRecord;
       case 'call.missed':
         return CallSocketEventType.missed;
-      case 'call.transfer-requested':
-        return CallSocketEventType.transferRequested;
-      case 'call.transfer-accepted':
-        return CallSocketEventType.transferAccepted;
-      case 'call.transfer-rejected':
-        return CallSocketEventType.transferRejected;
-      case 'call.transfer-cancelled':
-        return CallSocketEventType.transferCancelled;
       case 'call.group-invite':
         return CallSocketEventType.groupInvite;
       case 'call.group-join':
         return CallSocketEventType.groupJoin;
       case 'call.group-leave':
         return CallSocketEventType.groupLeave;
-      case 'call.group-ended':  // 关键修复：兼容后端 GroupCallService 的 call.group_ended
-        return CallSocketEventType.groupLeave;  // 群组结束视为离开事件处理
+      case 'call.group-ended':
+        // 这是一个房间级终止事件，不是单个成员离开。
+        // 如果把它映射成 groupLeave，会因为载荷里没有可供 onGroupLeave
+        // 移除的 userId，导致通话中的所有客户端都停留在错误状态。
+        return CallSocketEventType.ended;
       case 'call.group-participant-update':
         return CallSocketEventType.groupParticipantUpdate;
       case 'call.media-state-update':
         return CallSocketEventType.mediaStateUpdate;
       case 'call.media-control':  // 关键修复：兼容后端 CallSignalProcessor 的 call.media_control
         return CallSocketEventType.mediaStateUpdate;
-      case 'call.recording-started':  // 关键修复：兼容后端 CallRecordingService
-      case 'call.recording-stopped':
-        return CallSocketEventType.mediaStateUpdate;  // 录制状态变更视为媒体状态更新
       default:
         // 未识别的事件类型，返回 stateSync 作为兜底
         return CallSocketEventType.stateSync;

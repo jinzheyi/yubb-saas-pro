@@ -16,6 +16,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -40,6 +42,37 @@ public class CallPushService {
 
     @Resource
     private OfflinePushService offlinePushService;
+
+    /**
+     * Sends one call-domain event to every online device of each recipient.
+     *
+     * <p>Call REST endpoints and the low-level CALL_SIGNAL processor must use the
+     * same SYSTEM_NOTIFY envelope.  Keeping this in one place avoids the previous
+     * situation where REST only changed the database and the peer never learned
+     * about invite/accept/cancel/hangup.</p>
+     */
+    public void publishCallEvent(Collection<Long> recipientIds, Long senderId, Long tenantId, JSONObject payload) {
+        NettyMessageSender messageSender = nettyMessageSenderProvider.getIfAvailable();
+        if (messageSender == null || recipientIds == null || recipientIds.isEmpty()) {
+            return;
+        }
+        TextMessage textMessage = TextMessage.newBuilder().setContent("").build();
+        // Java 8 compatible de-duplication; do not send the same event twice
+        // when caller and callee resolve to the same account in malformed input.
+        for (Long recipientId : new LinkedHashSet<>(recipientIds)) {
+            if (recipientId == null) {
+                continue;
+            }
+            try {
+                messageSender.sendToUserWithExtra(recipientId, MessageType.SYSTEM_NOTIFY, textMessage,
+                        senderId, recipientId, 0L, null, null, null, null, null, null, payload.toString());
+            } catch (Exception e) {
+                // Signalling delivery is best effort; state sync remains the recovery source of truth.
+                log.error("[CallPush] 通话信令推送失败, recipientId={}, type={}", recipientId,
+                        payload.getStr("type"), e);
+            }
+        }
+    }
 
     /**
      * 推送未接来电通知

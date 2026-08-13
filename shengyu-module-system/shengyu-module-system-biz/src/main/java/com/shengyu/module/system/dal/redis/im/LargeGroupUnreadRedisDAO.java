@@ -152,6 +152,33 @@ public class LargeGroupUnreadRedisDAO {
     }
 
     /**
+     * 删除已成功合并的 Redis 快照字段。
+     *
+     * <p>不能删除整个 Hash：合并期间可能有新消息写入。dirty Set 已经由 pop 移除，
+     * 因此此处也不能移除 dirty 标记，以免误删并发写入重新添加的标记。</p>
+     */
+    public void removeUnreadEntries(Long chatId, Long userId, List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        String key = formatUnreadKey(chatId, userId);
+        try {
+            stringRedisTemplate.opsForHash().delete(key, messageIds.stream()
+                    .map(String::valueOf).toArray(String[]::new));
+        } catch (Exception e) {
+            log.error("[LargeGroupUnreadRedis] removeUnreadEntries failed, chatId: {}, userId: {}", chatId, userId, e);
+            throw new IllegalStateException("删除已合并的大群未读数据失败", e);
+        }
+    }
+
+    /** 重新标记未成功合并的 dirty key。 */
+    public void markDirty(String dirtyKey) {
+        if (dirtyKey != null && !dirtyKey.isEmpty()) {
+            stringRedisTemplate.opsForSet().add(RedisKeyConstants.LARGE_GROUP_UNREAD_DIRTY, dirtyKey);
+        }
+    }
+
+    /**
      * 获取所有 dirty keys（用于定时任务批量合并）
      *
      * @param maxCount 最大获取数量
@@ -177,9 +204,18 @@ public class LargeGroupUnreadRedisDAO {
      * @return [chatId, userId]
      */
     public static long[] parseDirtyKey(String dirtyKey) {
+        if (dirtyKey == null) {
+            throw new IllegalArgumentException("dirty key 不能为空");
+        }
         String[] parts = dirtyKey.split(":", 2);
+        if (parts.length != 2 || parts[0].isEmpty() || parts[1].isEmpty()) {
+            throw new IllegalArgumentException("dirty key 格式必须为 chatId:userId：" + dirtyKey);
+        }
         long chatId = Long.parseLong(parts[0]);
         long userId = Long.parseLong(parts[1]);
+        if (chatId <= 0 || userId <= 0) {
+            throw new IllegalArgumentException("dirty key 中的编号必须为正数：" + dirtyKey);
+        }
         return new long[]{chatId, userId};
     }
 

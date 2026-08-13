@@ -11,10 +11,6 @@ enum CallSocketEventType {
   mediaTokenIssued,
   callRecord,
   missed,
-  transferRequested, // 转接请求
-  transferAccepted, // 转接已接受
-  transferRejected, // 转接已拒绝
-  transferCancelled, // 转接已取消
   groupInvite, // 群组通话邀请
   groupJoin, // 加入群组通话
   groupLeave, // 离开群组通话

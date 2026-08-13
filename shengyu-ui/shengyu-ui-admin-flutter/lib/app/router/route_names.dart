@@ -48,7 +48,6 @@ abstract final class RouteNames {
   static const groupCallSession = 'groupCallSession';
   static const groupCallMemberSelect = 'groupCallMemberSelect';
   static const groupOutgoingCall = 'groupOutgoingCall';
-  static const callTransfer = 'callTransfer';
   static const callHistory = 'callHistory';
   static const deviceList = 'deviceList';
 }

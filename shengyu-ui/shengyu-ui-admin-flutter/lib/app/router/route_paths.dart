@@ -48,6 +48,5 @@ abstract final class RoutePaths {
   static const groupCallSession = '/call/group-session';
   static const groupCallMemberSelect = '/call/group-member-select';
   static const groupOutgoingCall = '/call/group-outgoing';
-  static const callTransfer = '/call/transfer';
   static const deviceList = '/im/device-list';
 }

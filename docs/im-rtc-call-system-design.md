@@ -210,8 +210,8 @@ CallSignalEventDto? _toCallSignalEvent(Map<String, Object?> payload) {
 | | 群聊顶部通话状态栏 | P0 | 收起/展开 + 加入按钮 | ✅ |
 | | 成员选择页面（发起前） | P0 | 搜索 + 勾选 | ✅ |
 | **高级功能** | 屏幕共享 | P1 | getDisplayMedia/MediaProjection | ✅ |
-| | 通话转接 | P2 | 信令控制 + 新房间 | ✅ |
-| | 通话录制 | P2 | 服务端录制 + 文件存储 | ✅ |
+| | ~~通话转接~~ | ~~P2~~ | 最小范围不包含 | 不做 |
+| | ~~通话录制~~ | ~~P2~~ | 已明确不纳入本期范围 | 不做 |
 | | 通话等待 | P2 | 保持当前通话，提示新来电 | ✅ |
 | | 横屏模式（16:9） | P1 | 视频通话横屏适配 | ✅ |
 | | ~~背景虚化~~ | ~~P2~~ | ~~人像分割 + 模糊滤镜~~ | ❌ 不做（实现成本过高，已移除） |
@@ -1030,62 +1030,7 @@ context.pushReplacementNamed(RouteNames.groupCallSession, extra: callArgs);
 
 > 以下功能已在源码中实现，但此前文档未记录。
 
-##### 3.1.1.7.1 通话转接（Call Transfer）
-
-**源码位置**：
-- 后端：`AppCallController.java` → `/system/im/call/transfer/{initiate,accept,reject,cancel}`
-- 前端：`call_controller.dart` → `initiateTransfer()`、`acceptTransfer()`、`rejectTransfer()`、`cancelTransfer()`
-- 状态：`CallState.transferStatus`（`CallTransferStatus` 枚举）
-
-**功能流程**：
-```
-1. 通话中用户点击"更多" → "通话转接"
-2. 选择转接目标用户 → 发起转接请求
-3. 目标用户收到转接邀请（信令通知）
-4. 目标用户接受 → 原通话结束，新通话建立
-5. 目标用户拒绝/超时 → 转接取消，原通话继续
-```
-
-**状态枚举**：
-| 状态 | 含义 |
-|-----|------|
-| `none` | 无转接 |
-| `initiating` | 正在发起转接 |
-| `waitingAccept` | 等待被转接方接受 |
-| `accepted` | 被转接方已接受 |
-| `rejected` | 被转接方已拒绝 |
-| `cancelled` | 转接已取消 |
-| `completed` | 转接已完成 |
-
-**UI 入口**：`call_session_page.dart` → `_showMoreMenu()` → "通话转接"菜单项 → `_showTransferDialog()`
-
-##### 3.1.1.7.2 通话录制（Call Recording）
-
-**源码位置**：
-- 后端：`AppCallController.java` → `/system/im/call/recording/{start,stop}`
-- 前端：
-  - `call_controller.dart` → `toggleRecording()`
-  - `record_call_use_case.dart` → 服务端录制 API 调用
-  - `call_media_controller.dart` → 本地录制状态管理
-- 状态：`CallMediaState.recordingEnabled`、`recordingFilePath`、`recordingDuration`
-
-**功能说明**：
-- **服务端录制模式**：采用服务端录制，录制文件由服务端存储和管理
-- **录制流程**：
-  1. 用户点击录制按钮 → `CallController.toggleRecording()`
-  2. 调用 `RecordCallUseCase.start/stop()` → 后端 API `/system/im/call/recording/{start,stop}`
-  3. 同步更新本地 `CallMediaState.recordingEnabled` 状态
-  4. 录制文件路径由服务端返回并持久化
-- **录制时长**：本地实时追踪，通过 `CallMediaState.recordingDuration` 展示
-- **UI 入口**：`call_session_page.dart` → `_showMoreMenu()` → "录制"菜单项
-
-**架构设计**：
-- `RecordCallUseCase`：封装服务端录制 API 调用（start/stop）
-- `CallMediaController`：管理本地录制状态和 UI 展示
-- `CallRepository`：提供 `startRecording/stopRecording` 接口
-- 通话结束时自动停止录制（后端处理）
-
-##### 3.1.1.7.3 屏幕共享（Screen Sharing）
+##### 3.1.1.7.1 屏幕共享（Screen Sharing）
 
 **源码位置**：
 - 前端：`call_controller.dart` → `toggleScreenShare()`
@@ -1210,7 +1155,6 @@ context.pushReplacementNamed(RouteNames.groupCallSession, extra: callArgs);
 | `networkTimeout` | 网络超时 |
 | `rtcError` | RTC 错误 |
 | `permissionDenied` | 权限被拒绝 |
-| `transferred` | 通话已转接 |
 
 ##### 3.1.1.8 通话系统配置说明（Call Configuration）
 
@@ -1228,9 +1172,7 @@ context.pushReplacementNamed(RouteNames.groupCallSession, extra: callArgs);
 | `maxGroupCallParticipants` | `int` | 9 | 群通话最大参与人数（包含发起人） |
 | `callInviteTimeout` | `Duration` | 30秒 | 通话邀请超时时间，超时自动取消 |
 | `ringtoneDuration` | `Duration` | 30秒 | 铃声播放时长，超时自动停止 |
-| `enableCallRecording` | `bool` | true | 是否启用通话录制功能 |
 | `enableScreenShare` | `bool` | true | 是否启用屏幕共享功能 |
-| `enableCallTransfer` | `bool` | true | 是否启用通话转接功能 |
 | ~~`enableBackgroundBlur`~~ | ~~`bool`~~ | ~~true~~ | ~~已移除~~（人像分割实现成本过高） |
 
 **使用方式**：
@@ -1257,9 +1199,7 @@ ProviderScope(
 - `callConfigProvider`：提供完整 `CallConfig` 对象
 - `maxGroupCallParticipantsProvider`：提供群通话最大参与人数
 - `callInviteTimeoutProvider`：提供通话邀请超时时间
-- `enableCallRecordingProvider`：提供是否启用录制
 - `enableScreenShareConfigProvider`：提供是否启用屏幕共享
-- `enableCallTransferConfigProvider`：提供是否启用转接
 - ~~`enableBackgroundBlurConfigProvider`~~：~~已移除~~（人像分割实现成本过高）
 
 ##### 3.1.1.9 来电横幅通知设计（Call Incoming Banner）
@@ -2635,7 +2575,7 @@ WebSocket 收到消息
 - ✅ 按钮文字：麦克风已开/麦克风已关、扬声器已开/扬声器已关
 - ✅ 按钮颜色：激活=白色，未激活=#555555，挂断=#E54D4F
 - ✅ 锁定防误触（双击解锁）
-- ✅ 更多菜单（屏幕共享、通话录制、通话转接、横屏模式）
+- ✅ 更多菜单（屏幕共享、横屏模式）
 - ✅ 网络质量指示器
 - ✅ 支持最小化到悬浮窗
 
@@ -3821,8 +3761,8 @@ Future<bool> checkCallPermissions() async {
 ### Phase 4: 高级功能（4 周）
 
 - [x] 屏幕共享（已完成：CallMediaState 屏幕共享状态、CallMediaController startScreenShare/stopScreenShare/toggleScreenShare、JanusVideoRoomPlugin replaceVideoTrack、CallController toggleScreenShare、call_session_page 屏幕共享按钮、isScreenShareEnabledProvider/canToggleScreenShareProvider）
-- [x] 通话录制（已完成：CallMediaState 录制状态字段、CallMediaController 录制控制方法、CallController toggleRecording、call_session_page 录制按钮、isRecordingEnabledProvider/canToggleRecordingProvider、_CallToolButton isActive 支持）
-- [x] 通话转接（已完成：CallTransferStatus 枚举、CallState 转接状态字段、CallController 转接方法、CallSocketEventType 转接事件、call_session_page 转接按钮和对话框、callTransferStatusProvider/canInitiateTransferProvider）
+- [ ] 通话录制（本期不做）
+- [ ] 通话转接（最小通话范围不包含；通话中收到新来电按忙线/冲突处理）
 - [x] 网络质量监控（已完成：NetworkQualityMonitor 监控服务、NetworkQualityStats 统计模型、NetworkQuality 枚举、CallMediaState 网络质量字段、CallMediaController 集成监控、CallController 监听网络统计、NetworkQualityIndicator UI 组件、networkQualityProvider/roundTripTimeProvider/packetLossRateProvider）
 
 ### Phase 5: UI 层 1:1 复刻微信与配置系统（2 周）

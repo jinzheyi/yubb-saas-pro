@@ -32,9 +32,13 @@ class _GroupCallMemberSelectPageState
   void initState() {
     super.initState();
     final callConfig = ref.read(callConfigProvider);
+    // maxGroupCallParticipants 包含发起人，这个页面只选择被邀请成员。
+    // 预留发起人名额，才能和服务端的 9 人上限保持一致，避免不必要的创建失败。
+    final maxInvitees =
+        (callConfig.maxGroupCallParticipants - 1).clamp(1, 8).toInt();
     _controller = GroupMemberSelectController(
       existingMemberIds: widget.args.existingMemberIds,
-      maxParticipants: callConfig.maxGroupCallParticipants,
+      maxParticipants: maxInvitees,
       currentUserId: widget.args.currentUserId,
     );
   }

@@ -14,7 +14,7 @@ class MockCallRepository implements CallRepository {
   final StreamController<CallSocketEvent> _socketController;
 
   @override
-  Future<void> accept({required String callSessionId}) async {
+  Future<void> accept({required String callSessionId, required String deviceId}) async {
     _socketController.add(
       CallSocketEvent(
         type: CallSocketEventType.accepted,
@@ -60,6 +60,32 @@ class MockCallRepository implements CallRepository {
   }
 
   @override
+  Future<CallInviteResult> createGroupInvite({
+    required String chatId,
+    required String groupId,
+    required CallType callType,
+    required List<String> inviteeIds,
+    String? deviceId,
+  }) {
+    return createInvite(chatId: chatId, callType: callType, calleeId: inviteeIds.first);
+  }
+
+  @override
+  Future<Map<String, dynamic>> inviteGroupMembers({
+    required String callSessionId, required String groupId, required List<String> inviteeIds,
+  }) async => {'callSessionId': callSessionId, 'invitedCount': inviteeIds.length};
+
+  @override
+  Future<void> leaveGroupCall({required String callSessionId}) async {
+    _socketController.add(
+      CallSocketEvent(
+        type: CallSocketEventType.groupLeave,
+        callSessionId: callSessionId,
+      ),
+    );
+  }
+
+  @override
   Future<void> reject({required String callSessionId}) async {
     _socketController.add(
       CallSocketEvent(
@@ -93,65 +119,8 @@ class MockCallRepository implements CallRepository {
     int pageNo = 1,
     int pageSize = 20,
   }) async {
-    // Mock 实现：返回空列表
+    // Mock 实现：直接返回空列表。
     return <CallRecord>[];
-  }
-
-  @override
-  Future<void> initiateTransfer({
-    required String callId,
-    required String targetUserId,
-    String? targetUserName,
-  }) async {
-    // Mock 实现：模拟转接请求
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<void> acceptTransfer({required String callId}) async {
-    // Mock 实现：模拟接受转接
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<void> rejectTransfer({required String callId}) async {
-    // Mock 实现：模拟拒绝转接
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<void> cancelTransfer({required String callId}) async {
-    // Mock 实现：模拟取消转接
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<void> startRecording({required String callId}) async {
-    // Mock 实现：模拟开始录制
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<void> stopRecording({
-    required String callId,
-    String? recordingFilePath,
-  }) async {
-    // Mock 实现：模拟停止录制
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
-
-  @override
-  Future<Map<String, dynamic>> inviteGroupMembers({
-    required String callSessionId,
-    required String groupId,
-    required List<String> inviteeIds,
-  }) async {
-    // Mock 实现：模拟群组邀请
-    await Future.delayed(const Duration(milliseconds: 100));
-    return {
-      'callSessionId': callSessionId,
-      'invitedCount': inviteeIds.length,
-    };
   }
 
   @override
@@ -160,11 +129,11 @@ class MockCallRepository implements CallRepository {
     required bool cameraEnabled,
     required bool microphoneEnabled,
   }) async {
-    // Mock 实现：模拟发送媒体状态更新
+    // Mock 实现：模拟发送媒体状态更新。
     await Future.delayed(const Duration(milliseconds: 100));
   }
 
-  /// Release resources to prevent memory leak
+  /// 释放资源，防止内存泄漏。
   void dispose() {
     if (!_socketController.isClosed) {
       _socketController.close();

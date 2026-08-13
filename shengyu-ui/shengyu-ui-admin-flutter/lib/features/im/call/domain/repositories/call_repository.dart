@@ -11,13 +11,29 @@ abstract class CallRepository {
     required String calleeId,
   });
 
-  Future<void> accept({required String callSessionId});
+  Future<CallInviteResult> createGroupInvite({
+    required String chatId,
+    required String groupId,
+    required CallType callType,
+    required List<String> inviteeIds,
+    String? deviceId,
+  });
+
+  Future<Map<String, dynamic>> inviteGroupMembers({
+    required String callSessionId,
+    required String groupId,
+    required List<String> inviteeIds,
+  });
+
+  Future<void> accept({required String callSessionId, required String deviceId});
 
   Future<void> reject({required String callSessionId});
 
   Future<void> cancel({required String callSessionId});
 
   Future<void> hangup({required String callSessionId});
+
+  Future<void> leaveGroupCall({required String callSessionId});
 
   Future<ActiveCallStateResult> syncState({required String callSessionId});
 
@@ -31,38 +47,6 @@ abstract class CallRepository {
     String? chatId,
     int pageNo = 1,
     int pageSize = 20,
-  });
-
-  /// 发起通话转接
-  Future<void> initiateTransfer({
-    required String callId,
-    required String targetUserId,
-    String? targetUserName,
-  });
-
-  /// 接受通话转接
-  Future<void> acceptTransfer({required String callId});
-
-  /// 拒绝通话转接
-  Future<void> rejectTransfer({required String callId});
-
-  /// 取消通话转接
-  Future<void> cancelTransfer({required String callId});
-
-  /// 开始通话录制
-  Future<void> startRecording({required String callId});
-
-  /// 停止通话录制
-  Future<void> stopRecording({
-    required String callId,
-    String? recordingFilePath,
-  });
-
-  /// 群组通话邀请成员加入
-  Future<Map<String, dynamic>> inviteGroupMembers({
-    required String callSessionId,
-    required String groupId,
-    required List<String> inviteeIds,
   });
 
   /// 发送媒体状态更新（摄像头/麦克风开关状态）

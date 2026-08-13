@@ -164,8 +164,11 @@ public class CallSecurityService {
             return false;
         }
 
-        if (signalType == null || signalType < 1 || signalType > 6) {
-            log.warn("[CallSecurity] 信令类型非法, callId={}, signalType={}", callId, signalType);
+        // CALL_SIGNAL(206) is reserved for in-call media control.  All
+        // lifecycle actions (invite/accept/reject/cancel/hangup) are REST
+        // endpoints backed by the call state-machine CAS updates.
+        if (signalType == null || signalType != 6) {
+            log.warn("[CallSecurity] 非媒体控制信令被拒绝, callId={}, signalType={}", callId, signalType);
             return false;
         }
 

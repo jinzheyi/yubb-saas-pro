@@ -539,9 +539,6 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
   void _showMoreMenu(BuildContext context) {
     final isScreenShareEnabled = ref.read(isScreenShareEnabledProvider);
     final canToggleScreenShare = ref.read(canToggleScreenShareProvider);
-    final isRecordingEnabled = ref.read(isRecordingEnabledProvider);
-    final canToggleRecording = ref.read(canToggleRecordingProvider);
-    final canInitiateTransfer = ref.read(canInitiateTransferProvider);
 
     showModalBottomSheet(
       context: context,
@@ -580,28 +577,6 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
                         .toggleScreenShare();
                   },
                 ),
-              if (canToggleRecording)
-                _MoreMenuItem(
-                  icon: isRecordingEnabled
-                      ? Icons.fiber_manual_record_rounded
-                      : Icons.fiber_manual_record_outlined,
-                  label: isRecordingEnabled ? '停止录制' : '录制',
-                  onTap: () {
-                    if (context.mounted) Navigator.pop(context);
-                    ref
-                        .read(callControllerProvider.notifier)
-                        .toggleRecording();
-                  },
-                ),
-              if (canInitiateTransfer)
-                _MoreMenuItem(
-                  icon: Icons.swap_horiz_rounded,
-                  label: '通话转接',
-                  onTap: () {
-                    if (context.mounted) Navigator.pop(context);
-                    if (context.mounted) _navigateToTransferPage(context);
-                  },
-                ),
               Container(
                 padding: const EdgeInsets.all(16),
                 width: double.infinity,
@@ -625,10 +600,6 @@ class _CallSessionPageState extends ConsumerState<CallSessionPage> {
     );
   }
 
-  /// 导航到转接页面
-  void _navigateToTransferPage(BuildContext context) {
-    context.pushNamed(RouteNames.callTransfer);
-  }
 }
 
 /// 微信风格通话控制按钮

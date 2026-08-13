@@ -34,6 +34,7 @@ import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
 import com.shengyu.module.system.service.im.vo.GroupInviteResultVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -92,6 +93,18 @@ public class ImCallServiceImpl implements ImCallService {
     @Resource
     private ObjectProvider<NettyMessageSender> nettyMessageSenderProvider;
 
+    @Resource
+    private JanusRoomManager janusRoomManager;
+
+    @Resource
+    private CallTokenService callTokenService;
+
+    @Resource
+    private CallDurationLimiter callDurationLimiter;
+
+    @Value("${janus.url:}")
+    private String janusUrl;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String initiateCall(Long callerId, Long calleeId, Integer callType, String deviceId) {
@@ -127,17 +140,62 @@ public class ImCallServiceImpl implements ImCallService {
             throw exception(CALL_RECORD_NOT_EXISTS);
         }
 
-        // 验证是否是被叫者
-        if (!callRecord.getCalleeId().equals(userId)) {
+        // In a group call, any invited participant may join; in a 1:1 call
+        // only the callee may accept.  The old callee-only rule made every
+        // group invite except the first selected member fail.
+        ImCallParticipantDO groupParticipant = callRecord.getGroupId() == null ? null
+                : callParticipantMapper.selectByCallIdAndUserId(callId, userId);
+        if (groupParticipant == null && !callRecord.getCalleeId().equals(userId)) {
             throw exception(CALL_PERMISSION_DENIED);
         }
+        if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            throw new IllegalStateException("通话已结束，不能接听");
+        }
+        if (ImCallStateEnum.CONNECTED.getState().equals(callRecord.getState())) {
+            if (groupParticipant != null) {
+                groupParticipant.setDeviceId(deviceId);
+                groupParticipant.setStatus(1);
+                groupParticipant.setLeaveTime(null);
+                if (groupParticipant.getJoinTime() == null) {
+                    groupParticipant.setJoinTime(LocalDateTime.now());
+                }
+                callParticipantMapper.updateById(groupParticipant);
+                return;
+            }
+            if (callRecord.getGroupId() == null && !Objects.equals(callRecord.getAcceptedDeviceId(), deviceId)) {
+                throw new IllegalStateException("通话已在其他设备接听");
+            }
+            return;
+        }
+        if (!ImCallStateEnum.RINGING.getState().equals(callRecord.getState())) {
+            throw new IllegalStateException("当前通话状态不能接听: " + callRecord.getState());
+        }
 
-        // 更新状态为已接听
-        callRecord.setStatus(ImCallStatusEnum.ANSWERED.getStatus());
-        callRecord.setState(ImCallStateEnum.CONNECTED.getState());
-        callRecord.setStartTime(LocalDateTime.now()); // 更新实际开始时间
-        callRecord.setAcceptedDeviceId(deviceId);
-        callRecordMapper.updateById(callRecord);
+        // Database CAS is required here: a read-then-write permits two app nodes
+        // to accept the same ringing call concurrently.
+        LocalDateTime acceptedAt = LocalDateTime.now();
+        if (!callRecordMapper.acceptIfRinging(callId, deviceId, acceptedAt,
+                ImCallStatusEnum.ANSWERED.getStatus())) {
+            ImCallRecordDO latest = callRecordMapper.selectByCallId(callId);
+            if (latest != null && ImCallStateEnum.CONNECTED.getState().equals(latest.getState())
+                    && callRecord.getGroupId() == null
+                    && !Objects.equals(latest.getAcceptedDeviceId(), deviceId)) {
+                throw new IllegalStateException("通话已在其他设备接听");
+            }
+            return;
+        }
+        callRecord = callRecordMapper.selectByCallId(callId);
+        callDurationLimiter.registerCallStart(callId, acceptedAt);
+
+        if (groupParticipant != null) {
+            groupParticipant.setDeviceId(deviceId);
+            groupParticipant.setStatus(1);
+            groupParticipant.setLeaveTime(null);
+            if (groupParticipant.getJoinTime() == null) {
+                groupParticipant.setJoinTime(LocalDateTime.now());
+            }
+            callParticipantMapper.updateById(groupParticipant);
+        }
 
         log.info("[acceptCall] 接听通话成功, callId={}, userId={}, deviceId={}", callId, userId, deviceId);
     }
@@ -145,25 +203,48 @@ public class ImCallServiceImpl implements ImCallService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void rejectCall(String callId, Long userId, String reason) {
-        // 保存租户上下文（可能在异步回调中丢失）
-        Long tenantId = TenantContextHolder.getTenantId();
-        
         // 查询通话记录
         ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
         if (callRecord == null) {
             throw exception(CALL_RECORD_NOT_EXISTS);
         }
+        // 通话记录是租户归属的权威来源，兼容 @TenantIgnore 的全局任务和无上下文回调。
+        Long tenantId = callRecord.getTenantId();
 
-        // 验证是否是被叫者
+        // 群通话的拒接仅结束该成员的邀请，不得结束其他成员仍可接听的整场通话。
+        if (callRecord.getGroupId() != null) {
+            ImCallParticipantDO participant = callParticipantMapper.selectByCallIdAndUserId(callId, userId);
+            if (participant == null) {
+                throw exception(CALL_PERMISSION_DENIED);
+            }
+            if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+                return;
+            }
+            if (!ImCallStateEnum.RINGING.getState().equals(callRecord.getState())) {
+                throw new IllegalStateException("当前群通话状态不能拒接: " + callRecord.getState());
+            }
+            callParticipantMapper.updateStatus(callId, userId, 3);
+            log.info("[rejectCall] 群通话成员拒接, callId={}, userId={}, reason={}", callId, userId, reason);
+            return;
+        }
+
+        // 1v1 通话仅被叫者可以拒接。
         if (!callRecord.getCalleeId().equals(userId)) {
             throw exception(CALL_PERMISSION_DENIED);
         }
+        if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            return;
+        }
+        if (!ImCallStateEnum.RINGING.getState().equals(callRecord.getState())) {
+            throw new IllegalStateException("当前通话状态不能拒绝: " + callRecord.getState());
+        }
 
-        // 更新状态为已拒绝
-        callRecord.setStatus(ImCallStatusEnum.REJECTED.getStatus());
-        callRecord.setEndTime(LocalDateTime.now());
-        callRecord.setDuration(0);
-        callRecordMapper.updateById(callRecord);
+        if (!callRecordMapper.endIfState(callId, ImCallStateEnum.RINGING.getState(),
+                ImCallStatusEnum.REJECTED.getStatus(), LocalDateTime.now(), 0, reason)) {
+            return;
+        }
+        callRecord = callRecordMapper.selectByCallId(callId);
+        callDurationLimiter.unregisterCall(callId);
 
         log.info("[rejectCall] 拒绝通话成功, callId={}, userId={}, reason={}", callId, userId, reason);
 
@@ -174,25 +255,32 @@ public class ImCallServiceImpl implements ImCallService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelCall(String callId, Long userId, String reason) {
-        // 保存租户上下文（可能在异步回调中丢失）
-        Long tenantId = TenantContextHolder.getTenantId();
-        
         // 查询通话记录
         ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
         if (callRecord == null) {
             throw exception(CALL_RECORD_NOT_EXISTS);
         }
+        // 通话记录是租户归属的权威来源，兼容 @TenantIgnore 的全局任务和无上下文回调。
+        Long tenantId = callRecord.getTenantId();
 
         // 验证是否是主叫者
         if (!callRecord.getCallerId().equals(userId)) {
             throw exception(CALL_PERMISSION_DENIED);
         }
+        if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            return;
+        }
+        if (!ImCallStateEnum.RINGING.getState().equals(callRecord.getState())
+                && !ImCallStateEnum.CONNECTING.getState().equals(callRecord.getState())) {
+            throw new IllegalStateException("通话已接通，请使用挂断操作");
+        }
 
-        // 更新状态为已取消
-        callRecord.setStatus(ImCallStatusEnum.CANCELLED.getStatus());
-        callRecord.setEndTime(LocalDateTime.now());
-        callRecord.setDuration(0);
-        callRecordMapper.updateById(callRecord);
+        if (!callRecordMapper.endIfState(callId, callRecord.getState(),
+                ImCallStatusEnum.CANCELLED.getStatus(), LocalDateTime.now(), 0, reason)) {
+            return;
+        }
+        callRecord = callRecordMapper.selectByCallId(callId);
+        callDurationLimiter.unregisterCall(callId);
 
         log.info("[cancelCall] 取消通话成功, callId={}, userId={}, reason={}", callId, userId, reason);
 
@@ -203,40 +291,46 @@ public class ImCallServiceImpl implements ImCallService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void hangupCall(String callId, Long userId, String reason) {
-        // 保存租户上下文（可能在异步回调中丢失）
-        Long tenantId = TenantContextHolder.getTenantId();
-        
         // 查询通话记录
         ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
         if (callRecord == null) {
             throw exception(CALL_RECORD_NOT_EXISTS);
         }
+        // 通话记录是租户归属的权威来源，兼容 @TenantIgnore 的全局任务和无上下文回调。
+        Long tenantId = callRecord.getTenantId();
 
         // 验证是否是通话参与者
         if (!Objects.equals(callRecord.getCallerId(), userId) && !Objects.equals(callRecord.getCalleeId(), userId)) {
-            throw exception(CALL_PERMISSION_DENIED);
+            ImCallParticipantDO participant = callRecord.getGroupId() == null ? null
+                    : callParticipantMapper.selectByCallIdAndUserId(callId, userId);
+            if (participant == null) {
+                throw exception(CALL_PERMISSION_DENIED);
+            }
+        }
+        if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            return;
         }
 
+        String expectedState = callRecord.getState();
+        if (!ImCallStateEnum.RINGING.getState().equals(expectedState)
+                && !ImCallStateEnum.CONNECTED.getState().equals(expectedState)) {
+            throw new IllegalStateException("当前通话状态不能挂断: " + expectedState);
+        }
         // 设置结束时间
         LocalDateTime endTime = LocalDateTime.now();
-        callRecord.setEndTime(endTime);
-        callRecord.setEndReason(reason);
-
-        // 计算通话时长（如果已接听）
-        if (ImCallStatusEnum.ANSWERED.getStatus().equals(callRecord.getStatus())) {
-            Duration duration = Duration.between(callRecord.getStartTime(), endTime);
-            callRecord.setDuration((int) duration.getSeconds());
+        Integer status = callRecord.getStatus();
+        int durationSeconds = 0;
+        if (ImCallStateEnum.CONNECTED.getState().equals(expectedState) && callRecord.getStartTime() != null) {
+            Duration elapsed = Duration.between(callRecord.getStartTime(), endTime);
+            durationSeconds = (int) elapsed.getSeconds();
         } else {
-            // 如果未接听，更新状态为已取消
-            callRecord.setStatus(ImCallStatusEnum.CANCELLED.getStatus());
-            callRecord.setDuration(0); // 未接听的通话时长为 0
+            status = ImCallStatusEnum.CANCELLED.getStatus();
         }
-        
-        // 关键修复：无论是否接听，挂断时都必须将状态机状态更新为 ENDED
-        // 确保前端查询通话状态时，状态机状态一致
-        callRecord.setState(ImCallStateEnum.ENDED.getState());
-
-        callRecordMapper.updateById(callRecord);
+        if (!callRecordMapper.endIfState(callId, expectedState, status, endTime, durationSeconds, reason)) {
+            return;
+        }
+        callRecord = callRecordMapper.selectByCallId(callId);
+        callDurationLimiter.unregisterCall(callId);
 
         log.info("[hangupCall] 挂断通话成功, callId={}, userId={}, reason={}, duration={}",
                 callId, userId, reason, callRecord.getDuration());
@@ -274,6 +368,11 @@ public class ImCallServiceImpl implements ImCallService {
     @Override
     public ImCallRecordDO getCallRecord(String callId) {
         return callRecordMapper.selectByCallId(callId);
+    }
+
+    @Override
+    public ImCallRecordDO getCallRecordByRoomId(String roomId) {
+        return callRecordMapper.selectByRoomId(roomId);
     }
 
     @Override
@@ -333,32 +432,33 @@ public class ImCallServiceImpl implements ImCallService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateCallState(String callId, String newState, String expectedState) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
+        if (callRecordMapper.transitionState(callId, expectedState, newState)) {
+            log.info("[updateCallState] 状态机更新成功, callId={}, {} -> {}", callId, expectedState, newState);
+            return true;
         }
-
-        // CAS 校验：只有当前状态等于期望状态时才更新
-        if (!expectedState.equals(callRecord.getState())) {
-            log.warn("[updateCallState] CAS 失败, callId={}, expectedState={}, actualState={}, newState={}",
-                    callId, expectedState, callRecord.getState(), newState);
-            return false;
-        }
-
-        callRecord.setState(newState);
-        callRecordMapper.updateById(callRecord);
-
-        log.info("[updateCallState] 状态机更新成功, callId={}, {} -> {}", callId, expectedState, newState);
-        return true;
+        ImCallRecordDO latest = callRecordMapper.selectByCallId(callId);
+        if (latest == null) throw exception(CALL_RECORD_NOT_EXISTS);
+        log.warn("[updateCallState] CAS 失败, callId={}, expectedState={}, actualState={}, newState={}",
+                callId, expectedState, latest.getState(), newState);
+        return false;
     }
 
     @Override
     public boolean isUserBusy(Long userId) {
-        // 查询用户是否有 RINGING/CONNECTING/CONNECTED 状态的通话
-        return callRecordMapper.existsBusyCall(userId,
+        // 1:1 直接参与者，以及群组通话 participant 都属于忙线。
+        if (callRecordMapper.existsBusyCall(userId,
                 ImCallStateEnum.RINGING.getState(),
                 ImCallStateEnum.CONNECTING.getState(),
-                ImCallStateEnum.CONNECTED.getState());
+                ImCallStateEnum.CONNECTED.getState())) {
+            return true;
+        }
+        return callParticipantMapper.selectActiveByUserId(userId, 1).stream()
+                .map(ImCallParticipantDO::getCallId)
+                .map(callRecordMapper::selectByCallId)
+                .filter(Objects::nonNull)
+                .anyMatch(call -> ImCallStateEnum.RINGING.getState().equals(call.getState())
+                        || ImCallStateEnum.CONNECTING.getState().equals(call.getState())
+                        || ImCallStateEnum.CONNECTED.getState().equals(call.getState()));
     }
 
     @Override
@@ -406,18 +506,47 @@ public class ImCallServiceImpl implements ImCallService {
         log.info("[updateRecordMessageId] 更新通话记录消息ID, callId={}, messageId={}", callId, messageId);
     }
 
-    // ===== 通话邀请、转接、录制相关方法 =====
+    // ===== 通话邀请相关方法 =====
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType) {
+        if (callerId == null || calleeId == null || Objects.equals(callerId, calleeId)) {
+            throw new IllegalArgumentException("被叫用户必须是其他有效用户");
+        }
+        if (!ImCallTypeEnum.VOICE.getType().equals(callType) && !ImCallTypeEnum.VIDEO.getType().equals(callType)) {
+            throw new IllegalArgumentException("不支持的通话类型");
+        }
+        Long chatIdLong;
+        try {
+            chatIdLong = Long.valueOf(chatId);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("会话ID无效");
+        }
+        // A user may only start a direct call inside a conversation that both
+        // parties currently belong to. This prevents arbitrary user-ID dialing.
+        if (chatUserMapper.selectByUserIdAndChatId(callerId, chatIdLong) == null
+                || chatUserMapper.selectByUserIdAndChatId(calleeId, chatIdLong) == null) {
+            throw exception(CALL_PERMISSION_DENIED);
+        }
+        // 最小通话模型不支持呼叫等待或转接：主叫、被叫任一方存在
+        // RINGING/CONNECTING/CONNECTED 通话时，新的邀请必须在服务端拒绝。
+        if (isUserBusy(callerId) || isUserBusy(calleeId)) {
+            throw exception(IM_CALL_USER_BUSY);
+        }
         // 生成通话ID和邀请ID
         String callId = IdUtil.simpleUUID();
         String inviteId = IdUtil.simpleUUID();
 
-        // TODO: 调用 JanusRoomManager 创建房间（需要注入）
-        String roomId = "room_" + callId;
-        String token = "mock_token_" + callId; // TODO: 调用 CallTokenService 生成真实 Token
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null || janusUrl == null || janusUrl.trim().isEmpty()) {
+            // Never hand a client an empty endpoint or a mock credential: that
+            // produces a ringing UI which can never establish media.
+            throw new IllegalStateException("RTC 服务未配置（需要 janus.url 和租户上下文）");
+        }
+        JanusRoomManager.RoomInfo room = janusRoomManager.createRoom(tenantId, "call_" + callId);
+        String roomId = room.getRoomId();
+        String token = callTokenService.generateToken(callerId, tenantId, roomId);
 
         // 创建通话记录
         ImCallRecordDO callRecord = ImCallRecordDO.builder()
@@ -425,7 +554,8 @@ public class ImCallServiceImpl implements ImCallService {
                 .callType(callType)
                 .callerId(callerId)
                 .calleeId(calleeId)
-                .chatId(chatId != null ? Long.parseLong(chatId) : null)
+                .chatId(chatIdLong)
+                .roomId(roomId)
                 .startTime(LocalDateTime.now())
                 .duration(0)
                 .status(ImCallStatusEnum.MISSED.getStatus())
@@ -443,7 +573,7 @@ public class ImCallServiceImpl implements ImCallService {
                 .roomId(roomId)
                 .publisherId(callerId.toString())
                 .displayName("")
-                .janusUrl("")
+                .janusUrl(janusUrl)
                 .turnUrls(Collections.emptyList())
                 .turnUsername("")
                 .turnCredential("")
@@ -488,6 +618,25 @@ public class ImCallServiceImpl implements ImCallService {
             throw exception(CALL_PERMISSION_DENIED);
         }
 
+        Long groupIdLong;
+        try {
+            groupIdLong = Long.valueOf(groupId);
+        } catch (NumberFormatException e) {
+            throw exception(CALL_PERMISSION_DENIED);
+        }
+        ImChatDO groupChat = chatMapper.selectGroupChat(groupIdLong, 2);
+        if (groupChat == null || !Objects.equals(callRecord.getChatId(), groupChat.getId())
+                || chatUserMapper.selectByUserIdAndChatId(inviterId, groupChat.getId()) == null) {
+            throw exception(CALL_PERMISSION_DENIED);
+        }
+
+        // Convert the original 1:1 invite into a durable group-call roster.
+        // This is required for authorization, join/leave broadcasting and
+        // reconnect recovery; WebSocket notification alone is not state.
+        callRecord.setGroupId(groupIdLong);
+        callRecordMapper.updateById(callRecord);
+        ensureGroupParticipant(callSessionId, inviterId, 1, 1);
+
         // 获取邀请者信息
         AdminUserDO inviterUser = adminUserMapper.selectById(inviterId);
         String inviterName = inviterUser != null ? inviterUser.getNickname() : "未知用户";
@@ -499,7 +648,15 @@ public class ImCallServiceImpl implements ImCallService {
 
         // 生成邀请ID列表
         List<String> inviteIds = new ArrayList<>();
-        for (Long inviteeId : inviteeIds) {
+        for (Long inviteeId : new java.util.LinkedHashSet<>(inviteeIds)) {
+            if (inviteeId == null || inviteeId.equals(inviterId)) {
+                continue;
+            }
+            if (chatUserMapper.selectByUserIdAndChatId(inviteeId, groupChat.getId()) == null) {
+                log.warn("[inviteGroupMembers] 忽略非群成员邀请, callSessionId={}, inviteeId={}", callSessionId, inviteeId);
+                continue;
+            }
+            ensureGroupParticipant(callSessionId, inviteeId, 2, 2);
             String inviteId = IdUtil.simpleUUID();
             inviteIds.add(inviteId);
 
@@ -513,6 +670,27 @@ public class ImCallServiceImpl implements ImCallService {
                 .inviteIds(inviteIds)
                 .invitedCount(inviteeIds.size())
                 .build();
+    }
+
+    private void ensureGroupParticipant(String callId, Long userId, int role, int status) {
+        if (callParticipantMapper.selectByCallIdAndUserId(callId, userId) != null) {
+            return;
+        }
+        callParticipantMapper.insert(ImCallParticipantDO.builder()
+                .callId(callId)
+                .userId(userId)
+                .role(role)
+                .status(status)
+                .joinTime(LocalDateTime.now())
+                .build());
+    }
+
+    private boolean isCallMember(ImCallRecordDO callRecord, Long userId) {
+        if (Objects.equals(callRecord.getCallerId(), userId) || Objects.equals(callRecord.getCalleeId(), userId)) {
+            return true;
+        }
+        return callRecord.getGroupId() != null
+                && callParticipantMapper.selectByCallIdAndUserId(callRecord.getCallId(), userId) != null;
     }
 
     /**
@@ -579,86 +757,6 @@ public class ImCallServiceImpl implements ImCallService {
             log.error("[sendGroupInviteWebSocket] 发送群组通话邀请失败, callSessionId={}, inviteeId={}", 
                 callSessionId, inviteeId, e);
         }
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void initiateCallTransfer(String callId, Long fromUserId, Long targetUserId, String targetUserName) {
-        // 验证通话是否存在
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // 验证操作权限
-        if (!callRecord.getCallerId().equals(fromUserId) && !callRecord.getCalleeId().equals(fromUserId)) {
-            throw exception(CALL_PERMISSION_DENIED);
-        }
-
-        // TODO: 实现通话转接逻辑（需要 CallTransferService）
-        log.info("[initiateCallTransfer] 发起通话转接, callId={}, fromUserId={}, targetUserId={}",
-                callId, fromUserId, targetUserId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void acceptCallTransfer(String callId, Long userId) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // TODO: 实现接受通话转接逻辑
-        log.info("[acceptCallTransfer] 接受通话转接, callId={}, userId={}", callId, userId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void rejectCallTransfer(String callId, Long userId) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // TODO: 实现拒绝通话转接逻辑
-        log.info("[rejectCallTransfer] 拒绝通话转接, callId={}, userId={}", callId, userId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void cancelCallTransfer(String callId, Long userId) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // TODO: 实现取消通话转接逻辑
-        log.info("[cancelCallTransfer] 取消通话转接, callId={}, userId={}", callId, userId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void startCallRecording(String callId, Long userId) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // TODO: 实现开始通话录制逻辑（需要 CallRecordingService）
-        log.info("[startCallRecording] 开始通话录制, callId={}, userId={}", callId, userId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void stopCallRecording(String callId, Long userId, String recordingFilePath) {
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // TODO: 实现停止通话录制逻辑
-        log.info("[stopCallRecording] 停止通话录制, callId={}, userId={}, filePath={}",
-                callId, userId, recordingFilePath);
     }
 
     @Override
@@ -896,6 +994,9 @@ public class ImCallServiceImpl implements ImCallService {
      */
     private void createCallRecordMessage(ImCallRecordDO callRecord, Long tenantId) {
         try {
+            if (callRecord.getRecordMessageId() != null) {
+                return;
+            }
             // 获取会话ID（群通话时 chatId 可能为 null，需要通过 groupId 查找）
             Long chatId = callRecord.getChatId();
             Long groupId = callRecord.getGroupId();
@@ -1010,6 +1111,8 @@ public class ImCallServiceImpl implements ImCallService {
                 .rev(1L)
                 .status(1) // 已发送状态
                 .build();
+            // 全局任务处于 TenantIgnore 模式，租户字段必须由业务记录显式继承。
+            message.setTenantId(tenantId);
 
             // 获取下一个 sequence
             Long sequence = chatMapper.nextSequence(chatId);

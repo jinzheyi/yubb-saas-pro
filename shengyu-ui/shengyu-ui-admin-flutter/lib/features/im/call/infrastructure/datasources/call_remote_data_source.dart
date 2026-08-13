@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/infrastructure/dtos/call_record_dto.dart';
@@ -38,11 +38,11 @@ class CallRemoteDataSource {
     }
   }
 
-  Future<void> accept({required String callSessionId}) async {
+  Future<void> accept({required String callSessionId, required String deviceId}) async {
     try {
       await dio.post(
         '/system/im/call/accept',
-        data: {'callSessionId': callSessionId},
+        data: {'callSessionId': callSessionId, 'deviceId': deviceId},
       );
     } catch (e) {
       debugPrint('[CallRemoteDataSource] accept 失败: $e');
@@ -89,6 +89,43 @@ class CallRemoteDataSource {
       debugPrint('[CallRemoteDataSource] hangup 失败: $e');
       rethrow;
     }
+  }
+
+  Future<CallSessionDto> createGroupInvite({
+    required String chatId,
+    required String groupId,
+    required String callType,
+    required List<String> inviteeIds,
+    String? deviceId,
+  }) async {
+    final response = await dio.post('/system/im/call/group/create-invite', data: {
+      'chatId': chatId,
+      'groupId': groupId,
+      'callType': callType,
+      'inviteeIds': inviteeIds,
+      if (deviceId != null && deviceId.isNotEmpty) 'deviceId': deviceId,
+    });
+    return ApiResult.fromJson<CallSessionDto>(response.data as Map<String, dynamic>,
+      dataParser: (raw) => CallSessionDto.fromJson(raw as Map<String, dynamic>? ?? const {}),
+    ).requireData();
+  }
+
+  Future<Map<String, dynamic>> inviteGroupMembers({
+    required String callSessionId, required String groupId, required List<String> inviteeIds,
+  }) async {
+    final response = await dio.post('/system/im/call/group/invite', data: {
+      'callSessionId': callSessionId, 'groupId': groupId, 'inviteeIds': inviteeIds,
+    });
+    return ApiResult.fromJson<Map<String, dynamic>>(response.data as Map<String, dynamic>,
+      dataParser: (raw) => raw as Map<String, dynamic>? ?? const {},
+    ).requireData();
+  }
+
+  Future<void> leaveGroupCall({required String callSessionId}) async {
+    await dio.post(
+      '/system/im/call/group/leave',
+      data: {'callSessionId': callSessionId},
+    );
   }
 
   Future<CallSessionDto> syncState({required String callSessionId}) async {
@@ -156,89 +193,6 @@ class CallRemoteDataSource {
     return result.requireData();
   }
 
-  /// 发起通话转接
-  Future<void> initiateTransfer({
-    required String callId,
-    required String targetUserId,
-    String? targetUserName,
-  }) async {
-    await dio.post(
-      '/system/im/call/transfer/initiate',
-      data: {
-        'callId': callId,
-        'targetUserId': targetUserId,
-        'targetUserName': ?targetUserName,
-      },
-    );
-  }
-
-  /// 接受通话转接
-  Future<void> acceptTransfer({required String callId}) async {
-    await dio.post(
-      '/system/im/call/transfer/accept',
-      data: {'callId': callId},
-    );
-  }
-
-  /// 拒绝通话转接
-  Future<void> rejectTransfer({required String callId}) async {
-    await dio.post(
-      '/system/im/call/transfer/reject',
-      data: {'callId': callId},
-    );
-  }
-
-  /// 取消通话转接
-  Future<void> cancelTransfer({required String callId}) async {
-    await dio.post(
-      '/system/im/call/transfer/cancel',
-      data: {'callId': callId},
-    );
-  }
-
-  /// 开始通话录制
-  Future<void> startRecording({required String callId}) async {
-    await dio.post(
-      '/system/im/call/recording/start',
-      data: {'callId': callId},
-    );
-  }
-
-  /// 停止通话录制
-  Future<void> stopRecording({
-    required String callId,
-    String? recordingFilePath,
-  }) async {
-    await dio.post(
-      '/system/im/call/recording/stop',
-      data: {
-        'callId': callId,
-        'recordingFilePath': ?recordingFilePath,
-      },
-    );
-  }
-
-  /// 群组通话邀请成员加入
-  Future<Map<String, dynamic>> inviteGroupMembers({
-    required String callSessionId,
-    required String groupId,
-    required List<String> inviteeIds,
-  }) async {
-    final response = await dio.post(
-      '/system/im/call/group/invite',
-      data: {
-        'callSessionId': callSessionId,
-        'groupId': groupId,
-        'inviteeIds': inviteeIds,
-      },
-    );
-    final result = ApiResult.fromJson<Map<String, dynamic>>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) => raw as Map<String, dynamic>? ?? const {},
-    );
-    return result.requireData();
-  }
-
   /// 发送媒体状态更新（摄像头/麦克风开关状态）
   ///
   /// 用于通知对端当前用户的媒体状态变化
@@ -257,3 +211,4 @@ class CallRemoteDataSource {
     );
   }
 }
+

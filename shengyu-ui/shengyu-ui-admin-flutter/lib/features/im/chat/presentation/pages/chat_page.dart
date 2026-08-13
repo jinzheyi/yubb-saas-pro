@@ -128,6 +128,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   bool _isRecording = false;
   bool _isCancelReady = false;
   bool _isVoicePressActive = false;
+  bool _isLaunchingCall = false;
   final Set<String> _selectedMessageIds = <String>{};
   final Map<String, String> _mentionNameToUserId = <String, String>{};
   QuoteInfo? _quoteInfo;
@@ -797,38 +798,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
                     GroupCallStatusBar(
                       groupId: groupId,
                       onTap: () {
-                        // 点击状态栏跳转到群通话页面
-                        final callState = ref.read(callControllerProvider);
-                        final callArgs = CallLaunchArgs(
-                          callSessionId: callState.callSessionId,
-                          chatId: widget.args.chatId,
-                          callType: callState.callType ?? CallType.video,
-                          entryMode: CallEntryMode.restore,
-                          title: chatTitle,
-                          isGroupCall: true,
+                        unawaited(_openOrJoinGroupCall(
+                          context,
+                          chatTitle: chatTitle,
                           groupId: groupId,
-                        );
-                        context.pushNamed(
-                          RouteNames.groupCallSession,
-                          extra: callArgs,
-                        );
+                        ));
                       },
                       onJoinTap: () {
-                        // 点击"加入"按钮加入群通话
-                        final callState = ref.read(callControllerProvider);
-                        final callArgs = CallLaunchArgs(
-                          callSessionId: callState.callSessionId,
-                          chatId: widget.args.chatId,
-                          callType: callState.callType ?? CallType.video,
-                          entryMode: CallEntryMode.incoming,
-                          title: chatTitle,
-                          isGroupCall: true,
+                        unawaited(_openOrJoinGroupCall(
+                          context,
+                          chatTitle: chatTitle,
                           groupId: groupId,
-                        );
-                        context.pushNamed(
-                          RouteNames.groupCallSession,
-                          extra: callArgs,
-                        );
+                        ));
                       },
                     ),
                   if (!_isSelectionMode && groupNoticeText.isNotEmpty)
@@ -3024,8 +3005,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
     required ChatPageState pageState,
     required String chatTitle,
   }) async {
+    // A call creates server-side state just like sending a message.  A
+    // read-only/removed conversation must not expose a bypass through the
+    // "more" panel; the backend remains authoritative as a second check.
     if (action != ChatMorePanelAction.favorite &&
-        action != ChatMorePanelAction.call &&
         !_ensureConversationWritable(context)) {
       return;
     }
@@ -3494,6 +3477,44 @@ class _ChatPageState extends ConsumerState<ChatPage>
     );
   }
 
+  /// 打开已加入的群通话，或者先接受待处理的群邀请再进入页面。
+  /// 之前直接跳到会话页并切成 restore 模式，会跳过权威的 REST 接听动作。
+  Future<void> _openOrJoinGroupCall(
+    BuildContext context, {
+    required String chatTitle,
+    required String groupId,
+  }) async {
+    final callState = ref.read(callControllerProvider);
+    if (callState.callSessionId.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('群通话状态已失效，请稍后重试')),
+        );
+      }
+      return;
+    }
+    final isPendingInvite = callState.isIncoming && !callState.hasAccepted;
+    final args = CallLaunchArgs(
+      callSessionId: callState.callSessionId,
+      chatId: widget.args.chatId,
+      callType: callState.callType ?? CallType.audio,
+      entryMode: isPendingInvite ? CallEntryMode.incoming : CallEntryMode.restore,
+      title: chatTitle,
+      isGroupCall: true,
+      groupId: groupId,
+    );
+    final controller = ref.read(callControllerProvider.notifier);
+    if (isPendingInvite) {
+      await controller.initialize(args);
+      if (!mounted) return;
+      await controller.accept(); // accept() performs the group-session navigation.
+      return;
+    }
+    if (context.mounted) {
+      await context.pushNamed(RouteNames.groupCallSession, extra: args);
+    }
+  }
+
   void _openCallPage(
     BuildContext context, {
     required String chatTitle,
@@ -3504,7 +3525,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     // 通话中拦截：检查是否有正在进行的通话
     // 参考微信逻辑：通话中不允许发起新的通话
     final activeCallRegistry = ref.read(activeCallRegistryProvider);
-    if (activeCallRegistry.hasActiveCall()) {
+    if (_isLaunchingCall || activeCallRegistry.hasActiveCall()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('您正在通话中'),
@@ -3514,20 +3535,38 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
 
-    if (isGroupChat && groupId != null) {
+    if (isGroupChat) {
+      final normalizedGroupId = groupId?.trim() ?? '';
+      if (normalizedGroupId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('群聊信息不完整，暂无法发起通话')),
+        );
+        return;
+      }
+      _isLaunchingCall = true;
       // 群聊：跳转到成员选择页
       final currentUserId = ref.read(authSessionProvider).userId;
       context.pushNamed(
         RouteNames.groupCallMemberSelect,
         extra: GroupCallMemberSelectArgs(
-          groupId: groupId,
+          groupId: normalizedGroupId,
           groupName: chatTitle,
           callType: callType,
           currentUserId: currentUserId,
         ),
       ).then((result) {
+        if (!mounted || !context.mounted) return;
         // 成员选择页返回选中的成员ID列表
         if (result != null && result is List<String> && result.isNotEmpty) {
+          final inviteeIds = result
+              .map((id) => id.trim())
+              .where((id) => id.isNotEmpty && id != currentUserId)
+              .toSet()
+              .toList(growable: false);
+          if (inviteeIds.isEmpty) {
+            setState(() => _isLaunchingCall = false);
+            return;
+          }
           // 跳转到群通话等待页
           final args = CallLaunchArgs.outgoing(
             callSessionId: '',
@@ -3535,15 +3574,26 @@ class _ChatPageState extends ConsumerState<ChatPage>
             callType: callType,
             title: chatTitle,
             isGroupCall: true,
-            groupId: groupId,
-            inviteeIds: result,
+            groupId: normalizedGroupId,
+            inviteeIds: inviteeIds,
           );
-          context.pushNamed(RouteNames.groupOutgoingCall, extra: args);
+          context.pushNamed(RouteNames.groupOutgoingCall, extra: args).whenComplete(() {
+            if (mounted) setState(() => _isLaunchingCall = false);
+          });
+        } else {
+          setState(() => _isLaunchingCall = false);
         }
       });
     } else {
+      final calleeId = widget.args.targetId?.trim() ?? '';
+      if (calleeId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('联系人信息不完整，暂无法发起通话')),
+        );
+        return;
+      }
+      _isLaunchingCall = true;
       // 单聊：跳转到1v1去电页
-      final calleeId = widget.args.chatId;
       final args = CallLaunchArgs.outgoing(
         callSessionId: '',
         chatId: widget.args.chatId,
@@ -3551,7 +3601,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         title: chatTitle,
         toUserId: calleeId,
       );
-      context.pushNamed(RouteNames.callOutgoing, extra: args);
+      context.pushNamed(RouteNames.callOutgoing, extra: args).whenComplete(() {
+        if (mounted) setState(() => _isLaunchingCall = false);
+      });
     }
   }
 

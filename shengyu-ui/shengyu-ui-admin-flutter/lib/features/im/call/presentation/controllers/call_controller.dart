@@ -12,9 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/cancel
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/create_call_invite_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/hangup_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/reject_call_use_case.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/record_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/sync_active_call_state_use_case.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/application/usecases/transfer_call_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/active_call_state_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_participant_profile.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_socket_event.dart';
@@ -46,8 +44,6 @@ class CallController extends StateNotifier<CallState> {
     this._cancelCallUseCase,
     this._hangupCallUseCase,
     this._syncActiveCallStateUseCase,
-    this._transferCallUseCase,
-    this._recordCallUseCase,
     this._callMediaController,
     this._callCoordinator,
     this._activeCallRegistry,
@@ -69,8 +65,6 @@ class CallController extends StateNotifier<CallState> {
   final CancelCallUseCase _cancelCallUseCase;
   final HangupCallUseCase _hangupCallUseCase;
   final SyncActiveCallStateUseCase _syncActiveCallStateUseCase;
-  final TransferCallUseCase _transferCallUseCase;
-  final RecordCallUseCase _recordCallUseCase;
   final CallMediaController _callMediaController;
   final CallCoordinator _callCoordinator;
   final ActiveCallRegistry _activeCallRegistry;
@@ -108,6 +102,7 @@ class CallController extends StateNotifier<CallState> {
 
   /// 发起通话的 Future（用于追踪 startOutgoing 的异步操作）
   Future<void>? _startOutgoingFuture;
+  bool _outgoingStarted = false;
 
   /// 公开的通话状态访问器（供外部类使用）
   CallState get currentCallState => state;
@@ -430,23 +425,42 @@ class CallController extends StateNotifier<CallState> {
 
   Future<void> startOutgoing() async {
     debugPrint('[CallController] startOutgoing 被调用, pageStatus=${state.pageStatus}, isOutgoing=${state.isOutgoing}');
+    // 路由重建、双击或悬浮窗恢复时，都不能为同一个可见通话重复创建邀请。
+    if (_startOutgoingFuture != null) {
+      return _startOutgoingFuture!;
+    }
+    if (_outgoingStarted) {
+      return;
+    }
+    _outgoingStarted = true;
     _startOutgoingFuture = _startOutgoingInternal();
-    return _startOutgoingFuture;
+    try {
+      await _startOutgoingFuture;
+    } finally {
+      _startOutgoingFuture = null;
+    }
   }
 
   Future<void> _startOutgoingInternal() async {
     try {
       var effectiveSessionId = state.callSessionId;
-      if (state.callSessionId.isEmpty &&
-          state.chatId.isNotEmpty &&
-          state.callType != null &&
-          state.calleeId != null) {
+      if (state.callSessionId.isEmpty && state.chatId.isNotEmpty && state.callType != null &&
+          (state.isGroupCall ? state.groupId != null && state.inviteeIds.isNotEmpty : state.calleeId != null)) {
         debugPrint('[CallController] startOutgoing 开始创建通话邀请, chatId=${state.chatId}');
-        final invite = await _createCallInviteUseCase.execute(
-          chatId: state.chatId,
-          callType: state.callType!,
-          calleeId: state.calleeId!,
-        );
+        final deviceInfo = await _deviceInfoService.getOrCreate();
+        final invite = state.isGroupCall
+            ? await _callRepository.createGroupInvite(
+                chatId: state.chatId,
+                groupId: state.groupId!,
+                callType: state.callType!,
+                inviteeIds: state.inviteeIds,
+                deviceId: deviceInfo.deviceId,
+              )
+            : await _createCallInviteUseCase.execute(
+                chatId: state.chatId,
+                callType: state.callType!,
+                calleeId: state.calleeId!,
+              );
         effectiveSessionId = invite.callSessionId;
         debugPrint('[CallController] startOutgoing 创建通话邀请成功, callSessionId=$effectiveSessionId');
         state = state.copyWith(
@@ -475,23 +489,6 @@ class CallController extends StateNotifier<CallState> {
         isOutgoing: true,
       );
       
-      // 关键修复：群组通话需要额外调用 inviteGroupMembers 通知被邀请人
-      // createInvite 只创建了1v1的通话记录（calleeId=第一个被邀请人），
-      // 必须通过 inviteGroupMembers 发送 WebSocket 通知给所有被邀请人
-      if (state.isGroupCall && state.groupId != null && state.inviteeIds.isNotEmpty) {
-        try {
-          await _callRepository.inviteGroupMembers(
-            callSessionId: effectiveSessionId,
-            groupId: state.groupId!,
-            inviteeIds: state.inviteeIds,
-          );
-          debugPrint('[CallController] 群组通话邀请已发送, callSessionId=$effectiveSessionId, groupId=${state.groupId}, inviteeCount=${state.inviteeIds.length}');
-        } catch (e) {
-          debugPrint('[CallController] 群组通话邀请发送失败: $e');
-          // 邀请发送失败不阻断流程，被邀请人可能通过其他途径收到通知
-        }
-      }
-      
       debugPrint('[CallController] startOutgoing 即将启动定时器, mounted=$mounted, isOutgoing=${state.isOutgoing}, pageStatus=${state.pageStatus}');
       // 启动30秒无应答自动挂断定时器（参考微信机制）
       _startNoAnswerTimer();
@@ -500,6 +497,7 @@ class CallController extends StateNotifier<CallState> {
       // 等待后端下发 call.media-token-issued 事件时再加入房间
       // 这样可以确保对方接听后才建立 RTC 连接，避免资源浪费
     } catch (error, stackTrace) {
+      _outgoingStarted = false;
       // 清理已创建的媒体资源（防止内存泄漏）
       final mediaState = await _callMediaController.disposeSession(state.mediaState);
       _enterFailed(
@@ -524,7 +522,11 @@ class CallController extends StateNotifier<CallState> {
       hasAccepted: true,
     );
     try {
-      await _acceptCallUseCase.execute(callSessionId: state.callSessionId);
+      final deviceInfo = await _deviceInfoService.getOrCreate();
+      await _acceptCallUseCase.execute(
+        callSessionId: state.callSessionId,
+        deviceId: deviceInfo.deviceId,
+      );
       final mediaState = await _callMediaController.prepare(
         state.mediaState,
         state.callType ?? CallType.audio,
@@ -583,17 +585,21 @@ class CallController extends StateNotifier<CallState> {
   }
 
   Future<void> hangup() async {
-    // 只有当 callSessionId 有效时才调用后端 API
-    // 如果通话还没成功建立就挂断，不需要调用后端
+      // 只有当 callSessionId 有效时才调用后端 API。
+      // 如果通话还没成功建立就挂断，就不需要调用后端。
     if (state.callSessionId.isEmpty) {
       debugPrint('[CallController] hangup: callSessionId is empty, skip backend API call');
-      // 关键修复：即使 callSessionId 为空，也要清理可能已创建的媒体资源
+      // 即使 callSessionId 为空，也要清理可能已经创建的媒体资源。
       final mediaState = await _callMediaController.disposeSession(state.mediaState);
       _enterEnded(CallEndReason.hangupByLocal, mediaState: mediaState);
       return;
     }
     state = state.copyWith(pageStatus: CallPageStatus.ending);
-    await _hangupCallUseCase.execute(callSessionId: state.callSessionId);
+    if (state.isGroupCall) {
+      await _callRepository.leaveGroupCall(callSessionId: state.callSessionId);
+    } else {
+      await _hangupCallUseCase.execute(callSessionId: state.callSessionId);
+    }
     final mediaState = await _callMediaController.disposeSession(
       state.mediaState,
     );
@@ -713,55 +719,6 @@ class CallController extends StateNotifier<CallState> {
     }
   }
 
-  /// 切换通话录制
-  ///
-  /// 录制采用纯服务端录制模式（参考微信/钉钉）：
-  /// 1. 调用后端 API 启动/停止服务端录制
-  /// 2. 仅更新本地 UI 状态，不做本地录制
-  /// 3. 录制文件由服务端存储和管理
-  ///
-  /// 关键修复：移除本地录制调用（_callMediaController.toggleRecording），
-  /// 避免双重录制（服务端+本地）导致资源浪费和状态不一致
-  Future<void> toggleRecording() async {
-    try {
-      final isCurrentlyRecording = state.mediaState.recordingEnabled;
-      final callId = state.callSessionId;
-      
-      if (callId.isEmpty) {
-        throw Exception('通话会话ID为空，无法启动录制');
-      }
-      
-      // 调用服务端录制 API
-      if (isCurrentlyRecording) {
-        // 停止录制
-        await _recordCallUseCase.stop(callId: callId);
-        debugPrint('[CallController] 服务端录制已停止');
-        // 更新本地 UI 状态（仅标记录制关闭，不做本地录制操作）
-        state = state.copyWith(
-          mediaState: state.mediaState.copyWith(
-            recordingEnabled: false,
-            recordingFilePath: null,
-          ),
-        );
-      } else {
-        // 启动录制
-        await _recordCallUseCase.start(callId: callId);
-        debugPrint('[CallController] 服务端录制已启动');
-        // 更新本地 UI 状态（仅标记录制开启，不做本地录制操作）
-        state = state.copyWith(
-          mediaState: state.mediaState.copyWith(
-            recordingEnabled: true,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('[CallController] 切换录制失败: $e');
-      state = state.copyWith(
-        error: AppError(message: '录制失败: $e'),
-      );
-    }
-  }
-
   Future<void> _onSocketEvent(CallSocketEvent event) async {
     // 来电邀请事件：state.callSessionId 可能为空，不能用 callSessionId 过滤
     // 其他事件：必须匹配当前通话会话ID
@@ -771,13 +728,13 @@ class CallController extends StateNotifier<CallState> {
     if (!isInviteEvent && event.callSessionId != state.callSessionId) {
       return;
     }
-    // 对于邀请事件，如果当前已有活跃通话（非空闲状态），进入通话等待
+    // 服务端会拒绝忙线邀请；此处仅处理网络乱序/旧服务端重放的兜底。
     if (isInviteEvent &&
         state.pageStatus != CallPageStatus.initial &&
         state.pageStatus != CallPageStatus.ended &&
         state.pageStatus != CallPageStatus.failed) {
-      debugPrint('[CallController] 当前已有活跃通话，进入通话等待 event.callSessionId=${event.callSessionId}');
-      await _handleCallWaiting(event);
+      debugPrint('[CallController] 当前已有活跃通话，拒绝额外来电 event.callSessionId=${event.callSessionId}');
+      await _rejectCallUseCase.execute(callSessionId: event.callSessionId);
       return;
     }
     switch (event.type) {
@@ -817,18 +774,6 @@ class CallController extends StateNotifier<CallState> {
       case CallSocketEventType.missed:
         // 未接来电通知，由通知模块处理
         await _handleMissedCall(event);
-        break;
-      case CallSocketEventType.transferRequested:
-        await onTransferRequested(event);
-        break;
-      case CallSocketEventType.transferAccepted:
-        await onTransferAccepted();
-        break;
-      case CallSocketEventType.transferRejected:
-        await onTransferRejected();
-        break;
-      case CallSocketEventType.transferCancelled:
-        await onTransferCancelled();
         break;
       case CallSocketEventType.groupInvite:
         await onGroupInvite(event);
@@ -873,7 +818,8 @@ class CallController extends StateNotifier<CallState> {
     // 关键修复：从事件 payload 中提取新来电的 callType，而非使用当前通话类型
     // 新来电可能是音频或视频，与当前通话类型可能不同
     final callTypeStr = event.payload['callType']?.toString() ?? 'audio';
-    final newCallType = callTypeStr == 'video' ? CallType.video : CallType.audio;
+    final newCallType = callTypeStr == 'video' || callTypeStr == '2'
+        ? CallType.video : CallType.audio;
 
     // 群组通话：从 payload 中提取群组相关信息
     final groupId = event.payload['groupId']?.toString();
@@ -1043,7 +989,11 @@ class CallController extends StateNotifier<CallState> {
 
     // 3. 接听待处理来电
     try {
-      await _acceptCallUseCase.execute(callSessionId: pendingCall.callSessionId);
+      final deviceInfo = await _deviceInfoService.getOrCreate();
+      await _acceptCallUseCase.execute(
+        callSessionId: pendingCall.callSessionId,
+        deviceId: deviceInfo.deviceId,
+      );
       debugPrint('[CallController] 通话等待：已接听待处理来电');
     } catch (e) {
       debugPrint('[CallController] 通话等待：接听待处理来电失败: $e');
@@ -1125,7 +1075,7 @@ class CallController extends StateNotifier<CallState> {
     final callerName = event.payload['callerName']?.toString() ?? '';
     final callId = event.payload['callId']?.toString() ?? '';
     final callTypeStr = event.payload['callType']?.toString() ?? 'audio';
-    final callType = callTypeStr == 'video' ? '视频' : '语音';
+    final callType = callTypeStr == 'video' || callTypeStr == '2' ? '视频' : '语音';
     
     debugPrint('[CallController] 收到未接来电通知, callId=$callId, callerId=$callerId, callerName=$callerName');
     
@@ -1150,178 +1100,23 @@ class CallController extends StateNotifier<CallState> {
     }
   }
 
-  /// 发起通话转接
-  Future<void> initiateTransfer(String targetUserId, String targetName) async {
-    try {
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.initiating,
-        transferTargetId: targetUserId,
-        transferTargetName: targetName,
-      );
-      
-      // 通过后端 API 发送转接请求
-      await _transferCallUseCase.initiate(
-        callId: state.callSessionId,
-        targetUserId: targetUserId,
-        targetUserName: targetName,
-      );
-      
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.waitingAccept,
-      );
-      
-      debugPrint('[CallController] 发起转接请求, targetUserId=$targetUserId, targetName=$targetName');
-    } catch (e) {
-      debugPrint('[CallController] 发起转接失败: $e');
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.none,
-        error: AppError(message: '发起转接失败: $e'),
-      );
-    }
-  }
-
-  /// 接受通话转接
-  Future<void> acceptTransfer() async {
-    try {
-      state = state.copyWith(transferStatus: CallTransferStatus.accepted);
-      
-      // 通过后端 API 发送接受转接信令
-      await _transferCallUseCase.accept(callId: state.callSessionId);
-      
-      // 结束当前通话，等待后端下发新的 roomBundle 加入新房间
-      // 转接接受后，后端会广播 transfer_accepted 事件，
-      // 当前通话以 transferred 原因结束，新房间通过 onMediaTokenIssued 加入
-      final mediaState = await _callMediaController.disposeSession(state.mediaState);
-      _enterEnded(CallEndReason.transferred, mediaState: mediaState);
-      
-      debugPrint('[CallController] 接受转接成功');
-    } catch (e) {
-      debugPrint('[CallController] 接受转接失败: $e');
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.none,
-        error: AppError(message: '接受转接失败: $e'),
-      );
-    }
-  }
-
-  /// 拒绝通话转接
-  Future<void> rejectTransfer() async {
-    try {
-      state = state.copyWith(transferStatus: CallTransferStatus.rejected);
-      
-      // 通过后端 API 发送拒绝转接信令
-      await _transferCallUseCase.reject(callId: state.callSessionId);
-      
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.none,
-        transferTargetId: null,
-        transferTargetName: null,
-      );
-      
-      debugPrint('[CallController] 拒绝转接成功');
-    } catch (e) {
-      debugPrint('[CallController] 拒绝转接失败: $e');
-      state = state.copyWith(
-        error: AppError(message: '拒绝转接失败: $e'),
-      );
-    }
-  }
-
-  /// 取消通话转接
-  Future<void> cancelTransfer() async {
-    try {
-      state = state.copyWith(transferStatus: CallTransferStatus.cancelled);
-      
-      // 通过后端 API 发送取消转接信令
-      await _transferCallUseCase.cancel(callId: state.callSessionId);
-      
-      state = state.copyWith(
-        transferStatus: CallTransferStatus.none,
-        transferTargetId: null,
-        transferTargetName: null,
-      );
-      
-      debugPrint('[CallController] 取消转接成功');
-    } catch (e) {
-      debugPrint('[CallController] 取消转接失败: $e');
-      state = state.copyWith(
-        error: AppError(message: '取消转接失败: $e'),
-      );
-    }
-  }
-
-  /// 处理收到转接请求
-  Future<void> onTransferRequested(CallSocketEvent event) async {
-    final fromUserId = event.payload['fromUserId']?.toString() ?? '';
-    final fromUserName = event.payload['fromUserName']?.toString() ?? '';
-    
-    debugPrint('[CallController] 收到转接请求, fromUserId=$fromUserId, fromUserName=$fromUserName');
-    
-    state = state.copyWith(
-      transferStatus: CallTransferStatus.waitingAccept,
-      transferTargetId: fromUserId,
-      transferTargetName: fromUserName,
-    );
-    
-    // 通知 UI 层显示转接请求对话框
-    // 实际的 UI 交互由 CallTransferRequestDialog 处理
-    // 用户可以选择接受或拒绝转接
-  }
-
-  /// 处理转接已接受
-  Future<void> onTransferAccepted() async {
-    debugPrint('[CallController] 转接已接受');
-    
-    state = state.copyWith(
-      transferStatus: CallTransferStatus.completed,
-      endReason: CallEndReason.transferred,
-    );
-    
-    // 关键修复：清理媒体资源后再结束通话，防止资源泄漏
-    // 转接接受后，当前通话结束，需要释放所有媒体资源
-    final mediaState = await _callMediaController.disposeSession(state.mediaState);
-    
-    // 结束当前通话，等待后端下发新的 roomBundle 加入新房间
-    // 后端会广播 transfer_accepted 事件，当前通话以 transferred 原因结束
-    // 新房间通过后续的 onMediaTokenIssued 事件加入
-    _enterEnded(CallEndReason.transferred, mediaState: mediaState);
-  }
-
-  /// 处理转接已拒绝
-  Future<void> onTransferRejected() async {
-    debugPrint('[CallController] 转接已拒绝');
-    
-    state = state.copyWith(
-      transferStatus: CallTransferStatus.none,
-      transferTargetId: null,
-      transferTargetName: null,
-    );
-  }
-
-  /// 处理转接已取消
-  Future<void> onTransferCancelled() async {
-    debugPrint('[CallController] 转接已取消');
-    
-    state = state.copyWith(
-      transferStatus: CallTransferStatus.none,
-      transferTargetId: null,
-      transferTargetName: null,
-    );
-  }
-
   /// 处理群组通话邀请
   Future<void> onGroupInvite(CallSocketEvent event) async {
     debugPrint('[CallController] 收到群组通话邀请');
     
     final groupId = event.payload['groupId']?.toString() ?? '';
-    final inviteeIds = (event.payload['inviteeIds'] as List?)?.cast<String>() ?? [];
+    final rawInvitees = event.payload['inviteeIds'];
+    final inviteeIds = rawInvitees is List
+        ? rawInvitees.map((id) => id.toString()).toList(growable: false)
+        : const <String>[];
     
     // 解析发起人信息
     final callerId = event.payload['callerId']?.toString() ?? '';
     final callerName = event.payload['callerName']?.toString();
     final callerAvatar = event.payload['callerAvatar']?.toString();
     final callTypeStr = event.payload['callType']?.toString() ?? 'audio';
-    final callType = callTypeStr == 'video' ? CallType.video : CallType.audio;
+    final callType = callTypeStr == 'video' || callTypeStr == '2'
+        ? CallType.video : CallType.audio;
     
     final callerProfile = CallParticipantProfile(
       userId: callerId,
@@ -1536,7 +1331,10 @@ class CallController extends StateNotifier<CallState> {
     final currentDeviceId = deviceInfo.deviceId;
     
     // 多设备场景：如果接听设备不是当前设备，关闭来电界面
-    if (acceptedDeviceId != null && acceptedDeviceId != currentDeviceId) {
+    if (!state.isOutgoing &&
+        acceptedDeviceId != null &&
+        acceptedDeviceId.isNotEmpty &&
+        acceptedDeviceId != currentDeviceId) {
       debugPrint('[CallController] 通话已在其他设备接听, acceptedDeviceId=$acceptedDeviceId, currentDeviceId=$currentDeviceId');
       final mediaState = await _callMediaController.disposeSession(state.mediaState);
       _enterEnded(CallEndReason.kickedByOtherDevice, mediaState: mediaState);

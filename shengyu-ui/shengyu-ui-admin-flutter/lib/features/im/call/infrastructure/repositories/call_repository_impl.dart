@@ -29,9 +29,9 @@ class CallRepositoryImpl implements CallRepository {
   }
 
   @override
-  Future<void> accept({required String callSessionId}) async {
+  Future<void> accept({required String callSessionId, required String deviceId}) async {
     _validateCallSessionId(callSessionId, 'accept');
-    return _remoteDataSource.accept(callSessionId: callSessionId);
+    return _remoteDataSource.accept(callSessionId: callSessionId, deviceId: deviceId);
   }
 
   @override
@@ -58,6 +58,36 @@ class CallRepositoryImpl implements CallRepository {
   Future<void> hangup({required String callSessionId}) async {
     _validateCallSessionId(callSessionId, 'hangup');
     return _remoteDataSource.hangup(callSessionId: callSessionId);
+  }
+
+  @override
+  Future<CallInviteResult> createGroupInvite({
+    required String chatId,
+    required String groupId,
+    required CallType callType,
+    required List<String> inviteeIds,
+    String? deviceId,
+  }) async {
+    final dto = await _remoteDataSource.createGroupInvite(
+      chatId: chatId,
+      groupId: groupId,
+      callType: _mapper.callTypeToServer(callType),
+      inviteeIds: inviteeIds,
+      deviceId: deviceId,
+    );
+    return _mapper.toInviteResult(dto);
+  }
+
+  @override
+  Future<Map<String, dynamic>> inviteGroupMembers({
+    required String callSessionId, required String groupId, required List<String> inviteeIds,
+  }) => _remoteDataSource.inviteGroupMembers(
+    callSessionId: callSessionId, groupId: groupId, inviteeIds: inviteeIds);
+
+  @override
+  Future<void> leaveGroupCall({required String callSessionId}) async {
+    _validateCallSessionId(callSessionId, 'leaveGroupCall');
+    return _remoteDataSource.leaveGroupCall(callSessionId: callSessionId);
   }
 
   @override
@@ -103,63 +133,6 @@ class CallRepositoryImpl implements CallRepository {
       debugPrint('[CallRepository] getCallRecords 失败: $e');
       rethrow;
     }
-  }
-
-  @override
-  Future<void> initiateTransfer({
-    required String callId,
-    required String targetUserId,
-    String? targetUserName,
-  }) {
-    return _remoteDataSource.initiateTransfer(
-      callId: callId,
-      targetUserId: targetUserId,
-      targetUserName: targetUserName,
-    );
-  }
-
-  @override
-  Future<void> acceptTransfer({required String callId}) {
-    return _remoteDataSource.acceptTransfer(callId: callId);
-  }
-
-  @override
-  Future<void> rejectTransfer({required String callId}) {
-    return _remoteDataSource.rejectTransfer(callId: callId);
-  }
-
-  @override
-  Future<void> cancelTransfer({required String callId}) {
-    return _remoteDataSource.cancelTransfer(callId: callId);
-  }
-
-  @override
-  Future<void> startRecording({required String callId}) {
-    return _remoteDataSource.startRecording(callId: callId);
-  }
-
-  @override
-  Future<void> stopRecording({
-    required String callId,
-    String? recordingFilePath,
-  }) {
-    return _remoteDataSource.stopRecording(
-      callId: callId,
-      recordingFilePath: recordingFilePath,
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> inviteGroupMembers({
-    required String callSessionId,
-    required String groupId,
-    required List<String> inviteeIds,
-  }) {
-    return _remoteDataSource.inviteGroupMembers(
-      callSessionId: callSessionId,
-      groupId: groupId,
-      inviteeIds: inviteeIds,
-    );
   }
 
   @override
