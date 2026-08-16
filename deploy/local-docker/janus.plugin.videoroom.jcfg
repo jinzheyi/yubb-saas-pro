@@ -1,14 +1,6 @@
-general:
-  admin_key = "shengyu-janus-admin-secret-2026"
+general: {
   events = true
+}
 
-rooms:
-  # 默认房间配置（可通过 API 动态创建）
-  - room_id = 1
-    description = "Default Room"
-    is_private = false
-    secret = "default-room-secret"
-    publishers = 9
-    bitrate = 128000
-    fir_secs = 10
-    save_pvtfiles = false
+# 通话房间由后端通过 VideoRoom REST API 动态创建；这里不预置共享房间，
+# 防止不同通话错误加入同一个房间。

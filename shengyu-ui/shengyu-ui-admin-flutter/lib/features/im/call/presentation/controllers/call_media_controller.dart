@@ -404,10 +404,21 @@ class CallMediaController {
       await _janusClient!.connect();
       
       // 创建 VideoRoom 插件
+      final janusRoomId = int.tryParse(roomBundle.roomId);
+      if (janusRoomId == null || janusRoomId <= 0) {
+        throw StateError('服务端下发的 Janus 房间号无效: ${roomBundle.roomId}');
+      }
       _videoRoomPlugin = JanusVideoRoomPlugin(
         janusClient: _janusClient!,
-        roomId: int.tryParse(roomBundle.roomId) ?? 0,
+        roomId: janusRoomId,
         displayName: roomBundle.displayName,
+      );
+
+      // 必须在 publish 前订阅。发布成功时若房间中已有对端，插件会立刻
+      // 创建 subscriber 并可能在 setRemoteDescription 中收到 onTrack；晚订阅
+      // 会丢失首个远端流事件，使界面一直停在“连接中”。
+      _remoteStreamSubscription = _videoRoomPlugin!.onRemoteStreamChanged.listen(
+        _remoteStreamController.add,
       );
       
       // 发布本地流
@@ -415,12 +426,6 @@ class CallMediaController {
         audioEnabled: true,
         videoEnabled: callType == CallType.video,
       );
-      
-      // 监听远端流
-      _remoteStreamSubscription = _videoRoomPlugin!.onRemoteStreamChanged.listen((remoteStream) {
-        // 远端流变化时，通知监听者
-        _remoteStreamController.add(remoteStream);
-      });
       
       // 启动网络质量监控
       _startNetworkQualityMonitor();

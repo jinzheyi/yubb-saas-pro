@@ -64,8 +64,11 @@ public class CallPushService {
                 continue;
             }
             try {
+                int onlineSessionCount = sessionManager.getSessionsByUserId(recipientId).size();
+                log.info("[CallPush] 下发通话信令, recipientId={}, tenantId={}, type={}, onlineSessions={}",
+                        recipientId, tenantId, payload.getStr("type"), onlineSessionCount);
                 messageSender.sendToUserWithExtra(recipientId, MessageType.SYSTEM_NOTIFY, textMessage,
-                        senderId, recipientId, 0L, null, null, null, null, null, null, payload.toString());
+                        senderId, recipientId, 0L, tenantId, null, null, null, null, null, payload.toString());
             } catch (Exception e) {
                 // Signalling delivery is best effort; state sync remains the recovery source of truth.
                 log.error("[CallPush] 通话信令推送失败, recipientId={}, type={}", recipientId,
@@ -151,7 +154,7 @@ public class CallPushService {
                         callerId, 
                         calleeId, 
                         0L, 
-                        null, 
+                        callRecord.getTenantId(),
                         null, 
                         null, 
                         null,
@@ -226,7 +229,7 @@ public class CallPushService {
                 calleeId, 
                 callerId, 
                 0L, 
-                null, 
+                callRecord.getTenantId(),
                 null, 
                 null, 
                 null,
@@ -247,7 +250,7 @@ public class CallPushService {
                 callerId, 
                 calleeId, 
                 0L, 
-                null, 
+                callRecord.getTenantId(),
                 null, 
                 null, 
                 null,

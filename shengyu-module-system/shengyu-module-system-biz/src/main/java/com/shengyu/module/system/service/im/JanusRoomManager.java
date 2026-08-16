@@ -1,5 +1,9 @@
 package com.shengyu.module.system.service.im;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.common.util.http.HttpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,12 @@ public class JanusRoomManager {
 
     @Value("${janus.tenant-isolation:true}")
     private boolean tenantIsolation;
+
+    @Value("${janus.api-url:}")
+    private String janusApiUrl;
+
+    @Value("${janus.api-secret:}")
+    private String janusApiSecret;
 
     /**
      * 房间信息缓存
@@ -94,7 +104,13 @@ public class JanusRoomManager {
      * @return 房间信息
      */
     public RoomInfo createRoom(Long tenantId, String description) {
-        String roomId = generateRoomId(tenantId);
+        if (tenantId == null) {
+            throw new IllegalArgumentException("租户上下文不能为空");
+        }
+        if (StrUtil.isBlank(janusApiUrl)) {
+            throw new IllegalStateException("RTC 服务未配置（需要 janus.api-url）");
+        }
+        String roomId = createVideoRoom(description);
         RoomInfo roomInfo = new RoomInfo(roomId, tenantId, description);
         roomCache.put(roomId, roomInfo);
         
@@ -102,6 +118,73 @@ public class JanusRoomManager {
             roomId, tenantId, description);
         
         return roomInfo;
+    }
+
+    /**
+     * 通过 Janus REST API 创建 VideoRoom。不能只在 JVM 内生成房间名：客户端加入的是
+     * Janus 的数值房间，内存字符串会被 Flutter 解析成 0，最终导致 room not found。
+     */
+    private String createVideoRoom(String description) {
+        Long sessionId = null;
+        try {
+            JSONObject session = request(apiBaseUrl(), JSONUtil.createObj()
+                    .set("janus", "create"));
+            sessionId = session.getJSONObject("data").getLong("id");
+            if (sessionId == null) {
+                throw new IllegalStateException("Janus 未返回 sessionId");
+            }
+
+            JSONObject handle = request(apiBaseUrl() + "/" + sessionId, JSONUtil.createObj()
+                    .set("janus", "attach")
+                    .set("plugin", "janus.plugin.videoroom"));
+            Long handleId = handle.getJSONObject("data").getLong("id");
+            if (handleId == null) {
+                throw new IllegalStateException("Janus 未返回 VideoRoom handleId");
+            }
+
+            JSONObject room = request(apiBaseUrl() + "/" + sessionId + "/" + handleId,
+                    JSONUtil.createObj()
+                            .set("janus", "message")
+                            .set("body", JSONUtil.createObj()
+                                    .set("request", "create")
+                                    .set("description", description)
+                                    .set("publishers", 2)
+                                    .set("permanent", false)));
+            JSONObject roomData = room.getJSONObject("plugindata") == null ? null
+                    : room.getJSONObject("plugindata").getJSONObject("data");
+            Long roomId = roomData == null ? null : roomData.getLong("room");
+            if (roomId == null) {
+                throw new IllegalStateException("Janus 未返回 VideoRoom 房间号: " + room);
+            }
+            return String.valueOf(roomId);
+        } catch (Exception e) {
+            throw new IllegalStateException("创建 Janus VideoRoom 失败: " + e.getMessage(), e);
+        } finally {
+            if (sessionId != null) {
+                try {
+                    request(apiBaseUrl() + "/" + sessionId, JSONUtil.createObj().set("janus", "destroy"));
+                } catch (Exception e) {
+                    log.warn("[createVideoRoom] 销毁 Janus 控制会话失败, sessionId={}", sessionId, e);
+                }
+            }
+        }
+    }
+
+    private JSONObject request(String url, JSONObject payload) {
+        payload.set("transaction", UUID.randomUUID().toString());
+        if (StrUtil.isNotBlank(janusApiSecret)) {
+            payload.set("apisecret", janusApiSecret);
+        }
+        JSONObject response = JSONUtil.parseObj(HttpUtils.post(url,
+                java.util.Collections.singletonMap("Content-Type", "application/json"), payload.toString()));
+        if (!"success".equals(response.getStr("janus"))) {
+            throw new IllegalStateException("Janus API 返回异常: " + response);
+        }
+        return response;
+    }
+
+    private String apiBaseUrl() {
+        return StrUtil.removeSuffix(janusApiUrl.trim(), "/");
     }
 
     /**

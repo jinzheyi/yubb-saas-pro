@@ -109,6 +109,28 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
         return selectCount(wrapper) > 0;
     }
 
+    /**
+     * 回收指定用户过期但未结束的邀请状态。
+     *
+     * <p>这是创建新通话前的兜底，不依赖 Quartz 已经被部署或正常运行。状态条件
+     * 保留在更新语句中，因此不会结束在检查期间刚刚接通的通话。</p>
+     */
+    default int expirePendingCallsForUser(Long userId, LocalDateTime before,
+                                          Integer missedStatus, LocalDateTime endTime) {
+        LambdaUpdateWrapper<ImCallRecordDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.and(w -> w.eq(ImCallRecordDO::getCallerId, userId)
+                        .or()
+                        .eq(ImCallRecordDO::getCalleeId, userId))
+                .in(ImCallRecordDO::getState, "RINGING", "CONNECTING")
+                .le(ImCallRecordDO::getStartTime, before)
+                .set(ImCallRecordDO::getState, "ENDED")
+                .set(ImCallRecordDO::getStatus, missedStatus)
+                .set(ImCallRecordDO::getEndTime, endTime)
+                .set(ImCallRecordDO::getDuration, 0)
+                .set(ImCallRecordDO::getEndReason, "TIMEOUT");
+        return update(null, wrapper);
+    }
+
     /** 查询在指定时刻之前进入某状态的通话，用于服务端权威的超时回收。 */
     default List<ImCallRecordDO> selectByStateBefore(String state, LocalDateTime before) {
         LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();

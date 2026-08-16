@@ -105,6 +105,9 @@ public class ImCallServiceImpl implements ImCallService {
     @Value("${janus.url:}")
     private String janusUrl;
 
+    @Value("${im.call.ring-timeout-seconds:30}")
+    private long ringTimeoutSeconds;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String initiateCall(Long callerId, Long calleeId, Integer callType, String deviceId) {
@@ -461,6 +464,18 @@ public class ImCallServiceImpl implements ImCallService {
                         || ImCallStateEnum.CONNECTED.getState().equals(call.getState()));
     }
 
+    private void expirePendingCalls(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        int expired = callRecordMapper.expirePendingCallsForUser(
+                userId,
+                now.minusSeconds(ringTimeoutSeconds),
+                ImCallStatusEnum.MISSED.getStatus(),
+                now);
+        if (expired > 0) {
+            log.warn("[createCallInvite] 回收 {} 条超时通话，userId={}", expired, userId);
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recordCallEvent(ImCallEventDO event) {
@@ -529,6 +544,10 @@ public class ImCallServiceImpl implements ImCallService {
                 || chatUserMapper.selectByUserIdAndChatId(calleeId, chatIdLong) == null) {
             throw exception(CALL_PERMISSION_DENIED);
         }
+        // Quartz 任务可能尚未配置、暂停或发生短暂故障。创建新通话前先回收两端已经
+        // 超时的 RINGING/CONNECTING 记录，避免一条历史残留记录让用户永久“通话中”。
+        expirePendingCalls(callerId);
+        expirePendingCalls(calleeId);
         // 最小通话模型不支持呼叫等待或转接：主叫、被叫任一方存在
         // RINGING/CONNECTING/CONNECTED 通话时，新的邀请必须在服务端拒绝。
         if (isUserBusy(callerId) || isUserBusy(calleeId)) {
@@ -539,10 +558,13 @@ public class ImCallServiceImpl implements ImCallService {
         String inviteId = IdUtil.simpleUUID();
 
         Long tenantId = TenantContextHolder.getTenantId();
-        if (tenantId == null || janusUrl == null || janusUrl.trim().isEmpty()) {
+        if (tenantId == null) {
+            throw new IllegalStateException("租户上下文缺失（请求必须携带 tenant-id）");
+        }
+        if (janusUrl == null || janusUrl.trim().isEmpty()) {
             // Never hand a client an empty endpoint or a mock credential: that
             // produces a ringing UI which can never establish media.
-            throw new IllegalStateException("RTC 服务未配置（需要 janus.url 和租户上下文）");
+            throw new IllegalStateException("RTC 服务未配置（需要 janus.url）");
         }
         JanusRoomManager.RoomInfo room = janusRoomManager.createRoom(tenantId, "call_" + callId);
         String roomId = room.getRoomId();

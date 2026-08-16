@@ -82,7 +82,8 @@ public class CallLifecycleJob implements JobHandler {
                 }
                 callService.hangupCall(before.getCallId(), before.getCallerId(), reason);
             } else {
-                if (!ImCallStateEnum.RINGING.getState().equals(before.getState())) {
+                if (!ImCallStateEnum.RINGING.getState().equals(before.getState())
+                        && !ImCallStateEnum.CONNECTING.getState().equals(before.getState())) {
                     return;
                 }
                 callService.cancelCall(before.getCallId(), before.getCallerId(), reason);

@@ -275,3 +275,13 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+
+# url 会下发给 Flutter 客户端，必须是浏览器/模拟器可访问的 WebSocket 地址；
+# api-url 仅供服务端创建和销毁 Janus VideoRoom 使用。
+janus:
+  # url 会下发给浏览器/真机，不能使用 localhost 或 127.0.0.1。
+  # 本机调试使用 mDNS 主机名，避免局域网 DHCP 变更 IP；生产环境改为可公开访问的 wss 域名。
+  url: ${JANUS_URL:ws://MacBook-Pro-3.local:8188}
+  api-url: ${JANUS_API_URL:http://127.0.0.1:8088/janus}
+  api-secret: ${JANUS_API_SECRET:}
+  tenant-isolation: true

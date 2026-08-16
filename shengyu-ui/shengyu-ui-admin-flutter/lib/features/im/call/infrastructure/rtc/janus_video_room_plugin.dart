@@ -21,8 +21,10 @@ class JanusVideoRoomPlugin {
 
   RTCPeerConnection? _publisherConnection;
   RTCPeerConnection? _subscriberConnection;
+  StreamSubscription<Map<String, dynamic>>? _janusEventsSubscription;
   MediaStream? _localStream;
   MediaStream? _remoteStream;
+  final Set<String> _subscribedFeedIds = <String>{};
   
   final StreamController<MediaStream?> _remoteStreamController = 
       StreamController<MediaStream?>.broadcast();
@@ -52,6 +54,10 @@ class JanusVideoRoomPlugin {
       );
       
       _publisherConnection = result['peerConnection'] as RTCPeerConnection?;
+      await _subscribeToPublishers(result['publishers']);
+      _janusEventsSubscription = janusClient.events.listen((event) {
+        unawaited(_subscribeToPublishers(_publishersFromEvent(event)));
+      });
       
       // 监听远端流
       // 关键修复：移除 _remoteStream == null 的限制，允许远端流变化时更新
@@ -119,19 +125,38 @@ class JanusVideoRoomPlugin {
 
   /// 订阅远端媒体流
   Future<void> subscribe(String feedId) async {
+    if (!_subscribedFeedIds.add(feedId)) return;
     _subscriberConnection = await janusClient.subscribeToFeed(
       roomId: roomId,
       feedId: feedId,
+      onRemoteStream: (stream) {
+        _remoteStream = stream;
+        _remoteStreamController.add(stream);
+      },
     );
-    
-    _subscriberConnection?.onTrack = (RTCTrackEvent event) {
-      if (event.track.kind == 'video' || event.track.kind == 'audio') {
-        _remoteStream = event.streams.isNotEmpty 
-            ? event.streams.first 
-            : null;
-        _remoteStreamController.add(_remoteStream);
+  }
+
+  Future<void> _subscribeToPublishers(Object? rawPublishers) async {
+    if (rawPublishers is! List) return;
+    for (final publisher in rawPublishers) {
+      if (publisher is! Map) continue;
+      final feedId = publisher['id']?.toString();
+      if (feedId == null || feedId.isEmpty) continue;
+      try {
+        await subscribe(feedId);
+      } catch (e) {
+        // 对端可能在订阅前离开；保留日志但不让本地发布失败。
+        debugPrint('[JanusVideoRoomPlugin] 订阅远端发布者失败, feedId=$feedId, error=$e');
+        _subscribedFeedIds.remove(feedId);
       }
-    };
+    }
+  }
+
+  List<dynamic>? _publishersFromEvent(Map<String, dynamic> event) {
+    final pluginData = event['plugindata'];
+    if (pluginData is! Map) return null;
+    final data = pluginData['data'];
+    return data is Map && data['publishers'] is List ? data['publishers'] as List<dynamic> : null;
   }
 
   /// 切换摄像头
@@ -224,6 +249,8 @@ class JanusVideoRoomPlugin {
       }
     }
     
+    await _janusEventsSubscription?.cancel();
+    _janusEventsSubscription = null;
     await _publisherConnection?.close();
     await _subscriberConnection?.close();
     await _localStream?.dispose();
@@ -238,6 +265,7 @@ class JanusVideoRoomPlugin {
     _subscriberConnection = null;
     _localStream = null;
     _remoteStream = null;
+    _subscribedFeedIds.clear();
   }
 
   /// 获取本地媒体流

@@ -31,6 +31,10 @@ class CallSocketDataSource {
     if (dto == null || _controller.isClosed) {
       return;
     }
+    debugPrint(
+      '[CallSocketDataSource] 收到通话信令: type=${dto.type}, '
+      'callSessionId=${dto.callSessionId}',
+    );
     // 防护性添加，避免在 controller 关闭后 add 导致 StateError
     try {
       _controller.add(dto);

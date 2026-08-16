@@ -256,6 +256,7 @@ class CallNotificationManager {
   /// 
   /// 当来电被接听/拒绝/取消时调用
   Future<void> cancelIncomingCallNotification(String callSessionId) async {
+    if (!_initialized) return;
     try {
       final int notificationId =
           _incomingCallNotificationBaseId + callSessionId.hashCode.abs() % 9000;
@@ -270,6 +271,7 @@ class CallNotificationManager {
   /// 
   /// 当应用恢复前台或通话结束时调用
   Future<void> cancelBackgroundNotification() async {
+    if (!_initialized) return;
     try {
       await _notifications.cancel(_backgroundNotificationId);
       debugPrint('[CallNotificationManager] 后台通知已取消');
@@ -282,6 +284,9 @@ class CallNotificationManager {
   /// 
   /// 通话结束时调用，清理所有通话相关通知
   Future<void> cancelAllNotifications() async {
+    // flutter_local_notifications 在 initialize 前调用 cancel* 会抛出
+    // LateInitializationError。没有创建过通知时直接跳过即可。
+    if (!_initialized) return;
     try {
       await _notifications.cancelAll();
       debugPrint('[CallNotificationManager] 所有通知已取消');

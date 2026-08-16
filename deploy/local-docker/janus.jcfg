@@ -1,39 +1,31 @@
-general:
+general: {
   configs_folder = "/usr/local/etc/janus"
   plugins_folder = "/usr/local/lib/janus/plugins"
   log_to_stdout = true
   debug_level = 4
-  admin_secret = "shengyu-janus-admin-secret-2026"
+}
 
-media:
+media: {
   rtp_port_range = "10000-10200"
+}
 
-nat:
-  stun_server = "stun.l.google.com"
-  stun_port = 19302
-  nice_debug = false
+nat: {
   ice_tcp = false
-  turn_server = "coturn"
-  turn_port = 3478
-  turn_type = "udp"
-  turn_user = "turnuser"
-  turn_pwd = "turnpassword"
-  nat_1_1_mapping = "127.0.0.1"
+  # 必须是客户端可访问的宿主机局域网数值 IP，不能写主机名、localhost 或 127.0.0.1。
+  # 这是 ICE 候选地址；客户端连接地址可在 application-local.yaml 与 Flutter AppConfig 使用 mDNS 主机名。
+  nat_1_1_mapping = "192.168.5.6"
+}
 
-plugins:
-  enabled = "libjanus_videoroom.so,libjanus_streaming.so,libjanus_textroom.so"
-
-transports:
-  enabled = "libjanus_http.so,libjanus_websockets.so"
-
-websockets:
+websockets: {
   ws = true
   ws_port = 8188
   ws_ip = "0.0.0.0"
   ws_secure = false
+}
 
-http:
+http: {
   http = true
   http_port = 8088
   http_ip = "0.0.0.0"
   base_path = "/janus"
+}

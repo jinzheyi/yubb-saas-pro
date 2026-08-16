@@ -49,6 +49,9 @@ services:
         --spring.redis.port=${REDIS_PORT:-6379}
         --spring.redis.database=${REDIS_DATABASE:-0}
         --spring.redis.password=${REDIS_PASSWORD:-}
+        --janus.url=${JANUS_URL:-ws://MacBook-Pro-3.local:8188}
+        --janus.api-url=${JANUS_API_URL:-http://host.docker.internal:8088/janus}
+        --janus.api-secret=${JANUS_API_SECRET:-}
     depends_on:
       - kkfileview
 

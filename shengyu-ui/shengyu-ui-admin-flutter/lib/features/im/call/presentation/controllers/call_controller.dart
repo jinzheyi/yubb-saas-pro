@@ -1296,13 +1296,15 @@ class CallController extends StateNotifier<CallState> {
       event.payload,
       fallbackCallSessionId: event.callSessionId,
     );
-    final args = _buildLaunchArgs(
-      callSessionId: event.callSessionId,
-      entryMode: CallEntryMode.incoming,
-    );
-    _activeCallRegistry.register(args);
+    final callTypeRaw = event.payload['callType']?.toString().toLowerCase();
+    final callType = callTypeRaw == 'video' || callTypeRaw == '2'
+        ? CallType.video
+        : CallType.audio;
     state = state.copyWith(
       callSessionId: event.callSessionId,
+      chatId: event.payload['chatId']?.toString() ?? state.chatId,
+      calleeId: event.payload['calleeId']?.toString() ?? state.calleeId,
+      callType: callType,
       entryMode: CallEntryMode.incoming,
       isIncoming: true,
       isOutgoing: false,
@@ -1314,6 +1316,13 @@ class CallController extends StateNotifier<CallState> {
       acceptedDeviceId: resolved.acceptedDeviceId,
       roomBundle: resolved.roomBundle,
     );
+    // 必须在状态写入后构造路由参数。此前这里先构造参数，IncomingCallPage
+    // 初始化时会用空 chatId/callType/calleeId 覆盖刚收到的邀请，导致无法接听。
+    final args = _buildLaunchArgs(
+      callSessionId: event.callSessionId,
+      entryMode: CallEntryMode.incoming,
+    );
+    _activeCallRegistry.register(args);
     // 导航到来电界面
     _callCoordinator.openIncomingCall(args);
   }
@@ -1452,17 +1461,25 @@ class CallController extends StateNotifier<CallState> {
         resolved.acceptedDeviceId ?? state.acceptedDeviceId;
     var mediaState = state.mediaState;
     try {
-      if (roomBundle != null) {
-        mediaState = await _callMediaController.prepareJoin(
-          state.mediaState,
-          callType: state.callType ?? CallType.audio,
-          roomBundle: roomBundle,
-        );
+      if (roomBundle == null) {
+        throw StateError('服务端未下发 RTC 房间信息');
       }
+      mediaState = await _callMediaController.prepareJoin(
+        state.mediaState,
+        callType: state.callType ?? CallType.audio,
+        roomBundle: roomBundle,
+      );
     } catch (error, stackTrace) {
       // 关键修复：prepareJoin 失败时清理已创建的媒体资源（防止内存泄漏）
       // prepareJoin 内部失败时会调用 disposeSession，但保险起见再次确保清理
       final failedMediaState = await _callMediaController.disposeSession(state.mediaState);
+      // 接听已经把服务端状态推进到 CONNECTING。若 RTC 协商失败，必须明确结束
+      // 该会话，不能依赖定时任务回收，否则双方会被残留记录持续判定为忙线。
+      try {
+        await _hangupCallUseCase.execute(callSessionId: state.callSessionId);
+      } catch (hangupError) {
+        debugPrint('[CallController] RTC 建连失败后的挂断同步失败: $hangupError');
+      }
       _enterFailed(
         CallEndReason.rtcError,
         error: AppErrorMapper.map(error, stackTrace),
@@ -1861,7 +1878,7 @@ class CallController extends StateNotifier<CallState> {
       title: state.title,
       inviteId: null,
       fromUserId: localUserId,
-      toUserId: null,
+      toUserId: state.calleeId,
       // 关键修复：传递群组通话字段，防止恢复/导航时丢失群组信息
       isGroupCall: state.isGroupCall,
       groupId: state.groupId,

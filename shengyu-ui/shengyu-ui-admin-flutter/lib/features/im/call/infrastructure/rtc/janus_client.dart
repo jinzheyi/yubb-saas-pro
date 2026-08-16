@@ -47,6 +47,7 @@ class JanusClient {
   StreamSubscription<dynamic>? _channelSubscription;
   String? _sessionId;
   String? _handleId;
+  String? _subscriberHandleId;
   int _transactionCounter = 0;
   
   JanusConnectionState _connectionState = JanusConnectionState.disconnected;
@@ -75,7 +76,18 @@ class JanusClient {
     try {
       _updateConnectionState(JanusConnectionState.connecting);
       
-      _channel = WebSocketChannel.connect(Uri.parse(janusUrl));
+      // Janus WebSocket transport requires the `janus-protocol` subprotocol.
+      // Without it Janus closes the TCP connection before the browser receives
+      // a WebSocket upgrade response, which surfaces as a generic handshake error.
+      _channel = WebSocketChannel.connect(
+        Uri.parse(janusUrl),
+        protocols: const <String>['janus-protocol'],
+      );
+
+      // WebSocketChannel.connect returns before the browser/native socket has
+      // completed its handshake. Wait here so the first Janus `create` request
+      // cannot be written to a channel that has already been rejected.
+      await _channel!.ready;
       
       // 关键修复：存储订阅引用，防止内存泄漏
       _channelSubscription = _channel!.stream.listen(
@@ -124,6 +136,7 @@ class JanusClient {
       
       debugPrint('[JanusClient] 连接成功, sessionId=$_sessionId, handleId=$_handleId');
     } catch (e) {
+      await _cleanupOldConnection();
       _updateConnectionState(JanusConnectionState.disconnected);
       throw Exception('Failed to connect to Janus: $e');
     }
@@ -218,6 +231,7 @@ class JanusClient {
     // 清理会话 ID
     _sessionId = null;
     _handleId = null;
+    _subscriberHandleId = null;
     
     // 清理所有待处理的事务（避免内存泄漏）
     for (final completer in _pendingTransactions.values) {
@@ -259,11 +273,7 @@ class JanusClient {
     
     // 监听 ICE 候选
     peerConnection.onIceCandidate = (candidate) {
-      _sendTrickle({
-        'candidate': candidate.candidate,
-        'sdpMid': candidate.sdpMid,
-        'sdpMLineIndex': candidate.sdpMLineIndex,
-      });
+      _sendTrickle(candidate);
     };
 
     // 发送 join 请求
@@ -280,14 +290,10 @@ class JanusClient {
       'transaction': _nextTransactionId(),
     });
 
-    if (joinResponse['janus'] != 'success') {
+    if (joinResponse['janus'] != 'event' ||
+        _videoRoomData(joinResponse)['videoroom'] != 'joined') {
       throw Exception('Failed to join room: ${joinResponse['error']}');
     }
-
-    // 等待发布确认事件
-    await _eventController.stream.firstWhere(
-      (event) => event['videoroom'] == 'event' && event['published'] != null,
-    );
 
     // 创建 offer
     final offer = await peerConnection.createOffer({
@@ -304,8 +310,10 @@ class JanusClient {
       'handle_id': int.parse(_handleId!),
       'body': {
         'request': 'publish',
-        'audio': true,
-        'video': true,
+        // 不要为纯语音通话声明视频发布；否则不同平台的 SDP 协商会出现
+        // 无实际 video track 却要求 video m-line 的不一致。
+        'audio': localStream.getAudioTracks().isNotEmpty,
+        'video': localStream.getVideoTracks().isNotEmpty,
       },
       'jsep': {
         'type': 'offer',
@@ -314,22 +322,23 @@ class JanusClient {
       'transaction': _nextTransactionId(),
     });
 
-    if (publishResponse['janus'] != 'success') {
+    if (publishResponse['janus'] != 'event') {
       throw Exception('Failed to publish: ${publishResponse['error']}');
     }
 
-    // 等待 answer
-    final answerEvent = await _eventController.stream.firstWhere(
-      (event) => event['jsep'] != null && event['jsep']['type'] == 'answer',
-    );
-
-    final answerSdp = answerEvent['jsep']['sdp'] as String;
+    // Janus 的异步插件响应会携带同一 transaction；_sendRequest 已等待到该
+    // event，不能再从事件流二次等待，否则会错过响应而超时。
+    final answerSdp = publishResponse['jsep']?['sdp'] as String?;
+    if (answerSdp == null || publishResponse['jsep']?['type'] != 'answer') {
+      throw Exception('Janus publish 未返回 SDP answer');
+    }
     await peerConnection.setRemoteDescription(RTCSessionDescription(answerSdp, 'answer'));
 
     return {
       'peerConnection': peerConnection,
       'roomId': roomId,
       'publisherId': _handleId,
+      'publishers': _videoRoomData(joinResponse)['publishers'] ?? const <dynamic>[],
     };
   }
 
@@ -337,37 +346,49 @@ class JanusClient {
   Future<RTCPeerConnection> subscribeToFeed({
     required int roomId,
     required String feedId,
+    void Function(MediaStream stream)? onRemoteStream,
   }) async {
     if (_sessionId == null || _handleId == null) {
       throw Exception('Janus not connected');
     }
 
     final peerConnection = await _createPeerConnection(null);
+    // VideoRoom 中 publisher 与 subscriber 必须使用不同 handle；复用发布
+    // handle 会被 Janus 拒绝为 already in a room。
+    _subscriberHandleId ??= await _attachVideoRoomHandle();
+    peerConnection.onIceCandidate = (candidate) {
+      _sendTrickle(candidate, handleId: _subscriberHandleId);
+    };
+    // 远端 track 可能在 setRemoteDescription 期间就到达，不能交给调用方在
+    // subscribeToFeed 返回后再注册，否则会错过第一帧/首段音频。
+    peerConnection.onTrack = (event) {
+      if (event.streams.isNotEmpty) {
+        onRemoteStream?.call(event.streams.first);
+      }
+    };
 
     // 发送 join 请求（订阅者模式）
     final joinResponse = await _sendRequest({
       'janus': 'message',
       'session_id': int.parse(_sessionId!),
-      'handle_id': int.parse(_handleId!),
+      'handle_id': int.parse(_subscriberHandleId!),
       'body': {
         'request': 'join',
         'ptype': 'subscriber',
         'room': roomId,
-        'feed': feedId,
+        'feed': int.parse(feedId),
       },
       'transaction': _nextTransactionId(),
     });
 
-    if (joinResponse['janus'] != 'success') {
+    if (joinResponse['janus'] != 'event') {
       throw Exception('Failed to subscribe: ${joinResponse['error']}');
     }
 
-    // 等待 offer
-    final offerEvent = await _eventController.stream.firstWhere(
-      (event) => event['jsep'] != null && event['jsep']['type'] == 'offer',
-    );
-
-    final offerSdp = offerEvent['jsep']['sdp'] as String;
+    final offerSdp = joinResponse['jsep']?['sdp'] as String?;
+    if (offerSdp == null || joinResponse['jsep']?['type'] != 'offer') {
+      throw Exception('Janus subscribe 未返回 SDP offer');
+    }
     await peerConnection.setRemoteDescription(RTCSessionDescription(offerSdp, 'offer'));
 
     // 创建 answer
@@ -378,7 +399,7 @@ class JanusClient {
     await _sendRequest({
       'janus': 'message',
       'session_id': int.parse(_sessionId!),
-      'handle_id': int.parse(_handleId!),
+      'handle_id': int.parse(_subscriberHandleId!),
       'body': {
         'request': 'start',
       },
@@ -433,6 +454,7 @@ class JanusClient {
     _channel = null;
     _sessionId = null;
     _handleId = null;
+    _subscriberHandleId = null;
     
     // 清理所有待的事务
     for (final completer in _pendingTransactions.values) {
@@ -475,6 +497,20 @@ class JanusClient {
     return peerConnection;
   }
 
+  Future<String> _attachVideoRoomHandle() async {
+    final response = await _sendRequest({
+      'janus': 'attach',
+      'session_id': int.parse(_sessionId!),
+      'plugin': 'janus.plugin.videoroom',
+      'transaction': _nextTransactionId(),
+    });
+    final handleId = response['data']?['id']?.toString();
+    if (response['janus'] != 'success' || handleId == null) {
+      throw Exception('Failed to attach subscriber handle: ${response['error']}');
+    }
+    return handleId;
+  }
+
   Future<Map<String, dynamic>> _sendRequest(Map<String, dynamic> request) async {
     final transaction = request['transaction'] as String;
     final completer = Completer<Map<String, dynamic>>();
@@ -491,14 +527,24 @@ class JanusClient {
     );
   }
 
-  void _sendTrickle(Map<String, dynamic> candidate) {
-    _sendRequest({
+  void _sendTrickle(RTCIceCandidate candidate, {String? handleId}) {
+    if (_sessionId == null || _channel == null) return;
+    final candidatePayload = candidate.candidate == null || candidate.candidate!.isEmpty
+        ? <String, dynamic>{'completed': true}
+        : <String, dynamic>{
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          };
+    // Janus 对 trickle 只返回 ack；它不是需要等待 plugin event 的事务。
+    // 若复用 _sendRequest，Future 会在 10 秒后无监听超时并污染下一次通话。
+    _channel!.sink.add(jsonEncode({
       'janus': 'trickle',
       'session_id': int.parse(_sessionId!),
-      'handle_id': int.parse(_handleId!),
-      'candidate': candidate,
+      'handle_id': int.parse(handleId ?? _handleId!),
+      'candidate': candidatePayload,
       'transaction': _nextTransactionId(),
-    });
+    }));
   }
 
   void _onMessage(dynamic data) {
@@ -508,8 +554,11 @@ class JanusClient {
       // 处理事务响应
       final transaction = message['transaction'] as String?;
       if (transaction != null && _pendingTransactions.containsKey(transaction)) {
-        _pendingTransactions.remove(transaction)?.complete(message);
-        return;
+        // plugin message 先返回 ack，随后才返回带相同 transaction 的 event。
+        // ack 不是业务完成态，若在此完成 Future，后续 event 会被遗漏。
+        if (message['janus'] != 'ack') {
+          _pendingTransactions.remove(transaction)?.complete(message);
+        }
       }
       
       // 处理事件
@@ -519,6 +568,13 @@ class JanusClient {
     } catch (e) {
       _eventController.addError(e);
     }
+  }
+
+  Map<String, dynamic> _videoRoomData(Map<String, dynamic> message) {
+    final pluginData = message['plugindata'];
+    if (pluginData is! Map) return const <String, dynamic>{};
+    final data = pluginData['data'];
+    return data is Map<String, dynamic> ? data : const <String, dynamic>{};
   }
 
   String _nextTransactionId() {

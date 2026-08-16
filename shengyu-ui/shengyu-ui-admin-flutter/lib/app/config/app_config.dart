@@ -107,7 +107,7 @@ abstract final class AppConfig {
   ///
   /// 用于 WebRTC 媒体流传输的信令通道。
   /// TODO: 生产环境替换为 wss://janus.yourdomain.com/ws
-  static const String janusWsUrl = 'ws://MacBook-Pro-3.local:8188/ws';
+  static const String janusWsUrl = 'ws://MacBook-Pro-3.local:8188';
 
   /// Janus HTTP API 地址。
   ///
