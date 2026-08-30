@@ -99,7 +99,7 @@ public class ImCallRecordDO extends TenantBaseDO {
     private String endReason;
 
     /**
-     * 接听设备ID（CAS 裁决写入，用于 SDP/ICE 定向转发）
+     * 接听设备ID（CAS 裁决写入，用于多设备唯一接听与重连校验）
      */
     private String acceptedDeviceId;
 
@@ -138,9 +138,22 @@ public class ImCallRecordDO extends TenantBaseDO {
      */
     private String calleeAvatar;
 
-    /**
-     * Janus 房间ID（用于 RTC 通话）
-     */
-    private String roomId;
+    /** RTC 服务提供方，当前唯一合法值为 LIVEKIT。 */
+    private String provider;
+
+    /** DIRECT（单聊）或 GROUP（群聊）。 */
+    private String callMode;
+
+    /** 通话拥有者；群通话由创建者结束全体通话。 */
+    private Long ownerId;
+
+    /** LiveKit 房间名；不向客户端暴露任何服务端密钥。 */
+    private String livekitRoom;
+
+    /** 首次实际接入媒体的时间，用于计算通话时长。 */
+    private LocalDateTime connectedAt;
+
+    /** 单调递增的业务事件版本，供客户端去重和状态对账。 */
+    private Integer stateVersion;
 
 }

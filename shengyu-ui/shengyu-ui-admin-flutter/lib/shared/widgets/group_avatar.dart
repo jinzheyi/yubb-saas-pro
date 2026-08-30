@@ -6,10 +6,12 @@ import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 /// 钉钉风格群组合头像组件
 ///
 /// 规则：
+/// - 群已设置头像：始终显示群头像，不因成员列表同步而切换为拼图
 /// - 1人：显示1个大头像
 /// - 2人：显示2个头像（左右排列）
 /// - 3人：上1个 + 下2个
 /// - 4人及以上：显示4个头像（2x2网格）
+/// - 无成员资料：按群名显示文字头像，颜色由群 ID 固定生成
 ///
 /// 性能优化：
 /// - 使用 const 构造函数，确保相同输入产生相同输出
@@ -19,6 +21,9 @@ class GroupAvatarWidget extends StatelessWidget {
   const GroupAvatarWidget({
     super.key,
     required this.members,
+    this.avatarUrl,
+    this.fallbackName = '',
+    this.fallbackSeed = '',
     this.size = 48,
     this.borderRadius = 8,
   });
@@ -27,12 +32,18 @@ class GroupAvatarWidget extends StatelessWidget {
   factory GroupAvatarWidget.fromMembers({
     Key? key,
     required List<GroupAvatarMember> members,
+    String? avatarUrl,
+    String fallbackName = '',
+    String fallbackSeed = '',
     double size = 48,
     double borderRadius = 8,
   }) {
     return GroupAvatarWidget(
       key: key,
       members: members,
+      avatarUrl: avatarUrl,
+      fallbackName: fallbackName,
+      fallbackSeed: fallbackSeed,
       size: size,
       borderRadius: borderRadius,
     );
@@ -40,6 +51,15 @@ class GroupAvatarWidget extends StatelessWidget {
 
   /// 群成员列表（按加入顺序排列）
   final List<GroupAvatarMember> members;
+
+  /// 群自定义头像；存在时优先于成员组合头像。
+  final String? avatarUrl;
+
+  /// 成员资料尚未就绪时的群名称回退。
+  final String fallbackName;
+
+  /// 群 ID，用于生成跨刷新稳定的文字头像背景色。
+  final String fallbackSeed;
 
   /// 组件尺寸
   final double size;
@@ -49,11 +69,29 @@ class GroupAvatarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedGroupAvatar = normalizeAvatarUrl(avatarUrl);
+    if (resolvedGroupAvatar.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: CachedNetworkImage(
+          imageUrl: resolvedGroupAvatar,
+          cacheManager: ImCacheManager.instance,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, _, _) => _buildAvatarComposite(),
+        ),
+      );
+    }
+    return _buildAvatarComposite();
+  }
+
+  Widget _buildAvatarComposite() {
     if (members.isEmpty) {
       return _buildSingleAvatar(
         avatarUrl: null,
-        name: '?',
-        seed: '',
+        name: fallbackName.isNotEmpty ? fallbackName : '?',
+        seed: fallbackSeed,
         size: size,
       );
     }
@@ -228,7 +266,8 @@ class GroupAvatarWidget extends StatelessWidget {
         width: cellWidth,
         height: cellHeight,
         fit: BoxFit.cover,
-        errorWidget: (_, _, _) => _buildFallbackAvatar(name, seed, cellWidth, cellHeight),
+        errorWidget: (_, _, _) =>
+            _buildFallbackAvatar(name, seed, cellWidth, cellHeight),
       );
     }
 

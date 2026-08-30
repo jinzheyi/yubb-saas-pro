@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -86,7 +87,14 @@ public class NettySessionManager {
      * 用于租约扫描器高效扫描即将到期/已到期的连接（O(log N) 而非 O(N)）
      * key: leaseExpireTime (毫秒时间戳), value: Set<channelId>
      */
-    private final TreeMap<Long, Set<String>> leaseExpireIndex = new TreeMap<>();
+    /**
+     * The Netty event loops authenticate different sockets concurrently.  This
+     * index is updated during authentication, so a TreeMap here can throw a
+     * ConcurrentModificationException and leave a client unauthenticated.
+     * Keep the ordering required by the lease scanner while making all index
+     * mutations safe across event-loop threads.
+     */
+    private final NavigableMap<Long, Set<String>> leaseExpireIndex = new ConcurrentSkipListMap<>();
 
     private List<NettySessionLifecycleListener> lifecycleListeners = Collections.emptyList();
 

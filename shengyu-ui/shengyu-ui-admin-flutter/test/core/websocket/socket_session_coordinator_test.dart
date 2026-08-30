@@ -4,6 +4,7 @@ import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_auth_payload_builder.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_message_dispatcher.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_session_coordinator.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
 
 void main() {
   late RecordingSocketClient socketClient;
@@ -43,6 +44,35 @@ void main() {
 
     expect(socketClient.operations, <String>['disconnect']);
   });
+
+  test(
+    'force reconnect restores authentication for the current session',
+    () async {
+      coordinator.onSessionChanged(null, _session(accessToken: 'token-a'));
+      await coordinator.waitForIdle();
+      socketClient.operations.clear();
+
+      coordinator.forceReconnect();
+      await coordinator.waitForIdle();
+
+      expect(socketClient.operations, <String>[
+        'disconnect',
+        'connect',
+        'auth:token-a',
+      ]);
+    },
+  );
+
+  test('force reconnect does not create an anonymous transport', () async {
+    coordinator.onSessionChanged(null, AuthSession.anonymous());
+    await coordinator.waitForIdle();
+    socketClient.operations.clear();
+
+    coordinator.forceReconnect();
+    await coordinator.waitForIdle();
+
+    expect(socketClient.operations, isEmpty);
+  });
 }
 
 class RecordingSocketClient extends ImSocketClient {
@@ -55,10 +85,15 @@ class RecordingSocketClient extends ImSocketClient {
       );
 
   final List<String> operations;
+  ImSocketConnectionState recordedState = ImSocketConnectionState.disconnected;
+
+  @override
+  ImSocketConnectionState get state => recordedState;
 
   @override
   Future<void> connect() async {
     operations.add('connect');
+    recordedState = ImSocketConnectionState.connected;
   }
 
   @override
@@ -74,6 +109,7 @@ class RecordingSocketClient extends ImSocketClient {
   @override
   Future<void> disconnect() async {
     operations.add('disconnect');
+    recordedState = ImSocketConnectionState.disconnected;
   }
 }
 

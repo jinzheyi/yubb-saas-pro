@@ -1,0 +1,61 @@
+name: shengyu-livekit
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    volumes:
+      - livekit-redis:/data
+    restart: unless-stopped
+    networks: [livekit]
+
+  livekit:
+    image: livekit/livekit-server:${LIVEKIT_VERSION:-v1.13.1}
+    environment:
+      # Docker Desktop 的 bridge IP 对局域网真机不可达；由部署侧显式指定可路由地址。
+      NODE_IP: ${LIVEKIT_NODE_IP:-}
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        redis:
+          address: redis:6379
+          password: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+        keys:
+          ${IM_CALL_LIVEKIT_API_KEY:?IM_CALL_LIVEKIT_API_KEY is required}: ${IM_CALL_LIVEKIT_API_SECRET:?IM_CALL_LIVEKIT_API_SECRET is required}
+        rtc:
+          tcp_port: 7881
+          # 单节点使用 UDP mux，避免 macOS 49152-65535 临时端口与整段
+          # Docker 映射随机冲突，同时减少防火墙暴露面。
+          udp_port: 7882
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-true}
+        # LiveKit 内嵌 TURN 会随信令向已认证客户端下发 ICE 配置。
+        turn:
+          enabled: true
+          domain: ${LIVEKIT_DOMAIN}
+          udp_port: 3478
+          relay_range_start: 41000
+          relay_range_end: 41040
+        room:
+          empty_timeout: 30
+          departure_timeout: 10
+        webhook:
+          api_key: ${IM_CALL_LIVEKIT_API_KEY:?IM_CALL_LIVEKIT_API_KEY is required}
+          urls:
+            - ${LIVEKIT_WEBHOOK_URL}
+    depends_on: [redis]
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "3478:3478/udp"
+      - "41000-41040:41000-41040/udp"
+    restart: unless-stopped
+    networks: [livekit]
+
+networks:
+  livekit:
+    driver: bridge
+
+volumes:
+  livekit-redis:

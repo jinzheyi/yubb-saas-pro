@@ -21,4 +21,8 @@ public class AppCallCreateInviteReqVO {
     @Schema(description = "被叫方ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "40002")
     @NotNull(message = "被叫方ID不能为空")
     private Long calleeId;
+
+    @Schema(description = "发起设备的稳定标识", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "发起设备ID不能为空")
+    private String deviceId;
 }

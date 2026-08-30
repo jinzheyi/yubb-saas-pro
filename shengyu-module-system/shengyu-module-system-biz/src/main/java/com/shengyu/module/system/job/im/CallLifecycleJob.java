@@ -9,11 +9,12 @@ import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
 import com.shengyu.module.system.dal.mysql.im.ImCallParticipantMapper;
 import com.shengyu.module.system.dal.mysql.im.ImCallRecordMapper;
 import com.shengyu.module.system.enums.im.ImCallStateEnum;
-import com.shengyu.module.system.service.im.CallPushService;
+import com.shengyu.module.system.service.im.CallEventPublisher;
 import com.shengyu.module.system.service.im.ImCallService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -38,7 +39,7 @@ public class CallLifecycleJob implements JobHandler {
     @Resource
     private ImCallService callService;
     @Resource
-    private CallPushService callPushService;
+    private CallEventPublisher callEventPublisher;
     @Value("${im.call.ring-timeout-seconds:30}")
     private long ringTimeoutSeconds;
     @Value("${im.call.max-duration-minutes:240}")
@@ -47,9 +48,20 @@ public class CallLifecycleJob implements JobHandler {
     @Override
     @TenantIgnore
     public String execute(String param) {
+        callEventPublisher.retryPendingEvents();
         expirePendingCalls();
         expireConnectedCalls();
         return "通话生命周期巡检完成";
+    }
+
+    /**
+     * 默认自驱动兜底，避免客户未在管理后台手工登记 Quartz 任务时产生永久忙线。
+     * 数据库 CAS 使其与可选的人工 Quartz 触发并发执行时仍保持幂等。
+     */
+    @Scheduled(fixedDelayString = "${im.call.lifecycle-check-delay-ms:10000}")
+    @TenantIgnore
+    public void scheduledExecute() {
+        execute("");
     }
 
     private void expirePendingCalls() {
@@ -111,6 +123,6 @@ public class CallLifecycleJob implements JobHandler {
                 .set("duration", call.getDuration())
                 .set("reason", reason)
                 .set("eventTime", System.currentTimeMillis());
-        callPushService.publishCallEvent(recipients, call.getCallerId(), call.getTenantId(), payload);
+        callEventPublisher.publish(recipients, call.getCallerId(), call.getTenantId(), payload);
     }
 }

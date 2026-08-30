@@ -50,6 +50,10 @@ rebel.xml
 
 application-my.yaml
 
+# Firebase Admin SDK private keys are deployment secrets. Development may point
+# IM_PUSH_FCM_CREDENTIAL_FILE at a local copy, but no key may enter Git.
+sql/*firebase-adminsdk*.json
+
 /shengyu-ui-app/unpackage/
 /shengyu-ui/shengyu-ui-admin-uniappx/node_modules/
 .DS_Store

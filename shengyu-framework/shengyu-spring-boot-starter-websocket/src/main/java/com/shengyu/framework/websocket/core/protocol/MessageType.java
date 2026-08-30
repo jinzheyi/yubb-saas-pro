@@ -201,14 +201,6 @@ public enum MessageType
   QUOTE_REPLY(205),
   /**
    * <pre>
-   * 通话信令
-   * </pre>
-   *
-   * <code>CALL_SIGNAL = 206;</code>
-   */
-  CALL_SIGNAL(206),
-  /**
-   * <pre>
    * 流程通知
    * </pre>
    *
@@ -423,14 +415,6 @@ public enum MessageType
   public static final int QUOTE_REPLY_VALUE = 205;
   /**
    * <pre>
-   * 通话信令
-   * </pre>
-   *
-   * <code>CALL_SIGNAL = 206;</code>
-   */
-  public static final int CALL_SIGNAL_VALUE = 206;
-  /**
-   * <pre>
    * 流程通知
    * </pre>
    *
@@ -502,7 +486,6 @@ public enum MessageType
       case 203: return TYPING;
       case 204: return BADGE_UPDATE;
       case 205: return QUOTE_REPLY;
-      case 206: return CALL_SIGNAL;
       case 207: return WORKFLOW_NOTIFY;
       case 208: return TODO_REMINDER;
       case 209: return CALL_RECORD;

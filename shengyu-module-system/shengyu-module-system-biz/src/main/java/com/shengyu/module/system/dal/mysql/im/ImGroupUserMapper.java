@@ -170,10 +170,12 @@ public interface ImGroupUserMapper extends BaseMapperX<ImGroupUserDO> {
         if (groupIds == null || groupIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        // 一次查询所有群的成员，按 groupId+joinTime 排序
+        // 一次查询所有群的成员。joinTime 相同（例如批量建群）时再按成员
+        // 主键排序，保证组合头像在每次列表/增量同步中的成员顺序完全一致。
         List<ImGroupUserDO> members = selectList(new LambdaQueryWrapperX<ImGroupUserDO>()
                 .in(ImGroupUserDO::getGroupId, groupIds)
-                .orderByAsc(ImGroupUserDO::getGroupId, ImGroupUserDO::getJoinTime));
+                .orderByAsc(ImGroupUserDO::getGroupId, ImGroupUserDO::getJoinTime,
+                        ImGroupUserDO::getId));
 
         // 内存分组并按 groupId 限制数量
         Map<Long, List<ImGroupUserDO>> result = new HashMap<>();

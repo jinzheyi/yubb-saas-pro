@@ -73,12 +73,29 @@ public interface ImCallParticipantMapper extends BaseMapperX<ImCallParticipantDO
         wrapper.eq(ImCallParticipantDO::getCallId, callId);
         wrapper.eq(ImCallParticipantDO::getUserId, userId);
         wrapper.set(ImCallParticipantDO::getStatus, status);
-        
-        // 如果状态变为已离开，设置离开时间
-        if (status == 3) {
+        if (status == 1) {
+            wrapper.set(ImCallParticipantDO::getInviteState, "ACCEPTED");
+            wrapper.set(ImCallParticipantDO::getJoinState, "JOINED");
+            wrapper.set(ImCallParticipantDO::getJoinedAt, LocalDateTime.now());
+        } else if (status == 3) {
             wrapper.set(ImCallParticipantDO::getLeaveTime, LocalDateTime.now());
+            wrapper.set(ImCallParticipantDO::getJoinState, "LEFT");
+            wrapper.set(ImCallParticipantDO::getLeftAt, LocalDateTime.now());
         }
         
+        return update(null, wrapper);
+    }
+
+    default int rejectInvitation(String callId, Long userId) {
+        LambdaUpdateWrapper<ImCallParticipantDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(ImCallParticipantDO::getCallId, callId);
+        wrapper.eq(ImCallParticipantDO::getUserId, userId);
+        // 以 participant 的邀请状态做 CAS，避免接听与拒绝并发时覆盖 ACCEPTED。
+        wrapper.eq(ImCallParticipantDO::getInviteState, "PENDING");
+        wrapper.set(ImCallParticipantDO::getStatus, 3);
+        wrapper.set(ImCallParticipantDO::getInviteState, "REJECTED");
+        wrapper.set(ImCallParticipantDO::getJoinState, "LEFT");
+        wrapper.set(ImCallParticipantDO::getLeftAt, LocalDateTime.now());
         return update(null, wrapper);
     }
 
@@ -105,6 +122,18 @@ public interface ImCallParticipantMapper extends BaseMapperX<ImCallParticipantDO
         LambdaQueryWrapper<ImCallParticipantDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ImCallParticipantDO::getUserId, userId);
         wrapper.eq(ImCallParticipantDO::getStatus, status);
+        return selectList(wrapper);
+    }
+
+    /**
+     * 查询可恢复的群通话成员关系。PENDING/ACCEPTED 均需要恢复；已拒绝、忙线、
+     * 超时或离会的成员绝不能再次弹出来电页。
+     */
+    default List<ImCallParticipantDO> selectRecoverableByUserId(Long userId) {
+        LambdaQueryWrapper<ImCallParticipantDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ImCallParticipantDO::getUserId, userId);
+        wrapper.in(ImCallParticipantDO::getInviteState, "PENDING", "ACCEPTED");
+        wrapper.ne(ImCallParticipantDO::getJoinState, "LEFT");
         return selectList(wrapper);
     }
 }

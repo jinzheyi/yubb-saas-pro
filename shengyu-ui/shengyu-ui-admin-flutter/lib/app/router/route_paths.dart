@@ -42,11 +42,7 @@ abstract final class RoutePaths {
   static const groupChatHistory = '/chat/group-chat-history';
   static const groupJoinRequests = '/chat/group-join-requests';
   static const groupMemberDetail = '/chat/group-member-detail';
-  static const callIncoming = '/call/incoming';
-  static const callOutgoing = '/call/outgoing';
-  static const callSession = '/call/session';
-  static const groupCallSession = '/call/group-session';
+  static const call = '/call';
   static const groupCallMemberSelect = '/call/group-member-select';
-  static const groupOutgoingCall = '/call/group-outgoing';
   static const deviceList = '/im/device-list';
 }

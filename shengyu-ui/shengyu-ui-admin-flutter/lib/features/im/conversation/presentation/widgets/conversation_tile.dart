@@ -63,7 +63,8 @@ class ConversationTile extends ConsumerWidget {
 
     // 从 BadgeState 读取角标（单一数据源），fallback 到 conversation.unreadCount
     final badgeState = ref.watch(badgeServiceProvider);
-    final unreadCount = badgeState.conversationBadges[conversation.chatId] ??
+    final unreadCount =
+        badgeState.conversationBadges[conversation.chatId] ??
         conversation.unreadCount;
 
     return Material(
@@ -109,8 +110,12 @@ class ConversationTile extends ConsumerWidget {
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
                                             color: isLeftGroup
-                                                ? ThemeColors.leftGroupText(context)
-                                                : ThemeColors.textPrimary(context),
+                                                ? ThemeColors.leftGroupText(
+                                                    context,
+                                                  )
+                                                : ThemeColors.textPrimary(
+                                                    context,
+                                                  ),
                                           ),
                                     ),
                                   ),
@@ -118,10 +123,13 @@ class ConversationTile extends ConsumerWidget {
                                     const SizedBox(width: 4),
                                     Text(
                                       '(${conversation.groupMemberCount})',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        fontSize: 13,
-                                        color: ThemeColors.leftGroupText(context),
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontSize: 13,
+                                            color: ThemeColors.leftGroupText(
+                                              context,
+                                            ),
+                                          ),
                                     ),
                                   ],
                                   if (showGroupStatus && !isLeftGroup) ...[
@@ -207,8 +215,8 @@ class ConversationTile extends ConsumerWidget {
       final statusText = conversation.isGroupKicked
           ? '你已被移出群聊'
           : conversation.isGroupLeft
-              ? '你已退出该群聊'
-              : '该群已解散';
+          ? '你已退出该群聊'
+          : '该群已解散';
       return [
         TextSpan(
           text: statusText,
@@ -244,10 +252,7 @@ class ConversationTile extends ConsumerWidget {
 
 /// 鼠标长按处理器（提取为独立组件，避免 ConversationTile 持有 State）
 class _MouseLongPressHandler extends StatefulWidget {
-  const _MouseLongPressHandler({
-    required this.child,
-    this.onLongPress,
-  });
+  const _MouseLongPressHandler({required this.child, this.onLongPress});
 
   final Widget child;
   final ValueChanged<Offset>? onLongPress;
@@ -306,7 +311,6 @@ class _MouseLongPressHandlerState extends State<_MouseLongPressHandler> {
 // 模块级缓存：预编译正则表达式，避免每次 build 重新解析
 final _previewTokenPattern = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
 final _newlinePattern = RegExp(r'\r?\n+');
-final _groupSplitPattern = RegExp(r'[、，, ]+');
 
 String _displayTitle(Conversation conversation) {
   final trimmedTitle = conversation.title.trim();
@@ -418,8 +422,7 @@ void _cachePreview(String cacheKey, List<_PreviewToken> tokens) {
 
 bool _isNoticePreview(String preview) {
   final normalized = preview.trim();
-  return normalized == '[群公告更新]' ||
-      normalized == '[Notice Updated]';
+  return normalized == '[群公告更新]' || normalized == '[Notice Updated]';
 }
 
 bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
@@ -447,18 +450,18 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
   final preview =
       (canFormatGroupPreview
               ? MessagePreviewFormatterWithContext(
-                strings,
-              ).formatConversationPreview(
-                type: conversation.lastMessageType,
-                content: conversation.lastMessagePreview,
-                customType: conversation.lastMessageCustomType,
-                fileName: conversation.lastMessageFileName,
-                systemEventKey: conversation.lastMessageSystemEventKey,
-                systemEventParams: conversation.lastMessageSystemEventParams,
-                conversationType: conversation.conversationType,
-                isSelf: conversation.lastMessageIsSelf,
-                senderName: conversation.lastMessageSenderName,
-              )
+                  strings,
+                ).formatConversationPreview(
+                  type: conversation.lastMessageType,
+                  content: conversation.lastMessagePreview,
+                  customType: conversation.lastMessageCustomType,
+                  fileName: conversation.lastMessageFileName,
+                  systemEventKey: conversation.lastMessageSystemEventKey,
+                  systemEventParams: conversation.lastMessageSystemEventParams,
+                  conversationType: conversation.conversationType,
+                  isSelf: conversation.lastMessageIsSelf,
+                  senderName: conversation.lastMessageSenderName,
+                )
               : rawPreview)
           .trim()
           .replaceAll(_newlinePattern, ' ');
@@ -564,15 +567,20 @@ class _ConversationAvatar extends StatelessWidget {
       children: [
         if (conversation.conversationType == ConversationType.group)
           GroupAvatarWidget.fromMembers(
-            members: conversation.groupMemberItems.isEmpty
-                ? _fallbackGroupMembersFromTitle(conversation.title)
-                : conversation.groupMemberItems
-                    .map((item) => GroupAvatarMember(
-                          userId: item.userId ?? '',
-                          name: item.name ?? '',
-                          avatarUrl: item.avatar,
-                        ))
-                    .toList(),
+            // 群自定义头像优先；未设置时才以服务端稳定排序的成员资料拼图。
+            // 成员资料暂缺不再把群名伪造成成员，避免列表同步时头像跳变。
+            avatarUrl: conversation.targetAvatar,
+            fallbackName: _fallbackText(),
+            fallbackSeed: conversation.targetId ?? conversation.chatId,
+            members: conversation.groupMemberItems
+                .map(
+                  (item) => GroupAvatarMember(
+                    userId: item.userId ?? '',
+                    name: item.name ?? '',
+                    avatarUrl: item.avatar,
+                  ),
+                )
+                .toList(),
             size: 48,
             borderRadius: 8,
           )
@@ -603,7 +611,10 @@ class _ConversationAvatar extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: ThemeColors.unreadBadgeBg(context),
                       borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: ThemeColors.scaffoldBg(context), width: 2),
+                      border: Border.all(
+                        color: ThemeColors.scaffoldBg(context),
+                        width: 2,
+                      ),
                     ),
                   )
                 : Container(
@@ -613,13 +624,14 @@ class _ConversationAvatar extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: ThemeColors.unreadBadgeBg(context),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: ThemeColors.scaffoldBg(context), width: 2),
+                      border: Border.all(
+                        color: ThemeColors.scaffoldBg(context),
+                        width: 2,
+                      ),
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      unreadCount > 99
-                          ? '99+'
-                          : '$unreadCount',
+                      unreadCount > 99 ? '99+' : '$unreadCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -638,17 +650,6 @@ class _ConversationAvatar extends StatelessWidget {
       title: displayTitle,
       targetId: conversation.targetId,
     );
-  }
-
-  List<GroupAvatarMember> _fallbackGroupMembersFromTitle(String title) {
-    final names = title
-        .split(_groupSplitPattern)
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    return names
-        .map((name) => GroupAvatarMember(userId: name, name: name))
-        .toList();
   }
 }
 

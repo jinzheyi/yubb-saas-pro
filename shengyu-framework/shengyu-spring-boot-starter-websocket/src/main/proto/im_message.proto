@@ -89,8 +89,6 @@ enum MessageType {
   BADGE_UPDATE = 204;
   // 引用回复
   QUOTE_REPLY = 205;
-  // 通话信令
-  CALL_SIGNAL = 206;
   // 流程通知
   WORKFLOW_NOTIFY = 207;
   // 待办提醒
@@ -303,47 +301,6 @@ message MenuBadge {
   string menuId = 1;
   // 角标数量
   int32 badgeCount = 2;
-}
-
-// 通话信令消息
-message CallSignalMessage {
-  // 通话ID
-  string callId = 1;
-  // 通话类型（1-语音 2-视频）
-  int32 callType = 2;
-  // 信令类型（1-呼叫 2-接听 3-拒绝 4-挂断 5-忙线 6-切换摄像头）
-  int32 signalType = 3;
-  // 呼叫方ID
-  int64 callerId = 4;
-  // 接听方ID
-  int64 calleeId = 5;
-  // 拒绝原因（信令类型为拒绝时使用）
-  string rejectReason = 6;
-  // 扩展数据（JSON格式，用于传递WebRTC信令）
-  string extraData = 7;
-  
-  // ===== 新增字段（v2.0）=====
-  
-  // 群组ID（群通话时使用）
-  int64 groupId = 8;
-  
-  // 被邀请人列表（群通话时使用）
-  repeated int64 inviteeIds = 9;
-  
-  // Janus Room ID（通话建立后生成）
-  string roomId = 10;
-  
-  // Janus Token（客户端加入房间用）
-  string janusToken = 11;
-  
-  // 通话发起时间戳（毫秒）
-  int64 initiateTime = 12;
-  
-  // 设备ID（用于多设备区分）
-  string deviceId = 13;
-  
-  // 设备名称（用于多设备显示）
-  string deviceName = 14;
 }
 
 // 通话记录消息

@@ -3,6 +3,9 @@ server:
 
 --- #################### 数据库相关配置 ####################
 spring:
+  config:
+    # 本地开发与 LiveKit Compose 共用同一份密钥配置；生产环境直接注入同名环境变量。
+    import: "optional:file:${IM_CALL_CONFIG_FILE:./deploy/livekit/.env}[.properties]"
   autoconfigure:
     # noinspection SpringBootApplicationYaml
     exclude:
@@ -248,6 +251,16 @@ shengyu:
   wxa-subscribe-message:
     miniprogram-state: developer # 跳转小程序类型：开发版为 “developer”；体验版为 “trial”为；正式版为 “formal”
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+  # FCM 凭据只从受控的环境变量路径读取；本地验收可显式启用。
+  im:
+    push:
+      fcm:
+        enabled: ${IM_PUSH_FCM_ENABLED:false}
+        project-id: ${IM_PUSH_FCM_PROJECT_ID:shengyu-im-fcm}
+        credential-file: ${IM_PUSH_FCM_CREDENTIAL_FILE:}
+        connect-timeout-ms: 3000
+        read-timeout-ms: 5000
+        dry-run: ${IM_PUSH_FCM_DRY_RUN:false}
 
 justauth:
   enabled: true
@@ -276,12 +289,12 @@ justauth:
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
 
-# url 会下发给 Flutter 客户端，必须是浏览器/模拟器可访问的 WebSocket 地址；
-# api-url 仅供服务端创建和销毁 Janus VideoRoom 使用。
-janus:
-  # url 会下发给浏览器/真机，不能使用 localhost 或 127.0.0.1。
-  # 本机调试使用 mDNS 主机名，避免局域网 DHCP 变更 IP；生产环境改为可公开访问的 wss 域名。
-  url: ${JANUS_URL:ws://MacBook-Pro-3.local:8188}
-  api-url: ${JANUS_API_URL:http://127.0.0.1:8088/janus}
-  api-secret: ${JANUS_API_SECRET:}
-  tenant-isolation: true
+# IM 音视频仅使用自建 LiveKit；生产环境必须使用公网可达的 wss 域名。
+im:
+  call:
+    livekit:
+      url: ${IM_CALL_LIVEKIT_URL:}
+      api-key: ${IM_CALL_LIVEKIT_API_KEY:}
+      api-secret: ${IM_CALL_LIVEKIT_API_SECRET:}
+      token-expire-seconds: ${IM_CALL_LIVEKIT_TOKEN_EXPIRE_SECONDS:600}
+      allow-insecure: ${IM_CALL_LIVEKIT_ALLOW_INSECURE:false}

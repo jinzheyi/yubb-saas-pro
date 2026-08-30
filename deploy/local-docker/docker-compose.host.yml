@@ -1,5 +1,3 @@
-version: "3.4"
-
 name: shengyu-system-local-host
 
 services:
@@ -48,10 +46,11 @@ services:
         --spring.redis.host=${REDIS_HOST}
         --spring.redis.port=${REDIS_PORT:-6379}
         --spring.redis.database=${REDIS_DATABASE:-0}
-        --spring.redis.password=${REDIS_PASSWORD:-}
-        --janus.url=${JANUS_URL:-ws://MacBook-Pro-3.local:8188}
-        --janus.api-url=${JANUS_API_URL:-http://host.docker.internal:8088/janus}
-        --janus.api-secret=${JANUS_API_SECRET:-}
+        --im.call.livekit.url=${LIVEKIT_URL:-}
+        --im.call.livekit.api-key=${LIVEKIT_API_KEY:-}
+        --im.call.livekit.api-secret=${LIVEKIT_API_SECRET:-}
+        --im.call.livekit.token-expire-seconds=${LIVEKIT_TOKEN_EXPIRE_SECONDS:-600}
+        --im.call.livekit.allow-insecure=${LIVEKIT_ALLOW_INSECURE:-false}
     depends_on:
       - kkfileview
 

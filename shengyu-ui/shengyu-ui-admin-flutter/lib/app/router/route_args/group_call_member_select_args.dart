@@ -7,6 +7,7 @@ class GroupCallMemberSelectArgs {
     required this.groupName,
     required this.callType,
     this.existingMemberIds = const [],
+    this.initialSelectedIds = const [],
     this.currentUserId = '',
   });
 
@@ -22,6 +23,9 @@ class GroupCallMemberSelectArgs {
   /// 已存在的成员ID列表（用于过滤已在通话中的成员）
   final List<String> existingMemberIds;
 
+  /// 创建群通话失败后回到选择页时恢复用户刚才的选择。
+  final List<String> initialSelectedIds;
+
   /// 当前用户ID（发起者，用于从列表中过滤）
   final String currentUserId;
 
@@ -34,15 +38,18 @@ class GroupCallMemberSelectArgs {
           groupName == other.groupName &&
           callType == other.callType &&
           _listEquals(existingMemberIds, other.existingMemberIds) &&
+          _listEquals(initialSelectedIds, other.initialSelectedIds) &&
           currentUserId == other.currentUserId;
 
   @override
-  int get hashCode =>
-      groupId.hashCode ^
-      groupName.hashCode ^
-      callType.hashCode ^
-      existingMemberIds.hashCode ^
-      currentUserId.hashCode;
+  int get hashCode => Object.hash(
+    groupId,
+    groupName,
+    callType,
+    Object.hashAll(existingMemberIds),
+    Object.hashAll(initialSelectedIds),
+    currentUserId,
+  );
 
   static bool _listEquals(List<String> a, List<String> b) {
     if (a.length != b.length) return false;

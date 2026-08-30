@@ -32,8 +32,8 @@ public class AppCallCreateInviteRespVO {
         @Schema(description = "通话会话ID", example = "abc123def456")
         private String callSessionId;
 
-        @Schema(description = "Janus 房间ID", example = "123456")
-        private String roomId;
+        @Schema(description = "LiveKit 房间名", example = "im_tenant_callId")
+        private String roomName;
 
         @Schema(description = "发布者ID", example = "40001")
         private String publisherId;
@@ -41,19 +41,10 @@ public class AppCallCreateInviteRespVO {
         @Schema(description = "显示名称", example = "")
         private String displayName;
 
-        @Schema(description = "Janus 服务器URL", example = "")
-        private String janusUrl;
+        @Schema(description = "LiveKit WebSocket 地址", example = "wss://rtc.example.com")
+        private String livekitUrl;
 
-        @Schema(description = "TURN 服务器URL列表")
-        private List<String> turnUrls;
-
-        @Schema(description = "TURN 用户名", example = "")
-        private String turnUsername;
-
-        @Schema(description = "TURN 密码", example = "")
-        private String turnCredential;
-
-        @Schema(description = "Janus Token", example = "eyJhbGciOiJIUzI1NiIs...")
+        @Schema(description = "LiveKit 加入令牌", example = "eyJhbGciOiJIUzI1NiIs...")
         private String token;
     }
 }

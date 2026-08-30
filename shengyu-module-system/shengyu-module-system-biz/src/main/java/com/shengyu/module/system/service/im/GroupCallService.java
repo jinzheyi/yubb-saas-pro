@@ -3,11 +3,6 @@ package com.shengyu.module.system.service.im;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.shengyu.framework.websocket.core.protocol.MessageType;
-import com.shengyu.framework.websocket.core.protocol.TextMessage;
-import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
-import com.shengyu.framework.websocket.core.session.NettySession;
-import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.module.system.dal.dataobject.im.ImCallParticipantDO;
 import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
@@ -16,8 +11,6 @@ import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImCallStateEnum;
 import com.shengyu.module.system.enums.im.ImCallStatusEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +22,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.IM_CALL_USER_BUSY;
+
 /**
  * 群组通话服务
  * 
  * 处理多人语音/视频会议的业务逻辑：
  * - 发起群组通话邀请
  * - 处理参与者加入/离开
- * - 管理 Janus 多人房间
+ * - 使用确定性的 LiveKit 房间名进行多人媒体会话
  * - 广播群组通话事件给所有参与者
  *
  * @author 圣钰科技
@@ -51,10 +47,7 @@ public class GroupCallService {
     private ImCallService callService;
 
     @Resource
-    private ObjectProvider<NettyMessageSender> nettyMessageSenderProvider;
-
-    @Resource
-    private NettySessionManager sessionManager;
+    private CallEventPublisher callEventPublisher;
 
     @Resource
     private ImCallParticipantMapper callParticipantMapper;
@@ -63,13 +56,7 @@ public class GroupCallService {
     private com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper groupUserMapper;
 
     @Resource
-    private JanusRoomManager janusRoomManager;
-
-    @Resource
     private AdminUserMapper adminUserMapper;
-
-    @Value("${janus.url:}")
-    private String janusUrl;
 
     /**
      * 发起群组通话
@@ -101,24 +88,21 @@ public class GroupCallService {
             throw new IllegalStateException("发起人不是群成员");
         }
         if (callService.isUserBusy(callerId)) {
-            throw new IllegalStateException("发起人正在通话中");
+            throw exception(IM_CALL_USER_BUSY);
         }
         for (Long inviteeId : uniqueInvitees) {
             if (groupUserMapper.selectByGroupIdAndUserId(groupId, inviteeId) == null) {
                 throw new IllegalArgumentException("被邀请用户不是群成员: " + inviteeId);
             }
             if (callService.isUserBusy(inviteeId)) {
-                throw new IllegalStateException("被邀请用户正在通话中: " + inviteeId);
+                // 返回稳定业务错误码，且不把成员 userId 暴露给终端用户。
+                throw exception(IM_CALL_USER_BUSY);
             }
-        }
-        if (janusUrl == null || janusUrl.trim().isEmpty()) {
-            throw new IllegalStateException("RTC 服务未配置（需要 janus.url）");
         }
         // 生成通话ID。房间、记录和完整受邀名单在发邀请前处于同一事务中，
         // 消除过去“先建单聊、再扩成群聊”的接听竞态。
         String callId = IdUtil.simpleUUID();
-        String roomId = janusRoomManager.createRoom(
-                tenantId, "call_" + callId).getRoomId();
+        String livekitRoom = "im_" + tenantId + "_" + callId;
         
         log.info("[GroupCall] 发起群组通话, callerId={}, groupId={}, inviteeIds={}, callType={}", 
             callerId, groupId, uniqueInvitees, callType);
@@ -131,7 +115,11 @@ public class GroupCallService {
             .calleeId(groupId) // 群通话时 calleeId 为群组ID
             .chatId(chatId)
             .groupId(groupId)
-            .roomId(roomId)
+            .provider("LIVEKIT")
+            .callMode("GROUP")
+            .ownerId(callerId)
+            .livekitRoom(livekitRoom)
+            .stateVersion(1)
             .startTime(LocalDateTime.now())
             .duration(0)
             .status(ImCallStatusEnum.MISSED.getStatus())
@@ -236,7 +224,8 @@ public class GroupCallService {
         boolean hasOnlineParticipant = callParticipantMapper.selectByCallId(callId).stream()
                 .anyMatch(participant -> Integer.valueOf(1).equals(participant.getStatus()));
         if (!hasOnlineParticipant) {
-            callService.hangupCall(callId, userId, "NO_PARTICIPANTS");
+            Long ownerId = callRecord.getOwnerId() != null ? callRecord.getOwnerId() : callRecord.getCallerId();
+            callService.hangupCall(callId, ownerId, "NO_PARTICIPANTS");
             ImCallRecordDO endedRecord = callService.getCallRecord(callId);
             sendGroupEnded(callId, userId, callRecord.getGroupId(),
                     endedRecord != null ? endedRecord.getDuration() : 0);
@@ -286,6 +275,9 @@ public class GroupCallService {
                 .role(role)
                 .joinTime(LocalDateTime.now())
                 .status(status)
+                .inviteState(status == 1 ? "ACCEPTED" : "PENDING")
+                .joinState(status == 1 ? "JOINED" : "NOT_JOINED")
+                .joinedAt(status == 1 ? LocalDateTime.now() : null)
                 .build());
     }
 
@@ -309,39 +301,8 @@ public class GroupCallService {
             .set("initiateTime", System.currentTimeMillis())
             .set("deviceId", deviceId);
         
-        NettyMessageSender messageSender = nettyMessageSenderProvider.getIfAvailable();
-        if (messageSender == null) {
-            log.warn("[GroupCall] NettyMessageSender 不可用，跳过推送");
-            return;
-        }
-        
-        TextMessage textMessage = TextMessage.newBuilder()
-            .setContent("")
-            .build();
-        
-        // 向所有被邀请者发送
-        for (Long inviteeId : inviteeIds) {
-            try {
-                messageSender.sendToUserWithExtra(
-                    inviteeId, 
-                    MessageType.SYSTEM_NOTIFY, 
-                    textMessage,
-                    callerId, 
-                    inviteeId, 
-                    0L, 
-                    null, 
-                    null, 
-                    null, 
-                    null,
-                    null, 
-                    null, 
-                    payload.toString()
-                );
-                log.info("[GroupCall] 向用户发送群组通话邀请, inviteeId={}", inviteeId);
-            } catch (Exception e) {
-                log.error("[GroupCall] 向用户发送群组通话邀请失败, inviteeId={}", inviteeId, e);
-            }
-        }
+        callEventPublisher.publish(inviteeIds, callerId,
+                com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId(), payload);
     }
 
     /**
@@ -390,61 +351,20 @@ public class GroupCallService {
         broadcastGroupEvent(callId, groupId, payload);
     }
 
-    /**
-     * 广播群组通话事件给所有在线参与者
-     */
+    /** 广播群组业务事件；实际投递与重试均由 outbox 唯一出口负责。 */
     private void broadcastGroupEvent(String callId, Long groupId, JSONObject payload) {
-        NettyMessageSender messageSender = nettyMessageSenderProvider.getIfAvailable();
-        if (messageSender == null) {
-            log.warn("[GroupCall] NettyMessageSender 不可用，跳过广播");
-            return;
-        }
-        
-        TextMessage textMessage = TextMessage.newBuilder()
-            .setContent("")
-            .build();
-        
-        // 查询群组通话参与者列表
         List<ImCallParticipantDO> participants = callParticipantMapper.selectByCallId(callId);
         if (participants == null || participants.isEmpty()) {
             log.warn("[GroupCall] 群组通话参与者列表为空, callId={}", callId);
             return;
         }
-        
-        // 获取参与者用户ID集合
         Set<Long> participantUserIds = participants.stream()
             .map(ImCallParticipantDO::getUserId)
             .collect(Collectors.toSet());
-        
-        int sentCount = 0;
-        // 只向在线的通话参与者广播
-        for (Long participantUserId : participantUserIds) {
-            List<NettySession> sessions = sessionManager.getSessionsByUserId(participantUserId);
-            for (NettySession session : sessions) {
-                try {
-                    messageSender.sendToUserWithExtra(
-                        participantUserId, 
-                        MessageType.SYSTEM_NOTIFY, 
-                        textMessage,
-                        0L, 
-                        participantUserId, 
-                        0L, 
-                        null, 
-                        null, 
-                        null, 
-                        null,
-                        null, 
-                        null, 
-                        payload.toString()
-                    );
-                    sentCount++;
-                } catch (Exception e) {
-                    log.error("[GroupCall] 广播群组事件失败, userId={}", participantUserId, e);
-                }
-            }
-        }
-        
-        log.info("[GroupCall] 广播群组事件完成, callId={}, type={}, 参与者数={}, 实际发送数={}", 
-            callId, payload.getStr("type"), participantUserIds.size(), sentCount);
+        Long actorId = payload.getLong("userId", payload.getLong("endedBy", 0L));
+        callEventPublisher.publish(participantUserIds, actorId,
+                com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId(), payload);
+        log.info("[GroupCall] 群组事件已写入 outbox, callId={}, type={}, participants={}",
+                callId, payload.getStr("type"), participantUserIds.size());
     }
 }

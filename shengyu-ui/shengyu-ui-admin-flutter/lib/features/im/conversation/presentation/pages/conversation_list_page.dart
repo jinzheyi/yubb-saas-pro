@@ -16,8 +16,6 @@ import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
-import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
@@ -26,7 +24,6 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_skeleton.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_tile.dart';
 import 'package:shengyu_ui_admin_im/features/im/device/presentation/providers/device_providers.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_incoming_banner.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
@@ -105,7 +102,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       // 加载设备列表（用于显示设备管理入口）
       await ref.read(deviceListProvider.notifier).load();
       if (!mounted) return;
-      
+
       // 先执行 load（有缓存时跳过 API）
       final error = await ref
           .read(conversationListControllerProvider.notifier)
@@ -156,7 +153,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     // 1. 检查 WebSocket 连接状态，如果断连则触发重连
     final socketClient = ref.read(imSocketClientProvider);
     if (socketClient.state != ImSocketConnectionState.connected) {
-      debugPrint('[ConversationListPage] WebSocket not connected on resume, triggering reconnect');
+      debugPrint(
+        '[ConversationListPage] WebSocket not connected on resume, triggering reconnect',
+      );
       unawaited(socketClient.reconnect());
     }
 
@@ -177,14 +176,22 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     _listenGroupMemberRemovedSignal(ref, context);
     final strings = AppLocalizations.of(context);
     // 精确订阅：仅监听 status 和 error 字段，用于页面状态切换
-    final listStatus = ref.watch(conversationListControllerProvider.select((state) => state.status));
-    final listError = ref.watch(conversationListControllerProvider.select((state) => state.error));
+    final listStatus = ref.watch(
+      conversationListControllerProvider.select((state) => state.status),
+    );
+    final listError = ref.watch(
+      conversationListControllerProvider.select((state) => state.error),
+    );
     // 精确订阅：仅监听 conversations 字段，避免 status/error 变化触发不必要的 rebuild
-    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final conversations = ref.watch(
+      conversationListControllerProvider.select((state) => state.conversations),
+    );
     // 监听设备列表状态（用于显示设备管理入口）
     final deviceState = ref.watch(deviceListProvider);
-    final otherDeviceCount = deviceState.devices.where((d) => !d.isCurrentDevice).length;
-    
+    final otherDeviceCount = deviceState.devices
+        .where((d) => !d.isCurrentDevice)
+        .length;
+
     final filteredConversations = _applyFilter(conversations);
     final pinnedConversations = filteredConversations
         .where((item) => item.isPinned)
@@ -322,8 +329,6 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                   ),
                 ),
                 const SizedBox(height: 8),
-                // 来电横幅通知（微信风格：显示在会话列表顶部）
-                const CallIncomingBanner(),
                 if (_inlineNoticeVisible)
                   Container(
                     color: ThemeColors.noticeBg(context),
@@ -390,7 +395,8 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                     : _selectedConversation?.chatId ?? '',
                 pinned: _selectedConversation?.isPinned ?? false,
                 unread: (_selectedConversation?.unreadCount ?? 0) > 0,
-                isGroupRemoved: _selectedConversation?.isGroupKicked == true ||
+                isGroupRemoved:
+                    _selectedConversation?.isGroupKicked == true ||
                     _selectedConversation?.isGroupDisbanded == true ||
                     _selectedConversation?.isGroupLeft == true,
                 onPinTap: () => _handleMenuAction(_ConversationMenuAction.pin),
@@ -677,10 +683,7 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     }).toList();
   }
 
-  void _listenGroupMemberRemovedSignal(
-    WidgetRef ref,
-    BuildContext context,
-  ) {
+  void _listenGroupMemberRemovedSignal(WidgetRef ref, BuildContext context) {
     final signal = ref.watch(groupMemberRemovedSignalProvider);
     if (signal == null || !context.mounted) {
       return;
@@ -760,7 +763,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     }
     context.pushNamed(
       RouteNames.chatCameraCapture,
-      extra: const CameraCaptureRouteArgs(initialMode: CameraCaptureMode.qrScan),
+      extra: const CameraCaptureRouteArgs(
+        initialMode: CameraCaptureMode.qrScan,
+      ),
     );
   }
 
@@ -806,11 +811,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
           .markConversationReadRemotely(conversation.chatId),
     );
 
-    // 后台预加载消息数据（不阻塞UI）
-    unawaited(_preloadChatWindow(conversation));
-
-    // 延迟 50ms 跳转，给预加载留出时间
-    await Future.delayed(const Duration(milliseconds: 50));
+    // 优先将本地消息快照装入 L1，再进入聊天页。对已有缓存通常是一次极短
+    // 的内存/磁盘读取，换取聊天页首帧直接显示消息；首次安装没有缓存时会
+    // 很快返回并保留原有骨架加载。
+    await _preloadChatWindow(conversation);
 
     if (!mounted) {
       return;
@@ -828,19 +832,18 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
 
   /// 后台预加载聊天窗口数据
   ///
-  /// 使用预加载模式从 Drift 数据库加载本地缓存的消息
-  /// 预加载失败不影响正常进入聊天页
+  /// 将本地消息缓存预热到 UnifiedCacheManager 的 L1。
+  ///
+  /// 旧实现调用的 use case 只读取了数据库但未回填可渲染缓存，因此聊天页
+  /// 仍然会在首帧显示骨架。这里直接走统一缓存层，确保随后页面可同步读取。
   Future<void> _preloadChatWindow(Conversation conversation) async {
     try {
-      final loadChatWindowUseCase = ref.read(loadChatWindowUseCaseProvider);
-      await loadChatWindowUseCase.call(
-        OpenChatCommand(
-          chatId: conversation.chatId,
-          conversationType: conversation.conversationType,
-          entryMode: ChatEntryMode.latest,
-          isPreload: true,
-        ),
-      );
+      final userId = ref.read(authSessionProvider).userId;
+      if (userId.isEmpty) return;
+      await ref
+          .read(unifiedCacheManagerProvider)
+          .getMessages(userId, conversation.chatId)
+          .timeout(const Duration(milliseconds: 180));
     } catch (e) {
       // 预加载失败静默忽略，不影响正常进入
     }
@@ -894,7 +897,11 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
             chatId: conversation.chatId,
             isPinned: !conversation.isPinned,
           );
-          _showInlineNotice(!conversation.isPinned ? strings.conversationPinnedNotice : strings.conversationUnpinnedNotice);
+          _showInlineNotice(
+            !conversation.isPinned
+                ? strings.conversationPinnedNotice
+                : strings.conversationUnpinnedNotice,
+          );
           break;
         case _ConversationMenuAction.unread:
           if (conversation.unreadCount > 0) {
@@ -933,9 +940,9 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.operationFailed(error.toString()))),
+      );
     }
   }
 
@@ -1073,10 +1080,7 @@ extension on _ConversationCategory {
 }
 
 class _ConversationCategoryItem {
-  const _ConversationCategoryItem({
-    required this.category,
-    required this.icon,
-  });
+  const _ConversationCategoryItem({required this.category, required this.icon});
 
   final _ConversationCategory category;
   final IconData icon;
@@ -1133,7 +1137,9 @@ class _CategoryButton extends StatelessWidget {
               child: Icon(
                 item.icon,
                 size: 22,
-                color: active ? ThemeColors.categoryActiveText(context) : ThemeColors.categoryInactiveText(context),
+                color: active
+                    ? ThemeColors.categoryActiveText(context)
+                    : ThemeColors.categoryInactiveText(context),
               ),
             ),
             const SizedBox(height: 6),
@@ -1185,7 +1191,10 @@ class _ConversationContextMenu extends StatelessWidget {
         decoration: BoxDecoration(
           color: ThemeColors.popupMenuBg(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ThemeColors.popupMenuBorder(context), width: 0.5),
+          border: Border.all(
+            color: ThemeColors.popupMenuBorder(context),
+            width: 0.5,
+          ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x26000000),
@@ -1214,7 +1223,12 @@ class _ConversationContextMenu extends StatelessWidget {
               ),
             ),
             if (!isGroupRemoved) ...[
-              _MenuTextButton(label: pinned ? strings.pinConversation : strings.unpinConversation, onTap: onPinTap),
+              _MenuTextButton(
+                label: pinned
+                    ? strings.pinConversation
+                    : strings.unpinConversation,
+                onTap: onPinTap,
+              ),
               _MenuTextButton(
                 label: unread ? strings.markAsRead : strings.markAsUnread,
                 onTap: onUnreadTap,
@@ -1233,11 +1247,7 @@ class _ConversationContextMenu extends StatelessWidget {
 }
 
 class _MenuTextButton extends StatelessWidget {
-  const _MenuTextButton({
-    required this.label,
-    required this.onTap,
-    this.color,
-  });
+  const _MenuTextButton({required this.label, required this.onTap, this.color});
 
   final String label;
   final VoidCallback onTap;
@@ -1249,7 +1259,13 @@ class _MenuTextButton extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Text(label, style: TextStyle(fontSize: 15, color: color ?? ThemeColors.textPrimary(context))),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            color: color ?? ThemeColors.textPrimary(context),
+          ),
+        ),
       ),
     );
   }
@@ -1271,7 +1287,7 @@ class _DeviceManagementBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1280,10 +1296,7 @@ class _DeviceManagementBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: ThemeColors.surface(context),
           border: Border(
-            bottom: BorderSide(
-              color: ThemeColors.divider(context),
-              width: 0.5,
-            ),
+            bottom: BorderSide(color: ThemeColors.divider(context), width: 0.5),
           ),
         ),
         child: Row(

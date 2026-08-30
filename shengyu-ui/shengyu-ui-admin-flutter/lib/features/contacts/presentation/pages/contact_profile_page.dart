@@ -10,7 +10,8 @@ import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/domain/entities/contact_profile.dart';
 import 'package:shengyu_ui_admin_im/features/contacts/presentation/providers/contacts_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/livekit_call_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_type_selection_sheet.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
@@ -51,7 +52,8 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
     final strings = AppLocalizations.of(context);
     final displayName = _displayName(strings);
     final session = ref.watch(authSessionProvider);
-    final isCurrentUser = widget.userId.trim().isNotEmpty &&
+    final isCurrentUser =
+        widget.userId.trim().isNotEmpty &&
         widget.userId.trim() == session.userId.trim();
 
     return Scaffold(
@@ -144,14 +146,18 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
                                           style: TextStyle(
                                             fontSize: 24,
                                             fontWeight: FontWeight.w700,
-                                            color: ThemeColors.textPrimary(context),
+                                            color: ThemeColors.textPrimary(
+                                              context,
+                                            ),
                                           ),
                                         ),
                                       ),
                                       if (_profile?.sex != null) ...[
                                         const SizedBox(width: 8),
                                         Icon(
-                                          _profile!.sex == 0 ? Icons.male : Icons.female,
+                                          _profile!.sex == 0
+                                              ? Icons.male
+                                              : Icons.female,
                                           size: 18,
                                           color: _profile!.sex == 0
                                               ? const Color(0xFF0EA5E9)
@@ -318,7 +324,9 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
       if (!mounted) {
         return;
       }
-      _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
+      _showMessage(
+        AppLocalizations.of(context).operationFailed(error.toString()),
+      );
     }
   }
 
@@ -326,58 +334,19 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
     if (widget.userId.trim().isEmpty) {
       return;
     }
-    if (_callLaunchInProgress || ref.read(activeCallRegistryProvider).hasActiveCall()) {
+    if (_callLaunchInProgress ||
+        ref.read(liveKitCallActivityProvider).isActive) {
       _showMessage('您正在通话中');
       return;
     }
     final strings = AppLocalizations.of(context);
     final displayName = _displayName(strings);
 
-    final callType = await showModalBottomSheet<CallType>(
-      context: context,
-      backgroundColor: ThemeColors.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: ThemeColors.divider(context),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                displayName,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: ThemeColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _CallOptionTile(
-                icon: Icons.phone_outlined,
-                label: strings.callVoice,
-                onTap: () => Navigator.of(context).pop(CallType.audio),
-              ),
-              _CallOptionTile(
-                icon: Icons.videocam_outlined,
-                label: strings.callVideo,
-                onTap: () => Navigator.of(context).pop(CallType.video),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
+    final callType = await CallTypeSelectionSheet.show(
+      context,
+      displayName: displayName,
+      voiceLabel: strings.callVoice,
+      videoLabel: strings.callVideo,
     );
 
     if (!mounted || callType == null) {
@@ -401,9 +370,11 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
         chatId: conversation.chatId,
         callType: callType,
         title: chatTitle,
+        conversationTitle: chatTitle,
+        peerAvatarUrl: _profile?.avatarUrl,
         toUserId: widget.userId.trim(),
       );
-      context.pushNamed(RouteNames.callOutgoing, extra: args).whenComplete(() {
+      context.pushNamed(RouteNames.call, extra: args).whenComplete(() {
         if (mounted) setState(() => _callLaunchInProgress = false);
       });
     } catch (error) {
@@ -411,7 +382,8 @@ class _ContactProfilePageState extends ConsumerState<ContactProfilePage> {
         return;
       }
       setState(() => _callLaunchInProgress = false);
-      _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
+      debugPrint('[ContactProfilePage] 发起通话失败: $error');
+      _showMessage('发起通话失败，请稍后重试');
     }
   }
 
@@ -544,10 +516,7 @@ class _InfoRow extends StatelessWidget {
         border: Border(
           bottom: isLast
               ? BorderSide.none
-              : BorderSide(
-                  color: ThemeColors.divider(context),
-                  width: 0.5,
-                ),
+              : BorderSide(color: ThemeColors.divider(context), width: 0.5),
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -623,41 +592,6 @@ class _FooterAction extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CallOptionTile extends StatelessWidget {
-  const _CallOptionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 24, color: ThemeColors.textPrimary(context)),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                color: ThemeColors.textPrimary(context),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

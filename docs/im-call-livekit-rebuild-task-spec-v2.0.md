@@ -1,9 +1,9 @@
 # IM 单聊/群聊音视频通话：LiveKit 私有化替换式重构任务书
 
-> **版本**：v2.0｜**日期**：2026-08-16｜**状态**：待实施  
+> **版本**：v2.0｜**日期**：2026-08-19｜**状态**：代码与本地部署完成，待真机/推送凭据验收
 > **优先级**：P0｜**唯一实施依据**：是  
 > **适用**：Android、iOS；Flutter Web 只保证前台加入/通话，不保证浏览器关闭后的系统来电  
-> **替代关系**：本文件取代 `docs/im-rtc-call-system-design.md` 和 `sql/flutter-doc/IM-Flutter音视频通话企业级设计-v1.0.md` 中所有 Janus 实施结论。
+> **替代关系**：本文件是唯一通话实施依据；旧 Janus 设计与悬浮窗专项文档已删除。
 
 ## 1. 目标与不可变原则
 
@@ -51,18 +51,17 @@ presentation/widgets/call_waiting_banner.dart
 presentation/widgets/call_waiting_dialog.dart
 ```
 
-创建新根目录 `lib/features/im/call_v2/`；旧 `call/` 在灰度完成前只允许保留，不允许继续修改。新目录固定如下：
+在唯一根目录 `lib/features/im/call/` 内完成整体替换；旧媒体、页面、provider 与 Janus 文件直接删除，仅保留通话记录展示和群成员选择。采用紧凑单编排器结构，禁止以 `v2`、feature flag 或平行目录维护双实现，也禁止为了目录形式拆出无行为的空接口：
 
 ```text
-call_v2/
-  domain/{call_session,call_participant,call_enums,call_repository}.dart
-  application/call_orchestrator.dart
-  infrastructure/{call_api,call_socket_gateway,livekit_gateway,native_call_ui_gateway}.dart
-  presentation/{call_router,incoming_call_page,outgoing_call_page,in_call_page,widgets/}
-  providers/call_v2_providers.dart
+call/
+  infrastructure/native_call_ui_gateway.dart            # Android 全屏来电 / iOS CallKit 唯一适配器
+  presentation/controllers/livekit_call_controller.dart # 唯一状态/REST/LiveKit 编排器
+  presentation/pages/livekit_call_page.dart              # 来电、去电、通话中统一页面
+  presentation/providers/livekit_call_providers.dart     # SYSTEM_NOTIFY、版本去重、全局入口
 ```
 
-`CallOrchestrator` 是唯一状态写入者，状态只有 `idle/outgoingRinging/incomingRinging/connecting/inCall/ending`。页面、LiveKit 回调、Socket 回调都只能向它发送命令；不得再存在 `CallController + CallCoordinator + CallMediaController` 三方同时改状态。
+`LiveKitCallController` 是单页会话唯一状态写入者；页面、LiveKit 回调、Socket 回调都只能向它发送命令。不得再存在旧版 `CallController + CallCoordinator + CallMediaController` 三方同时改状态。
 
 复用并迁移：`CallRecord`、`CallRecordMessage`、`call_history_page.dart`、`call_record_message_bubble.dart`、单聊/群聊入口及现有权限/设备 ID 服务。重做：`incoming_call_page.dart`、`outgoing_call_page.dart`、`call_session_page.dart`、所有 group call 页面与 provider。
 
@@ -115,15 +114,15 @@ AppCallController（只做鉴权、VO、调用）
 ### 3.2 状态机
 
 ```text
-DIRECT: CREATED -> RINGING -> ACCEPTED -> CONNECTED -> ENDED
-                            \-> REJECTED/CANCELLED/TIMEOUT/BUSY/FAILED
-GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
-                            \-> CANCELLED/TIMEOUT/FAILED
+DIRECT: RINGING -> CONNECTED -> ENDED
+                 \-> ENDED(REJECT/CANCEL/TIMEOUT/BUSY/FAILED)
+GROUP : RINGING -> CONNECTED -> ENDED
+                 \-> ENDED(CANCEL/TIMEOUT/FAILED)
 ```
 
-- 单聊 `accept` 必须执行 `UPDATE ... WHERE state=RINGING AND accepted_device_id IS NULL`；受影响行数为 1 才是胜者。其他端返回 `CALL_ALREADY_ANSWERED` 并收到 ended。
-- 群聊首次任意成员成功 join 时，`RINGING -> ACTIVE`；发起人未入房且所有成员拒绝/超时，才 `TIMEOUT`。群内至少一人时不因某成员拒绝而结束会话。
-- 同一用户任一活跃状态（`RINGING/ACCEPTED/CONNECTED/ACTIVE`）只能属于一个 call。群聊邀请时，忙线成员写为 `BUSY` participant，不影响其他成员。
+- 单聊 `accept` 必须执行 `UPDATE ... WHERE state=RINGING AND accepted_device_id IS NULL`；受影响行数为 1 才是胜者。其他设备返回已在其他设备接听。
+- 群聊首次任意成员成功 join 时 `RINGING -> CONNECTED`；群内至少一人时不因某成员拒绝而结束会话。
+- 同一用户任一活跃状态（`RINGING/CONNECTING/CONNECTED`）只能属于一个 call。群聊邀请时，忙线成员不影响其他成员。
 - 所有状态变化都必须在同一数据库事务内：条件更新 → 写事件 outbox → 写审计/记录。事件由事务提交后异步投递；不得先发 WebSocket 再落库。
 
 ## 4. API、事件与 Token 契约
@@ -132,15 +131,16 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 
 | Method | URL | 请求 | 权限/结果 |
 |---|---|---|---|
-| POST | `/system/im/call/direct` | `chatId,calleeId,callType` | 校验单聊双方成员，创建 RINGING |
-| POST | `/system/im/call/group` | `chatId,groupId,inviteeIds,callType` | 发起人必须群成员；被邀 1~8 人，总人数上限 9 |
-| POST | `/system/im/call/{callId}/accept` | `deviceId` | 单聊唯一接听；群聊加入 |
-| POST | `/system/im/call/{callId}/reject` | `deviceId` | 单聊终态；群聊仅本成员拒绝 |
-| POST | `/system/im/call/{callId}/cancel` | 空 | 仅 RINGING 的 owner 可取消 |
-| POST | `/system/im/call/{callId}/leave` | `deviceId` | 群成员离开；单聊等同 hangup |
-| POST | `/system/im/call/{callId}/end` | 空 | 单聊任意参与方；群聊仅 owner 结束全体 |
-| POST | `/system/im/call/{callId}/connected` | `deviceId` | 报告 LiveKit 已连接，幂等 |
-| GET | `/system/im/call/{callId}` | 空 | 授权用户获取状态与当前 roster |
+| POST | `/system/im/call/create-invite` | `chatId,calleeId,callType,deviceId` | 校验单聊双方成员，创建 RINGING |
+| POST | `/system/im/call/group/create-invite` | `chatId,groupId,inviteeIds,callType,deviceId` | 原子创建群通话；不支持通话中追加邀请 |
+| POST | `/system/im/call/accept` | `callSessionId,deviceId` | 单聊唯一接听；群聊成员加入 |
+| POST | `/system/im/call/reject` | `callSessionId` | 单聊终态；群聊仅本成员拒绝 |
+| POST | `/system/im/call/cancel` | `callSessionId` | 仅 RINGING 的 owner 可取消 |
+| POST | `/system/im/call/group/leave` | `callSessionId` | 群成员离开；最后一人离开自动结束 |
+| POST | `/system/im/call/hangup` | `callSessionId` | 单聊任意参与方；群聊仅 owner 结束全体 |
+| POST | `/system/im/call/connection` | `callSessionId,deviceId` | 授权参与者获取重连 Token |
+| GET | `/system/im/call/state` | `callSessionId` | 授权用户状态对账 |
+| GET | `/system/im/call/active` | 无 | 登录、Socket 重新鉴权或应用回前台时查询当前用户唯一活跃通话；返回 `RINGING/CONNECTING/CONNECTED` 中最新一条及 `incoming` 方向 |
 
 `accept` 成功响应仅此时返回：`callId,roomName,serverUrl,accessToken,expiresAt,participants`。Token 有效期 10 分钟；Token 仅包含此 room 的 join/publish/subscribe 权限，identity=`tenant:user:device`。任何 invite/push/socket 事件均不得包含 RTC Token。
 
@@ -161,18 +161,18 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 | `call.ended` | 所有相关用户 | `reason,endedAt,durationSeconds` |
 | `call.busy` | 主叫或群发起人 | `userId` |
 
-客户端按 `(callId,version)` 去重。收到版本跳跃、冷启动、网络恢复时调用 GET state 对账；对账结果覆盖本地 UI。
+客户端按 `(callId,version)` 去重。收到版本跳跃且已知 `callId` 时调用 GET state 对账；登录成功、WebSocket 重新鉴权、冷启动或应用回前台时至多并发一次 GET active。active 为空时不创建页面，返回活跃通话时按 `incoming + state` 恢复来电页或通话恢复页。对账失败只记录一次诊断信息，不递归重试、不关闭 Socket、不触发 cancel/hangup。
 
 ## 5. LiveKit 与部署设计
 
 ### 5.1 组件
 
-每个客户环境部署 `livekit-server + redis + coturn + reverse-proxy`；可选 Egress 不进入 P0。必须使用官方 Apache-2.0 LiveKit Server、`livekit_client` 和 `livekit_components`，版本写入客户交付兼容矩阵。
+每个客户环境部署 `livekit-server + redis + reverse-proxy`；TURN 使用 LiveKit 内嵌且与短时会话鉴权集成的实现，不再维护独立 coturn。可选 Egress 不进入 P0。使用官方 Apache-2.0 LiveKit Server 与 `livekit_client`，版本写入客户交付兼容矩阵。
 
 - 开发环境可 Docker Compose；生产单机 VM 起步，容量/高可用另行通过 Kubernetes/Helm 扩展。
 - 客户必须提供可由移动端访问的 DNS、TLS 证书、UDP 端口段及 TURN/TLS；禁止开发机 `.local`、`localhost`、硬编码内网 IP。
 - 每个客户独立 API key/secret、Redis、TURN 长期密钥；密钥存部署环境变量或密钥管理服务，App 永不持有。
-- Java 后端使用 LiveKit 官方 Server SDK 签发 Token，并验证 LiveKit webhook 签名；webhook 只做离线补偿和审计，不改变用户已显式结束的终态。
+- Java 后端保持项目 Java 8 交付基线，按 LiveKit Access Token/Webhook 协议使用 HS256 JWT 签发受限 Token，并校验 webhook issuer、有效期、签名与 body SHA-256；禁止引入要求 Java 17 的 `livekit-server` SDK。webhook 只做离线补偿和审计，不改变用户已显式结束的终态。
 
 ### 5.2 Flutter 媒体适配
 
@@ -200,9 +200,9 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 
 ### 阶段 A：替换准备
 
-1. 新建 feature flag `im.call.provider=janus|livekit`，默认 janus；一个 `callId` 只能绑定一种 provider。
-2. 新建 `docs/` 中的 LiveKit Compose、环境变量模板、网络验证脚本；在两台真机完成 LiveKit SDK 原生示例通话。
-3. 添加依赖 `livekit_client`、`livekit_components`、`flutter_callkit_incoming`；锁定版本和许可清单。
+1. 移除 `im.call.provider`；新建通话固定 `provider=LIVEKIT`，不存在 RTC provider 回退或双写。
+2. 新建 LiveKit Compose、环境变量模板和网络验证脚本；两台真机通话列入发布验收。
+3. 添加并锁定 `livekit_client`、`flutter_callkit_incoming`；视频组件由项目 Widget 封装 SDK renderer，不引入第二套 UI 状态层。
 
 **门禁**：不改现网通话；本地和测试环境 LiveKit HTTPS/WSS/UDP/TURN 全通过。
 
@@ -218,19 +218,19 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 
 ### 阶段 C：Flutter 替换
 
-1. 完整新建 `call_v2`，从聊天页和群聊天页接入新入口；禁止调用旧 use case。
+1. 在唯一 `call` feature 内整体替换，从聊天页和群聊天页接入新入口；禁止调用旧 use case 或保留 `call_v2` 平行实现。
 2. 实现 API/Socket 对账、单一 Orchestrator、单聊和群聊三种页面（来电、去电、通话中）。
 3. 实现 `LiveKitGateway` 与音频/视频控制，接入真实设备权限；实现所有资源释放和恢复。
 4. 实现 NativeCallUiGateway、FCM/APNs VoIP/CallKit；冷启动必须通过 GET state 恢复。
-5. 迁移通话记录气泡和历史页到 v2 DTO/API。
+5. 通话记录气泡和历史页保留在唯一 `call` feature，并统一使用新 DTO/API。
 
 **门禁**：Android↔Android、iOS↔iOS、Android↔iOS 的单聊音频和视频连续各 10 次通过；群 3 人音频、群 3 人视频各 10 次通过。
 
-### 阶段 D：灰度与清理
+### 阶段 D：切换验证与清理
 
-1. 内部租户灰度 7 天；监控 create、push、accept、LiveKit connect、end 和失败原因。
-2. 达到发布门禁后默认 livekit；保留 Janus 回滚 30 天。
-3. 删除第 2.1 列出的旧 Flutter Janus 文件、`JanusRoomManager`、Janus Docker 配置、`janus.*` 属性、Janus 测试与文档；清理不再使用的 `CALL_SIGNAL`。
+1. 在隔离测试租户完成 create、push、accept、LiveKit connect、end 和失败原因监控验证后，直接切换全部客户端入口。
+2. 删除第 2.1 列出的旧 Flutter Janus 文件、`JanusRoomManager`、Janus Docker 配置、`janus.*` 属性、Janus 测试与文档；清理不再使用的 `CALL_SIGNAL`。
+3. 历史通话记录只读展示，不提供 Janus 回滚、旧 token 或旧媒体接入能力。
 
 ## 8. 测试、观测与发布门禁
 
@@ -249,7 +249,7 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 1. 严格按阶段实施，阶段门禁未通过不得开始下一阶段。
 2. 任何无法确认的现有行为先用代码/测试验证；不能依据旧设计文档推测。
 3. 每一个 PR 必须列出新增/删除文件、数据库迁移、接口兼容性、自动化测试、真机验证、回滚步骤。
-4. 不得为了兼容而在 LiveKit 链路继续保留 Janus media client；只允许 feature flag 层面短期二选一。
+4. 不得为了兼容而保留 Janus media client、provider feature flag 或任何 Janus 回退路径。
 5. 遇到 iOS/Android 系统限制要明确报告，不得把失败隐藏为“连接中”或用无上限定时器重试。
 
 ## 10. 源码审计结论与精确迁移映射
@@ -264,20 +264,20 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 | `publishInvite/publishStateEvent/publishMediaTokenEvents/publishGroup*` | Controller 私有方法直接拼 JSON、直调 `CallPushService`，事件可能与 DB 事务脱节 | 全部删除，替换为 outbox + `CallEventPublisher` |
 | `ImCallServiceImpl`、`GroupCallService`、`CallSignalProcessor` | 业务状态与 Janus 房间/Token/Socket 发信交织 | 保留通话记录与成员权限规则；拆出 application service；删除 Janus 和上行 Call Signal 生命周期 |
 | Flutter `call_controller.dart/call_coordinator.dart/call_media_controller.dart` | 多个对象共同维护页面、媒体和恢复状态，是当前状态错乱根源 | 不迁移实现；以单一 `CallOrchestrator` 替换 |
-| Flutter `call_socket_data_source.dart` | 已能从 `SYSTEM_NOTIFY` 解析 `call.` 事件 | 可复用解析思路，但迁入 v2，按固定 envelope/version 对账 |
+| Flutter `call_socket_data_source.dart` | 已能从 `SYSTEM_NOTIFY` 解析 `call.` 事件 | 仅复用解析思路并整体重写到唯一 `call` feature，按固定 envelope/version 对账 |
 | Flutter `rtc_room_bundle.dart` | Janus URL/TURN/JWT 领域模型 | 删除；以 `LiveKitConnectionInfo(roomName,serverUrl,accessToken,expiresAt)` 替代 |
 | WebSocket `NettyMessageSender` | 已支持 tenant、receiver、group、extra 和全设备投递 | 不改其基础发送语义；新增上层 `CallEventPublisher` 防止业务层直接调用 |
 | `im_message.proto` | `SYSTEM_NOTIFY=200` 可复用；`CALL_SIGNAL=206` 已定义但不是 P0 必需 | 保留前者；后者先引用审计，再删除/弃用，变更 proto 必须重新生成并验证 JSON/PB 双 codec |
 
 ### 10.1 旧 API 兼容与下线
 
-旧 API `/create-invite`、`/token`、`/group/create-invite`、`/group/invite`、`/group/leave` 不得静默改变语义。灰度期以 provider 路由适配：旧客户端仅走 Janus，版本达到 `minLiveKitCallVersion` 的新客户端仅走新 API；服务端依据客户端版本和 feature flag 拒绝跨 provider 接听。灰度结束后先返回明确 `CALL_PROVIDER_RETIRED`，观察 30 天再删除旧 endpoint/VO/use case。不得让一个 room 同时被 Janus 和 LiveKit 消费。
+保留的业务 API `/create-invite`、`/group/create-invite`、`/group/leave` 直接升级为 LiveKit 语义；删除通话中追加邀请 `/group/invite`、`/token`、Janus room/turn 字段及所有 `CALL_SIGNAL` 生命周期接口。新增 `/connection` 仅用于已授权参与者重连时重新获取短期 LiveKit Token。不得存在旧 provider 路由或双媒体房间。
 
 ### 10.2 数据库、Outbox 与清理任务
 
 新增 `im_call_event_outbox`：`id,tenant_id,call_id,event_type,event_version,payload,status,retry_count,next_retry_at,created_at,published_at`，唯一键 `(call_id,event_version)`。事务内更新会话/成员/记录并插入 outbox；提交后消费者发送 WebSocket、离线 Push，失败按指数退避，最终告警而非回滚已完成业务状态。
 
-新增或调整枚举而非继续复用模糊的页面状态：`CallMode`、`CallState`、`CallEndReason`、`ParticipantInviteState`、`ParticipantJoinState`。数据库迁移必须为历史 Janus 记录写 `provider=JANUS_LEGACY`，新记录写 `provider=LIVEKIT`；历史记录只读可查，禁止用新 LiveKit API 操作。
+新增或调整枚举而非继续复用模糊的页面状态：`CallMode`、`CallState`、`CallEndReason`、`ParticipantInviteState`、`ParticipantJoinState`。数据库迁移中新字段默认 `provider=LIVEKIT`；历史记录仅用于展示，任何缺失 `livekit_room` 的记录均禁止通过新 API 操作。
 
 后台任务每分钟处理：RINGING 到期、ACCEPTED 长时间未连接、群通话无人加入、终态 room 数据清理。任务是兜底而非唯一正确性来源；create 与 accept 仍必须同步检查并回收过期会话。
 
@@ -291,4 +291,17 @@ GROUP : CREATED -> RINGING -> ACTIVE -> ENDED
 
 ### 10.4 交付文档体系
 
-实施完成必须同时提交以下文件，缺一不可：架构图与端口表、Docker Compose、Kubernetes values、环境变量说明、证书/TURN/防火墙检查、容量估算、监控告警、升级回滚、密钥轮换、故障排查、API/OpenAPI、数据库迁移、Flutter Android/iOS 推送配置、测试报告和第三方许可证清单。客户交付包不得引用开发电脑路径、个人域名、测试账号或共享密钥。
+实施完成必须同时提交以下文件，缺一不可：架构与端口表、Docker Compose、Kubernetes values 模板、环境变量说明、证书/TURN/防火墙检查、容量与监控基线、升级回滚、密钥轮换、故障排查、数据库迁移、Flutter Android/iOS 推送配置和第三方许可证清单。真机矩阵结果随客户发布验收单独归档。客户交付包不得引用开发电脑路径、个人域名、测试账号或共享密钥。
+
+## 11. 2026-08-19 实施收口与外部验收边界
+
+无需外部账号即可完成的代码、数据库、Docker 和构建项已经落地：Janus/CALL_SIGNAL/旧 Flutter 媒体页面已删除；单聊与群聊入口统一进入 LiveKit；业务动作由应用服务事务编排并写 outbox；客户端具备事件版本去重、状态对账、30 秒无应答、15 秒断网收敛、音视频控制、本地/远端画面、Android 全屏来电与 iOS CallKit 适配；LiveKit Compose 使用显式可路由 node IP、内嵌 TURN、Redis、Webhook 和自动网络检查。
+
+以下是发布验收条件，不属于可以在无客户凭据、无实体设备时伪造完成的代码待办：
+
+1. 客户 Firebase 项目、Android `google-services.json` 与 FCM 服务账号；中国大陆无 FCM 设备时还需确定厂商推送聚合策略。
+2. Apple Developer Team、正式 Bundle ID、APNs VoIP `.p8`、Key ID、Team ID、Push Notifications/VoIP entitlement 与真实 iPhone。
+3. 客户正式 RTC/API DNS、TLS/TURN 证书、公网 IP、防火墙和至少两台 Android/iOS 真机。
+4. 按第 8 节执行双向、跨平台、后台/锁屏、弱网、连续 20 次和并发接听验收；结果写入发布测试报告。
+
+缺少上述资料时，前台 WebSocket 来电与 LiveKit 通话可运行；应用被系统终止后的系统来电无法仅靠业务代码保证，这是 Android/iOS 推送平台的客观边界。

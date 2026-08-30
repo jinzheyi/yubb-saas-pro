@@ -24,9 +24,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     this._loadOlderMessagesUseCase, {
     UnifiedCacheManager? unifiedCacheManager,
     String? currentUserId,
-  })  : _unifiedCacheManager = unifiedCacheManager,
-        _currentUserId = currentUserId,
-        super(const ChatTimelineState());
+  }) : _unifiedCacheManager = unifiedCacheManager,
+       _currentUserId = currentUserId,
+       super(const ChatTimelineState());
 
   final LoadChatWindowUseCase _loadChatWindowUseCase;
   final LoadOlderMessagesUseCase _loadOlderMessagesUseCase;
@@ -45,12 +45,14 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       final toCache = state.messages.length > 500
           ? state.messages.sublist(state.messages.length - 500)
           : state.messages;
-      unawaited(_unifiedCacheManager!.setMessages(
-        _currentUserId!,
-        toCache.first.chatId,
-        toCache,
-        state.viewportState,
-      ));
+      unawaited(
+        _unifiedCacheManager.setMessages(
+          _currentUserId,
+          toCache.first.chatId,
+          toCache,
+          state.viewportState,
+        ),
+      );
     }
   }
 
@@ -214,16 +216,31 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     _writeMessagesToCache();
   }
 
+  /// 首帧前恢复已在 L1 中的消息快照。
+  ///
+  /// 缓存列表在登录/点击会话阶段已经预热完毕，此处保持同步，确保聊天页
+  /// 的第一帧就是最近消息，而非等待 Future 完成后的骨架屏。
+  void applyCachedWindow(ChatWindowResult result) {
+    final messages = _sortMessagesBySequence(result.messages);
+    state = state.copyWith(
+      status: ChatTimelineStatus.ready,
+      messages: messages,
+      viewportState: result.viewportState,
+      error: null,
+      quotePreviewCache: _buildQuotePreviewCache(messages),
+    );
+  }
+
   Future<void> loadOlder({required String chatId}) async {
     // 如果没有更多历史消息，直接返回
     if (state.viewportState?.hasMoreBefore == false) {
       return;
     }
-    
+
     state = state.copyWith(status: ChatTimelineStatus.loading, error: null);
     try {
       final viewportState = state.viewportState;
-      
+
       // 优先使用第一条消息的sequence
       String? resolvedBeforeSequence;
       if (state.messages.isNotEmpty) {
@@ -232,15 +249,16 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
           resolvedBeforeSequence = firstMessage.sequence;
         }
       }
-      
+
       // 如果第一条消息没有sequence，使用viewportState的oldestSequence
-      if (resolvedBeforeSequence == null || resolvedBeforeSequence.trim().isEmpty) {
+      if (resolvedBeforeSequence == null ||
+          resolvedBeforeSequence.trim().isEmpty) {
         resolvedBeforeSequence = viewportState?.oldestSequence;
       }
-      
+
       // 如果仍然没有有效的beforeSequence，说明没有更多消息
-      if (resolvedBeforeSequence == null || 
-          resolvedBeforeSequence.trim().isEmpty || 
+      if (resolvedBeforeSequence == null ||
+          resolvedBeforeSequence.trim().isEmpty ||
           resolvedBeforeSequence == '0') {
         state = state.copyWith(
           status: ChatTimelineStatus.ready,
@@ -248,7 +266,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
         );
         return;
       }
-      
+
       final result = await _loadOlderMessagesUseCase(
         chatId: chatId,
         beforeSequence: resolvedBeforeSequence,
@@ -315,19 +333,25 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   /// 轻量级状态确认：仅当存在"发送中"消息时，拉取最近 5 条消息来确认状态
   /// 用于 authSucceeded 事件后，避免无意义的全量窗口拉取
   /// 优化：limit=5 替代默认 30，减少 83% 数据传输量
-  Future<void> confirmPendingMessages({required OpenChatCommand command}) async {
+  Future<void> confirmPendingMessages({
+    required OpenChatCommand command,
+  }) async {
     // 关键优化：如果没有任何"发送中"的 outgoing 消息，直接跳过
     // 这避免了每次 authSucceeded 都拉取窗口的性能浪费
     final hasPending = state.messages.any(
       (m) => m.status == MessageStatus.sending && m.isOutgoing,
     );
     if (!hasPending) {
-      debugPrint('[ChatTimeline] confirmPendingMessages skipped: no pending messages');
+      debugPrint(
+        '[ChatTimeline] confirmPendingMessages skipped: no pending messages',
+      );
       return;
     }
 
-    debugPrint('[ChatTimeline] confirmPendingMessages: ${state.messages.where((m) => m.status == MessageStatus.sending && m.isOutgoing).length} pending messages, limit=5');
-    
+    debugPrint(
+      '[ChatTimeline] confirmPendingMessages: ${state.messages.where((m) => m.status == MessageStatus.sending && m.isOutgoing).length} pending messages, limit=5',
+    );
+
     try {
       // 使用 limit=5 替代默认 30，仅拉取最近 5 条消息确认状态
       final confirmCommand = OpenChatCommand(
@@ -362,9 +386,13 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   /// 重连后拉取离线消息（根治方案）
   /// 与 confirmPendingMessages 不同，此方法不检查是否有"发送中"消息
   /// 而是直接拉取最新消息，确保对方发来的离线消息能被接收
-  Future<void> pullMessagesAfterReconnect({required OpenChatCommand command}) async {
-    debugPrint('[ChatTimeline] pullMessagesAfterReconnect: pulling latest messages after reconnect');
-    
+  Future<void> pullMessagesAfterReconnect({
+    required OpenChatCommand command,
+  }) async {
+    debugPrint(
+      '[ChatTimeline] pullMessagesAfterReconnect: pulling latest messages after reconnect',
+    );
+
     try {
       // 拉取最近 10 条消息（覆盖离线期间可能收到的消息）
       final pullCommand = OpenChatCommand(
@@ -378,7 +406,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       );
       final result = await _loadChatWindowUseCase(pullCommand);
       if (result.messages.isEmpty) {
-        debugPrint('[ChatTimeline] pullMessagesAfterReconnect: no messages returned');
+        debugPrint(
+          '[ChatTimeline] pullMessagesAfterReconnect: no messages returned',
+        );
         return;
       }
 
@@ -393,7 +423,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       );
       // 【缓存写穿】
       _writeMessagesToCache();
-      debugPrint('[ChatTimeline] pullMessagesAfterReconnect: merged ${merged.length} messages');
+      debugPrint(
+        '[ChatTimeline] pullMessagesAfterReconnect: merged ${merged.length} messages',
+      );
     } catch (e) {
       // 静默失败，不影响主流程
       debugPrint('[ChatTimeline] pullMessagesAfterReconnect failed: $e');
@@ -439,7 +471,8 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
     // 如果已经是已读或更高状态，跳过（避免降级）
     final current = state.messages[index];
-    if (current.status == MessageStatus.read || current.status == MessageStatus.sent) {
+    if (current.status == MessageStatus.read ||
+        current.status == MessageStatus.sent) {
       return;
     }
 
@@ -671,7 +704,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
   void clearAll() {
     // 先获取 chatId（清空后拿不到）
-    final chatId = state.messages.isNotEmpty ? state.messages.first.chatId : null;
+    final chatId = state.messages.isNotEmpty
+        ? state.messages.first.chatId
+        : null;
 
     state = state.copyWith(
       status: ChatTimelineStatus.ready,
@@ -679,8 +714,10 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       error: null,
     );
     // 【缓存写穿】清空缓存
-    if (_unifiedCacheManager != null && _currentUserId != null && chatId != null) {
-      unawaited(_unifiedCacheManager!.clearMessages(_currentUserId!, chatId));
+    if (_unifiedCacheManager != null &&
+        _currentUserId != null &&
+        chatId != null) {
+      unawaited(_unifiedCacheManager.clearMessages(_currentUserId, chatId));
     }
   }
 
@@ -735,8 +772,12 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
     // 追加 existing 中未在 incoming 出现的新消息（如刚发送的乐观消息）
     for (final item in existing) {
-      final isInIncoming = item.messageId.isNotEmpty && processedIncomingIds.contains(item.messageId) ||
-          (item.clientMessageId != null && item.clientMessageId!.isNotEmpty && processedIncomingIds.contains(item.clientMessageId));
+      final isInIncoming =
+          item.messageId.isNotEmpty &&
+              processedIncomingIds.contains(item.messageId) ||
+          (item.clientMessageId != null &&
+              item.clientMessageId!.isNotEmpty &&
+              processedIncomingIds.contains(item.clientMessageId));
       if (!isInIncoming) {
         result.add(item);
       }
@@ -785,7 +826,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
           .toList();
     } catch (e) {
       // Isolate 执行失败时降级到主线程执行（容错）
-      debugPrint('[ChatTimeline] Isolate merge failed, fallback to main thread: $e');
+      debugPrint(
+        '[ChatTimeline] Isolate merge failed, fallback to main thread: $e',
+      );
       return _mergeWindowMessages(existing: existing, incoming: incoming);
     }
   }
@@ -825,7 +868,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
     final mergedOlder = <Message>[];
     for (final message in older) {
       final matched = _findMatchedByHash(message, existingIndex);
-      mergedOlder.add(matched == null ? message : _mergeMessage(matched, message));
+      mergedOlder.add(
+        matched == null ? message : _mergeMessage(matched, message),
+      );
     }
 
     // 2. 追加 existing 中未匹配的消息（使用 olderIndex O(1) 查找）
@@ -840,10 +885,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   /// 通过哈希索引表快速查找匹配消息（O(1) 复杂度）
-  Message? _findMatchedByHash(
-    Message target,
-    Map<String, Message> index,
-  ) {
+  Message? _findMatchedByHash(Message target, Map<String, Message> index) {
     if (target.messageId.isNotEmpty) {
       final matched = index[target.messageId];
       if (matched != null && _isSameMessage(matched, target)) {
@@ -1182,10 +1224,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       ),
       locationProvider: _pickNonEmpty(n.locationProvider, p.locationProvider),
       locationPoiId: _pickNonEmpty(n.locationPoiId, p.locationPoiId),
-      quoteMessageId: _pickMeaningfulString(
-        n.quoteMessageId,
-        p.quoteMessageId,
-      ),
+      quoteMessageId: _pickMeaningfulString(n.quoteMessageId, p.quoteMessageId),
       quoteContent: _pickMeaningfulString(n.quoteContent, p.quoteContent),
       quoteSenderName: _pickMeaningfulString(
         n.quoteSenderName,
@@ -1195,10 +1234,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       atUserIds: _preferList(n.atUserIds, p.atUserIds) ?? const <String>[],
       mentions: _preferMentions(n.mentions, p.mentions) ?? const [],
       reeditContent: _pickMeaningfulString(n.reeditContent, p.reeditContent),
-      reeditDeadlineTs: _preferPositive(
-        n.reeditDeadlineTs,
-        p.reeditDeadlineTs,
-      ),
+      reeditDeadlineTs: _preferPositive(n.reeditDeadlineTs, p.reeditDeadlineTs),
       systemEventKey: _pickMeaningfulString(n.systemEventKey, p.systemEventKey),
     );
   }
@@ -1250,7 +1286,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
   /// 引用链预计算：为所有有引用的消息构建引用链缓存（含完整的 senderName + preview）
   /// 在消息合并后调用，避免在 build 热路径中重复遍历引用链
-  Map<String, List<QuotePreviewEntry>> _buildQuotePreviewCache(List<Message> messages) {
+  Map<String, List<QuotePreviewEntry>> _buildQuotePreviewCache(
+    List<Message> messages,
+  ) {
     // 构建消息 ID 到消息的索引表 O(1) 查找
     final messageIndex = <String, Message>{};
     for (final msg in messages) {

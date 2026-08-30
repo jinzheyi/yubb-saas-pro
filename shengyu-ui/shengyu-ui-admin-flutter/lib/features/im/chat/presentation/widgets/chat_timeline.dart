@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/group_call_record_text.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/core/i18n/system_message_renderer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
@@ -74,6 +75,7 @@ class ChatTimeline extends StatelessWidget {
   final String Function(Message message)? outgoingFooterLabelBuilder;
   final bool showSenderNamesForIncoming;
   final String? watermarkText;
+
   /// 引用链预计算缓存，由 controller 在消息合并时自动更新
   /// 渲染时直接读取缓存，无需在 build 中遍历引用链
   final Map<String, List<QuotePreviewEntry>> quotePreviewCache;
@@ -140,10 +142,14 @@ class ChatTimeline extends StatelessWidget {
                   return KeyedSubtree(
                     key: messageItemKeys?[renderKey],
                     child: KeyedSubtree(
-                      key: ValueKey<String>(_messageStableKey(message, messageIndex2)),
+                      key: ValueKey<String>(
+                        _messageStableKey(message, messageIndex2),
+                      ),
                       child: _ChatMessageItem(
                         message: message,
-                        quotePreviewChain: quotePreviewCache[message.messageId] ?? const <QuotePreviewEntry>[],
+                        quotePreviewChain:
+                            quotePreviewCache[message.messageId] ??
+                            const <QuotePreviewEntry>[],
                         strings: strings,
                         isSelected: isSelected,
                         isHighlighted: isHighlighted,
@@ -163,7 +169,8 @@ class ChatTimeline extends StatelessWidget {
                         onOpenReadReceipt: onOpenReadReceipt,
                         onLongPressMessage: onLongPressMessage,
                         onToggleSelection: onToggleSelection,
-                        activePlayingVoiceMessageId: activePlayingVoiceMessageId,
+                        activePlayingVoiceMessageId:
+                            activePlayingVoiceMessageId,
                         activePausedVoiceMessageId: activePausedVoiceMessageId,
                         activeVoicePlaybackProgressMs:
                             activeVoicePlaybackProgressMs,
@@ -266,6 +273,7 @@ class _ChatMessageItem extends StatelessWidget {
   });
 
   final Message message;
+
   /// 预计算的引用链列表，由 controller 在消息合并时自动计算，build 中直接使用
   final List<QuotePreviewEntry> quotePreviewChain;
   final AppLocalizations strings;
@@ -360,10 +368,7 @@ class _ChatMessageItem extends StatelessWidget {
 
     Widget messageRow;
     if (message.isOutgoing) {
-      messageRow = _OutgoingMessageLayout(
-        avatar: avatar,
-        bubble: bubble,
-      );
+      messageRow = _OutgoingMessageLayout(avatar: avatar, bubble: bubble);
     } else {
       messageRow = _IncomingMessageLayout(
         avatar: avatar,
@@ -398,10 +403,12 @@ class _ChatMessageItem extends StatelessWidget {
   }
 
   _VoicePlaybackState _computeVoiceState() {
-    final isPlaying = activePlayingVoiceMessageId != null &&
+    final isPlaying =
+        activePlayingVoiceMessageId != null &&
         (message.messageId == activePlayingVoiceMessageId ||
             message.clientMessageId == activePlayingVoiceMessageId);
-    final isPaused = activePausedVoiceMessageId != null &&
+    final isPaused =
+        activePausedVoiceMessageId != null &&
         (message.messageId == activePausedVoiceMessageId ||
             message.clientMessageId == activePausedVoiceMessageId);
     return _VoicePlaybackState(
@@ -542,10 +549,7 @@ class _ChatMessageBubble extends StatelessWidget {
 
 /// 出消息布局（右侧头像 + 气泡）
 class _OutgoingMessageLayout extends StatelessWidget {
-  const _OutgoingMessageLayout({
-    required this.avatar,
-    required this.bubble,
-  });
+  const _OutgoingMessageLayout({required this.avatar, required this.bubble});
 
   final Widget avatar;
   final Widget bubble;
@@ -619,12 +623,12 @@ String _resolveSystemMessageText(Message message, BuildContext context) {
   if (content.isNotEmpty && !content.startsWith('im.system.')) {
     return content;
   }
-  
+
   // Use SystemMessageRenderer for personalized rendering with params
-  final systemEventKey = content.startsWith('im.system.') 
-      ? content 
+  final systemEventKey = content.startsWith('im.system.')
+      ? content
       : message.extra.systemEventKey;
-  
+
   return SystemMessageRenderer.render(
     context,
     systemEventKey,
@@ -787,7 +791,10 @@ class _SystemMessage extends StatelessWidget {
           children: [
             Flexible(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0x0F1F2329),
                   borderRadius: BorderRadius.circular(10),
@@ -850,7 +857,6 @@ class _SystemMessage extends StatelessWidget {
 /// 参考微信群聊通话记录显示逻辑：
 /// - 发起通话："{发起人}发起了{语音/视频}通话"
 /// - 通话结束："{语音/视频}通话已经结束"
-/// - 邀请成员："{发起人}邀请{成员1}、{成员2}加入了群聊"
 /// 样式：居中显示，灰色文字，无气泡背景
 class _CallRecordCenteredMessage extends StatelessWidget {
   const _CallRecordCenteredMessage({required this.message});
@@ -890,11 +896,21 @@ class _CallRecordCenteredMessage extends StatelessWidget {
 
     // 群通话特殊处理
     if (isGroupCall) {
-      return _buildGroupCallText(callerName, callTypeText, callStatus, duration);
+      return groupCallRecordText(
+        callerName: callerName,
+        isVideo: (extra.callType ?? 1) == 2,
+        status: callStatus,
+        durationSeconds: duration,
+      );
     }
 
     // 1v1 通话（虽然 1v1 走气泡流程，但保留此方法以防万一）
-    return _buildOneToOneCallText(callerName, callTypeText, callStatus, duration);
+    return _buildOneToOneCallText(
+      callerName,
+      callTypeText,
+      callStatus,
+      duration,
+    );
   }
 
   /// 构建1v1通话展示文本
@@ -916,35 +932,6 @@ class _CallRecordCenteredMessage extends StatelessWidget {
         return '对方忙线中';
       case 5: // 已取消
         return '$callTypeText通话已取消';
-      default:
-        return '$callTypeText通话';
-    }
-  }
-
-  /// 构建群通话展示文本
-  String _buildGroupCallText(
-    String callerName,
-    String callTypeText,
-    int callStatus,
-    int duration,
-  ) {
-    switch (callStatus) {
-      case 1: // 已接通 - 显示通话时长
-        final durationText = _formatDuration(duration);
-        return '$callTypeText通话时长 $durationText';
-      case 2: // 未接听
-      case 3: // 已拒绝
-      case 5: // 已取消
-        // 显示邀请信息
-        final inviteeNames = message.extra.inviteeNames;
-        if (inviteeNames != null && inviteeNames.isNotEmpty) {
-          final inviteeList =
-              inviteeNames.map((name) => '"$name"').join('、');
-          return '"$callerName"邀请你和$inviteeList加入了群聊';
-        }
-        return '"$callerName"发起了$callTypeText通话';
-      case 4: // 忙线
-        return '对方忙线中';
       default:
         return '$callTypeText通话';
     }
@@ -978,7 +965,7 @@ class _LoadOlderBar extends StatelessWidget {
     if (onTap == null) {
       return const SizedBox.shrink();
     }
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Center(
@@ -1036,7 +1023,8 @@ class _ChatWatermarkLayer extends StatelessWidget {
   }
 
   /// 缓存水印子组件，避免每次 build 都重新创建 12 个 Text 组件
-  static final Map<String, List<Widget>> _cachedItems = <String, List<Widget>>{};
+  static final Map<String, List<Widget>> _cachedItems =
+      <String, List<Widget>>{};
 
   List<Widget> _buildWatermarkItems(String text) {
     // 如果该文本已缓存，直接返回缓存结果

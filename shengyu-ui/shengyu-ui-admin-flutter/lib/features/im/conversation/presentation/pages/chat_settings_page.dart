@@ -49,7 +49,9 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     // 精确订阅：仅需要 conversations 字段
-    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final conversations = ref.watch(
+      conversationListControllerProvider.select((state) => state.conversations),
+    );
     final conversation = conversations
         .where((item) => item.chatId == widget.args.chatId)
         .firstOrNull;
@@ -80,7 +82,11 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.chevron_left_rounded, size: 22, color: ThemeColors.headerIcon(context)),
+          icon: Icon(
+            Icons.chevron_left_rounded,
+            size: 22,
+            color: ThemeColors.headerIcon(context),
+          ),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -96,12 +102,17 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
               children: [
                 if (isGroupChat)
                   GroupAvatarWidget.fromMembers(
+                    avatarUrl: conversation?.targetAvatar,
+                    fallbackName: displayName,
+                    fallbackSeed: targetId ?? widget.args.chatId,
                     members: (conversation?.groupMemberItems ?? const [])
-                        .map((item) => GroupAvatarMember(
-                              userId: item.userId ?? '',
-                              name: item.name ?? '',
-                              avatarUrl: item.avatar,
-                            ))
+                        .map(
+                          (item) => GroupAvatarMember(
+                            userId: item.userId ?? '',
+                            name: item.name ?? '',
+                            avatarUrl: item.avatar,
+                          ),
+                        )
                         .toList(),
                     size: 64,
                     borderRadius: 12,
@@ -262,9 +273,9 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       setState(() {
         _pinnedOverride = !value;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.operationFailed(error.toString()))),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -312,9 +323,9 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       setState(() {
         _mutedOverride = !value;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.operationFailed(error.toString()))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.operationFailed(error.toString()))),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -361,9 +372,14 @@ class _ChatSettingsPageState extends ConsumerState<ChatSettingsPage> {
       await ref
           .read(messageRepositoryProvider)
           .clearConversationHistory(chatId: widget.args.chatId);
-      final currentChatId = ref.read(chatControllerProvider(widget.args.chatId)).entryArgs.chatId;
+      final currentChatId = ref
+          .read(chatControllerProvider(widget.args.chatId))
+          .entryArgs
+          .chatId;
       if (currentChatId == widget.args.chatId) {
-        ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).clearAll();
+        ref
+            .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
+            .clearAll();
       }
       ref
           .read(conversationListControllerProvider.notifier)
@@ -448,7 +464,9 @@ class _DangerTile extends StatelessWidget {
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: busy ? ThemeColors.textSecondary(context) : ThemeColors.errorText(context),
+          color: busy
+              ? ThemeColors.textSecondary(context)
+              : ThemeColors.errorText(context),
         ),
       ),
     );

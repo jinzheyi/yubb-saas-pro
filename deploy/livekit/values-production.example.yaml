@@ -1,0 +1,37 @@
+# 官方 livekit/livekit-server Helm chart 的客户生产模板。
+# 真实密钥、Redis 密码与 TLS Secret 必须由客户密钥系统注入，不得提交本文件的替换值。
+replicaCount: 2
+
+livekit:
+  port: 7880
+  rtc:
+    tcp_port: 7881
+    port_range_start: 50000
+    port_range_end: 50100
+    use_external_ip: true
+  redis:
+    address: redis.customer.svc.cluster.local:6379
+    password: replace-via-secret-management
+  keys:
+    replace-customer-api-key: replace-via-secret-management
+  room:
+    empty_timeout: 30
+    departure_timeout: 10
+  turn:
+    enabled: true
+    domain: turn.customer.example.com
+    udp_port: 3478
+    tls_port: 5349
+    relay_range_start: 49160
+    relay_range_end: 49200
+    secretName: livekit-turn-tls
+  webhook:
+    api_key: replace-customer-api-key
+    urls:
+      - https://api.customer.example.com/app-api/system/im/call/livekit/webhook
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60

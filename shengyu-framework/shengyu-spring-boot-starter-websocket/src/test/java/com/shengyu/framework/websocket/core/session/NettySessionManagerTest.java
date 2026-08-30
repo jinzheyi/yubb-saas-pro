@@ -10,7 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -280,5 +286,57 @@ class NettySessionManagerTest {
         NettySession found = sessionManager.getSessionByUserIdAndDeviceType(userId, deviceType);
         assertNotNull(found);
         assertEquals("channel-2", found.getChannelId());
+    }
+
+    @Test
+    @DisplayName("并发认证时租约索引不会导致会话注册失败")
+    void testConcurrentSessionRegistration() throws Exception {
+        int sessionCount = 32;
+        long sharedLeaseExpiry = System.currentTimeMillis() + 60_000;
+        ExecutorService executor = Executors.newFixedThreadPool(sessionCount);
+        CountDownLatch ready = new CountDownLatch(sessionCount);
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        List<Long> userIds = new ArrayList<>();
+
+        try {
+            for (int index = 0; index < sessionCount; index++) {
+                long userId = 10_000L + index;
+                userIds.add(userId);
+                String channelId = "concurrent-channel-" + index;
+                executor.submit(() -> {
+                    Channel channel = mock(Channel.class);
+                    ChannelId id = mock(ChannelId.class);
+                    when(channel.id()).thenReturn(id);
+                    when(id.asShortText()).thenReturn(channelId);
+                    when(channel.isActive()).thenReturn(true);
+                    try {
+                        ready.countDown();
+                        assertTrue(start.await(5, TimeUnit.SECONDS));
+                        sessionManager.addSession(NettySession.builder()
+                                .channel(channel)
+                                .userId(userId)
+                                .tenantId(1L)
+                                .deviceType(3)
+                                .deviceId("device-" + userId)
+                                .leaseExpireTime(sharedLeaseExpiry)
+                                .build());
+                    } catch (Throwable error) {
+                        failure.compareAndSet(null, error);
+                    }
+                });
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            executor.shutdown();
+            assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertNull(failure.get());
+        for (Long userId : userIds) {
+            assertEquals(1, sessionManager.getSessionsByUserId(userId).size());
+        }
     }
 }

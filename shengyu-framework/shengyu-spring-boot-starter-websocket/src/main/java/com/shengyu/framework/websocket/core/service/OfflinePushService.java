@@ -2,6 +2,8 @@ package com.shengyu.framework.websocket.core.service;
 
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 
+import java.util.Map;
+
 /**
  * 离线推送服务接口
  * 
@@ -47,6 +49,14 @@ public interface OfflinePushService {
      * @return 是否推送成功
      */
     boolean pushSystemNotify(Long userId, String title, String content);
+
+    /**
+     * 高优先级来电 data push。实现方必须原样携带最小业务字段，严禁加入 RTC Token。
+     * 默认明确返回 NOT_CONFIGURED，避免未集成推送平台时伪报成功或无限重试。
+     */
+    default OfflineCallPushResult pushCallInvite(Long userId, Map<String, String> data) {
+        return OfflineCallPushResult.NOT_CONFIGURED;
+    }
 
     /**
      * 检查用户是否启用离线推送

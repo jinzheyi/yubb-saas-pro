@@ -5,9 +5,11 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   file_selector_windows
+  firebase_core
   flutter_secure_storage_windows
   flutter_webrtc
   geolocator_windows
+  livekit_client
   permission_handler_windows
   record_windows
   sqlite3_flutter_libs

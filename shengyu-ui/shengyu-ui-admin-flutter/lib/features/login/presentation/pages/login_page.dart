@@ -85,229 +85,239 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                 ),
                 Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '圣钰',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    color: const Color(0xFF246BFD),
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            strings.appName,
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            strings.loginIntro,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.white70),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 18),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 12),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                18,
-                                16,
-                                16,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Center(
-                                          child: Text(
-                                            strings.usernamePasswordLogin,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  color: const Color(
-                                                    0xFF246BFD,
-                                                  ),
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Center(
-                                          child: Text(
-                                            strings.phoneLogin,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 18),
-                                  TextField(
-                                    controller: _usernameController,
-                                    onChanged: ref
-                                        .read(loginControllerProvider.notifier)
-                                        .updateUsername,
-                                    decoration: InputDecoration(
-                                      labelText: strings.usernameLabel,
-                                      prefixIcon: const Padding(
-                                        padding: EdgeInsets.all(12),
-                                        child: AppIcon(
-                                          AppIconKind.personOutline,
-                                          size: 18,
-                                          color: Color(0xFF98A1B2),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextField(
-                                    controller: _passwordController,
-                                    obscureText: true,
-                                    onChanged: ref
-                                        .read(loginControllerProvider.notifier)
-                                        .updatePassword,
-                                    decoration: InputDecoration(
-                                      labelText: strings.passwordLabel,
-                                      prefixIcon: const Padding(
-                                        padding: EdgeInsets.all(12),
-                                        child: AppIcon(
-                                          AppIconKind.folder,
-                                          size: 18,
-                                          color: Color(0xFF98A1B2),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    alignment: WrapAlignment.center,
-                                    children: [
-                                      _DebugAccountChip(
-                                        label: _debugUsername,
-                                        onTap: () => _applyDebugAccount(
-                                          _debugUsername,
-                                          ref,
-                                        ),
-                                      ),
-                                      _DebugAccountChip(
-                                        label: _debugUsername2,
-                                        onTap: () => _applyDebugAccount(
-                                          _debugUsername2,
-                                          ref,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    '测试环境密码已临时固定为 123456',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF98A1B2),
-                                    ),
-                                  ),
-                                  if (state.error != null) ...[
-                                    const SizedBox(height: 12),
-                                    AppErrorView(
-                                      error: state.error,
-                                      onRetry: null,
-                                    ),
-                                  ],
-                                  const SizedBox(height: 18),
-                                  FilledButton(
-                                    onPressed:
-                                        state.status ==
-                                            LoginPageStatus.submitting
-                                        ? null
-                                        : () async {
-                                            await ref
-                                                .read(
-                                                  loginControllerProvider
-                                                      .notifier,
-                                                )
-                                                .submit(locale: locale);
-                                            if (!context.mounted) {
-                                              return;
-                                            }
-                                            if (ref
-                                                    .read(
-                                                      loginControllerProvider,
-                                                    )
-                                                    .error ==
-                                                null) {
-                                              context.goNamed(
-                                                RouteNames.conversations,
-                                              );
-                                            }
-                                          },
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                    ),
-                                    child: Text(strings.loginAction),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '圣钰',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: const Color(0xFF246BFD),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 18),
+                            Text(
+                              strings.appName,
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              strings.loginIntro,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: Colors.white70),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 18),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  18,
+                                  16,
+                                  16,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              strings.usernamePasswordLogin,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    color: const Color(
+                                                      0xFF246BFD,
+                                                    ),
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              strings.phoneLogin,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 18),
+                                    TextField(
+                                      controller: _usernameController,
+                                      onChanged: ref
+                                          .read(
+                                            loginControllerProvider.notifier,
+                                          )
+                                          .updateUsername,
+                                      decoration: InputDecoration(
+                                        labelText: strings.usernameLabel,
+                                        prefixIcon: const Padding(
+                                          padding: EdgeInsets.all(12),
+                                          child: AppIcon(
+                                            AppIconKind.personOutline,
+                                            size: 18,
+                                            color: Color(0xFF98A1B2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: _passwordController,
+                                      obscureText: true,
+                                      onChanged: ref
+                                          .read(
+                                            loginControllerProvider.notifier,
+                                          )
+                                          .updatePassword,
+                                      decoration: InputDecoration(
+                                        labelText: strings.passwordLabel,
+                                        prefixIcon: const Padding(
+                                          padding: EdgeInsets.all(12),
+                                          child: AppIcon(
+                                            AppIconKind.folder,
+                                            size: 18,
+                                            color: Color(0xFF98A1B2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      alignment: WrapAlignment.center,
+                                      children: [
+                                        _DebugAccountChip(
+                                          label: _debugUsername,
+                                          onTap: () => _applyDebugAccount(
+                                            _debugUsername,
+                                            ref,
+                                          ),
+                                        ),
+                                        _DebugAccountChip(
+                                          label: _debugUsername2,
+                                          onTap: () => _applyDebugAccount(
+                                            _debugUsername2,
+                                            ref,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      '测试环境密码已临时固定为 123456',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF98A1B2),
+                                      ),
+                                    ),
+                                    if (state.error != null) ...[
+                                      const SizedBox(height: 12),
+                                      AppErrorView(
+                                        error: state.error,
+                                        onRetry: null,
+                                      ),
+                                    ],
+                                    const SizedBox(height: 18),
+                                    FilledButton(
+                                      onPressed:
+                                          state.status ==
+                                              LoginPageStatus.submitting
+                                          ? null
+                                          : () async {
+                                              await ref
+                                                  .read(
+                                                    loginControllerProvider
+                                                        .notifier,
+                                                  )
+                                                  .submit(locale: locale);
+                                              if (!context.mounted) {
+                                                return;
+                                              }
+                                              if (ref
+                                                      .read(
+                                                        loginControllerProvider,
+                                                      )
+                                                      .error ==
+                                                  null) {
+                                                context.goNamed(
+                                                  RouteNames.conversations,
+                                                );
+                                              }
+                                            },
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(strings.loginAction),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

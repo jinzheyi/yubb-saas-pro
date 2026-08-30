@@ -25,23 +25,35 @@ abstract final class AppConfig {
   /// mDNS (.local) 域名在部分安卓机型（如小米 HyperOS）上解析不稳定，
   /// 建议生产环境使用 HTTPS 域名，开发环境使用 IP 直连。
   /// TODO: 生产环境替换为正式 HTTPS 域名，如 https://im.yourdomain.com/app-api
-  static const String apiBaseUrl = 'http://MacBook-Pro-3.local:48080/app-api';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://MacBook-Pro-3.local:48080/app-api',
+  );
 
   /// IM WebSocket 地址。
   ///
   /// 同上，生产环境使用 wss:// 协议 + 正式域名。
   /// TODO: 生产环境替换为 wss://im.yourdomain.com/ws
-  static const String socketUrl = 'ws://MacBook-Pro-3.local:9000/ws';
+  static const String socketUrl = String.fromEnvironment(
+    'SOCKET_URL',
+    defaultValue: 'ws://MacBook-Pro-3.local:9000/ws',
+  );
 
   /// 网络延迟探测目标地址（Web 平台使用 HTTP 请求）。
   ///
   /// 开发环境默认使用 API 服务器地址（HTTP 方式探测，避免 DNS 解析失败），
   /// 生产环境可替换为 CDN 节点、健康检查端点或外部探测服务。
   /// 如果不需要网络探测，可设置为空字符串，此时探测直接返回 9999ms。
-  static const String networkProbeUrl = 'http://MacBook-Pro-3.local:48080/app-api';
+  static const String networkProbeUrl = String.fromEnvironment(
+    'NETWORK_PROBE_URL',
+    defaultValue: 'http://MacBook-Pro-3.local:48080/app-api',
+  );
 
   /// 网络延迟探测目标主机（非 Web 平台使用 Socket 连接）。
-  static const String networkProbeHost = 'MacBook-Pro-3.local';
+  static const String networkProbeHost = String.fromEnvironment(
+    'NETWORK_PROBE_HOST',
+    defaultValue: 'MacBook-Pro-3.local',
+  );
 
   /// 网络延迟探测目标端口（非 Web 平台使用 Socket 连接）。
   static const int networkProbePort = 48080;
@@ -102,24 +114,6 @@ abstract final class AppConfig {
   );
 
   /// ===== 通话相关配置 =====
-
-  /// Janus WebSocket 地址。
-  ///
-  /// 用于 WebRTC 媒体流传输的信令通道。
-  /// TODO: 生产环境替换为 wss://janus.yourdomain.com/ws
-  static const String janusWsUrl = 'ws://MacBook-Pro-3.local:8188';
-
-  /// Janus HTTP API 地址。
-  ///
-  /// 用于 Janus 房间管理、Token 生成等操作。
-  /// TODO: 生产环境替换为 https://janus.yourdomain.com
-  static const String janusHttpUrl = 'http://MacBook-Pro-3.local:8088';
-
-  /// Janus API Secret。
-  ///
-  /// 用于生成 Janus Token，客户端加入房间时需要。
-  /// TODO: 生产环境从环境变量或配置文件读取，不要硬编码
-  static const String janusApiSecret = 'shengyu-janus-api-secret-2026';
 
   /// 通话超时时间。
   ///

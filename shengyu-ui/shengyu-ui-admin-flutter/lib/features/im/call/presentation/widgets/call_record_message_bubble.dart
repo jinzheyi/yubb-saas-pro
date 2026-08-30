@@ -34,58 +34,53 @@ class CallRecordMessageBubble extends StatelessWidget {
     final bubbleColor = isOutgoing
         ? const Color(0xFFD2E3FC) // 发送方蓝色气泡
         : ThemeColors.chatBubbleIncoming(context); // 接收方自适应颜色
-    
+
     final textColor = isOutgoing
         ? const Color(0xFF1F2329) // 发送方深色文字
         : ThemeColors.chatBubbleIncomingText(context); // 接收方自适应文字颜色
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        constraints: const BoxConstraints(maxWidth: 276),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          // 接收方添加边框和阴影，与普通消息一致
-          border: isOutgoing ? null : Border.all(color: ThemeColors.divider(context)),
-          boxShadow: isOutgoing ? null : const [
-            BoxShadow(
-              color: Color(0x0A162033),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-          // 使用与普通消息一致的圆角
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isOutgoing ? 12 : 5),
-            bottomRight: Radius.circular(isOutgoing ? 5 : 12),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _callIcon,
-              size: 16,
-              color: textColor,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                _buildDisplayText(),
-                style: TextStyle(
-                  fontSize: 15,
-                  color: textColor,
-                  height: 1.5,
+    final bubble = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      constraints: const BoxConstraints(maxWidth: 276),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        // 接收方添加边框和阴影，与普通消息一致
+        border: isOutgoing
+            ? null
+            : Border.all(color: ThemeColors.divider(context)),
+        boxShadow: isOutgoing
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0A162033),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
                 ),
-              ),
-            ),
-          ],
+              ],
+        // 使用与普通消息一致的圆角
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(12),
+          topRight: const Radius.circular(12),
+          bottomLeft: Radius.circular(isOutgoing ? 12 : 5),
+          bottomRight: Radius.circular(isOutgoing ? 5 : 12),
         ),
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_callIcon, size: 16, color: textColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              _buildDisplayText(),
+              style: TextStyle(fontSize: 15, color: textColor, height: 1.5),
+            ),
+          ),
+        ],
+      ),
     );
+    if (onTap == null) return bubble;
+    return GestureDetector(onTap: onTap, child: bubble);
   }
 
   /// 构建展示文本（微信风格）
@@ -111,16 +106,16 @@ class CallRecordMessageBubble extends StatelessWidget {
         return '$callTypeText通话时长 $duration';
       case CallStatus.missed:
         // 未接听
-        return isOutgoing ? '未接听' : '$callerName发起了$callTypeText通话';
+        return isOutgoing ? '对方无应答' : '未接听';
       case CallStatus.rejected:
         // 已拒绝
-        return isOutgoing ? '$callTypeText通话已取消' : '$callerName发起了$callTypeText通话';
+        return isOutgoing ? '对方已拒绝' : '已拒绝';
       case CallStatus.busy:
         // 忙线
-        return '对方忙线中';
+        return '对方正在通话中';
       case CallStatus.cancelled:
         // 已取消
-        return '$callTypeText通话已取消';
+        return isOutgoing ? '已取消' : '对方已取消';
     }
   }
 
@@ -132,14 +127,11 @@ class CallRecordMessageBubble extends StatelessWidget {
         return '$callTypeText通话时长 $duration';
       case CallStatus.missed:
       case CallStatus.rejected:
-      case CallStatus.cancelled:
-        if (message.inviteeNames.isNotEmpty) {
-          final inviteeList = message.inviteeNames.map((name) => '"$name"').join('、');
-          return '"$callerName"邀请你和$inviteeList加入了群聊';
-        }
         return '"$callerName"发起了$callTypeText通话';
+      case CallStatus.cancelled:
+        return '群$callTypeText通话已取消';
       case CallStatus.busy:
-        return '对方忙线中';
+        return '所选成员正在通话中';
     }
   }
 

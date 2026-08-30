@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/coordinators/conversation_sync_coordinator.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/results/conversation_sync_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/usecases/load_conversation_list_use_case.dart';
@@ -16,6 +17,9 @@ import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+
   late ConversationListController controller;
   late _FakeConversationRepository repository;
   late ActiveConversationService activeConversationService;
@@ -28,7 +32,7 @@ void main() {
     final memoryCache = MemoryCacheManager();
     final diskCache = DiskCacheManager();
     cursorVersionStore = CursorVersionStore();
-    unifiedCacheManager = UnifiedCacheManager(
+    unifiedCacheManager = _MemoryOnlyCacheManager(
       memoryCache: memoryCache,
       diskCache: diskCache,
       cursorVersionStore: cursorVersionStore,
@@ -137,28 +141,33 @@ void main() {
     expect(repository.syncCallCount, 0);
   });
 
-  test('coordinator uses incremental sync after cursor is established', () async {
-    repository.syncResult = ConversationSyncResult(
-      items: <Conversation>[_buildConversation(chatId: 'chat-2')],
-      cursorVersion: '42',
-      hasMore: false,
-    );
-    final coordinator = ConversationSyncCoordinator(
-      _FakeLoadConversationListUseCase(repository),
-      _FakeSyncConversationsIncrementallyUseCase(repository),
-    );
+  test(
+    'coordinator uses incremental sync after cursor is established',
+    () async {
+      repository.syncResult = ConversationSyncResult(
+        items: <Conversation>[_buildConversation(chatId: 'chat-2')],
+        cursorVersion: '42',
+        hasMore: false,
+      );
+      final coordinator = ConversationSyncCoordinator(
+        _FakeLoadConversationListUseCase(repository),
+        _FakeSyncConversationsIncrementallyUseCase(repository),
+      );
 
-    final result = await coordinator.bootstrap(cursorVersion: '41');
+      final result = await coordinator.bootstrap(cursorVersion: '41');
 
-    expect(result.items.single.chatId, 'chat-2');
-    expect(repository.syncCallCount, 1);
-    expect(repository.listCallCount, 0);
-  });
+      expect(result.items.single.chatId, 'chat-2');
+      expect(repository.syncCallCount, 1);
+      expect(repository.listCallCount, 0);
+    },
+  );
 
   test(
     'incremental sync keeps current conversations when response is empty',
     () async {
-      repository.listResult = <Conversation>[_buildConversation(chatId: 'chat-1')];
+      repository.listResult = <Conversation>[
+        _buildConversation(chatId: 'chat-1'),
+      ];
       await controller.load();
 
       repository.syncResult = const ConversationSyncResult(
@@ -202,6 +211,31 @@ void main() {
       expect(controller.state.conversations.single.avatarBg, '#abcdef');
     },
   );
+}
+
+/// 控制器单测只验证内存态和同步逻辑；持久化缓存由独立缓存测试覆盖。
+/// 这样不会把 Drift/path_provider 等宿主插件依赖带入纯 Dart 测试。
+class _MemoryOnlyCacheManager extends UnifiedCacheManager {
+  _MemoryOnlyCacheManager({
+    required MemoryCacheManager memoryCache,
+    required DiskCacheManager diskCache,
+    required CursorVersionStore cursorVersionStore,
+  }) : super(
+         memoryCache: memoryCache,
+         diskCache: diskCache,
+         cursorVersionStore: cursorVersionStore,
+       );
+
+  @override
+  Future<void> setConversationList(
+    String userId,
+    List<Conversation> conversations,
+    String cursorVersion,
+  ) async {}
+
+  @override
+  Future<ConversationCacheResult?> getConversationList(String userId) async =>
+      null;
 }
 
 class _FakeLoadConversationListUseCase extends LoadConversationListUseCase {

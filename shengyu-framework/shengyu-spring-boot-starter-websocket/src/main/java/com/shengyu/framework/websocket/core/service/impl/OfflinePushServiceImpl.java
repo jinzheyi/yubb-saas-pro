@@ -1,6 +1,7 @@
 package com.shengyu.framework.websocket.core.service.impl;
 
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.service.OfflineCallPushResult;
 import com.shengyu.framework.websocket.core.service.OfflinePushService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 离线推送服务默认实现
@@ -41,6 +44,7 @@ public class OfflinePushServiceImpl implements OfflinePushService {
 
     // 缓存过期时间
     private static final Duration PUSH_CONFIG_TTL = Duration.ofDays(30);
+    private final AtomicBoolean missingCallPushWarningLogged = new AtomicBoolean();
 
     @Override
     public boolean pushOfflineMessage(Long userId, ImMessage message) {
@@ -117,6 +121,14 @@ public class OfflinePushServiceImpl implements OfflinePushService {
             log.error("[OfflinePush] 推送系统通知失败: userId={}, title={}", userId, title, e);
             return false;
         }
+    }
+
+    @Override
+    public OfflineCallPushResult pushCallInvite(Long userId, Map<String, String> data) {
+        if (missingCallPushWarningLogged.compareAndSet(false, true)) {
+            log.warn("[OfflinePush] 未配置 APNs/FCM/厂商推送实现；离线来电将标记 SKIPPED 且不会重试");
+        }
+        return OfflineCallPushResult.NOT_CONFIGURED;
     }
 
     @Override

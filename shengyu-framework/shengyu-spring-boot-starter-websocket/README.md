@@ -976,74 +976,12 @@ public class TypingService {
 }
 ```
 
-### 5.6 语音/视频通话信令
+### 5.6 音视频通话业务事件
 
-```java
-@Service
-public class CallService {
-    
-    @Resource
-    private NettyMessageSender messageSender;
-    
-    /**
-     * 发起语音通话
-     */
-    public void initiateVoiceCall(Long callerId, Long calleeId, String roomId) {
-        CallSignalMessage signal = CallSignalMessage.newBuilder()
-            .setCallType("VOICE")
-            .setAction("INVITE")
-            .setCallerId(callerId)
-            .setCalleeId(calleeId)
-            .setRoomId(roomId)
-            .build();
-        
-        messageSender.sendToUser(calleeId, MessageType.CALL_SIGNAL, signal);
-    }
-    
-    /**
-     * 接受通话
-     */
-    public void acceptCall(Long calleeId, Long callerId, String roomId) {
-        CallSignalMessage signal = CallSignalMessage.newBuilder()
-            .setCallType("VOICE")
-            .setAction("ACCEPT")
-            .setCallerId(callerId)
-            .setCalleeId(calleeId)
-            .setRoomId(roomId)
-            .build();
-        
-        messageSender.sendToUser(callerId, MessageType.CALL_SIGNAL, signal);
-    }
-    
-    /**
-     * 拒绝通话
-     */
-    public void rejectCall(Long calleeId, Long callerId, String reason) {
-        CallSignalMessage signal = CallSignalMessage.newBuilder()
-            .setCallType("VOICE")
-            .setAction("REJECT")
-            .setCallerId(callerId)
-            .setCalleeId(calleeId)
-            .setReason(reason)
-            .build();
-        
-        messageSender.sendToUser(callerId, MessageType.CALL_SIGNAL, signal);
-    }
-    
-    /**
-     * 挂断通话
-     */
-    public void hangupCall(Long userId, Long targetId, String roomId) {
-        CallSignalMessage signal = CallSignalMessage.newBuilder()
-            .setCallType("VOICE")
-            .setAction("HANGUP")
-            .setRoomId(roomId)
-            .build();
-        
-        messageSender.sendToUser(targetId, MessageType.CALL_SIGNAL, signal);
-    }
-}
-```
+通话生命周期只能通过业务 REST API 进入，由业务事务写入 outbox，再使用
+`SYSTEM_NOTIFY` 向相关用户下发只读事件。本 WebSocket 中间层不接收通话命令，
+不定义 `CALL_SIGNAL`，也不传输 SDP、ICE 或媒体 Token。媒体信令与 WebRTC 由
+LiveKit SDK 和私有化 LiveKit Server 独立承担。
 
 ## 六、文档
 

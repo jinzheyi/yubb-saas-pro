@@ -43,11 +43,11 @@ class ChatController extends StateNotifier<ChatPageState> {
     SocketOutboundSender? socketOutboundSender,
     UnifiedCacheManager? unifiedCacheManager,
     String? currentUserId,
-  })  : _socketClient = socketClient,
-        _socketOutboundSender = socketOutboundSender,
-        _unifiedCacheManager = unifiedCacheManager,
-        _currentUserId = currentUserId,
-        super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
+  }) : _socketClient = socketClient,
+       _socketOutboundSender = socketOutboundSender,
+       _unifiedCacheManager = unifiedCacheManager,
+       _currentUserId = currentUserId,
+       super(const ChatPageState(entryArgs: ChatEntryArgs.empty()));
 
   final OpenChatUseCase _openChatUseCase;
   final SendMessageUseCase _sendMessageUseCase;
@@ -98,7 +98,55 @@ class ChatController extends StateNotifier<ChatPageState> {
     state = state.copyWith(chatTitle: title);
   }
 
+  /// 从已预热的 L1 缓存同步水合聊天页。
+  ///
+  /// 返回 true 表示调用方可以直接渲染时间线；网络刷新仍会在 [initialize]
+  /// 中后台执行。缓存缺失时保留原有的首次安装加载体验。
+  bool hydrateFromMemory(ChatEntryArgs args) {
+    if (_unifiedCacheManager == null || _currentUserId == null) {
+      return false;
+    }
+    final cached = _unifiedCacheManager.peekMessages(
+      _currentUserId,
+      args.chatId,
+    );
+    if (cached == null || cached.data.isEmpty) {
+      return false;
+    }
+
+    _timelineController.applyCachedWindow(
+      ChatWindowResult(
+        messages: cached.data,
+        viewportState:
+            cached.viewportState ??
+            const ChatViewportState(
+              anchorMessageId: null,
+              hasMoreBefore: true,
+              hasMoreAfter: true,
+            ),
+        chatId: args.chatId,
+      ),
+    );
+    state = state.copyWith(
+      entryArgs: args,
+      pageStatus: ChatPageStatus.ready,
+      chatTitle: args.title,
+      isReadOnly: args.isReadOnly,
+      highlightedMessageId: args.highlightedMessageId,
+      error: null,
+    );
+    return true;
+  }
+
   Future<void> initialize(ChatEntryArgs args) async {
+    final isHydrated =
+        state.pageStatus == ChatPageStatus.ready &&
+        state.entryArgs.chatId == args.chatId &&
+        _timelineController.state.messages.isNotEmpty;
+    if (isHydrated) {
+      _backgroundRefreshMessages(args);
+      return;
+    }
     state = state.copyWith(
       entryArgs: args,
       pageStatus: ChatPageStatus.initializing,
@@ -109,7 +157,7 @@ class ChatController extends StateNotifier<ChatPageState> {
     // 1. 尝试从缓存加载消息
     if (_unifiedCacheManager != null && _currentUserId != null) {
       final cached = await _unifiedCacheManager.getMessages(
-        _currentUserId!,
+        _currentUserId,
         args.chatId,
       );
 
@@ -118,7 +166,13 @@ class ChatController extends StateNotifier<ChatPageState> {
         await _timelineController.applyWindow(
           ChatWindowResult(
             messages: cached.data,
-            viewportState: cached.viewportState ?? const ChatViewportState(anchorMessageId: null, hasMoreBefore: true, hasMoreAfter: true),
+            viewportState:
+                cached.viewportState ??
+                const ChatViewportState(
+                  anchorMessageId: null,
+                  hasMoreBefore: true,
+                  hasMoreAfter: true,
+                ),
             chatId: args.chatId,
           ),
         );
@@ -130,7 +184,9 @@ class ChatController extends StateNotifier<ChatPageState> {
           highlightedMessageId: args.highlightedMessageId,
         );
 
-        debugPrint('[ChatController] Cache hit, showing cached messages (${cached.data.length} messages)');
+        debugPrint(
+          '[ChatController] Cache hit, showing cached messages (${cached.data.length} messages)',
+        );
 
         // 后台拉取最新消息并合并
         _backgroundRefreshMessages(args);
@@ -163,7 +219,7 @@ class ChatController extends StateNotifier<ChatPageState> {
       // ========== 【Phase 4】写入缓存 ==========
       if (_unifiedCacheManager != null && _currentUserId != null) {
         await _unifiedCacheManager.setMessages(
-          _currentUserId!,
+          _currentUserId,
           args.chatId,
           result.window.messages,
           result.window.viewportState,
@@ -174,7 +230,7 @@ class ChatController extends StateNotifier<ChatPageState> {
       // ========== 【Phase 4】网络失败时降级到过期缓存 ==========
       if (_unifiedCacheManager != null && _currentUserId != null) {
         final staleCached = await _unifiedCacheManager.getMessages(
-          _currentUserId!,
+          _currentUserId,
           args.chatId,
         );
         if (staleCached != null && staleCached.data.isNotEmpty) {
@@ -182,13 +238,17 @@ class ChatController extends StateNotifier<ChatPageState> {
           await _timelineController.applyWindow(
             ChatWindowResult(
               messages: staleCached.data,
-              viewportState: staleCached.viewportState ?? const ChatViewportState(anchorMessageId: null, hasMoreBefore: true, hasMoreAfter: true),
+              viewportState:
+                  staleCached.viewportState ??
+                  const ChatViewportState(
+                    anchorMessageId: null,
+                    hasMoreBefore: true,
+                    hasMoreAfter: true,
+                  ),
               chatId: args.chatId,
             ),
           );
-          state = state.copyWith(
-            pageStatus: ChatPageStatus.ready,
-          );
+          state = state.copyWith(pageStatus: ChatPageStatus.ready);
           return;
         }
       }
@@ -212,12 +272,12 @@ class ChatController extends StateNotifier<ChatPageState> {
       await _timelineController.applyWindow(result.window);
 
       // 更新标题
-      if (result.chatTitle != null) {
-        state = state.copyWith(chatTitle: result.chatTitle);
-      }
+      state = state.copyWith(chatTitle: result.chatTitle);
 
       // 标记已读
-      final readSequence = _resolveLatestReadableSequence(result.window.messages);
+      final readSequence = _resolveLatestReadableSequence(
+        result.window.messages,
+      );
       if (readSequence != null) {
         await _markConversationReadUseCase(
           chatId: args.chatId,
@@ -229,7 +289,7 @@ class ChatController extends StateNotifier<ChatPageState> {
       // 更新缓存
       if (_unifiedCacheManager != null && _currentUserId != null) {
         await _unifiedCacheManager.setMessages(
-          _currentUserId!,
+          _currentUserId,
           args.chatId,
           result.window.messages,
           result.window.viewportState,

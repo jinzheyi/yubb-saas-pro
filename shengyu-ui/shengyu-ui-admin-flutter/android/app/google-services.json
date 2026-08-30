@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "937731218980",
+    "project_id": "shengyu-im-fcm",
+    "storage_bucket": "shengyu-im-fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:937731218980:android:ad4b815442c124402a42b1",
+        "android_client_info": {
+          "package_name": "com.shengyu.im.shengyu_ui_admin_im"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf9oAY0-RgDaUZVWUohRzNqNmhYg4W4JI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

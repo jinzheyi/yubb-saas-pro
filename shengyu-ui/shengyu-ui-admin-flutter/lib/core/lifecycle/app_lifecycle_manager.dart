@@ -6,11 +6,11 @@ import 'package:shengyu_ui_admin_im/core/websocket/socket_session_coordinator.da
 
 /// App 生命周期状态
 enum ShengyuAppLifecycleState {
-  resumed,      // 前台活跃
-  inactive,     // 非活跃（如来电、分屏）
-  paused,       // 后台
-  hidden,       // 完全隐藏
-  detached,     // 从引擎分离
+  resumed, // 前台活跃
+  inactive, // 非活跃（如来电、分屏）
+  paused, // 后台
+  hidden, // 完全隐藏
+  detached, // 从引擎分离
 }
 
 /// App 生命周期管理器（单例）
@@ -63,7 +63,9 @@ class AppLifecycleManager extends WidgetsBindingObserver {
     final oldState = _currentState;
     _currentState = _mapFlutterState(state);
 
-    debugPrint('[AppLifecycleManager] lifecycle changed: ${oldState.name} -> ${_currentState.name}');
+    debugPrint(
+      '[AppLifecycleManager] lifecycle changed: ${oldState.name} -> ${_currentState.name}',
+    );
 
     if (oldState == _currentState) {
       return;
@@ -92,26 +94,38 @@ class AppLifecycleManager extends WidgetsBindingObserver {
   }
 
   /// 处理生命周期变化
-  void _handleLifecycleChange(ShengyuAppLifecycleState oldState, ShengyuAppLifecycleState newState) {
-    // 进入后台
-    if (oldState == ShengyuAppLifecycleState.resumed &&
-        (newState == ShengyuAppLifecycleState.paused || newState == ShengyuAppLifecycleState.hidden)) {
+  void _handleLifecycleChange(
+    ShengyuAppLifecycleState oldState,
+    ShengyuAppLifecycleState newState,
+  ) {
+    final wasInBackground = _isBackgroundState(oldState);
+    final isInBackground = _isBackgroundState(newState);
+
+    // Flutter 通常会先进入 inactive，再进入 hidden/paused。
+    // 以是否跨越后台状态集合为准，不能依赖 resumed -> paused 的直接跳转。
+    if (!wasInBackground && isInBackground) {
       _onEnterBackground();
     }
 
-    // 回到前台
-    if ((oldState == ShengyuAppLifecycleState.paused || oldState == ShengyuAppLifecycleState.hidden) &&
-        newState == ShengyuAppLifecycleState.resumed) {
+    if (newState == ShengyuAppLifecycleState.resumed &&
+        (wasInBackground || _enterBackgroundTime != null)) {
       _onResumeFromBackground();
     }
   }
+
+  bool _isBackgroundState(ShengyuAppLifecycleState state) =>
+      state == ShengyuAppLifecycleState.paused ||
+      state == ShengyuAppLifecycleState.hidden ||
+      state == ShengyuAppLifecycleState.detached;
 
   /// 进入后台处理
   void _onEnterBackground() {
     _enterBackgroundTime = DateTime.now();
 
     // 主动标记连接为 stale，避免后台连接被系统静默关闭
-    debugPrint('[AppLifecycleManager] entering background, marking connection as stale');
+    debugPrint(
+      '[AppLifecycleManager] entering background, marking connection as stale',
+    );
 
     // 如果 socket coordinator 可用，通知连接状态变化
     _socketCoordinator?.notifyAppBackgrounded();
@@ -125,11 +139,15 @@ class AppLifecycleManager extends WidgetsBindingObserver {
 
     _enterBackgroundTime = null;
 
-    debugPrint('[AppLifecycleManager] resumed from background, was away for ${backgroundDuration.inSeconds}s');
+    debugPrint(
+      '[AppLifecycleManager] resumed from background, was away for ${backgroundDuration.inSeconds}s',
+    );
 
     // 如果离开超过 30 秒，强制重连（因为 TCP 连接可能已被系统或服务器关闭）
     if (backgroundDuration.inSeconds > 30) {
-      debugPrint('[AppLifecycleManager] background duration > 30s, forcing reconnect');
+      debugPrint(
+        '[AppLifecycleManager] background duration > 30s, forcing reconnect',
+      );
       _socketCoordinator?.forceReconnect();
     } else {
       // 短暂离开，仅检查连接状态
@@ -146,6 +164,8 @@ final appLifecycleManagerProvider = Provider<AppLifecycleManager>((ref) {
 });
 
 /// 当前 App 生命周期状态 Provider
-final appLifecycleStateProvider = StateProvider<ShengyuAppLifecycleState>((ref) {
+final appLifecycleStateProvider = StateProvider<ShengyuAppLifecycleState>((
+  ref,
+) {
   return ShengyuAppLifecycleState.resumed;
 });

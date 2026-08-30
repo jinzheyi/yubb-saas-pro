@@ -46,16 +46,12 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/select_c
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/sticker_manage_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/camera_capture_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/pages/video_player_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/call_session_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_member_select_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_call_session_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/group_outgoing_call_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/chat_settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/conversation_list_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/initiate_group_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/pages/join_group_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/incoming_call_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/outgoing_call_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/pages/livekit_call_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/device/presentation/pages/device_list_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favorites_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/favorite/presentation/pages/favorite_detail_page.dart';
@@ -105,58 +101,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final args = state.extra is BrowserPageArgs
               ? state.extra! as BrowserPageArgs
               : const BrowserPageArgs(url: '');
-          return _buildRoutePage(state: state, child: BrowserPage(args: args));
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.callIncoming,
-        name: RouteNames.callIncoming,
-        pageBuilder: (context, state) {
-          final args = state.extra is CallLaunchArgs
-              ? state.extra! as CallLaunchArgs
-              : const CallLaunchArgs.empty();
           return _buildRoutePage(
             state: state,
-            child: IncomingCallPage(args: args),
+            child: BrowserPage(args: args),
           );
         },
       ),
       GoRoute(
-        path: RoutePaths.callOutgoing,
-        name: RouteNames.callOutgoing,
+        path: RoutePaths.call,
+        name: RouteNames.call,
         pageBuilder: (context, state) {
           final args = state.extra is CallLaunchArgs
               ? state.extra! as CallLaunchArgs
               : const CallLaunchArgs.empty();
           return _buildRoutePage(
             state: state,
-            child: OutgoingCallPage(args: args),
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.callSession,
-        name: RouteNames.callSession,
-        pageBuilder: (context, state) {
-          final args = state.extra is CallLaunchArgs
-              ? state.extra! as CallLaunchArgs
-              : const CallLaunchArgs.empty();
-          return _buildRoutePage(
-            state: state,
-            child: CallSessionPage(args: args),
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.groupCallSession,
-        name: RouteNames.groupCallSession,
-        pageBuilder: (context, state) {
-          final args = state.extra is CallLaunchArgs
-              ? state.extra! as CallLaunchArgs
-              : const CallLaunchArgs.empty();
-          return _buildRoutePage(
-            state: state,
-            child: GroupCallSessionPage(args: args),
+            child: LiveKitCallPage(args: args),
           );
         },
       ),
@@ -174,19 +134,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _buildRoutePage(
             state: state,
             child: GroupCallMemberSelectPage(args: args),
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.groupOutgoingCall,
-        name: RouteNames.groupOutgoingCall,
-        pageBuilder: (context, state) {
-          final args = state.extra is CallLaunchArgs
-              ? state.extra! as CallLaunchArgs
-              : const CallLaunchArgs.empty();
-          return _buildRoutePage(
-            state: state,
-            child: GroupOutgoingCallPage(args: args),
           );
         },
       ),
@@ -271,10 +218,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.themeSettings,
             name: RouteNames.themeSettings,
-            pageBuilder: (context, state) => _buildRoutePage(
-              state: state,
-              child: const ThemeSettingsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const ThemeSettingsPage()),
           ),
           GoRoute(
             path: RoutePaths.languageSettings,
@@ -323,10 +268,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             );
           }
-          return _buildRoutePage(
-            state: state,
-            child: const MyDepartmentPage(),
-          );
+          return _buildRoutePage(state: state, child: const MyDepartmentPage());
         },
       ),
       GoRoute(
@@ -358,10 +300,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.contactsFavorites,
         name: RouteNames.contactsFavorites,
-        pageBuilder: (context, state) => _buildRoutePage(
-          state: state,
-          child: const StarContactsPage(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const StarContactsPage()),
       ),
       GoRoute(
         path: RoutePaths.contactsGroupMembers,
@@ -369,10 +309,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is ContactGroupMembersArgs
               ? state.extra! as ContactGroupMembersArgs
-              : const ContactGroupMembersArgs(
-                  groupId: '',
-                  groupName: '群成员',
-                );
+              : const ContactGroupMembersArgs(groupId: '', groupName: '群成员');
           return _buildRoutePage(
             state: state,
             child: ContactGroupMembersPage(args: args),
@@ -444,7 +381,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final args = state.extra is ChatEntryArgs
               ? state.extra! as ChatEntryArgs
               : const ChatEntryArgs.empty();
-          return _buildRoutePage(state: state, child: ChatPage(args: args));
+          return _buildRoutePage(
+            state: state,
+            child: ChatPage(args: args),
+          );
         },
         onExit: (context, state) {
           // 不在 onExit 中手动 invalidate provider
@@ -457,10 +397,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.chatSelectContactCard,
         name: RouteNames.chatSelectContactCard,
-        pageBuilder: (context, state) => _buildRoutePage(
-          state: state,
-          child: const SelectContactCardPage(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const SelectContactCardPage()),
       ),
       GoRoute(
         path: RoutePaths.chatSelectLocation,

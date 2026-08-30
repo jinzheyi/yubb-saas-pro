@@ -1187,7 +1187,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         List<ImGroupUserDO> members = groupUserMapper.selectList(
                 new LambdaQueryWrapperX<ImGroupUserDO>()
                         .eq(ImGroupUserDO::getGroupId, group.getId())
-                        .orderByAsc(ImGroupUserDO::getJoinTime)
+                        .orderByAsc(ImGroupUserDO::getJoinTime, ImGroupUserDO::getId)
                         .last("LIMIT 4"));
         if (members != null && !members.isEmpty()) {
             List<Long> memberUserIds = members.stream()

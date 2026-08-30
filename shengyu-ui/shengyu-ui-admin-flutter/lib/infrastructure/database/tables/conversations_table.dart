@@ -39,13 +39,16 @@ class Conversations extends Table {
   TextColumn get lastMessageSenderName => text().nullable()();
 
   /// 最后一条消息是否自己发送
-  BoolColumn get lastMessageIsSelf => boolean().withDefault(const Constant(false))();
+  BoolColumn get lastMessageIsSelf =>
+      boolean().withDefault(const Constant(false))();
 
   /// 最后一条消息状态（存储为字符串名称）
-  TextColumn get lastMessageStatus => text().withDefault(const Constant('sent'))();
+  TextColumn get lastMessageStatus =>
+      text().withDefault(const Constant('sent'))();
 
   /// 是否有 @我
-  BoolColumn get lastMessageHasAtMe => boolean().withDefault(const Constant(false))();
+  BoolColumn get lastMessageHasAtMe =>
+      boolean().withDefault(const Constant(false))();
 
   /// 最后一条消息时间
   DateTimeColumn get lastMessageTime => dateTime()();
@@ -77,7 +80,4 @@ class Conversations extends Table {
 
   @override
   Set<Column> get primaryKey => {chatId};
-
-  @override
-  List<String> get customConstraints => ['UNIQUE(chatId)'];
 }

@@ -24,5 +24,6 @@ public class AppCallGroupCreateInviteReqVO {
     @Schema(description = "被邀请成员ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<Long> inviteeIds;
     @Schema(description = "发起设备ID")
+    @NotBlank(message = "发起设备ID不能为空")
     private String deviceId;
 }

@@ -1,28 +1,55 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_local_notifications (0.0.1):
+    - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
+  - flutter_webrtc (1.4.0):
+    - Flutter
+    - WebRTC-SDK (= 144.7559.09)
+  - livekit_client (2.9.0):
+    - Flutter
+    - flutter_webrtc
+    - WebRTC-SDK (= 144.7559.09)
   - video_compress (0.3.0):
     - Flutter
+  - WebRTC-SDK (144.7559.09)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+  - flutter_webrtc (from `.symlinks/plugins/flutter_webrtc/ios`)
+  - livekit_client (from `.symlinks/plugins/livekit_client/ios`)
   - video_compress (from `.symlinks/plugins/video_compress/ios`)
+
+SPEC REPOS:
+  trunk:
+    - WebRTC-SDK
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
+  flutter_webrtc:
+    :path: ".symlinks/plugins/flutter_webrtc/ios"
+  livekit_client:
+    :path: ".symlinks/plugins/livekit_client/ios"
   video_compress:
     :path: ".symlinks/plugins/video_compress/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  flutter_webrtc: 3ee86aa10e0313c38c93fdb215dd86e77014f96a
+  livekit_client: 08c2f86ab9d5f69bd617525a97d085e7f4b70d4a
   video_compress: f2133a07762889d67f0711ac831faa26f956980e
+  WebRTC-SDK: e6006119cd730d6315d875e4a421b6cc8bb88833
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

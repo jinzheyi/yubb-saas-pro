@@ -2813,7 +2813,7 @@ CREATE TABLE `system_users`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_username`(`update_time` ASC, `tenant_id` ASC) USING BTREE
+  INDEX `idx_saas_user_tenant`(`saas_user_id` ASC, `tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1790399770972667906 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户信息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------

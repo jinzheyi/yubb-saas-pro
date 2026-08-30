@@ -28,8 +28,10 @@ dependencies:
   camera: ^0.11.1
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
-  connectivity_plus: ^6.1.5
-  device_info_plus: ^11.3.0
+  # 7.3.x 使用新 Xcode SDK 的 NWPath.isUltraConstrained；本项目 Xcode 16.3 固定 7.0.0。
+  connectivity_plus: 7.0.0
+  # 12.4.0 调用了仅新 SDK 暴露的 NSProcessInfo.isiOSAppOnVision；LiveKit 2.9 官方示例也固定 <12.4。
+  device_info_plus: 12.3.0
   mobile_scanner: ^7.2.0
   record: ^6.2.0
   just_audio: ^0.10.5
@@ -54,10 +56,14 @@ dependencies:
   geolocator_android: ^4.6.2
   permission_handler: ^11.3.1
   
-  # WebRTC 音视频通话
-  flutter_webrtc: ^1.5.2
+  # LiveKit 自建音视频通话（底层仍由 SDK 管理 WebRTC）
+  livekit_client: 2.9.0
+  # Android 全屏来电与 iOS CallKit 的唯一封装入口；推送凭证仍由客户部署环境提供。
+  flutter_callkit_incoming: 3.1.5
   audio_session: ^0.1.18
   flutter_local_notifications: ^18.0.1
+  firebase_core: ^4.14.0
+  firebase_messaging: ^16.6.0
 
 dependency_overrides:
   extended_text_field:
@@ -65,6 +71,8 @@ dependency_overrides:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   async: ^2.13.0

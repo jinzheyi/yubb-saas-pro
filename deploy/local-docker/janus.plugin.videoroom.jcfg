@@ -1,6 +1,0 @@
-general: {
-  events = true
-}
-
-# 通话房间由后端通过 VideoRoom REST API 动态创建；这里不预置共享房间，
-# 防止不同通话错误加入同一个房间。

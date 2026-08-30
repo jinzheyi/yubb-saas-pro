@@ -64,4 +64,14 @@ public class ImCallParticipantDO extends BaseDO {
      * 状态：1-在线 2-离线 3-已离开
      */
     private Integer status;
+
+    /** 邀请状态：PENDING/ACCEPTED/REJECTED/BUSY/TIMEOUT。 */
+    private String inviteState;
+
+    /** 入会状态：NOT_JOINED/JOINED/LEFT。 */
+    private String joinState;
+
+    private LocalDateTime joinedAt;
+
+    private LocalDateTime leftAt;
 }

@@ -129,7 +129,6 @@ class ShengyuIconFont {
   static const IconData celiang = IconData(0xea6c, fontFamily: family);
   static const IconData celve = IconData(0xea6d, fontFamily: family);
   static const IconData chaxun = IconData(0xea6e, fontFamily: family);
-  static const IconData tongbujiaobiao = IconData(0xea5f, fontFamily: family);
   static const IconData dabao = IconData(0xea6f, fontFamily: family);
   static const IconData dasai = IconData(0xea70, fontFamily: family);
   static const IconData dingdan = IconData(0xea71, fontFamily: family);

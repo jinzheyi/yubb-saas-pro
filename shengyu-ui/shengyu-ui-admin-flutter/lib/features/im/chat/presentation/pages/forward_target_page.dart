@@ -74,8 +74,12 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     // 精确订阅：仅需要 conversations 和 status 字段
-    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
-    final listStatus = ref.watch(conversationListControllerProvider.select((state) => state.status));
+    final conversations = ref.watch(
+      conversationListControllerProvider.select((state) => state.conversations),
+    );
+    final listStatus = ref.watch(
+      conversationListControllerProvider.select((state) => state.status),
+    );
     final filtered = _filteredConversations(conversations);
     final isFavoriteMode = widget.args.isFavoriteMode;
     final isContactCardMode = widget.args.isContactCardMode;
@@ -204,8 +208,7 @@ class _ForwardTargetPageState extends ConsumerState<ForwardTargetPage> {
                 ),
               Expanded(
                 child:
-                    listStatus ==
-                            ConversationListStatus.loading &&
+                    listStatus == ConversationListStatus.loading &&
                         conversations.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : filtered.isEmpty
@@ -518,12 +521,17 @@ class _ForwardConversationTile extends StatelessWidget {
             children: [
               if (isGroup)
                 GroupAvatarWidget.fromMembers(
+                  avatarUrl: conversation.targetAvatar,
+                  fallbackName: title,
+                  fallbackSeed: conversation.targetId ?? conversation.chatId,
                   members: conversation.groupMemberItems
-                      .map((item) => GroupAvatarMember(
-                            userId: item.userId ?? '',
-                            name: item.name ?? '',
-                            avatarUrl: item.avatar,
-                          ))
+                      .map(
+                        (item) => GroupAvatarMember(
+                          userId: item.userId ?? '',
+                          name: item.name ?? '',
+                          avatarUrl: item.avatar,
+                        ),
+                      )
                       .toList(),
                   size: 44,
                   borderRadius: 10,
@@ -533,7 +541,9 @@ class _ForwardConversationTile extends StatelessWidget {
                   name: title,
                   avatarUrl: conversation.targetAvatar,
                   seed: conversation.targetId,
-                  backgroundColor: getUserAvatarColor(conversation.targetId ?? ''),
+                  backgroundColor: getUserAvatarColor(
+                    conversation.targetId ?? '',
+                  ),
                   size: 44,
                   borderRadius: 10,
                   fontSize: 16,

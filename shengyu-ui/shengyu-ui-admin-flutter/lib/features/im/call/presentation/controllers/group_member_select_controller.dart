@@ -8,24 +8,29 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/g
 /// - 搜索过滤
 /// - 选择/取消选择逻辑
 /// - 过滤发起者（当前用户不在列表中显示）
-class GroupMemberSelectController extends StateNotifier<GroupMemberSelectState> {
+class GroupMemberSelectController
+    extends StateNotifier<GroupMemberSelectState> {
   GroupMemberSelectController({
     required List<String> existingMemberIds,
     required int maxParticipants,
     String currentUserId = '',
-  }) : super(GroupMemberSelectState(
-          existingMemberIds: existingMemberIds,
-          maxParticipants: maxParticipants,
-          currentUserId: currentUserId,
-        ));
+  }) : super(
+         GroupMemberSelectState(
+           existingMemberIds: existingMemberIds,
+           maxParticipants: maxParticipants,
+           currentUserId: currentUserId,
+         ),
+       );
 
   /// 获取当前状态（供外部访问）
   GroupMemberSelectState get currentState => state;
 
   /// 切换成员选择状态
-  void toggleMember(GroupMember member) {
-    final isSelected = state.selectedMembers.contains(member);
-    
+  GroupMemberToggleResult toggleMember(GroupMember member) {
+    final isSelected = state.selectedMembers.any(
+      (selected) => selected.userId == member.userId,
+    );
+
     if (isSelected) {
       // 取消选择
       state = state.copyWith(
@@ -33,16 +38,18 @@ class GroupMemberSelectController extends StateNotifier<GroupMemberSelectState> 
             .where((m) => m.userId != member.userId)
             .toList(),
       );
+      return GroupMemberToggleResult.unselected;
     } else {
       // 检查是否超过最大人数
       if (state.selectedMembers.length >= state.maxParticipants) {
-        return; // 已达上限，不再添加
+        return GroupMemberToggleResult.limitReached;
       }
-      
+
       // 添加选择
       state = state.copyWith(
         selectedMembers: [...state.selectedMembers, member],
       );
+      return GroupMemberToggleResult.selected;
     }
   }
 
@@ -56,13 +63,23 @@ class GroupMemberSelectController extends StateNotifier<GroupMemberSelectState> 
     return !state.existingMemberIds.contains(member.userId);
   }
 
+  /// 按 userId 恢复上一次提交的选择，不依赖成员实体对象实例。
+  void restoreSelection(List<GroupMember> members, List<String> userIds) {
+    final wanted = userIds.toSet();
+    final restored = filterMembers(members)
+        .where((member) => wanted.contains(member.userId))
+        .take(state.maxParticipants)
+        .toList(growable: false);
+    state = state.copyWith(selectedMembers: restored);
+  }
+
   /// 设置搜索关键词
   void setSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);
   }
 
   /// 过滤成员列表
-  /// 
+  ///
   /// 过滤规则：
   /// 1. 排除已在通话中的成员（existingMemberIds）
   /// 2. 排除发起者（currentUserId）- 发起者不需要勾选自己
@@ -72,10 +89,12 @@ class GroupMemberSelectController extends StateNotifier<GroupMemberSelectState> 
       // 排除已在通话中的成员
       if (state.existingMemberIds.contains(m.userId)) return false;
       // 排除发起者（当前用户）
-      if (state.currentUserId.isNotEmpty && m.userId == state.currentUserId) return false;
+      if (state.currentUserId.isNotEmpty && m.userId == state.currentUserId) {
+        return false;
+      }
       return true;
     });
-    
+
     if (state.searchQuery.isNotEmpty) {
       filtered = filtered.where((m) {
         final name = m.nickname.toLowerCase();
@@ -83,17 +102,17 @@ class GroupMemberSelectController extends StateNotifier<GroupMemberSelectState> 
         return name.contains(query);
       });
     }
-    
+
     return filtered.toList();
   }
 
   /// 清空选择
   void clearSelection() {
-    state = state.copyWith(
-      selectedMembers: [],
-    );
+    state = state.copyWith(selectedMembers: []);
   }
 }
+
+enum GroupMemberToggleResult { selected, unselected, limitReached }
 
 /// 群通话成员选择状态
 class GroupMemberSelectState {

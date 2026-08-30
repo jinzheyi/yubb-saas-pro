@@ -93,6 +93,17 @@
       }
     })();
   </script>
+  <script>
+    // Web FCM requires HTTPS in production. Registration is harmless on an
+    // unsupported browser; Dart still requests permission only after login.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('firebase-messaging-sw.js').catch(function (error) {
+          console.warn('Firebase messaging worker registration failed', error);
+        });
+      });
+    }
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

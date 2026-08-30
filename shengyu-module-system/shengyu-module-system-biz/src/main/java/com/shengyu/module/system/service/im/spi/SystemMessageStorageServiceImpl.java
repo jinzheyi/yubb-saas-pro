@@ -35,6 +35,7 @@ import com.shengyu.module.system.service.im.ConversationSnapshotService;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.ImGroupService;
+import com.shengyu.module.system.service.im.push.ImNotificationEventPublisher;
 import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.ExecutorType;
@@ -129,6 +130,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private ConversationSnapshotService conversationSnapshotService;
+
+    @Resource
+    private ImNotificationEventPublisher imNotificationEventPublisher;
 
     /**
      * 是否启用会话快照 Redis 缓存（默认 false）
@@ -587,6 +591,12 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
             // 5. 异步更新会话信息（不阻塞消息保存）
             updateChatUserAsync(header, messageDO, message);
+            // Network delivery is intentionally deferred until this transaction
+            // commits.  The event includes no message body or credentials.
+            imNotificationEventPublisher.publishMessageCommitted(
+                    header.getTenantId(), header.getSenderId(), header.getGroupId(),
+                    header.getReceiverId(), chatId, messageDO.getId(),
+                    messageDO.getSendTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
             
             log.debug("[MessageStorage] 消息保存成功, messageId: {}, type: {}", 
                     header.getMessageId(), header.getMessageType());
@@ -1030,8 +1040,6 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     return "[正在输入]";
                 case BADGE_UPDATE:
                     return "[角标更新]";
-                case CALL_SIGNAL:
-                    return "[通话]";
                 case WORKFLOW_NOTIFY:
                     return "[流程通知]";
                 case TODO_REMINDER:

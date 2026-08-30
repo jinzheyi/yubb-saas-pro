@@ -27,8 +27,8 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
         return selectOne(ImCallRecordDO::getCallId, callId);
     }
 
-    default ImCallRecordDO selectByRoomId(String roomId) {
-        return selectOne(ImCallRecordDO::getRoomId, roomId);
+    default ImCallRecordDO selectByLivekitRoom(String roomName) {
+        return selectOne(ImCallRecordDO::getLivekitRoom, roomName);
     }
 
     /**
@@ -109,6 +109,30 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
         return selectCount(wrapper) > 0;
     }
 
+    /** 查询用户作为单聊双方或群通话发起人时的唯一活跃通话。 */
+    default ImCallRecordDO selectLatestActiveByUserId(Long userId) {
+        LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w.eq(ImCallRecordDO::getCallerId, userId)
+                .or()
+                .eq(ImCallRecordDO::getCalleeId, userId));
+        wrapper.in(ImCallRecordDO::getState, "RINGING", "CONNECTING", "CONNECTED");
+        wrapper.orderByDesc(ImCallRecordDO::getCreateTime);
+        wrapper.last("LIMIT 1");
+        return selectOne(wrapper);
+    }
+
+    /** 查询群成员恢复所需的活跃通话，并保持确定性的最新优先顺序。 */
+    default List<ImCallRecordDO> selectActiveByCallIds(List<String> callIds) {
+        if (callIds == null || callIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        LambdaQueryWrapper<ImCallRecordDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(ImCallRecordDO::getCallId, callIds);
+        wrapper.in(ImCallRecordDO::getState, "RINGING", "CONNECTING", "CONNECTED");
+        wrapper.orderByDesc(ImCallRecordDO::getCreateTime);
+        return selectList(wrapper);
+    }
+
     /**
      * 回收指定用户过期但未结束的邀请状态。
      *
@@ -175,6 +199,26 @@ public interface ImCallRecordMapper extends BaseMapperX<ImCallRecordDO> {
                 .eq(ImCallRecordDO::getState, expectedState)
                 .set(ImCallRecordDO::getState, targetState);
         return update(null, wrapper) == 1;
+    }
+
+    /** 为同一通话分配严格递增的业务事件版本，避免群成员事件被 outbox 去重误吞。 */
+    default int allocateNextStateVersion(String callId) {
+        for (int attempt = 0; attempt < 8; attempt++) {
+            ImCallRecordDO record = selectByCallId(callId);
+            if (record == null) {
+                return 0;
+            }
+            int current = record.getStateVersion() == null ? 0 : record.getStateVersion();
+            int next = current + 1;
+            LambdaUpdateWrapper<ImCallRecordDO> wrapper = new LambdaUpdateWrapper<>();
+            wrapper.eq(ImCallRecordDO::getCallId, callId)
+                    .eq(ImCallRecordDO::getStateVersion, current)
+                    .set(ImCallRecordDO::getStateVersion, next);
+            if (update(null, wrapper) == 1) {
+                return next;
+            }
+        }
+        throw new IllegalStateException("通话事件版本分配冲突: " + callId);
     }
 
 }

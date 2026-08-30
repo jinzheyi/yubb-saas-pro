@@ -64,8 +64,8 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_composer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_page_panels.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/chat_timeline.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/group_call_status_bar.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/call_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/providers/livekit_call_providers.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_type_selection_sheet.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
@@ -111,7 +111,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
   static const int _voiceDurationOverflowToleranceMs = 1500;
   static const double _voiceCancelThreshold = 60;
   static const Duration _voicePlayedSyncDebounce = Duration(milliseconds: 300);
-  static final _directUrlPattern = RegExp(r'^https?:\/\/\S+$', caseSensitive: false);
+  static final _directUrlPattern = RegExp(
+    r'^https?:\/\/\S+$',
+    caseSensitive: false,
+  );
   static final _wwwUrlPattern = RegExp(r'^www\.\S+$', caseSensitive: false);
   static const Duration _voicePlayedCompensateInterval = Duration(seconds: 12);
   static const int _voicePlayedSyncBatchSize = 30;
@@ -150,7 +153,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   StreamSubscription<Duration>? _voicePositionSubscription;
   StreamSubscription<Duration?>? _voiceDurationSubscription;
   StreamSubscription<PlayerState>? _voicePlayerStateSubscription;
-  StreamSubscription<Message>? _callRecordSubscription;
+
   /// 统一 Timer 管理器（替代分散的 Timer? 字段）
   late final ChatPageTimerManager _timerManager;
   late final TextEditingController _mentionSearchController;
@@ -173,6 +176,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
   double _lastTimelineScrollTop = 0;
   int _lastHistoryLoadTriggerAt = 0;
   bool _initialBottomAlignmentPending = true;
+  // `mounted` remains true while Flutter has temporarily deactivated this
+  // element during a route transition.  Lifecycle callbacks can arrive in
+  // that narrow interval, when Riverpod's `ref` must not be accessed.
+  bool _isInWidgetTree = true;
   final Map<String, _TypingEntry> _typingEntries = <String, _TypingEntry>{};
   late final ActiveConversationService _activeConversationService;
 
@@ -182,7 +189,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     WidgetsBinding.instance.addObserver(this);
     _messageItemKeys = MessageKeyCache(maxSize: 100);
     _timerManager = ChatPageTimerManager();
-    _activeConversationService = ref.read(activeConversationServiceProvider.notifier);
+    _activeConversationService = ref.read(
+      activeConversationServiceProvider.notifier,
+    );
     _timelineScrollController = ScrollController()
       ..addListener(_handleTimelineScroll);
     _mentionSearchController = TextEditingController();
@@ -196,12 +205,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
       },
     );
 
-    // 监听通话记录消息（从 CallController 接收）
-    _callRecordSubscription = ref
-        .read(callControllerProvider.notifier)
-        .onCallRecordReceived
-        .listen(_handleCallRecordReceived);
-
     // ===== 关键路径：首帧前初始化 =====
     // 1. 立即启动非阻塞型 Timer（打字清理、语音补偿等）
     _startVoicePlayedCompensation();
@@ -210,6 +213,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
     // 2. 延迟到首帧渲染完成后执行，避免阻塞首帧
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // 缓存水合会修改时间线 Provider。必须在首帧完成后执行，避免在
+      // initState 的构建阶段写 Provider 而导致通知点击后的聊天页白屏。
+      ref
+          .read(chatControllerProvider(widget.args.chatId).notifier)
+          .hydrateFromMemory(widget.args);
       // 激活当前会话（角标处理）
       _activateCurrentConversation();
       // 初始化聊天页面（关键路径：加载消息数据）
@@ -234,7 +242,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
   void _activateCurrentConversation() {
     if (!mounted) return;
     final chatId = widget.args.chatId;
-
     // 从 BadgeState 读取该会话进入时的未读数（单一数据源）
     final badgeState = ref.read(badgeServiceProvider);
     final unreadAtEntry = badgeState.conversationBadges[chatId] ?? 0;
@@ -248,7 +255,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && mounted && _isInWidgetTree) {
       // 回前台：检查 WebSocket 连接并重试发送中消息
       unawaited(_handleResumeFromBackground());
     }
@@ -257,19 +264,21 @@ class _ChatPageState extends ConsumerState<ChatPage>
   /// 回前台时的恢复逻辑（根治方案）
   Future<void> _handleResumeFromBackground() async {
     // 在每次使用 ref 之前都检查 mounted，避免 widget disposed 后访问 ref
-    if (!mounted) return;
+    if (!mounted || !_isInWidgetTree) return;
 
     // 1. 如果 WebSocket 未连接，触发重连（authSucceeded 事件会自动处理 pullMessagesAfterReconnect）
     final socketClient = ref.read(imSocketClientProvider);
     if (socketClient.state != ImSocketConnectionState.connected) {
-      debugPrint('[ChatPage] WebSocket not connected on resume, triggering reconnect');
+      debugPrint(
+        '[ChatPage] WebSocket not connected on resume, triggering reconnect',
+      );
       unawaited(socketClient.reconnect());
       // 重连成功后，authSucceeded 事件会自动触发 pullMessagesAfterReconnect
       return;
     }
 
     // 2. WebSocket 已连接：直接拉取离线消息（后台期间可能收到的对方消息）
-    if (!mounted) return;
+    if (!mounted || !_isInWidgetTree) return;
     try {
       final command = OpenChatCommand.fromArgs(widget.args);
       final timelineController = ref.read(
@@ -283,11 +292,21 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   @override
+  void deactivate() {
+    _isInWidgetTree = false;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _isInWidgetTree = true;
+  }
+
+  @override
   void dispose() {
     // 立即移除 lifecycle observer，避免已 disposed 的页面仍收到回前台事件
     WidgetsBinding.instance.removeObserver(this);
-
-    final chatId = widget.args.chatId;
 
     // 延迟注销当前对话，避免在 widget tree finalizing 期间修改 provider 状态
     Future.microtask(() => _activeConversationService.deactivateChat());
@@ -302,7 +321,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _voicePositionSubscription?.cancel();
     _voiceDurationSubscription?.cancel();
     _voicePlayerStateSubscription?.cancel();
-    _callRecordSubscription?.cancel();
     _timelineSubscription?.close();
     unawaited(_flushVoicePlayedSyncQueue(force: true));
     _timelineScrollController.dispose();
@@ -324,38 +342,16 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
   }
 
-  /// 处理通话记录消息
-  ///
-  /// 当 CallController 收到 call.record 事件时，将通话记录转换为 Message 对象，
-  /// 并插入到当前聊天时间线中。
-  void _handleCallRecordReceived(Message message) {
-    if (!mounted) return;
-
-    // 仅处理当前聊天窗口的通话记录
-    if (message.chatId != widget.args.chatId) return;
-
-    debugPrint('[ChatPage] 收到通话记录消息: ${message.messageId}, chatId=${message.chatId}');
-
-    // 将通话记录插入到时间线
-    final timelineController = ref.read(
-      chatTimelineControllerProvider(widget.args.chatId).notifier,
-    );
-    timelineController.appendSingleMessage(message);
-
-    // 如果在底部，自动滚动到新消息
-    if (_isTimelineAtBottom) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _scrollTimelineToBottom();
-        }
-      });
-    }
-  }
-
   Future<void> _initializeChatPage() async {
-    await ref.read(chatControllerProvider(widget.args.chatId).notifier).initialize(widget.args);
+    await ref
+        .read(chatControllerProvider(widget.args.chatId).notifier)
+        .initialize(widget.args);
     // 记录当前会话为已读可见（替代 ChatReceiptController）
-    ref.read(chatReceiptLastVisibleChatIdProvider(widget.args.chatId).notifier).state = widget.args.chatId;
+    ref
+        .read(chatReceiptLastVisibleChatIdProvider(widget.args.chatId).notifier)
+        .state = widget
+        .args
+        .chatId;
     await _rehydrateReeditHints();
     if (!mounted) {
       return;
@@ -434,64 +430,121 @@ class _ChatPageState extends ConsumerState<ChatPage>
       });
     }
     ref.watch(chatRealtimeBindingProvider(widget.args.chatId));
-    ref.listen<ChatRuntimeNotice?>(chatRuntimeNoticeProvider(widget.args.chatId), (prev, next) {
-      if (next == null || next.chatId != widget.args.chatId || !mounted) {
-        return;
-      }
-      ref.read(chatRuntimeNoticeProvider(widget.args.chatId).notifier).state = null;
-      final groupId = _resolveGroupId(
-        widget.args.conversationType == ConversationType.group,
-      );
-      if (groupId != null && groupId.trim().isNotEmpty) {
-        final args = GroupContextArgs(groupId: groupId, groupName: '');
-        ref.invalidate(groupSettingsControllerProvider(args));
-        ref.invalidate(groupMembersFutureProvider(groupId));
-      }
-      _showAttachmentError(context, next.message);
-      if (next.redirectToConversations) {
-        final router = GoRouter.of(context);
-        Future<void>.delayed(const Duration(milliseconds: 180), () {
-          if (!mounted) {
-            return;
-          }
-          router.goNamed(RouteNames.conversations);
-        });
-      }
-    });
-    ref.listen<ChatRealtimeSignal?>(chatRealtimeSignalProvider(widget.args.chatId), (prev, next) {
-      if (next == null || next.chatId != widget.args.chatId || !mounted) {
-        return;
-      }
-      ref.read(chatRealtimeSignalProvider(widget.args.chatId).notifier).state = null;
-      _handleRealtimeSignal(next);
-    });
+    ref.listen<ChatRuntimeNotice?>(
+      chatRuntimeNoticeProvider(widget.args.chatId),
+      (prev, next) {
+        if (next == null || next.chatId != widget.args.chatId || !mounted) {
+          return;
+        }
+        ref.read(chatRuntimeNoticeProvider(widget.args.chatId).notifier).state =
+            null;
+        final groupId = _resolveGroupId(
+          widget.args.conversationType == ConversationType.group,
+        );
+        if (groupId != null && groupId.trim().isNotEmpty) {
+          final args = GroupContextArgs(groupId: groupId, groupName: '');
+          ref.invalidate(groupSettingsControllerProvider(args));
+          ref.invalidate(groupMembersFutureProvider(groupId));
+        }
+        _showAttachmentError(context, next.message);
+        if (next.redirectToConversations) {
+          final router = GoRouter.of(context);
+          Future<void>.delayed(const Duration(milliseconds: 180), () {
+            if (!mounted) {
+              return;
+            }
+            router.goNamed(RouteNames.conversations);
+          });
+        }
+      },
+    );
+    ref.listen<ChatRealtimeSignal?>(
+      chatRealtimeSignalProvider(widget.args.chatId),
+      (prev, next) {
+        if (next == null || next.chatId != widget.args.chatId || !mounted) {
+          return;
+        }
+        ref
+                .read(chatRealtimeSignalProvider(widget.args.chatId).notifier)
+                .state =
+            null;
+        _handleRealtimeSignal(next);
+      },
+    );
     // ===== 精确订阅优化：仅监听实际使用的字段，减少 60-70% 不必要 rebuild =====
     final strings = ref.watch(appStringsProvider);
     // 仅订阅页面状态字段：每个字段独立订阅，避免无关字段变化触发 rebuild
-    final pageStatus = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.pageStatus));
-    final pendingAction = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.pendingAction));
-    final isReadOnly = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.isReadOnly));
-    final pageError = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.error));
-    final chatTitleFromState = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.chatTitle));
-    final entryArgs = ref.watch(chatControllerProvider(widget.args.chatId).select((state) => state.entryArgs));
+    final pageStatus = ref.watch(
+      chatControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.pageStatus),
+    );
+    final pendingAction = ref.watch(
+      chatControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.pendingAction),
+    );
+    final isReadOnly = ref.watch(
+      chatControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.isReadOnly),
+    );
+    final pageError = ref.watch(
+      chatControllerProvider(widget.args.chatId).select((state) => state.error),
+    );
+    final chatTitleFromState = ref.watch(
+      chatControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.chatTitle),
+    );
+    final entryArgs = ref.watch(
+      chatControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.entryArgs),
+    );
     // 仅订阅消息时间线字段：messages、status、viewportState 独立订阅
-    final timelineMessages = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.messages));
-    final timelineStatus = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.status));
-    final timelineViewportState = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.viewportState));
-    final timelineError = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.error));
-    final timelineQuotePreviewCache = ref.watch(chatTimelineControllerProvider(widget.args.chatId).select((state) => state.quotePreviewCache));
+    final timelineMessages = ref.watch(
+      chatTimelineControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.messages),
+    );
+    final timelineStatus = ref.watch(
+      chatTimelineControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.status),
+    );
+    final timelineViewportState = ref.watch(
+      chatTimelineControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.viewportState),
+    );
+    final timelineError = ref.watch(
+      chatTimelineControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.error),
+    );
+    final timelineQuotePreviewCache = ref.watch(
+      chatTimelineControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.quotePreviewCache),
+    );
     // 仅订阅已读回执汇总
     final readReceiptSummaryState = ref.watch(readReceiptSummaryStoreProvider);
     // 仅订阅媒体选择状态：isPicking
-    final isMediaPicking = ref.watch(chatMediaControllerProvider(widget.args.chatId).select((state) => state.isPicking));
+    final isMediaPicking = ref.watch(
+      chatMediaControllerProvider(
+        widget.args.chatId,
+      ).select((state) => state.isPicking),
+    );
     final composer = ref.watch(chatComposerControllerProvider);
     // 仅订阅会话列表
-    final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+    final conversations = ref.watch(
+      conversationListControllerProvider.select((state) => state.conversations),
+    );
 
     final chatTitle = chatTitleFromState ?? strings.chatTitle;
     final isBusy =
-        pendingAction == ChatPendingAction.sendingMessage ||
-        isMediaPicking;
+        pendingAction == ChatPendingAction.sendingMessage || isMediaPicking;
     final isGroupChat = widget.args.conversationType == ConversationType.group;
     final conversation = _resolveConversation(conversations);
     final groupId = _resolveGroupId(isGroupChat);
@@ -520,7 +573,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
     // 增量同步消息 Key：仅处理新增消息，避免每次 build 遍历全量消息
     final currentCount = timelineMessages.length;
     if (currentCount != _lastSyncedMessageCount) {
-      final start = _lastSyncedMessageCount > 0 && currentCount > _lastSyncedMessageCount
+      final start =
+          _lastSyncedMessageCount > 0 && currentCount > _lastSyncedMessageCount
           ? _lastSyncedMessageCount
           : 0;
       for (var index = start; index < currentCount; index++) {
@@ -542,9 +596,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       groupSettingsState: groupSettingsState,
     );
     final shouldShowEditableComposer =
-        !_isSelectionMode &&
-        !isReadOnly &&
-        groupRestrictionHint == null;
+        !_isSelectionMode && !isReadOnly && groupRestrictionHint == null;
     final fullExpandedComposerOnly =
         shouldShowEditableComposer && _isFullExpanded;
     final composerWidget = ChatComposer(
@@ -652,7 +704,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
           if (!context.mounted) {
             return;
           }
-          final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
+          final error = ref
+              .read(chatControllerProvider(widget.args.chatId))
+              .error;
           if (_handleGroupLifecycleRequestError(
             context,
             error,
@@ -726,7 +780,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   .read(chatControllerProvider(widget.args.chatId).notifier)
                   .sendSticker(payload);
               if (!sent && context.mounted) {
-                final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
+                final error = ref
+                    .read(chatControllerProvider(widget.args.chatId))
+                    .error;
                 if (_handleGroupLifecycleRequestError(
                   context,
                   error,
@@ -793,25 +849,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
               )
             : Column(
                 children: [
-                  // 群聊通话状态栏（微信风格：群内有通话时显示在消息列表顶部）
-                  if (isGroupChat && groupId != null && !_isSelectionMode)
-                    GroupCallStatusBar(
-                      groupId: groupId,
-                      onTap: () {
-                        unawaited(_openOrJoinGroupCall(
-                          context,
-                          chatTitle: chatTitle,
-                          groupId: groupId,
-                        ));
-                      },
-                      onJoinTap: () {
-                        unawaited(_openOrJoinGroupCall(
-                          context,
-                          chatTitle: chatTitle,
-                          groupId: groupId,
-                        ));
-                      },
-                    ),
                   if (!_isSelectionMode && groupNoticeText.isNotEmpty)
                     ChatGroupNoticeBanner(
                       notice: groupNoticeText,
@@ -829,7 +866,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                     ),
                   Expanded(
                     child: DecoratedBox(
-                      decoration: BoxDecoration(color: ThemeColors.surfaceDim(context)),
+                      decoration: BoxDecoration(
+                        color: ThemeColors.surfaceDim(context),
+                      ),
                       child: switch (timelineStatus) {
                         ChatTimelineStatus.failed => AppErrorView(
                           error: timelineError,
@@ -846,23 +885,32 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           selectionMode: _isSelectionMode,
                           selectedMessageIds: _selectedMessageIds,
                           isLoadingOlder:
-                              timelineStatus ==
-                              ChatTimelineStatus.loading,
-                          onLoadOlder: timelineViewportState?.hasMoreBefore == true
+                              timelineStatus == ChatTimelineStatus.loading,
+                          onLoadOlder:
+                              timelineViewportState?.hasMoreBefore == true
                               ? () async {
                                   final notice = strings.chatNoMoreMessages;
                                   final beforeCount = timelineMessages.length;
                                   await ref
-                                      .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
+                                      .read(
+                                        chatTimelineControllerProvider(
+                                          widget.args.chatId,
+                                        ).notifier,
+                                      )
                                       .loadOlder(chatId: entryArgs.chatId);
                                   if (!mounted || !context.mounted) {
                                     return;
                                   }
                                   final nextTimeline = ref.read(
-                                    chatTimelineControllerProvider(widget.args.chatId),
+                                    chatTimelineControllerProvider(
+                                      widget.args.chatId,
+                                    ),
                                   );
-                                  if (beforeCount == nextTimeline.messages.length &&
-                                      nextTimeline.viewportState?.hasMoreBefore ==
+                                  if (beforeCount ==
+                                          nextTimeline.messages.length &&
+                                      nextTimeline
+                                              .viewportState
+                                              ?.hasMoreBefore ==
                                           false) {
                                     _showAttachmentError(context, notice);
                                   }
@@ -871,7 +919,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           onRetryMessage: (message) async {
                             if (message.type == MessageType.text) {
                               final retried = await ref
-                                  .read(chatControllerProvider(widget.args.chatId).notifier)
+                                  .read(
+                                    chatControllerProvider(
+                                      widget.args.chatId,
+                                    ).notifier,
+                                  )
                                   .retryFailedMessage(
                                     message.clientMessageId ??
                                         message.messageId,
@@ -895,7 +947,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               return;
                             }
                             final handled = await ref
-                                .read(chatMediaControllerProvider(widget.args.chatId).notifier)
+                                .read(
+                                  chatMediaControllerProvider(
+                                    widget.args.chatId,
+                                  ).notifier,
+                                )
                                 .retryFailedMessage(
                                   failedMessage: message,
                                   entryArgs: entryArgs,
@@ -903,7 +959,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                 );
                             if (!handled) {
                               final error = ref
-                                  .read(chatMediaControllerProvider(widget.args.chatId))
+                                  .read(
+                                    chatMediaControllerProvider(
+                                      widget.args.chatId,
+                                    ),
+                                  )
                                   .error;
                               if (error != null && context.mounted) {
                                 if (_handleGroupLifecycleRequestError(
@@ -1058,8 +1118,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   },
                 ),
         ),
-        body:
-            Stack(children: [body, if (_isRecording) _buildRecordingOverlay()]),
+        body: Stack(
+          children: [body, if (_isRecording) _buildRecordingOverlay()],
+        ),
       ),
     );
   }
@@ -1207,7 +1268,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
 
     if (signal.action == 'group_disbanded') {
-      _redirectAfterRemovedFromGroup(context, ref.read(appStringsProvider).groupDissolved);
+      _redirectAfterRemovedFromGroup(
+        context,
+        ref.read(appStringsProvider).groupDissolved,
+      );
       return;
     }
 
@@ -1250,7 +1314,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       // 群主变更需要全量刷新群设置
       unawaited(
-        ref.read(conversationListControllerProvider.notifier).syncIncrementally(),
+        ref
+            .read(conversationListControllerProvider.notifier)
+            .syncIncrementally(),
       );
       unawaited(groupSettingsNotifier.load());
       unawaited(groupMembersNotifier.load());
@@ -1951,43 +2017,50 @@ class _ChatPageState extends ConsumerState<ChatPage>
         ? profile!.nickname.trim()
         : '';
     _timerManager.cancel('typingSend');
-    _timerManager.setOnce('typingSend', Timer(_typingDebounce, () {
-      unawaited(
-        ref
-            .read(socketOutboundSenderProvider)
-            .sendTypingIfConnected(
-              senderId: session.userId,
-              receiverId: receiverId,
-              groupId: resolvedGroupId.isEmpty ? '0' : resolvedGroupId,
-              tenantId: session.tenantId,
-              senderName: senderName,
-            ),
-      );
-    }));
+    _timerManager.setOnce(
+      'typingSend',
+      Timer(_typingDebounce, () {
+        unawaited(
+          ref
+              .read(socketOutboundSenderProvider)
+              .sendTypingIfConnected(
+                senderId: session.userId,
+                receiverId: receiverId,
+                groupId: resolvedGroupId.isEmpty ? '0' : resolvedGroupId,
+                tenantId: session.tenantId,
+                senderName: senderName,
+              ),
+        );
+      }),
+    );
   }
 
   void _startTypingCleanupTimer() {
     _timerManager.cancel('typingCleanup');
-    _timerManager.setPeriodic('typingCleanup', Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || _typingEntries.isEmpty) {
-        return;
-      }
-      final now = DateTime.now();
-      final expiredKeys = _typingEntries.entries
-          .where(
-            (entry) => now.difference(entry.value.timestamp) >= _typingTimeout,
-          )
-          .map((entry) => entry.key)
-          .toList(growable: false);
-      if (expiredKeys.isEmpty) {
-        return;
-      }
-      setState(() {
-        for (final key in expiredKeys) {
-          _typingEntries.remove(key);
+    _timerManager.setPeriodic(
+      'typingCleanup',
+      Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || _typingEntries.isEmpty) {
+          return;
         }
-      });
-    }));
+        final now = DateTime.now();
+        final expiredKeys = _typingEntries.entries
+            .where(
+              (entry) =>
+                  now.difference(entry.value.timestamp) >= _typingTimeout,
+            )
+            .map((entry) => entry.key)
+            .toList(growable: false);
+        if (expiredKeys.isEmpty) {
+          return;
+        }
+        setState(() {
+          for (final key in expiredKeys) {
+            _typingEntries.remove(key);
+          }
+        });
+      }),
+    );
   }
 
   String? _resolveMentionTailQuery(String text) {
@@ -2565,10 +2638,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final fileId = message.extra.fileId?.trim() ?? '';
     String url;
     if (fileId.isNotEmpty && fileId != '0') {
-      url = (await ref
-              .read(fileRepositoryProvider)
-              .getPresignedGetUrl(fileId: fileId))
-          .toString();
+      url =
+          (await ref
+                  .read(fileRepositoryProvider)
+                  .getPresignedGetUrl(fileId: fileId))
+              .toString();
     } else {
       final directUrl = message.extra.fileUrl?.trim() ?? '';
       if (directUrl.isEmpty) {
@@ -2682,9 +2756,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     _voicePlayedPendingSync.putIfAbsent(messageId, () => true);
     if (!_timerManager.isActive('voicePlayedSync')) {
-      _timerManager.setOnce('voicePlayedSync', Timer(_voicePlayedSyncDebounce, () {
-        unawaited(_flushVoicePlayedSyncQueue());
-      }));
+      _timerManager.setOnce(
+        'voicePlayedSync',
+        Timer(_voicePlayedSyncDebounce, () {
+          unawaited(_flushVoicePlayedSyncQueue());
+        }),
+      );
     }
   }
 
@@ -2732,9 +2809,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   void _scheduleNextVoicePlayedSync() {
     if (!_timerManager.isActive('voicePlayedSync')) {
-      _timerManager.setOnce('voicePlayedSync', Timer(_voicePlayedSyncDebounce, () {
-        unawaited(_flushVoicePlayedSyncQueue());
-      }));
+      _timerManager.setOnce(
+        'voicePlayedSync',
+        Timer(_voicePlayedSyncDebounce, () {
+          unawaited(_flushVoicePlayedSyncQueue());
+        }),
+      );
     }
   }
 
@@ -2750,10 +2830,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   void _startVoicePlayedCompensation() {
     _timerManager.cancel('voicePlayedCompensate');
-    _timerManager.setPeriodic('voicePlayedCompensate', Timer.periodic(
-      _voicePlayedCompensateInterval,
-      (_) => unawaited(_restoreVoicePlayedCompensationOnce()),
-    ));
+    _timerManager.setPeriodic(
+      'voicePlayedCompensate',
+      Timer.periodic(
+        _voicePlayedCompensateInterval,
+        (_) => unawaited(_restoreVoicePlayedCompensationOnce()),
+      ),
+    );
   }
 
   Future<void> _restoreVoicePlayedCompensationOnce() async {
@@ -2810,7 +2893,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final seen = <String>{};
     final List<Message> messages;
     try {
-      messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+      messages = ref
+          .read(chatTimelineControllerProvider(widget.args.chatId))
+          .messages;
     } catch (_) {
       return <String>[];
     }
@@ -3013,9 +3098,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     if (action == ChatMorePanelAction.call) {
-      final isGroupChat = widget.args.conversationType == ConversationType.group;
+      final isGroupChat =
+          widget.args.conversationType == ConversationType.group;
       final groupId = _resolveGroupId(isGroupChat);
-      _showCallOptions(context, chatTitle: chatTitle, isGroupChat: isGroupChat, groupId: groupId);
+      _showCallOptions(
+        context,
+        chatTitle: chatTitle,
+        isGroupChat: isGroupChat,
+        groupId: groupId,
+      );
       return;
     }
     if (action == ChatMorePanelAction.favorite) {
@@ -3023,7 +3114,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
 
-    final mediaController = ref.read(chatMediaControllerProvider(widget.args.chatId).notifier);
+    final mediaController = ref.read(
+      chatMediaControllerProvider(widget.args.chatId).notifier,
+    );
     ChatMorePanelResult result;
     switch (action) {
       case ChatMorePanelAction.album:
@@ -3058,7 +3151,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         result = const ChatMorePanelResult();
     }
 
-    final error = ref.read(chatMediaControllerProvider(widget.args.chatId)).error;
+    final error = ref
+        .read(chatMediaControllerProvider(widget.args.chatId))
+        .error;
     if (error != null && mounted) {
       if (_handleGroupLifecycleRequestError(
         context,
@@ -3414,105 +3509,33 @@ class _ChatPageState extends ConsumerState<ChatPage>
     );
   }
 
-  void _showCallOptions(
+  Future<void> _showCallOptions(
     BuildContext context, {
     required String chatTitle,
     required bool isGroupChat,
     String? groupId,
-  }) {
-    final strings = ref.read(appStringsProvider);
-    final pageContext = context; // 保存页面的 context
-
-    showModalBottomSheet<CallType>(
-      context: context,
-      backgroundColor: ThemeColors.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (dialogContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: ThemeColors.divider(dialogContext),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                chatTitle,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: ThemeColors.textPrimary(dialogContext),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.phone_outlined),
-                title: Text(strings.callVoice),
-                onTap: () {
-                  Navigator.of(dialogContext).pop(CallType.audio);
-                  _openCallPage(pageContext, chatTitle: chatTitle, callType: CallType.audio, isGroupChat: isGroupChat, groupId: groupId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.videocam_outlined),
-                title: Text(strings.callVideo),
-                onTap: () {
-                  Navigator.of(dialogContext).pop(CallType.video);
-                  _openCallPage(pageContext, chatTitle: chatTitle, callType: CallType.video, isGroupChat: isGroupChat, groupId: groupId);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// 打开已加入的群通话，或者先接受待处理的群邀请再进入页面。
-  /// 之前直接跳到会话页并切成 restore 模式，会跳过权威的 REST 接听动作。
-  Future<void> _openOrJoinGroupCall(
-    BuildContext context, {
-    required String chatTitle,
-    required String groupId,
   }) async {
-    final callState = ref.read(callControllerProvider);
-    if (callState.callSessionId.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('群通话状态已失效，请稍后重试')),
-        );
-      }
+    final strings = ref.read(appStringsProvider);
+    if (_isLaunchingCall || ref.read(liveKitCallActivityProvider).isActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('您正在通话中'), duration: Duration(seconds: 2)),
+      );
       return;
     }
-    final isPendingInvite = callState.isIncoming && !callState.hasAccepted;
-    final args = CallLaunchArgs(
-      callSessionId: callState.callSessionId,
-      chatId: widget.args.chatId,
-      callType: callState.callType ?? CallType.audio,
-      entryMode: isPendingInvite ? CallEntryMode.incoming : CallEntryMode.restore,
-      title: chatTitle,
-      isGroupCall: true,
+    final callType = await CallTypeSelectionSheet.show(
+      context,
+      displayName: chatTitle,
+      voiceLabel: strings.callVoice,
+      videoLabel: strings.callVideo,
+    );
+    if (!mounted || !context.mounted || callType == null) return;
+    _openCallPage(
+      context,
+      chatTitle: chatTitle,
+      callType: callType,
+      isGroupChat: isGroupChat,
       groupId: groupId,
     );
-    final controller = ref.read(callControllerProvider.notifier);
-    if (isPendingInvite) {
-      await controller.initialize(args);
-      if (!mounted) return;
-      await controller.accept(); // accept() performs the group-session navigation.
-      return;
-    }
-    if (context.mounted) {
-      await context.pushNamed(RouteNames.groupCallSession, extra: args);
-    }
   }
 
   void _openCallPage(
@@ -3524,13 +3547,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }) {
     // 通话中拦截：检查是否有正在进行的通话
     // 参考微信逻辑：通话中不允许发起新的通话
-    final activeCallRegistry = ref.read(activeCallRegistryProvider);
-    if (_isLaunchingCall || activeCallRegistry.hasActiveCall()) {
+    if (_isLaunchingCall || ref.read(liveKitCallActivityProvider).isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('您正在通话中'),
-          duration: Duration(seconds: 2),
-        ),
+        const SnackBar(content: Text('您正在通话中'), duration: Duration(seconds: 2)),
       );
       return;
     }
@@ -3538,72 +3557,102 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (isGroupChat) {
       final normalizedGroupId = groupId?.trim() ?? '';
       if (normalizedGroupId.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('群聊信息不完整，暂无法发起通话')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('群聊信息不完整，暂无法发起通话')));
         return;
       }
-      _isLaunchingCall = true;
-      // 群聊：跳转到成员选择页
       final currentUserId = ref.read(authSessionProvider).userId;
-      context.pushNamed(
-        RouteNames.groupCallMemberSelect,
-        extra: GroupCallMemberSelectArgs(
-          groupId: normalizedGroupId,
-          groupName: chatTitle,
+      unawaited(
+        _openGroupCallFlow(
+          context,
+          chatTitle: chatTitle,
           callType: callType,
+          groupId: normalizedGroupId,
           currentUserId: currentUserId,
         ),
-      ).then((result) {
+      );
+      return;
+    }
+
+    final calleeId = widget.args.targetId?.trim() ?? '';
+    if (calleeId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('联系人信息不完整，暂无法发起通话')));
+      return;
+    }
+    _isLaunchingCall = true;
+    final args = CallLaunchArgs.outgoing(
+      callSessionId: '',
+      chatId: widget.args.chatId,
+      callType: callType,
+      title: chatTitle,
+      conversationTitle: chatTitle,
+      peerAvatarUrl: _resolveConversation(
+        ref.read(conversationListControllerProvider).conversations,
+      )?.targetAvatar,
+      toUserId: calleeId,
+    );
+    context.pushNamed(RouteNames.call, extra: args).whenComplete(() {
+      if (mounted) setState(() => _isLaunchingCall = false);
+    });
+  }
+
+  Future<void> _openGroupCallFlow(
+    BuildContext context, {
+    required String chatTitle,
+    required CallType callType,
+    required String groupId,
+    required String currentUserId,
+  }) async {
+    if (mounted) setState(() => _isLaunchingCall = true);
+    var initialSelectedIds = const <String>[];
+    try {
+      while (mounted && context.mounted) {
+        final selection = await context.pushNamed(
+          RouteNames.groupCallMemberSelect,
+          extra: GroupCallMemberSelectArgs(
+            groupId: groupId,
+            groupName: chatTitle,
+            callType: callType,
+            currentUserId: currentUserId,
+            initialSelectedIds: initialSelectedIds,
+          ),
+        );
         if (!mounted || !context.mounted) return;
-        // 成员选择页返回选中的成员ID列表
-        if (result != null && result is List<String> && result.isNotEmpty) {
-          final inviteeIds = result
-              .map((id) => id.trim())
-              .where((id) => id.isNotEmpty && id != currentUserId)
-              .toSet()
-              .toList(growable: false);
-          if (inviteeIds.isEmpty) {
-            setState(() => _isLaunchingCall = false);
-            return;
-          }
-          // 跳转到群通话等待页
-          final args = CallLaunchArgs.outgoing(
+        if (selection is! List<String> || selection.isEmpty) return;
+        final inviteeIds = selection
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty && id != currentUserId)
+            .toSet()
+            .toList(growable: false);
+        if (inviteeIds.isEmpty) return;
+
+        final result = await context.pushNamed(
+          RouteNames.call,
+          extra: CallLaunchArgs.outgoing(
             callSessionId: '',
             chatId: widget.args.chatId,
             callType: callType,
             title: chatTitle,
+            conversationTitle: chatTitle,
+            callerId: currentUserId,
             isGroupCall: true,
-            groupId: normalizedGroupId,
+            groupId: groupId,
             inviteeIds: inviteeIds,
-          );
-          context.pushNamed(RouteNames.groupOutgoingCall, extra: args).whenComplete(() {
-            if (mounted) setState(() => _isLaunchingCall = false);
-          });
-        } else {
-          setState(() => _isLaunchingCall = false);
-        }
-      });
-    } else {
-      final calleeId = widget.args.targetId?.trim() ?? '';
-      if (calleeId.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('联系人信息不完整，暂无法发起通话')),
+          ),
         );
-        return;
+        if (!mounted || !context.mounted) return;
+        if (result != CallPageResult.groupMemberBusy) return;
+
+        initialSelectedIds = inviteeIds;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('所选成员正在通话中，请稍后重试')));
       }
-      _isLaunchingCall = true;
-      // 单聊：跳转到1v1去电页
-      final args = CallLaunchArgs.outgoing(
-        callSessionId: '',
-        chatId: widget.args.chatId,
-        callType: callType,
-        title: chatTitle,
-        toUserId: calleeId,
-      );
-      context.pushNamed(RouteNames.callOutgoing, extra: args).whenComplete(() {
-        if (mounted) setState(() => _isLaunchingCall = false);
-      });
+    } finally {
+      if (mounted) setState(() => _isLaunchingCall = false);
     }
   }
 
@@ -3612,7 +3661,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     Message message, {
     Offset? globalPosition,
   }) {
-    final actionController = ref.read(chatMessageActionControllerProvider(widget.args.chatId));
+    final actionController = ref.read(
+      chatMessageActionControllerProvider(widget.args.chatId),
+    );
     final strings = ref.read(appStringsProvider);
     if (message.type == MessageType.system) {
       return Future.value();
@@ -4386,19 +4437,20 @@ class _ChatPageState extends ConsumerState<ChatPage>
             targetId: pageState.entryArgs.targetId,
             messageId: recalled.messageId,
             messageSequence: recalled.sequence,
-            preview: createConversationPreviewFormatter(
-              ref.read(appLocaleProvider),
-            ).call(
-              type: recalled.type,
-              content: recalled.content,
-              customType: recalled.extra.customType,
-              fileName: recalled.extra.fileName,
-              systemEventKey: recalled.extra.systemEventKey,
-              systemEventParams: recalled.extra.systemEventParams,
-              conversationType: pageState.entryArgs.conversationType,
-              isSelf: recalled.isOutgoing,
-              senderName: recalled.senderName,
-            ),
+            preview:
+                createConversationPreviewFormatter(
+                  ref.read(appLocaleProvider),
+                ).call(
+                  type: recalled.type,
+                  content: recalled.content,
+                  customType: recalled.extra.customType,
+                  fileName: recalled.extra.fileName,
+                  systemEventKey: recalled.extra.systemEventKey,
+                  systemEventParams: recalled.extra.systemEventParams,
+                  conversationType: pageState.entryArgs.conversationType,
+                  isSelf: recalled.isOutgoing,
+                  senderName: recalled.senderName,
+                ),
             messageType: recalled.type,
             senderName: recalled.senderName,
             isSelf: recalled.isOutgoing,
@@ -4479,7 +4531,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (session.userId.isEmpty || session.tenantId.isEmpty) {
       return;
     }
-    final timeline = ref.read(chatTimelineControllerProvider(widget.args.chatId));
+    final timeline = ref.read(
+      chatTimelineControllerProvider(widget.args.chatId),
+    );
     if (timeline.messages.isEmpty) {
       return;
     }
@@ -4666,9 +4720,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   String _buildQuotePreview(Message message) {
-    return createMessagePreviewFormatter(
-      ref.read(appLocaleProvider),
-    ).call(
+    return createMessagePreviewFormatter(ref.read(appLocaleProvider)).call(
       type: message.type,
       content: message.content,
       customType: message.extra.customType,
@@ -4689,16 +4741,19 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (highlightedMessageId == null || highlightedMessageId.isEmpty) {
       return;
     }
-    _timerManager.setOnce('highlightClear', Timer(const Duration(seconds: 3), () {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        if (_activeHighlightedMessageId == highlightedMessageId) {
-          _activeHighlightedMessageId = null;
+    _timerManager.setOnce(
+      'highlightClear',
+      Timer(const Duration(seconds: 3), () {
+        if (!mounted) {
+          return;
         }
-      });
-    }));
+        setState(() {
+          if (_activeHighlightedMessageId == highlightedMessageId) {
+            _activeHighlightedMessageId = null;
+          }
+        });
+      }),
+    );
   }
 
   void _handleInitialViewport() {
@@ -4795,7 +4850,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (targetId.isEmpty) {
       return;
     }
-    var messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    var messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     var matched = messages.any((item) => item.messageId == targetId);
     if (!matched) {
       final pageState = ref.read(chatControllerProvider(widget.args.chatId));
@@ -4814,7 +4871,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       if (!mounted) {
         return;
       }
-      messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+      messages = ref
+          .read(chatTimelineControllerProvider(widget.args.chatId))
+          .messages;
       matched = messages.any((item) => item.messageId == targetId);
     }
     if (!matched) {
@@ -4858,7 +4917,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       await _doScrollToContext(key!.currentContext!);
       return true;
     }
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     final index = messages.indexWhere(
       (item) =>
           item.messageId == messageId || item.clientMessageId == messageId,
@@ -4873,7 +4934,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   /// 以指定消息为锚点重新加载消息窗口
   Future<void> _reloadWithAnchor(String messageId) async {
     final pageState = ref.read(chatControllerProvider(widget.args.chatId));
-    await ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).reloadLatest(
+    await ref
+        .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
+        .reloadLatest(
           command: OpenChatCommand(
             chatId: widget.args.chatId,
             conversationType: pageState.entryArgs.conversationType,
@@ -4891,7 +4954,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       await _doScrollToContext(key!.currentContext!);
       return;
     }
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     final index = messages.indexWhere(
       (item) =>
           item.messageId == messageId || item.clientMessageId == messageId,
@@ -4952,7 +5017,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   /// 精确计算从列表顶部到目标消息的像素偏移量
   /// 通过累加已渲染消息的真实高度 + 未渲染消息的估算高度
   double? _calculateExactPixelOffset(int targetIndex) {
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     if (targetIndex < 0 || targetIndex >= messages.length) return null;
     // ListView padding top = 16
     double totalOffset = 16;
@@ -4992,7 +5059,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   GlobalKey? _resolveMessageItemKeyByIndex(int messageIndex) {
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     if (messageIndex < 0 || messageIndex >= messages.length) return null;
     final item = messages[messageIndex];
     final renderKey = _messageRenderKey(item, messageIndex);
@@ -5017,7 +5086,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return true;
       }
       // 在消息数据列表中查找目标索引
-      final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+      final messages = ref
+          .read(chatTimelineControllerProvider(widget.args.chatId))
+          .messages;
       final index = messages.indexWhere(
         (item) =>
             item.messageId == messageId || item.clientMessageId == messageId,
@@ -5028,14 +5099,16 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return true;
       }
       // 消息还未加载，检查是否还有更早的历史消息
-      final viewport = ref.read(chatTimelineControllerProvider(widget.args.chatId)).viewportState;
+      final viewport = ref
+          .read(chatTimelineControllerProvider(widget.args.chatId))
+          .viewportState;
       if (viewport?.hasMoreBefore != true) {
         return false;
       }
       try {
-        await ref.read(chatTimelineControllerProvider(widget.args.chatId).notifier).loadOlder(
-              chatId: widget.args.chatId,
-            );
+        await ref
+            .read(chatTimelineControllerProvider(widget.args.chatId).notifier)
+            .loadOlder(chatId: widget.args.chatId);
       } catch (_) {
         return false;
       }
@@ -5047,7 +5120,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   GlobalKey? _resolveMessageItemKey(String messageId) {
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     for (var index = 0; index < messages.length; index++) {
       final item = messages[index];
       if (item.messageId == messageId || item.clientMessageId == messageId) {
@@ -5200,23 +5275,26 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   void _startReeditTicker() {
     _timerManager.cancel('reedit');
-    _timerManager.setPeriodic('reedit', Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) {
-        _timerManager.cancel('reedit');
-        return;
-      }
-      // 双重检查：确保在 setState 时仍然有效
-      try {
-        if (mounted) {
-          setState(() {
-            _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
-          });
+    _timerManager.setPeriodic(
+      'reedit',
+      Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) {
+          _timerManager.cancel('reedit');
+          return;
         }
-      } catch (_) {
-        // 忽略 widget 已被销毁时的 setState 异常
-        _timerManager.cancel('reedit');
-      }
-    }));
+        // 双重检查：确保在 setState 时仍然有效
+        try {
+          if (mounted) {
+            setState(() {
+              _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
+            });
+          }
+        } catch (_) {
+          // 忽略 widget 已被销毁时的 setState 异常
+          _timerManager.cancel('reedit');
+        }
+      }),
+    );
   }
 
   void _handleReeditAfterRecall(Message message) {
@@ -5363,7 +5441,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   List<Message> get _selectedMessages {
-    final messages = ref.read(chatTimelineControllerProvider(widget.args.chatId)).messages;
+    final messages = ref
+        .read(chatTimelineControllerProvider(widget.args.chatId))
+        .messages;
     return messages
         .where(
           (message) =>
@@ -5495,7 +5575,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (top > 48 || delta > 0) {
       return;
     }
-    final timelineState = ref.read(chatTimelineControllerProvider(widget.args.chatId));
+    final timelineState = ref.read(
+      chatTimelineControllerProvider(widget.args.chatId),
+    );
     if (timelineState.status == ChatTimelineStatus.loading ||
         timelineState.messages.isEmpty ||
         timelineState.viewportState?.hasMoreBefore == false) {
@@ -5548,7 +5630,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 .sendSticker(payload);
             if (!sent && context.mounted) {
               final strings = ref.read(appStringsProvider);
-              final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
+              final error = ref
+                  .read(chatControllerProvider(widget.args.chatId))
+                  .error;
               if (_handleGroupLifecycleRequestError(
                 context,
                 error,
@@ -5615,20 +5699,23 @@ class _ChatPageState extends ConsumerState<ChatPage>
             });
           });
       _timerManager.cancel('recording');
-      _timerManager.setPeriodic('recording', Timer.periodic(const Duration(milliseconds: 100), (_) {
-        final startAt = _recordStartAt;
-        if (!mounted || startAt == null) {
-          return;
-        }
-        final elapsed = DateTime.now().difference(startAt).inMilliseconds;
-        if (elapsed >= _maxVoiceDurationMs) {
-          _finishVoiceRecording();
-          return;
-        }
-        setState(() {
-          _recordingElapsedMs = elapsed;
-        });
-      }));
+      _timerManager.setPeriodic(
+        'recording',
+        Timer.periodic(const Duration(milliseconds: 100), (_) {
+          final startAt = _recordStartAt;
+          if (!mounted || startAt == null) {
+            return;
+          }
+          final elapsed = DateTime.now().difference(startAt).inMilliseconds;
+          if (elapsed >= _maxVoiceDurationMs) {
+            _finishVoiceRecording();
+            return;
+          }
+          setState(() {
+            _recordingElapsedMs = elapsed;
+          });
+        }),
+      );
       setState(() {
         _recordStartY = globalPosition.dy;
         _recordStartAt = DateTime.now();
@@ -5685,6 +5772,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     try {
       final path = await service.stop();
+      if (!mounted) {
+        return;
+      }
       if (path == null || path.trim().isEmpty) {
         _showAttachmentError(
           context,
@@ -5699,6 +5789,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       final localPath = path.trim();
       final uploadBytes = await _resolveVoiceUploadBytes(localPath);
+      if (!mounted) {
+        return;
+      }
       if (kIsWeb && (uploadBytes == null || uploadBytes.isEmpty)) {
         _showAttachmentError(
           context,
@@ -5864,24 +5957,27 @@ class _ChatPageState extends ConsumerState<ChatPage>
         .read(conversationListControllerProvider.notifier)
         .upsertLocalMessage(
           chatId: localMessage.chatId,
-          title: ref.read(chatControllerProvider(widget.args.chatId)).chatTitle ?? '',
+          title:
+              ref.read(chatControllerProvider(widget.args.chatId)).chatTitle ??
+              '',
           conversationType: widget.args.conversationType,
           targetId: widget.args.targetId,
           messageId: retryKey,
           messageSequence: localMessage.sequence,
-          preview: createConversationPreviewFormatter(
-            ref.read(appLocaleProvider),
-          ).call(
-            type: localMessage.type,
-            content: localMessage.content,
-            customType: localMessage.extra.customType,
-            fileName: localMessage.extra.fileName,
-            systemEventKey: localMessage.extra.systemEventKey,
-            systemEventParams: localMessage.extra.systemEventParams,
-            conversationType: widget.args.conversationType,
-            isSelf: localMessage.isOutgoing,
-            senderName: localMessage.senderName,
-          ),
+          preview:
+              createConversationPreviewFormatter(
+                ref.read(appLocaleProvider),
+              ).call(
+                type: localMessage.type,
+                content: localMessage.content,
+                customType: localMessage.extra.customType,
+                fileName: localMessage.extra.fileName,
+                systemEventKey: localMessage.extra.systemEventKey,
+                systemEventParams: localMessage.extra.systemEventParams,
+                conversationType: widget.args.conversationType,
+                isSelf: localMessage.isOutgoing,
+                senderName: localMessage.senderName,
+              ),
           messageType: localMessage.type,
           senderName: localMessage.senderName,
           isSelf: localMessage.isOutgoing,
@@ -5946,24 +6042,29 @@ class _ChatPageState extends ConsumerState<ChatPage>
           .read(conversationListControllerProvider.notifier)
           .upsertLocalMessage(
             chatId: normalizedSent.chatId,
-            title: ref.read(chatControllerProvider(widget.args.chatId)).chatTitle ?? '',
+            title:
+                ref
+                    .read(chatControllerProvider(widget.args.chatId))
+                    .chatTitle ??
+                '',
             conversationType: widget.args.conversationType,
             targetId: widget.args.targetId,
             messageId: normalizedSent.messageId,
             messageSequence: normalizedSent.sequence,
-            preview: createConversationPreviewFormatter(
-              ref.read(appLocaleProvider),
-            ).call(
-              type: normalizedSent.type,
-              content: normalizedSent.content,
-              customType: normalizedSent.extra.customType,
-              fileName: normalizedSent.extra.fileName,
-              systemEventKey: normalizedSent.extra.systemEventKey,
-              systemEventParams: normalizedSent.extra.systemEventParams,
-              conversationType: widget.args.conversationType,
-              isSelf: normalizedSent.isOutgoing,
-              senderName: normalizedSent.senderName,
-            ),
+            preview:
+                createConversationPreviewFormatter(
+                  ref.read(appLocaleProvider),
+                ).call(
+                  type: normalizedSent.type,
+                  content: normalizedSent.content,
+                  customType: normalizedSent.extra.customType,
+                  fileName: normalizedSent.extra.fileName,
+                  systemEventKey: normalizedSent.extra.systemEventKey,
+                  systemEventParams: normalizedSent.extra.systemEventParams,
+                  conversationType: widget.args.conversationType,
+                  isSelf: normalizedSent.isOutgoing,
+                  senderName: normalizedSent.senderName,
+                ),
             messageType: normalizedSent.type,
             senderName: normalizedSent.senderName,
             isSelf: normalizedSent.isOutgoing,
@@ -6185,7 +6286,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         if (!context.mounted) {
           return;
         }
-        final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
+        final error = ref
+            .read(chatControllerProvider(widget.args.chatId))
+            .error;
         if (_handleGroupLifecycleRequestError(
           context,
           error,
@@ -6204,6 +6307,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         return;
       }
     } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
       if (_handleGroupLifecycleRequestError(
         context,
         error,
@@ -6234,7 +6340,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         if (!context.mounted) {
           return;
         }
-        final error = ref.read(chatControllerProvider(widget.args.chatId)).error;
+        final error = ref
+            .read(chatControllerProvider(widget.args.chatId))
+            .error;
         if (_handleGroupLifecycleRequestError(
           context,
           error,
@@ -6251,6 +6359,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       // 发送成功不显示提示（微信行为）
     } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
       if (_handleGroupLifecycleRequestError(
         context,
         error,
@@ -6258,17 +6369,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
       )) {
         return;
       }
-      if (!context.mounted) {
-        return;
-      }
       _showAttachmentError(context, error.toString());
     }
   }
 
-  void _openLocationMessage(
-    BuildContext context,
-    Message message,
-  ) {
+  void _openLocationMessage(BuildContext context, Message message) {
     final strings = ref.read(appStringsProvider);
     final latitude = message.extra.locationLatitude;
     final longitude = message.extra.locationLongitude;
@@ -6278,7 +6383,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     final locationName = message.extra.locationName?.trim() ?? '';
     final address = message.extra.locationAddress?.trim() ?? '';
-    
+
     // 直接跳转到位置详情页
     context.pushNamed(
       RouteNames.chatLocationDetail,
@@ -6292,25 +6397,6 @@ class _ChatPageState extends ConsumerState<ChatPage>
         provider: message.extra.locationProvider ?? 'unknown',
       ),
     );
-  }
-
-  String _buildLocationClipboardPayload({
-    required String locationName,
-    required String address,
-    required double latitude,
-    required double longitude,
-  }) {
-    final parts = <String>[];
-    if (locationName.trim().isNotEmpty) {
-      parts.add(locationName.trim());
-    }
-    if (address.trim().isNotEmpty && address.trim() != locationName.trim()) {
-      parts.add(address.trim());
-    }
-    parts.add(
-      '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
-    );
-    return parts.join('\n');
   }
 
   void _insertEmojiIntoComposer(
@@ -6658,7 +6744,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                           child: Text(
                             _error!,
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: ThemeColors.textSecondary(context)),
+                            style: TextStyle(
+                              color: ThemeColors.textSecondary(context),
+                            ),
                           ),
                         ),
                       );
@@ -6669,7 +6757,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                           _selectedTab == 'read'
                               ? strings.chatReadReceiptEmptyRead
                               : strings.chatReadReceiptEmptyUnread,
-                          style: TextStyle(color: ThemeColors.textSecondary(context)),
+                          style: TextStyle(
+                            color: ThemeColors.textSecondary(context),
+                          ),
                         ),
                       );
                     }
@@ -6710,7 +6800,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                   child: item.avatar.trim().isEmpty
                                       ? DecoratedBox(
                                           decoration: BoxDecoration(
-                                            color: getUserAvatarColor(item.userId),
+                                            color: getUserAvatarColor(
+                                              item.userId,
+                                            ),
                                             borderRadius: BorderRadius.circular(
                                               8,
                                             ),
@@ -6753,7 +6845,9 @@ class _ReadReceiptBottomSheetState extends State<_ReadReceiptBottomSheet> {
                                         _buildReadTime(item),
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: ThemeColors.textSecondary(context),
+                                          color: ThemeColors.textSecondary(
+                                            context,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -6848,7 +6942,9 @@ class _ReadReceiptTabSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? const Color(0xFF246BFD) : ThemeColors.textSecondary(context),
+              color: active
+                  ? const Color(0xFF246BFD)
+                  : ThemeColors.textSecondary(context),
             ),
           ),
         ],
@@ -7075,7 +7171,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
         height: 252,
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: ThemeColors.divider(context), width: 1)),
+          border: Border(
+            top: BorderSide(color: ThemeColors.divider(context), width: 1),
+          ),
         ),
         child: Column(
           children: [
@@ -7169,7 +7267,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                       _error!,
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: ThemeColors.textSecondary(context),
+                                        color: ThemeColors.textSecondary(
+                                          context,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -7220,7 +7320,10 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                                                   child: Icon(
                                                     Icons
                                                         .emoji_emotions_outlined,
-                                                    color: ThemeColors.textSecondary(context),
+                                                    color:
+                                                        ThemeColors.textSecondary(
+                                                          context,
+                                                        ),
                                                   ),
                                                 );
                                               },
@@ -7239,7 +7342,9 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
             Container(
               height: 44,
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: ThemeColors.divider(context))),
+                border: Border(
+                  top: BorderSide(color: ThemeColors.divider(context)),
+                ),
               ),
               child: Row(
                 children: [
@@ -7388,7 +7493,9 @@ class _PickerIconTab extends StatelessWidget {
           child: AppIcon(
             icon,
             size: 22,
-            color: active ? const Color(0xFF2F6BFF) : ThemeColors.textSecondary(context),
+            color: active
+                ? const Color(0xFF2F6BFF)
+                : ThemeColors.textSecondary(context),
           ),
         ),
       ),

@@ -31,6 +31,7 @@ import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
+import com.shengyu.module.system.service.im.push.ImNotificationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
@@ -335,6 +336,9 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Resource
     private ImSystemMessageI18nSupport imSystemMessageI18nSupport;
+
+    @Resource
+    private ImNotificationEventPublisher imNotificationEventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -1453,6 +1457,25 @@ public class ImMessageServiceImpl implements ImMessageService {
                     senderId, sendReqVO, effectiveGroupId);
             pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev,
                     senderId, sendReqVO, effectiveGroupId);
+        }
+
+        // REST sends and forwarded messages do not pass through the WebSocket
+        // MessageStorage SPI. Publish their minimal push event here so every
+        // persisted normal-message path reaches the same after-commit FCM
+        // dispatcher without performing network I/O in this transaction.
+        Long receiverId = null;
+        Long groupId = null;
+        if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            groupId = chat.getGroupId();
+        } else {
+            receiverId = Objects.equals(chat.getSingleUser1(), senderId)
+                    ? chat.getSingleUser2() : chat.getSingleUser1();
+        }
+        if (lastMessageId != null && chat.getId() != null) {
+            LocalDateTime eventTime = lastMessageTime != null ? lastMessageTime : LocalDateTime.now();
+            imNotificationEventPublisher.publishMessageCommitted(
+                    tenantId, senderId, groupId, receiverId, chat.getId(), lastMessageId,
+                    eventTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
         }
     }
 

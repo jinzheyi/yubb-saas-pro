@@ -42,12 +42,8 @@ abstract final class RouteNames {
   static const groupChatHistory = 'groupChatHistory';
   static const groupJoinRequests = 'groupJoinRequests';
   static const groupMemberDetail = 'groupMemberDetail';
-  static const callIncoming = 'callIncoming';
-  static const callOutgoing = 'callOutgoing';
-  static const callSession = 'callSession';
-  static const groupCallSession = 'groupCallSession';
+  static const call = 'call';
   static const groupCallMemberSelect = 'groupCallMemberSelect';
-  static const groupOutgoingCall = 'groupOutgoingCall';
   static const callHistory = 'callHistory';
   static const deviceList = 'deviceList';
 }

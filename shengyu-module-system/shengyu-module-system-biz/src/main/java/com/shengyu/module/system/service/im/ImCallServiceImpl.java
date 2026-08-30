@@ -32,7 +32,6 @@ import com.shengyu.module.system.enums.im.ImCallTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
-import com.shengyu.module.system.service.im.vo.GroupInviteResultVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
@@ -94,16 +93,10 @@ public class ImCallServiceImpl implements ImCallService {
     private ObjectProvider<NettyMessageSender> nettyMessageSenderProvider;
 
     @Resource
-    private JanusRoomManager janusRoomManager;
-
-    @Resource
-    private CallTokenService callTokenService;
+    private LiveKitTokenService liveKitTokenService;
 
     @Resource
     private CallDurationLimiter callDurationLimiter;
-
-    @Value("${janus.url:}")
-    private String janusUrl;
 
     @Value("${im.call.ring-timeout-seconds:30}")
     private long ringTimeoutSeconds;
@@ -158,7 +151,11 @@ public class ImCallServiceImpl implements ImCallService {
             if (groupParticipant != null) {
                 groupParticipant.setDeviceId(deviceId);
                 groupParticipant.setStatus(1);
+                groupParticipant.setInviteState("ACCEPTED");
+                groupParticipant.setJoinState("JOINED");
+                groupParticipant.setJoinedAt(LocalDateTime.now());
                 groupParticipant.setLeaveTime(null);
+                groupParticipant.setLeftAt(null);
                 if (groupParticipant.getJoinTime() == null) {
                     groupParticipant.setJoinTime(LocalDateTime.now());
                 }
@@ -193,7 +190,11 @@ public class ImCallServiceImpl implements ImCallService {
         if (groupParticipant != null) {
             groupParticipant.setDeviceId(deviceId);
             groupParticipant.setStatus(1);
+            groupParticipant.setInviteState("ACCEPTED");
+            groupParticipant.setJoinState("JOINED");
+            groupParticipant.setJoinedAt(LocalDateTime.now());
             groupParticipant.setLeaveTime(null);
+            groupParticipant.setLeftAt(null);
             if (groupParticipant.getJoinTime() == null) {
                 groupParticipant.setJoinTime(LocalDateTime.now());
             }
@@ -223,10 +224,15 @@ public class ImCallServiceImpl implements ImCallService {
             if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
                 return;
             }
-            if (!ImCallStateEnum.RINGING.getState().equals(callRecord.getState())) {
-                throw new IllegalStateException("当前群通话状态不能拒接: " + callRecord.getState());
+            // 群通话的全局状态可能已被其他成员推进到 CONNECTED。当前成员能否
+            // 拒绝必须以自己的邀请状态为准，不能再依赖整场通话仍为 RINGING。
+            if ("REJECTED".equals(participant.getInviteState())) {
+                return;
             }
-            callParticipantMapper.updateStatus(callId, userId, 3);
+            if (!"PENDING".equals(participant.getInviteState())) {
+                throw new IllegalStateException("当前群通话邀请状态不能拒接: " + participant.getInviteState());
+            }
+            callParticipantMapper.rejectInvitation(callId, userId);
             log.info("[rejectCall] 群通话成员拒接, callId={}, userId={}, reason={}", callId, userId, reason);
             return;
         }
@@ -302,6 +308,13 @@ public class ImCallServiceImpl implements ImCallService {
         // 通话记录是租户归属的权威来源，兼容 @TenantIgnore 的全局任务和无上下文回调。
         Long tenantId = callRecord.getTenantId();
 
+        // 群成员只能调用 leave；结束全体严格限制为 owner。
+        if (callRecord.getGroupId() != null
+                && !Objects.equals(callRecord.getOwnerId(), userId)
+                && !Objects.equals(callRecord.getCallerId(), userId)) {
+            throw exception(CALL_PERMISSION_DENIED);
+        }
+
         // 验证是否是通话参与者
         if (!Objects.equals(callRecord.getCallerId(), userId) && !Objects.equals(callRecord.getCalleeId(), userId)) {
             ImCallParticipantDO participant = callRecord.getGroupId() == null ? null
@@ -343,24 +356,6 @@ public class ImCallServiceImpl implements ImCallService {
     }
 
     @Override
-    public void forwardCallSignal(String callId, Long fromUserId, Long toUserId, String signalData) {
-        // 验证通话记录存在
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // 验证是否是通话参与者
-        if (!callRecord.getCallerId().equals(fromUserId) && !callRecord.getCalleeId().equals(fromUserId)) {
-            throw exception(CALL_PERMISSION_DENIED);
-        }
-
-        // 信令转发逻辑由WebSocket中间件处理
-        // 这里只做验证和日志记录
-        log.info("[forwardCallSignal] 转发通话信令, callId={}, from={}, to={}", callId, fromUserId, toUserId);
-    }
-
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveCallRecord(ImCallRecordDO callRecord) {
         callRecordMapper.insert(callRecord);
@@ -374,8 +369,8 @@ public class ImCallServiceImpl implements ImCallService {
     }
 
     @Override
-    public ImCallRecordDO getCallRecordByRoomId(String roomId) {
-        return callRecordMapper.selectByRoomId(roomId);
+    public ImCallRecordDO getCallRecordByLivekitRoom(String roomName) {
+        return callRecordMapper.selectByLivekitRoom(roomName);
     }
 
     @Override
@@ -455,7 +450,10 @@ public class ImCallServiceImpl implements ImCallService {
                 ImCallStateEnum.CONNECTED.getState())) {
             return true;
         }
-        return callParticipantMapper.selectActiveByUserId(userId, 1).stream()
+        // A pending group invite is already an occupied ringing slot. Checking
+        // only status=1 allowed the same user to receive several concurrent
+        // group/direct calls and made client recovery choose an arbitrary one.
+        return callParticipantMapper.selectRecoverableByUserId(userId).stream()
                 .map(ImCallParticipantDO::getCallId)
                 .map(callRecordMapper::selectByCallId)
                 .filter(Objects::nonNull)
@@ -525,8 +523,8 @@ public class ImCallServiceImpl implements ImCallService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType) {
-        if (callerId == null || calleeId == null || Objects.equals(callerId, calleeId)) {
+    public CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType, String deviceId) {
+        if (callerId == null || calleeId == null || Objects.equals(callerId, calleeId) || deviceId == null || deviceId.trim().isEmpty()) {
             throw new IllegalArgumentException("被叫用户必须是其他有效用户");
         }
         if (!ImCallTypeEnum.VOICE.getType().equals(callType) && !ImCallTypeEnum.VIDEO.getType().equals(callType)) {
@@ -551,7 +549,7 @@ public class ImCallServiceImpl implements ImCallService {
         // 最小通话模型不支持呼叫等待或转接：主叫、被叫任一方存在
         // RINGING/CONNECTING/CONNECTED 通话时，新的邀请必须在服务端拒绝。
         if (isUserBusy(callerId) || isUserBusy(calleeId)) {
-            throw exception(IM_CALL_USER_BUSY);
+            throw new IllegalStateException("用户正在通话中");
         }
         // 生成通话ID和邀请ID
         String callId = IdUtil.simpleUUID();
@@ -561,14 +559,9 @@ public class ImCallServiceImpl implements ImCallService {
         if (tenantId == null) {
             throw new IllegalStateException("租户上下文缺失（请求必须携带 tenant-id）");
         }
-        if (janusUrl == null || janusUrl.trim().isEmpty()) {
-            // Never hand a client an empty endpoint or a mock credential: that
-            // produces a ringing UI which can never establish media.
-            throw new IllegalStateException("RTC 服务未配置（需要 janus.url）");
-        }
-        JanusRoomManager.RoomInfo room = janusRoomManager.createRoom(tenantId, "call_" + callId);
-        String roomId = room.getRoomId();
-        String token = callTokenService.generateToken(callerId, tenantId, roomId);
+        String livekitRoom = buildLivekitRoomName(tenantId, callId);
+        LiveKitConnectionInfo connection = liveKitTokenService.issueJoinToken(
+                tenantId, callerId, deviceId, callId, livekitRoom);
 
         // 创建通话记录
         ImCallRecordDO callRecord = ImCallRecordDO.builder()
@@ -577,7 +570,11 @@ public class ImCallServiceImpl implements ImCallService {
                 .callerId(callerId)
                 .calleeId(calleeId)
                 .chatId(chatIdLong)
-                .roomId(roomId)
+                .provider("LIVEKIT")
+                .callMode("DIRECT")
+                .ownerId(callerId)
+                .livekitRoom(livekitRoom)
+                .stateVersion(1)
                 .startTime(LocalDateTime.now())
                 .duration(0)
                 .status(ImCallStatusEnum.MISSED.getStatus())
@@ -586,20 +583,17 @@ public class ImCallServiceImpl implements ImCallService {
 
         callRecordMapper.insert(callRecord);
 
-        log.info("[createCallInvite] 创建通话邀请成功, callId={}, inviteId={}, callerId={}, callType={}, roomId={}",
-                callId, inviteId, callerId, callType, roomId);
+        log.info("[createCallInvite] 创建 LiveKit 通话邀请成功, callId={}, inviteId={}, callerId={}, callType={}, room={}",
+                callId, inviteId, callerId, callType, livekitRoom);
 
         // 构建 RTC 房间信息
         CallInviteResultVO.RtcRoomInfo rtcRoom = CallInviteResultVO.RtcRoomInfo.builder()
                 .callSessionId(callId)
-                .roomId(roomId)
+                .roomName(livekitRoom)
                 .publisherId(callerId.toString())
                 .displayName("")
-                .janusUrl(janusUrl)
-                .turnUrls(Collections.emptyList())
-                .turnUsername("")
-                .turnCredential("")
-                .token(token)
+                .livekitUrl(connection.getServerUrl())
+                .token(connection.getAccessToken())
                 .build();
 
         // 构建响应 VO
@@ -613,98 +607,31 @@ public class ImCallServiceImpl implements ImCallService {
                 .build();
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public GroupInviteResultVO inviteGroupMembers(String callSessionId, String groupId, Long inviterId, List<Long> inviteeIds) {
-        // 验证通话是否存在
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callSessionId);
-        if (callRecord == null) {
-            throw exception(CALL_RECORD_NOT_EXISTS);
-        }
-
-        // 关键修复：群组通话权限验证需要检查多个维度
-        // 1. 主叫方（发起人）可以邀请
-        // 2. 被叫方（1v1场景）可以邀请
-        // 3. 已经是通话参与者的人也可以邀请（群组通话场景）
-        boolean isCaller = callRecord.getCallerId().equals(inviterId);
-        boolean isCallee = callRecord.getCalleeId().equals(inviterId);
-        boolean isParticipant = false;
-        
-        if (!isCaller && !isCallee) {
-            // 检查是否是群组通话的已加入参与者
-            ImCallParticipantDO participant = callParticipantMapper.selectByCallIdAndUserId(callSessionId, inviterId);
-            isParticipant = (participant != null);
-        }
-        
-        if (!isCaller && !isCallee && !isParticipant) {
-            throw exception(CALL_PERMISSION_DENIED);
-        }
-
-        Long groupIdLong;
-        try {
-            groupIdLong = Long.valueOf(groupId);
-        } catch (NumberFormatException e) {
-            throw exception(CALL_PERMISSION_DENIED);
-        }
-        ImChatDO groupChat = chatMapper.selectGroupChat(groupIdLong, 2);
-        if (groupChat == null || !Objects.equals(callRecord.getChatId(), groupChat.getId())
-                || chatUserMapper.selectByUserIdAndChatId(inviterId, groupChat.getId()) == null) {
-            throw exception(CALL_PERMISSION_DENIED);
-        }
-
-        // Convert the original 1:1 invite into a durable group-call roster.
-        // This is required for authorization, join/leave broadcasting and
-        // reconnect recovery; WebSocket notification alone is not state.
-        callRecord.setGroupId(groupIdLong);
-        callRecordMapper.updateById(callRecord);
-        ensureGroupParticipant(callSessionId, inviterId, 1, 1);
-
-        // 获取邀请者信息
-        AdminUserDO inviterUser = adminUserMapper.selectById(inviterId);
-        String inviterName = inviterUser != null ? inviterUser.getNickname() : "未知用户";
-        String inviterAvatar = inviterUser != null ? inviterUser.getAvatar() : null;
-        
-        // 关键修复：从通话记录中获取实际的 callType，而非硬编码
-        Integer callTypeInt = callRecord.getCallType();
-        String callTypeStr = ImCallTypeEnum.VIDEO.getType().equals(callTypeInt) ? "video" : "audio";
-
-        // 生成邀请ID列表
-        List<String> inviteIds = new ArrayList<>();
-        for (Long inviteeId : new java.util.LinkedHashSet<>(inviteeIds)) {
-            if (inviteeId == null || inviteeId.equals(inviterId)) {
-                continue;
-            }
-            if (chatUserMapper.selectByUserIdAndChatId(inviteeId, groupChat.getId()) == null) {
-                log.warn("[inviteGroupMembers] 忽略非群成员邀请, callSessionId={}, inviteeId={}", callSessionId, inviteeId);
-                continue;
-            }
-            ensureGroupParticipant(callSessionId, inviteeId, 2, 2);
-            String inviteId = IdUtil.simpleUUID();
-            inviteIds.add(inviteId);
-
-            // 发送 WebSocket 通知给被邀请者
-            sendGroupInviteWebSocket(callSessionId, groupId, inviterId, inviterName, inviterAvatar, inviteeId, inviteId, callTypeStr);
-        }
-
-        // 构建响应 VO
-        return GroupInviteResultVO.builder()
-                .callSessionId(callSessionId)
-                .inviteIds(inviteIds)
-                .invitedCount(inviteeIds.size())
-                .build();
+    private String buildLivekitRoomName(Long tenantId, String callId) {
+        return "im_" + tenantId + "_" + callId;
     }
 
-    private void ensureGroupParticipant(String callId, Long userId, int role, int status) {
-        if (callParticipantMapper.selectByCallIdAndUserId(callId, userId) != null) {
-            return;
+    @Override
+    public LiveKitConnectionInfo issueLiveKitConnection(String callId, Long userId, String deviceId) {
+        ImCallRecordDO record = callRecordMapper.selectByCallId(callId);
+        if (record == null) {
+            throw exception(CALL_RECORD_NOT_EXISTS);
         }
-        callParticipantMapper.insert(ImCallParticipantDO.builder()
-                .callId(callId)
-                .userId(userId)
-                .role(role)
-                .status(status)
-                .joinTime(LocalDateTime.now())
-                .build());
+        boolean directParticipant = Objects.equals(record.getCallerId(), userId)
+                || Objects.equals(record.getCalleeId(), userId);
+        boolean groupParticipant = "GROUP".equals(record.getCallMode())
+                && callParticipantMapper.selectByCallIdAndUserId(callId, userId) != null;
+        if (!directParticipant && !groupParticipant) {
+            throw exception(CALL_PERMISSION_DENIED);
+        }
+        if (ImCallStateEnum.ENDED.getState().equals(record.getState())) {
+            throw new IllegalStateException("通话已结束");
+        }
+        if (!"LIVEKIT".equals(record.getProvider()) || record.getLivekitRoom() == null) {
+            throw new IllegalStateException("该通话不是可加入的 LiveKit 通话");
+        }
+        return liveKitTokenService.issueJoinToken(record.getTenantId(), userId, deviceId,
+                record.getCallId(), record.getLivekitRoom());
     }
 
     private boolean isCallMember(ImCallRecordDO callRecord, Long userId) {
@@ -713,72 +640,6 @@ public class ImCallServiceImpl implements ImCallService {
         }
         return callRecord.getGroupId() != null
                 && callParticipantMapper.selectByCallIdAndUserId(callRecord.getCallId(), userId) != null;
-    }
-
-    /**
-     * 发送群组通话邀请 WebSocket 通知
-     * 
-     * @param callType 通话类型（"audio" 或 "video"），从通话记录中动态获取
-     */
-    private void sendGroupInviteWebSocket(String callSessionId, String groupId, Long inviterId, 
-                                          String inviterName, String inviterAvatar, 
-                                          Long inviteeId, String inviteId, String callType) {
-        NettyMessageSender messageSender = nettyMessageSenderProvider.getIfAvailable();
-        if (messageSender == null) {
-            log.warn("[sendGroupInviteWebSocket] NettyMessageSender 不可用，跳过通知");
-            return;
-        }
-
-        // 关键修复：查询群组对应的 chatId，前端 onGroupInvite 需要此字段
-        Long chatId = null;
-        try {
-            Long groupIdLong = Long.parseLong(groupId);
-            ImChatDO groupChat = chatMapper.selectGroupChat(groupIdLong, 2); // chatType=2 表示群聊
-            if (groupChat != null) {
-                chatId = groupChat.getId();
-            }
-        } catch (Exception e) {
-            log.warn("[sendGroupInviteWebSocket] 查询群组 chatId 失败, groupId={}", groupId, e);
-        }
-
-        // 构建群组邀请 payload
-        JSONObject payload = JSONUtil.createObj()
-            .set("type", "call.group-invite")
-            .set("callSessionId", callSessionId)
-            .set("groupId", groupId)
-            .set("chatId", chatId != null ? String.valueOf(chatId) : "")  // 关键修复：补充 chatId 字段
-            .set("inviteId", inviteId)
-            .set("callerId", String.valueOf(inviterId))
-            .set("callerName", inviterName)
-            .set("callerAvatar", inviterAvatar)
-            .set("callType", callType); // 关键修复：使用动态 callType，而非硬编码
-
-        TextMessage textMessage = TextMessage.newBuilder()
-            .setContent("")
-            .build();
-
-        try {
-            messageSender.sendToUserWithExtra(
-                inviteeId,
-                MessageType.SYSTEM_NOTIFY,
-                textMessage,
-                inviterId,
-                inviteeId,
-                0L,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                payload.toString()
-            );
-            log.info("[sendGroupInviteWebSocket] 发送群组通话邀请成功, callSessionId={}, inviteeId={}, inviteId={}", 
-                callSessionId, inviteeId, inviteId);
-        } catch (Exception e) {
-            log.error("[sendGroupInviteWebSocket] 发送群组通话邀请失败, callSessionId={}, inviteeId={}", 
-                callSessionId, inviteeId, e);
-        }
     }
 
     @Override
@@ -947,64 +808,6 @@ public class ImCallServiceImpl implements ImCallService {
                     userId, deviceId, activeCalls.size());
         } catch (Exception e) {
             log.error("[handleDeviceKicked] 设备被踢通话清理异常, userId={}, deviceId={}", userId, deviceId, e);
-        }
-    }
-
-    @Override
-    public void updateMediaState(String callSessionId, Long userId, Boolean cameraEnabled, Boolean microphoneEnabled) {
-        // 查询通话记录
-        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callSessionId);
-        if (callRecord == null) {
-            log.warn("[updateMediaState] 通话记录不存在, callSessionId={}", callSessionId);
-            return;
-        }
-
-        // 确定对端用户ID
-        Long targetUserId = callRecord.getCallerId().equals(userId) ? callRecord.getCalleeId() : callRecord.getCallerId();
-        if (targetUserId == null) {
-            log.warn("[updateMediaState] 对端用户ID为空, callSessionId={}", callSessionId);
-            return;
-        }
-
-        // 构建 WebSocket 消息
-        JSONObject payload = JSONUtil.createObj()
-            .set("type", "call.media-state-update")
-            .set("callSessionId", callSessionId)
-            .set("fromUserId", String.valueOf(userId))
-            .set("cameraEnabled", cameraEnabled)
-            .set("microphoneEnabled", microphoneEnabled);
-
-        // 通过 WebSocket 广播给对端
-        NettyMessageSender messageSender = nettyMessageSenderProvider.getIfAvailable();
-        if (messageSender == null) {
-            log.warn("[updateMediaState] NettyMessageSender 不可用，跳过广播");
-            return;
-        }
-
-        TextMessage textMessage = TextMessage.newBuilder()
-            .setContent("")
-            .build();
-
-        try {
-            messageSender.sendToUserWithExtra(
-                targetUserId,
-                MessageType.SYSTEM_NOTIFY,
-                textMessage,
-                userId,
-                targetUserId,
-                0L,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                payload.toString()
-            );
-            log.info("[updateMediaState] 广播媒体状态成功, callSessionId={}, fromUserId={}, targetUserId={}, cameraEnabled={}, microphoneEnabled={}",
-                callSessionId, userId, targetUserId, cameraEnabled, microphoneEnabled);
-        } catch (Exception e) {
-            log.error("[updateMediaState] 广播媒体状态失败, callSessionId={}, targetUserId={}", callSessionId, targetUserId, e);
         }
     }
 

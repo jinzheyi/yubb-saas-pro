@@ -27,10 +27,10 @@ class UnifiedCacheManager {
     required DiskCacheManager diskCache,
     required CursorVersionStore cursorVersionStore,
     CachePerformanceMonitor? performanceMonitor,
-  })  : _memoryCache = memoryCache,
-        _diskCache = diskCache,
-        _cursorVersionStore = cursorVersionStore,
-        _performanceMonitor = performanceMonitor ?? CachePerformanceMonitor();
+  }) : _memoryCache = memoryCache,
+       _diskCache = diskCache,
+       _cursorVersionStore = cursorVersionStore,
+       _performanceMonitor = performanceMonitor ?? CachePerformanceMonitor();
 
   /// 获取会话列表（三级缓存）
   Future<ConversationCacheResult?> getConversationList(String userId) async {
@@ -51,14 +51,18 @@ class UnifiedCacheManager {
     if (diskCached != null) {
       debugPrint('[UnifiedCache] Conversation list HIT L2 for user: $userId');
       _performanceMonitor.recordConversationListHit();
-      
+
       // 从 CursorVersionStore 获取正确的游标版本
-      final cursorVersion = await _cursorVersionStore.getConversationListCursor(userId);
-      
+      final cursorVersion = await _cursorVersionStore.getConversationListCursor(
+        userId,
+      );
+
       // 回填 L1 内存缓存
       _memoryCache.setConversationList(userId, diskCached, cursorVersion);
-      debugPrint('[UnifiedCache] Backfilled L1 cache from L2 for user: $userId');
-      
+      debugPrint(
+        '[UnifiedCache] Backfilled L1 cache from L2 for user: $userId',
+      );
+
       return ConversationCacheResult(
         data: diskCached,
         cursorVersion: cursorVersion,
@@ -69,6 +73,23 @@ class UnifiedCacheManager {
     debugPrint('[UnifiedCache] Conversation list MISS for user: $userId');
     _performanceMonitor.recordConversationListMiss();
     return null;
+  }
+
+  /// 仅从 L1 读取会话缓存。
+  ///
+  /// 用于首帧水合：页面不能为了确认内存中已有的数据再等待一次异步
+  /// 查询，否则即使缓存命中也会短暂渲染骨架屏。
+  ConversationCacheResult? peekConversationList(String userId) {
+    final cached = _memoryCache.getConversationList(userId);
+    if (cached == null) {
+      return null;
+    }
+    _performanceMonitor.recordConversationListHit();
+    return ConversationCacheResult(
+      data: cached.data,
+      cursorVersion: cached.cursorVersion,
+      fromMemory: true,
+    );
   }
 
   /// 设置会话列表缓存
@@ -84,10 +105,7 @@ class UnifiedCacheManager {
   }
 
   /// 获取消息（三级缓存）
-  Future<MessageCacheResult?> getMessages(
-    String userId,
-    String chatId,
-  ) async {
+  Future<MessageCacheResult?> getMessages(String userId, String chatId) async {
     // 1. 尝试内存缓存
     final memoryCached = _memoryCache.getMessages(userId, chatId);
     if (memoryCached != null) {
@@ -107,8 +125,15 @@ class UnifiedCacheManager {
       _performanceMonitor.recordMessageHit();
 
       // 回填 L1 内存缓存（包含 viewportState）
-      _memoryCache.setMessages(userId, chatId, diskCached.messages, diskCached.viewportState);
-      debugPrint('[UnifiedCache] Backfilled L1 cache from L2 for chat: $chatId');
+      _memoryCache.setMessages(
+        userId,
+        chatId,
+        diskCached.messages,
+        diskCached.viewportState,
+      );
+      debugPrint(
+        '[UnifiedCache] Backfilled L1 cache from L2 for chat: $chatId',
+      );
 
       return MessageCacheResult(
         data: diskCached.messages,
@@ -122,6 +147,20 @@ class UnifiedCacheManager {
     return null;
   }
 
+  /// 仅从 L1 读取消息缓存，供聊天页在首帧前同步恢复时间线。
+  MessageCacheResult? peekMessages(String userId, String chatId) {
+    final cached = _memoryCache.getMessages(userId, chatId);
+    if (cached == null) {
+      return null;
+    }
+    _performanceMonitor.recordMessageHit();
+    return MessageCacheResult(
+      data: cached.data,
+      viewportState: cached.viewportState,
+      fromMemory: true,
+    );
+  }
+
   /// 设置消息缓存
   Future<void> setMessages(
     String userId,
@@ -132,7 +171,12 @@ class UnifiedCacheManager {
     // 写入 L1
     _memoryCache.setMessages(userId, chatId, messages, viewportState);
     // 异步写入 L2（包含 viewportState）
-    await _diskCache.setMessages(userId, chatId, messages, viewportState: viewportState);
+    await _diskCache.setMessages(
+      userId,
+      chatId,
+      messages,
+      viewportState: viewportState,
+    );
   }
 
   /// 清空指定用户的内存缓存（用户登出时调用）

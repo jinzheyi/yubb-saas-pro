@@ -20,7 +20,7 @@ class ImDatabase extends _$ImDatabase {
   ImDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -29,12 +29,14 @@ class ImDatabase extends _$ImDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
       },
+
       /// 数据库升级时调用
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
           // 版本 1 → 2：添加用户隔离、缓存字段、引用信息
           // 使用 columnTransformer 保留旧数据
           await m.alterTable(
+            // ignore: experimental_member_use
             TableMigration(
               conversations,
               columnTransformer: {
@@ -44,14 +46,20 @@ class ImDatabase extends _$ImDatabase {
                 conversations.targetAvatar: conversations.targetAvatar,
                 conversations.targetId: conversations.targetId,
                 conversations.lastMessageId: conversations.lastMessageId,
-                conversations.lastMessageSequence: conversations.lastMessageSequence,
+                conversations.lastMessageSequence:
+                    conversations.lastMessageSequence,
                 conversations.lastReadSequence: conversations.lastReadSequence,
-                conversations.lastMessagePreview: conversations.lastMessagePreview,
+                conversations.lastMessagePreview:
+                    conversations.lastMessagePreview,
                 conversations.lastMessageType: conversations.lastMessageType,
-                conversations.lastMessageSenderName: conversations.lastMessageSenderName,
-                conversations.lastMessageIsSelf: conversations.lastMessageIsSelf,
-                conversations.lastMessageStatus: conversations.lastMessageStatus,
-                conversations.lastMessageHasAtMe: conversations.lastMessageHasAtMe,
+                conversations.lastMessageSenderName:
+                    conversations.lastMessageSenderName,
+                conversations.lastMessageIsSelf:
+                    conversations.lastMessageIsSelf,
+                conversations.lastMessageStatus:
+                    conversations.lastMessageStatus,
+                conversations.lastMessageHasAtMe:
+                    conversations.lastMessageHasAtMe,
                 conversations.lastMessageTime: conversations.lastMessageTime,
                 conversations.unreadCount: conversations.unreadCount,
                 conversations.isPinned: conversations.isPinned,
@@ -61,6 +69,7 @@ class ImDatabase extends _$ImDatabase {
             ),
           );
           await m.alterTable(
+            // ignore: experimental_member_use
             TableMigration(
               messages,
               columnTransformer: {
@@ -82,10 +91,19 @@ class ImDatabase extends _$ImDatabase {
             ),
           );
         }
-        
+
         if (from < 3) {
           // 版本 2 → 3：添加通话记录表
           await m.createTable(callRecords);
+        }
+
+        if (from < 4) {
+          // 版本 3 → 4：重建会话表以移除早期版本错误的
+          // `UNIQUE(chatId)` 约束。SQLite 实际列名为 `chat_id`，旧约束会让
+          // 数据库初始化/升级失败，继而使 IM 本地缓存完全不可用。
+          // chat_id 本身已是主键，无需额外唯一约束。
+          // ignore: experimental_member_use
+          await m.alterTable(TableMigration(conversations));
         }
       },
     );
@@ -95,13 +113,15 @@ class ImDatabase extends _$ImDatabase {
 
   /// 获取数据库单例
   static ImDatabase get instance {
-    _instance ??= ImDatabase(driftDatabase(
-      name: 'yubb_im',
-      web: DriftWebOptions(
-        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-        driftWorker: Uri.parse('drift_worker.js'),
+    _instance ??= ImDatabase(
+      driftDatabase(
+        name: 'yubb_im',
+        web: DriftWebOptions(
+          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+          driftWorker: Uri.parse('drift_worker.js'),
+        ),
       ),
-    ));
+    );
     return _instance!;
   }
 
@@ -117,10 +137,10 @@ class ImDatabase extends _$ImDatabase {
     try {
       // 清理消息表（drift 语法）
       await delete(messages).go();
-      
+
       // 清理会话表（drift 语法）
       await delete(conversations).go();
-      
+
       // 清理通话记录表（drift 语法）
       await delete(callRecords).go();
     } catch (e) {

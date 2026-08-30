@@ -41,6 +41,56 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   final CursorVersionStore _cursorVersionStore;
   final String _currentUserId;
 
+  /// 在路由进入会话页前恢复本地会话快照。
+  ///
+  /// 这条路径只读取本地缓存，不依赖网络；成功时会先将页面置为 ready，
+  /// 随后再后台增量同步，避免每次登录都从骨架屏开始。
+  Future<bool> warmStart() async {
+    if (state.conversations.isNotEmpty) {
+      return true;
+    }
+
+    final cached = await _unifiedCacheManager.getConversationList(
+      _currentUserId,
+    );
+    if (!mounted || cached == null || cached.data.isEmpty) {
+      return false;
+    }
+
+    state = state.copyWith(
+      status: ConversationListStatus.ready,
+      conversations: cached.data,
+      cursorVersion: cached.cursorVersion,
+      error: null,
+    );
+    debugPrint(
+      '[ConversationList] Warm start restored ${cached.data.length} conversations',
+    );
+    _backgroundIncrementalSync();
+    // 将最近会话也放入 L1，使紧接着进入聊天页时可以首帧显示消息。
+    await _warmRecentMessageCaches(cached.data);
+    return true;
+  }
+
+  Future<void> _warmRecentMessageCaches(
+    List<Conversation> conversations,
+  ) async {
+    try {
+      await Future.wait<void>(
+        conversations
+            .take(5)
+            .map(
+              (conversation) => _unifiedCacheManager
+                  .getMessages(_currentUserId, conversation.chatId)
+                  .then<void>((_) {}),
+            ),
+      );
+    } catch (error) {
+      // 消息预热失败不影响会话列表恢复；进入聊天页仍会按缓存/网络路径处理。
+      debugPrint('[ConversationList] Recent message warm-up failed: $error');
+    }
+  }
+
   Future<AppError?> load() async {
     // Skip API call if data already exists - prevents data loss on tab switch
     // When switching tabs, the page is recreated but the controller persists.
@@ -56,19 +106,24 @@ class ConversationListController extends StateNotifier<ConversationListState> {
 
     // ========== 【新增】缓存优先策略 ==========
     // 1. 尝试从缓存加载（L1 → L2）
-    final cached = await _unifiedCacheManager.getConversationList(_currentUserId);
+    final cached = await _unifiedCacheManager.getConversationList(
+      _currentUserId,
+    );
     if (cached != null && cached.data.isNotEmpty) {
       // 恢复游标版本
-      final cursorVersion = await _cursorVersionStore
-          .getConversationListCursor(_currentUserId);
+      final cursorVersion = await _cursorVersionStore.getConversationListCursor(
+        _currentUserId,
+      );
 
       state = state.copyWith(
-        status: ConversationListStatus.ready,  // 直接设为 ready，跳过骨架屏
+        status: ConversationListStatus.ready, // 直接设为 ready，跳过骨架屏
         conversations: cached.data,
         cursorVersion: cursorVersion,
       );
 
-      debugPrint('[ConversationList] Cache hit, loading from cache (${cached.data.length} conversations)');
+      debugPrint(
+        '[ConversationList] Cache hit, loading from cache (${cached.data.length} conversations)',
+      );
 
       // 后台增量同步（不阻塞 UI）
       _backgroundIncrementalSync();
@@ -95,15 +150,19 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       );
 
       // ========== 【新增】写入缓存（异步，不阻塞 UI）==========
-      unawaited(_unifiedCacheManager.setConversationList(
-        _currentUserId,
-        nextConversations,
-        result.cursorVersion,
-      ));
-      unawaited(_cursorVersionStore.setConversationListCursor(
-        _currentUserId,
-        result.cursorVersion,
-      ));
+      unawaited(
+        _unifiedCacheManager.setConversationList(
+          _currentUserId,
+          nextConversations,
+          result.cursorVersion,
+        ),
+      );
+      unawaited(
+        _cursorVersionStore.setConversationListCursor(
+          _currentUserId,
+          result.cursorVersion,
+        ),
+      );
       // ========== 【新增结束】 ==========
 
       return null;
@@ -152,15 +211,19 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         );
 
         // 更新缓存（异步，不阻塞）
-        unawaited(_unifiedCacheManager.setConversationList(
-          _currentUserId,
-          merged,
-          result.cursorVersion,
-        ));
-        unawaited(_cursorVersionStore.setConversationListCursor(
-          _currentUserId,
-          result.cursorVersion,
-        ));
+        unawaited(
+          _unifiedCacheManager.setConversationList(
+            _currentUserId,
+            merged,
+            result.cursorVersion,
+          ),
+        );
+        unawaited(
+          _cursorVersionStore.setConversationListCursor(
+            _currentUserId,
+            result.cursorVersion,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('[ConversationList] Background sync failed: $e');
@@ -190,15 +253,19 @@ class ConversationListController extends StateNotifier<ConversationListState> {
 
       // ========== 【新增】写入缓存 ==========
       if (result.items.isNotEmpty) {
-        unawaited(_unifiedCacheManager.setConversationList(
-          _currentUserId,
-          nextConversations,
-          result.cursorVersion,
-        ));
-        unawaited(_cursorVersionStore.setConversationListCursor(
-          _currentUserId,
-          result.cursorVersion,
-        ));
+        unawaited(
+          _unifiedCacheManager.setConversationList(
+            _currentUserId,
+            nextConversations,
+            result.cursorVersion,
+          ),
+        );
+        unawaited(
+          _cursorVersionStore.setConversationListCursor(
+            _currentUserId,
+            result.cursorVersion,
+          ),
+        );
       }
       // ========== 【新增结束】 ==========
 
@@ -351,11 +418,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     }
 
     // ========== 【新增】缓存写穿 ==========
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId,
-      state.conversations,
-      state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
     // ========== 【新增结束】 ==========
   }
 
@@ -396,9 +465,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         conversations: _sortConversations(_dedupeConversations(items)),
       );
       // 【缓存写穿】
-      unawaited(_unifiedCacheManager.setConversationList(
-        _currentUserId, state.conversations, state.cursorVersion,
-      ));
+      unawaited(
+        _unifiedCacheManager.setConversationList(
+          _currentUserId,
+          state.conversations,
+          state.cursorVersion,
+        ),
+      );
       return;
     }
     final existing = items[index];
@@ -460,11 +533,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
 
     // ========== 【新增】缓存写穿 ==========
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId,
-      state.conversations,
-      state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
     // ========== 【新增结束】 ==========
   }
 
@@ -495,9 +570,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   void markConversationRead(String chatId) {
@@ -516,9 +595,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   Future<void> markConversationReadRemotely(String chatId) async {
@@ -553,9 +636,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   /// 激活对话（进入对话页时调用）
@@ -594,9 +681,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   Future<void> deleteConversation(String chatId) async {
@@ -608,9 +699,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   void clearConversationPreview({required String chatId, DateTime? updatedAt}) {
@@ -630,9 +725,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: _sortConversations(items),
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   void patchConversationSettings({
@@ -654,9 +753,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: _sortConversations(items),
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   void patchConversationTitle({
@@ -687,9 +790,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: _sortConversations(items),
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   /// 更新会话目标头像（用于对方头像变更时同步到会话列表）
@@ -724,9 +831,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: _sortConversations(items),
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   void applyBadgeSnapshot(Map<String, int> conversationBadges) {
@@ -768,9 +879,13 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations: items,
     );
     // 【缓存写穿】
-    unawaited(_unifiedCacheManager.setConversationList(
-      _currentUserId, state.conversations, state.cursorVersion,
-    ));
+    unawaited(
+      _unifiedCacheManager.setConversationList(
+        _currentUserId,
+        state.conversations,
+        state.cursorVersion,
+      ),
+    );
   }
 
   List<Conversation> _sortConversations(List<Conversation> items) {

@@ -3,7 +3,6 @@ package com.shengyu.module.system.service.im;
 import com.shengyu.module.system.dal.dataobject.im.ImCallEventDO;
 import com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO;
 import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
-import com.shengyu.module.system.service.im.vo.GroupInviteResultVO;
 
 import java.util.List;
 
@@ -67,17 +66,6 @@ public interface ImCallService {
     void hangupCall(String callId, Long userId, String reason);
 
     /**
-     * 转发通话信令
-     * 用于转发WebRTC信令数据
-     *
-     * @param callId 通话ID
-     * @param fromUserId 发送者ID
-     * @param toUserId 接收者ID
-     * @param signalData 信令数据
-     */
-    void forwardCallSignal(String callId, Long fromUserId, Long toUserId, String signalData);
-
-    /**
      * 保存通话记录
      *
      * @param callRecord 通话记录
@@ -93,7 +81,7 @@ public interface ImCallService {
      */
     ImCallRecordDO getCallRecord(String callId);
 
-    ImCallRecordDO getCallRecordByRoomId(String roomId);
+    ImCallRecordDO getCallRecordByLivekitRoom(String roomName);
 
     /**
      * 获取用户的通话记录列表
@@ -207,7 +195,7 @@ public interface ImCallService {
 
     /**
      * 创建通话邀请
-     * 创建 Janus 房间、生成 Token、保存通话记录
+     * 创建 LiveKit 通话业务记录并签发主叫方短时加入凭据
      *
      * @param callerId 呼叫者ID
      * @param calleeId 被叫者ID
@@ -215,19 +203,10 @@ public interface ImCallService {
      * @param callType 通话类型(1-语音 2-视频)
      * @return 通话邀请结果
      */
-    CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType);
+    CallInviteResultVO createCallInvite(Long callerId, Long calleeId, String chatId, Integer callType, String deviceId);
 
-    /**
-     * 群组通话邀请成员加入
-     * 发送 WebSocket 通知给被邀请者
-     *
-     * @param callSessionId 通话会话ID
-     * @param groupId 群组ID
-     * @param inviterId 邀请者ID
-     * @param inviteeIds 被邀请者ID列表
-     * @return 群组通话邀请结果
-     */
-    GroupInviteResultVO inviteGroupMembers(String callSessionId, String groupId, Long inviterId, List<Long> inviteeIds);
+    /** 为当前通话参与者签发短时 LiveKit 入会凭据。 */
+    LiveKitConnectionInfo issueLiveKitConnection(String callId, Long userId, String deviceId);
 
     /**
      * 根据用户ID分页查询通话记录
@@ -244,16 +223,5 @@ public interface ImCallService {
     com.shengyu.framework.common.pojo.PageResult<com.shengyu.module.system.dal.dataobject.im.ImCallRecordDO> getCallRecordPageByUserId(
             Long userId, Integer callType, java.time.LocalDateTime startTime,
             java.time.LocalDateTime endTime, Long chatId, Integer pageNo, Integer pageSize);
-
-    /**
-     * 更新媒体状态（摄像头/麦克风开关）
-     * 通过 WebSocket 广播给对端
-     *
-     * @param callSessionId 通话会话ID
-     * @param userId 用户ID
-     * @param cameraEnabled 摄像头是否开启
-     * @param microphoneEnabled 麦克风是否开启
-     */
-    void updateMediaState(String callSessionId, Long userId, Boolean cameraEnabled, Boolean microphoneEnabled);
 
 }

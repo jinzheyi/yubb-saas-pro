@@ -20,6 +20,11 @@ class KickedDialog extends ConsumerWidget {
   final int? kickedAt;
 
   Future<void> _onConfirm(BuildContext context, WidgetRef ref) async {
+    // 先关闭不可取消的弹窗，避免网络/存储清理较慢时界面仍停留在“账号异常”。
+    // 随后的会话清理和路由替换仍会完成，且不会因当前 dialog 的 context
+    // 被销毁而中断。
+    Navigator.of(context, rootNavigator: true).pop();
+
     // 1. 断开 WebSocket 连接
     await ref.read(imSocketClientProvider).disconnect();
 
@@ -53,9 +58,7 @@ class KickedDialog extends ConsumerWidget {
 
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 320,
         padding: const EdgeInsets.all(24),
@@ -97,10 +100,7 @@ class KickedDialog extends ConsumerWidget {
             const Text(
               '如非本人操作，请及时修改密码。',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF999999),
-              ),
+              style: TextStyle(fontSize: 13, color: Color(0xFF999999)),
             ),
             const SizedBox(height: 24),
 
@@ -120,10 +120,7 @@ class KickedDialog extends ConsumerWidget {
                 ),
                 child: const Text(
                   '确定',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),
             ),

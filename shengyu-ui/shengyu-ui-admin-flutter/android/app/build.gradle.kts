@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -38,6 +39,22 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Flutter assets are not Android raw resources. Generate the native
+    // CallKit ringtone resource from the single canonical sound file so the
+    // foreground page and lock-screen incoming UI cannot drift apart.
+    sourceSets.getByName("main").res.srcDir(
+        layout.buildDirectory.dir("generated/call-sounds/res"),
+    )
+}
+
+val prepareCallSounds by tasks.registering(Copy::class) {
+    from(file("../../assets/sounds/call_ringtone.mp3"))
+    into(layout.buildDirectory.dir("generated/call-sounds/res/raw"))
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(prepareCallSounds)
 }
 
 dependencies {

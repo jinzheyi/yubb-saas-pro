@@ -1,0 +1,10 @@
+shengyu:
+  im:
+    push:
+      fcm:
+        enabled: false
+        project-id: ${IM_PUSH_FCM_PROJECT_ID:shengyu-im-fcm}
+        credential-file: ${IM_PUSH_FCM_CREDENTIAL_FILE:}
+        connect-timeout-ms: 3000
+        read-timeout-ms: 5000
+        dry-run: false

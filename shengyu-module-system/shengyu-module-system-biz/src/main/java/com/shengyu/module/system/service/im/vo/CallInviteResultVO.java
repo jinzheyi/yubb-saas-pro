@@ -47,8 +47,8 @@ public class CallInviteResultVO {
         @Schema(description = "通话会话ID")
         private String callSessionId;
 
-        @Schema(description = "Janus 房间ID")
-        private String roomId;
+        @Schema(description = "LiveKit 房间名")
+        private String roomName;
 
         @Schema(description = "发布者ID")
         private String publisherId;
@@ -56,19 +56,10 @@ public class CallInviteResultVO {
         @Schema(description = "显示名称")
         private String displayName;
 
-        @Schema(description = "Janus 服务器URL")
-        private String janusUrl;
+        @Schema(description = "LiveKit WebSocket 地址")
+        private String livekitUrl;
 
-        @Schema(description = "TURN 服务器URL列表")
-        private List<String> turnUrls;
-
-        @Schema(description = "TURN 用户名")
-        private String turnUsername;
-
-        @Schema(description = "TURN 密码")
-        private String turnCredential;
-
-        @Schema(description = "Janus Token")
+        @Schema(description = "LiveKit 加入令牌")
         private String token;
     }
 }
