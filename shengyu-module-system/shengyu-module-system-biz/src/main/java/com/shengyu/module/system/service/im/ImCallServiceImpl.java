@@ -98,6 +98,9 @@ public class ImCallServiceImpl implements ImCallService {
     @Resource
     private CallDurationLimiter callDurationLimiter;
 
+    @Resource
+    private CallEventPublisher callEventPublisher;
+
     @Value("${im.call.ring-timeout-seconds:30}")
     private long ringTimeoutSeconds;
 
@@ -299,6 +302,58 @@ public class ImCallServiceImpl implements ImCallService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void timeoutCall(String callId) {
+        ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
+        if (callRecord == null) {
+            throw exception(CALL_RECORD_NOT_EXISTS);
+        }
+        if (ImCallStateEnum.ENDED.getState().equals(callRecord.getState())) {
+            return;
+        }
+        String expectedState = callRecord.getState();
+        if (!ImCallStateEnum.RINGING.getState().equals(expectedState)
+                && !ImCallStateEnum.CONNECTING.getState().equals(expectedState)) {
+            return;
+        }
+
+        if (!callRecordMapper.endIfState(callId, expectedState,
+                ImCallStatusEnum.MISSED.getStatus(), LocalDateTime.now(), 0, "TIMEOUT")) {
+            return;
+        }
+        callRecord = callRecordMapper.selectByCallId(callId);
+        callDurationLimiter.unregisterCall(callId);
+
+        log.info("[timeoutCall] 通话无人接听，callId={}", callId);
+        createCallRecordMessage(callRecord, callRecord.getTenantId());
+        publishTimeoutEvent(callRecord);
+    }
+
+    private void publishTimeoutEvent(ImCallRecordDO callRecord) {
+        List<Long> recipients = new ArrayList<>();
+        if (callRecord.getGroupId() == null) {
+            recipients.add(callRecord.getCallerId());
+            recipients.add(callRecord.getCalleeId());
+        } else {
+            for (ImCallParticipantDO participant : callParticipantMapper.selectByCallId(callRecord.getCallId())) {
+                recipients.add(participant.getUserId());
+            }
+        }
+        if (recipients.isEmpty()) {
+            return;
+        }
+        JSONObject payload = JSONUtil.createObj()
+                .set("type", "call.timeout")
+                .set("callSessionId", callRecord.getCallId())
+                .set("callId", callRecord.getCallId())
+                .set("actorId", String.valueOf(callRecord.getCallerId()))
+                .set("duration", 0)
+                .set("reason", "TIMEOUT")
+                .set("eventTime", System.currentTimeMillis());
+        callEventPublisher.publish(recipients, callRecord.getCallerId(), callRecord.getTenantId(), payload);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void hangupCall(String callId, Long userId, String reason) {
         // 查询通话记录
         ImCallRecordDO callRecord = callRecordMapper.selectByCallId(callId);
@@ -463,14 +518,20 @@ public class ImCallServiceImpl implements ImCallService {
     }
 
     private void expirePendingCalls(Long userId) {
-        LocalDateTime now = LocalDateTime.now();
-        int expired = callRecordMapper.expirePendingCallsForUser(
-                userId,
-                now.minusSeconds(ringTimeoutSeconds),
-                ImCallStatusEnum.MISSED.getStatus(),
-                now);
-        if (expired > 0) {
-            log.warn("[createCallInvite] 回收 {} 条超时通话，userId={}", expired, userId);
+        LocalDateTime deadline = LocalDateTime.now().minusSeconds(ringTimeoutSeconds);
+        List<ImCallRecordDO> expiredCalls = callRecordMapper.selectList(
+                new LambdaQueryWrapper<ImCallRecordDO>()
+                        .and(wrapper -> wrapper.eq(ImCallRecordDO::getCallerId, userId)
+                                .or().eq(ImCallRecordDO::getCalleeId, userId))
+                        .in(ImCallRecordDO::getState,
+                                ImCallStateEnum.RINGING.getState(),
+                                ImCallStateEnum.CONNECTING.getState())
+                        .le(ImCallRecordDO::getStartTime, deadline));
+        for (ImCallRecordDO call : expiredCalls) {
+            timeoutCall(call.getCallId());
+        }
+        if (!expiredCalls.isEmpty()) {
+            log.warn("[createCallInvite] 回收 {} 条超时通话，userId={}", expiredCalls.size(), userId);
         }
     }
 

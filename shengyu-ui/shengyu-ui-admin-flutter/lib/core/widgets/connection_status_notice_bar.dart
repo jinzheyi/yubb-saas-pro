@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
 
@@ -42,6 +43,7 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
     int reconnectAttempts,
     int maxReconnectAttempts,
   ) {
+    final strings = AppLocalizations.of(context);
     switch (state) {
       case ImSocketConnectionState.connected:
         return const SizedBox.shrink();
@@ -51,7 +53,7 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
           color: const Color(0xFFE3F2FD),
           textColor: const Color(0xFF1565C0),
           icon: Icons.cloud_upload_outlined,
-          message: '正在连接服务器...',
+          message: strings.serverConnecting,
           isLoading: true,
         );
 
@@ -60,7 +62,10 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
           color: const Color(0xFFFFF3E0),
           textColor: const Color(0xFFE65100),
           icon: Icons.sync,
-          message: '正在重连服务器 ($reconnectAttempts/$maxReconnectAttempts)...',
+          message: strings.serverReconnecting(
+            reconnectAttempts,
+            maxReconnectAttempts,
+          ),
           isLoading: true,
         );
 
@@ -71,7 +76,8 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
             color: const Color(0xFFFFEBEE),
             textColor: const Color(0xFFC62828),
             icon: Icons.cloud_off,
-            message: '连接已断开，点击重试',
+            message: strings.serverDisconnectedRetry,
+            retryLabel: strings.retry,
             showRetryButton: true,
           ),
         );
@@ -90,6 +96,7 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
     required Color textColor,
     required IconData icon,
     required String message,
+    String? retryLabel,
     bool isLoading = false,
     bool showRetryButton = false,
   }) {
@@ -111,14 +118,11 @@ class ConnectionStatusNoticeBar extends ConsumerWidget {
           else
             Icon(icon, size: 16, color: textColor),
           const SizedBox(width: 6),
-          Text(
-            message,
-            style: TextStyle(fontSize: 12, color: textColor),
-          ),
+          Text(message, style: TextStyle(fontSize: 12, color: textColor)),
           if (showRetryButton) ...[
             const SizedBox(width: 8),
             Text(
-              '重试',
+              retryLabel ?? '',
               style: TextStyle(
                 fontSize: 12,
                 color: textColor,

@@ -5642,6 +5642,330 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days}d ago'**
   String deviceTimeDaysAgo(Object days);
+
+  /// No description provided for @callRecordOutgoingNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer'**
+  String get callRecordOutgoingNoAnswer;
+
+  /// No description provided for @callRecordIncomingMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed call'**
+  String get callRecordIncomingMissed;
+
+  /// No description provided for @callRecordOutgoingRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get callRecordOutgoingRejected;
+
+  /// No description provided for @callRecordIncomingRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get callRecordIncomingRejected;
+
+  /// No description provided for @callRecordOutgoingBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Line busy'**
+  String get callRecordOutgoingBusy;
+
+  /// No description provided for @callRecordIncomingBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed due to busy line'**
+  String get callRecordIncomingBusy;
+
+  /// No description provided for @callRecordOutgoingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get callRecordOutgoingCancelled;
+
+  /// No description provided for @callRecordIncomingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Caller cancelled'**
+  String get callRecordIncomingCancelled;
+
+  /// No description provided for @callRecordGroupCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Group {type} call ended · {duration}'**
+  String callRecordGroupCompleted(String type, String duration);
+
+  /// No description provided for @callRecordGroupMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'{callerName} started a group {type} call. No one answered.'**
+  String callRecordGroupMissed(String callerName, String type);
+
+  /// No description provided for @callRecordGroupRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{callerName}\'s group {type} call was declined'**
+  String callRecordGroupRejected(String callerName, String type);
+
+  /// No description provided for @callRecordGroupBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'{callerName}\'s group {type} call: members are busy'**
+  String callRecordGroupBusy(String callerName, String type);
+
+  /// No description provided for @callRecordGroupCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'{callerName} cancelled the group {type} call'**
+  String callRecordGroupCancelled(String callerName, String type);
+
+  /// No description provided for @callTypeVoiceShort.
+  ///
+  /// In en, this message translates to:
+  /// **'voice'**
+  String get callTypeVoiceShort;
+
+  /// No description provided for @callTypeVideoShort.
+  ///
+  /// In en, this message translates to:
+  /// **'video'**
+  String get callTypeVideoShort;
+
+  /// No description provided for @callPeerFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'the other person'**
+  String get callPeerFallback;
+
+  /// No description provided for @callMemberFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get callMemberFallback;
+
+  /// No description provided for @callSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose call type'**
+  String get callSheetTitle;
+
+  /// No description provided for @callSheetWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'Call {name}'**
+  String callSheetWithName(String name);
+
+  /// No description provided for @callVideoConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting video…'**
+  String get callVideoConnecting;
+
+  /// No description provided for @callStartingCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting camera…'**
+  String get callStartingCamera;
+
+  /// No description provided for @callWaitingForAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for an answer…'**
+  String get callWaitingForAnswer;
+
+  /// No description provided for @callMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get callMe;
+
+  /// No description provided for @callIncomingGroupInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} invited you to a group {type} call'**
+  String callIncomingGroupInvite(String name, String type);
+
+  /// No description provided for @callIncomingInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited you to a {type} call'**
+  String callIncomingInvite(String type);
+
+  /// No description provided for @callAccepting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get callAccepting;
+
+  /// No description provided for @callDialing.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling…'**
+  String get callDialing;
+
+  /// No description provided for @callWaitingForMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for members to join…'**
+  String get callWaitingForMembers;
+
+  /// No description provided for @callRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring call…'**
+  String get callRestoring;
+
+  /// No description provided for @callGroupParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} in call · {elapsed}'**
+  String callGroupParticipants(int count, String elapsed);
+
+  /// No description provided for @callNetworkRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Network is unstable. Reconnecting…'**
+  String get callNetworkRestoring;
+
+  /// No description provided for @callGroupFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Group {type} call'**
+  String callGroupFallback(String type);
+
+  /// No description provided for @callGenericFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get callGenericFallback;
+
+  /// No description provided for @callRemoteHangup.
+  ///
+  /// In en, this message translates to:
+  /// **'The other person ended the call'**
+  String get callRemoteHangup;
+
+  /// No description provided for @callOtherDeviceAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered on another device'**
+  String get callOtherDeviceAnswered;
+
+  /// No description provided for @callNetworkLostEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection lost. Call ended'**
+  String get callNetworkLostEnded;
+
+  /// No description provided for @callMaxDurationEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum call duration reached. Call ended'**
+  String get callMaxDurationEnded;
+
+  /// No description provided for @callRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to restore call'**
+  String get callRestoreFailed;
+
+  /// No description provided for @callAcceptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to answer'**
+  String get callAcceptFailed;
+
+  /// No description provided for @callMicrophonePermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is required for calls'**
+  String get callMicrophonePermissionRequired;
+
+  /// No description provided for @callMediaPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera and microphone permissions are required for video calls'**
+  String get callMediaPermissionRequired;
+
+  /// No description provided for @callConnectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to connect call. Please try again'**
+  String get callConnectFailed;
+
+  /// No description provided for @callEndGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'End call'**
+  String get callEndGroup;
+
+  /// No description provided for @callLeaveGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave call'**
+  String get callLeaveGroup;
+
+  /// No description provided for @networkDisconnectedOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Network disconnected. Tap to open settings'**
+  String get networkDisconnectedOpenSettings;
+
+  /// No description provided for @serverConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to server…'**
+  String get serverConnecting;
+
+  /// No description provided for @serverReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting to server ({current}/{maximum})…'**
+  String serverReconnecting(int current, int maximum);
+
+  /// No description provided for @serverDisconnectedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost. Tap to retry'**
+  String get serverDisconnectedRetry;
+
+  /// No description provided for @accountSecurityAlertTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account security alert'**
+  String get accountSecurityAlertTitle;
+
+  /// No description provided for @accountSecurityPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If this wasn\'t you, change your password immediately.'**
+  String get accountSecurityPasswordHint;
+
+  /// No description provided for @accountKickedWithTimeAndDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account signed in on {device} at {time}. You have been signed out.'**
+  String accountKickedWithTimeAndDevice(String device, String time);
+
+  /// No description provided for @accountKickedWithDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account signed in on {device}. You have been signed out.'**
+  String accountKickedWithDevice(String device);
+
+  /// No description provided for @accountKickedWithTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account signed in on another device at {time}. You have been signed out.'**
+  String accountKickedWithTime(String time);
+
+  /// No description provided for @accountKicked.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been signed out.'**
+  String get accountKicked;
 }
 
 class _AppLocalizationsDelegate

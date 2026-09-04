@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/auth/session_cleanup_service.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
@@ -55,6 +56,7 @@ class KickedDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timeText = _formatTime(kickedAt);
+    final strings = AppLocalizations.of(context);
 
     return Dialog(
       backgroundColor: Colors.white,
@@ -74,9 +76,9 @@ class KickedDialog extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 标题
-            const Text(
-              '账号异常',
-              style: TextStyle(
+            Text(
+              strings.accountSecurityAlertTitle,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF333333),
@@ -86,7 +88,7 @@ class KickedDialog extends ConsumerWidget {
 
             // 提示内容
             Text(
-              _buildMessageText(timeText),
+              _buildMessageText(strings, timeText),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -97,8 +99,8 @@ class KickedDialog extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // 安全提示
-            const Text(
-              '如非本人操作，请及时修改密码。',
+            Text(
+              strings.accountSecurityPasswordHint,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Color(0xFF999999)),
             ),
@@ -118,9 +120,12 @@ class KickedDialog extends ConsumerWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  '确定',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                child: Text(
+                  strings.confirmAction,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -130,16 +135,16 @@ class KickedDialog extends ConsumerWidget {
     );
   }
 
-  String _buildMessageText(String timeText) {
+  String _buildMessageText(AppLocalizations strings, String timeText) {
     if (byDevice != null && byDevice!.isNotEmpty) {
       if (timeText.isNotEmpty) {
-        return '你的账号于 $timeText 在 $byDevice 上登录，你已被迫下线。';
+        return strings.accountKickedWithTimeAndDevice(byDevice!, timeText);
       }
-      return '你的账号在 $byDevice 上登录，你已被迫下线。';
+      return strings.accountKickedWithDevice(byDevice!);
     }
     if (timeText.isNotEmpty) {
-      return '你的账号于 $timeText 在其他设备上登录，你已被迫下线。';
+      return strings.accountKickedWithTime(timeText);
     }
-    return message.isNotEmpty ? message : '你的账号已被迫下线。';
+    return message.isNotEmpty ? message : strings.accountKicked;
   }
 }

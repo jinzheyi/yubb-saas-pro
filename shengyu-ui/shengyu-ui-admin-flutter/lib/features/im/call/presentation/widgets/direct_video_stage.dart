@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/call_participant_view_model.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/widgets/call_video_tile.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 class DirectVideoStage extends StatelessWidget {
   const DirectVideoStage({
@@ -19,10 +20,13 @@ class DirectVideoStage extends StatelessWidget {
     final safeTop = MediaQuery.paddingOf(context).top;
     final main = remote ?? local;
     if (main == null) {
-      return const ColoredBox(
+      return ColoredBox(
         color: Color(0xFF0B0B0D),
         child: Center(
-          child: Text('正在开启摄像头…', style: TextStyle(color: Colors.white70)),
+          child: Text(
+            AppLocalizations.of(context).callStartingCamera,
+            style: const TextStyle(color: Colors.white70),
+          ),
         ),
       );
     }
@@ -31,7 +35,7 @@ class DirectVideoStage extends StatelessWidget {
       children: [
         CallVideoTile(participant: main, showName: false),
         if (waitingForRemote)
-          const Center(
+          Center(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: Color(0x66000000),
@@ -40,8 +44,8 @@ class DirectVideoStage extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Text(
-                  '等待对方接听…',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
+                  AppLocalizations.of(context).callWaitingForAnswer,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
             ),

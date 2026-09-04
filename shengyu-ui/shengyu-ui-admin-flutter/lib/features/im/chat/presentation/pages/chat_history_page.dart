@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/im_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/browser_page_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
@@ -20,6 +21,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dar
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message_extra.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/widgets/message_bubble_factory.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_record_message.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/call_record_display_text.dart';
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/providers/file_preview_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -36,12 +40,15 @@ import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 final _historyQuoteCharPattern = RegExp(r'''["']''');
 
 class ChatHistoryPage extends ConsumerStatefulWidget {
-  const ChatHistoryPage({
-    super.key,
-    this.chatArgs,
-    this.groupArgs,
-  })  : assert(chatArgs != null || groupArgs != null, 'chatArgs or groupArgs must be provided'),
-        assert(!(chatArgs != null && groupArgs != null), 'only one of chatArgs or groupArgs can be provided');
+  const ChatHistoryPage({super.key, this.chatArgs, this.groupArgs})
+    : assert(
+        chatArgs != null || groupArgs != null,
+        'chatArgs or groupArgs must be provided',
+      ),
+      assert(
+        !(chatArgs != null && groupArgs != null),
+        'only one of chatArgs or groupArgs can be provided',
+      );
 
   final ChatEntryArgs? chatArgs;
   final GroupSettingDetailArgs? groupArgs;
@@ -304,8 +311,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
                           item.messageType == MessageType.system
                               ? strings.chatGroupSystemSender
                               : (item.senderName.trim().isEmpty
-                                  ? strings.chatHistoryUnknownUser
-                                  : item.senderName.trim()),
+                                    ? strings.chatHistoryUnknownUser
+                                    : item.senderName.trim()),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -374,11 +381,17 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     if (extraData.isNotEmpty) {
       return MessageExtra(
         fileId: extraData['fileId'],
-        fileUrl: extraData['url']?.isNotEmpty == true ? extraData['url'] : extraData['fileUrl'],
+        fileUrl: extraData['url']?.isNotEmpty == true
+            ? extraData['url']
+            : extraData['fileUrl'],
         fileName: extraData['fileName'],
-        mimeType: extraData['fileType']?.isNotEmpty == true ? extraData['fileType'] : extraData['mimeType'],
+        mimeType: extraData['fileType']?.isNotEmpty == true
+            ? extraData['fileType']
+            : extraData['mimeType'],
         fileType: extraData['fileType'],
-        fileSize: int.tryParse(extraData['size'] ?? extraData['fileSize'] ?? ''),
+        fileSize: int.tryParse(
+          extraData['size'] ?? extraData['fileSize'] ?? '',
+        ),
         thumbnailUrl: extraData['thumbnailUrl'],
         thumbFileId: extraData['thumbFileId'],
         width: int.tryParse(extraData['width'] ?? ''),
@@ -392,7 +405,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         locationName: extraData['locationName'],
         locationAddress: extraData['locationAddress'],
         locationLatitude: double.tryParse(extraData['locationLatitude'] ?? ''),
-        locationLongitude: double.tryParse(extraData['locationLongitude'] ?? ''),
+        locationLongitude: double.tryParse(
+          extraData['locationLongitude'] ?? '',
+        ),
         customType: extraData['customType'],
         // 聊天记录页不显示未读红点
         voicePlayed: true,
@@ -401,10 +416,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
     final content = item.content.trim();
     if (content.isEmpty || !content.startsWith('{') || !content.endsWith('}')) {
-      return MessageExtra(
-        fileName: _extractPlainText(item),
-        voicePlayed: true,
-      );
+      return MessageExtra(fileName: _extractPlainText(item), voicePlayed: true);
     }
     try {
       final map = jsonDecode(content) as Map<String, dynamic>;
@@ -427,16 +439,17 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         contactAvatar: map['contactAvatar']?.toString(),
         locationName: map['locationName']?.toString(),
         locationAddress: map['locationAddress']?.toString(),
-        locationLatitude: double.tryParse(map['locationLatitude']?.toString() ?? ''),
-        locationLongitude: double.tryParse(map['locationLongitude']?.toString() ?? ''),
+        locationLatitude: double.tryParse(
+          map['locationLatitude']?.toString() ?? '',
+        ),
+        locationLongitude: double.tryParse(
+          map['locationLongitude']?.toString() ?? '',
+        ),
         customType: map['customType']?.toString(),
         voicePlayed: true,
       );
     } catch (_) {
-      return MessageExtra(
-        fileName: _extractPlainText(item),
-        voicePlayed: true,
-      );
+      return MessageExtra(fileName: _extractPlainText(item), voicePlayed: true);
     }
   }
 
@@ -475,7 +488,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   Widget _buildMessageBubble(Message message, ChatHistoryItem item) {
     final keyword = _getSearchKeyword();
-    final isTextWithKeyword = message.type == MessageType.text && keyword.isNotEmpty;
+    final isTextWithKeyword =
+        message.type == MessageType.text && keyword.isNotEmpty;
     final isVoiceMessage = message.type == MessageType.voice;
 
     if (isTextWithKeyword) {
@@ -483,19 +497,22 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         onTap: () => _handleMessageTap(item),
         onLongPress: () => _showItemMenu(item),
         behavior: HitTestBehavior.translucent,
-        child: _CustomTextMessageBubble(
-          message: message,
-          keyword: keyword,
-        ),
+        child: _CustomTextMessageBubble(message: message, keyword: keyword),
       );
     }
 
     if (isVoiceMessage) {
       final messageKey = message.messageId;
-      final isPlaying = messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey;
-      final isPaused = messageKey.isNotEmpty && _activePausedVoiceMessageId == messageKey;
-      final progressMs = (isPlaying || isPaused) ? _activeVoicePlaybackProgressMs : 0;
-      final durationMs = (isPlaying || isPaused) ? _activeVoicePlaybackDurationMs : 0;
+      final isPlaying =
+          messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey;
+      final isPaused =
+          messageKey.isNotEmpty && _activePausedVoiceMessageId == messageKey;
+      final progressMs = (isPlaying || isPaused)
+          ? _activeVoicePlaybackProgressMs
+          : 0;
+      final durationMs = (isPlaying || isPaused)
+          ? _activeVoicePlaybackDurationMs
+          : 0;
       return MessageBubbleFactory.build(
         message,
         strings: AppLocalizations.of(context),
@@ -554,7 +571,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     final messageKey = message.messageId;
     if (messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey) {
       _pauseVoiceMessage(message);
-    } else if (messageKey.isNotEmpty && _activePausedVoiceMessageId == messageKey) {
+    } else if (messageKey.isNotEmpty &&
+        _activePausedVoiceMessageId == messageKey) {
       _resumeVoiceMessage(message);
     } else {
       _playVoiceMessage(message);
@@ -578,7 +596,11 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       if (url == null || url.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context).chatVoicePlayUrlFailed)),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).chatVoicePlayUrlFailed,
+              ),
+            ),
           );
         }
         return;
@@ -588,7 +610,11 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       if (localPath == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context).chatVoicePlayUrlFailed)),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).chatVoicePlayUrlFailed,
+              ),
+            ),
           );
         }
         return;
@@ -617,7 +643,8 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
             _activePausedVoiceMessageId = null;
             _activeVoicePlaybackProgressMs = 0;
           });
-        } else if (!state.playing && _activePlayingVoiceMessageId == messageKey) {
+        } else if (!state.playing &&
+            _activePlayingVoiceMessageId == messageKey) {
           setState(() {
             _activePlayingVoiceMessageId = null;
             _activePausedVoiceMessageId = messageKey;
@@ -750,17 +777,17 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       rawUrl = content;
     }
     if (rawUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.chatOpenFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.chatOpenFailed)));
       return;
     }
     final normalized = rawUrl.startsWith('www.') ? 'https://$rawUrl' : rawUrl;
     final uri = Uri.tryParse(normalized);
     if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.chatOpenFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.chatOpenFailed)));
       return;
     }
     context.pushNamed(
@@ -802,7 +829,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     try {
       final effectiveChatId = await _resolveChatId();
       final nextPage = _pageNo + 1;
-      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+      final records = await ref
+          .read(messageRepositoryProvider)
+          .searchChatHistory(
             chatId: effectiveChatId,
             keyword: '',
             category: _filter.apiValue,
@@ -883,7 +912,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     });
     try {
       final effectiveChatId = await _resolveChatId();
-      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+      final records = await ref
+          .read(messageRepositoryProvider)
+          .searchChatHistory(
             chatId: effectiveChatId,
             keyword: keyword,
             category: _filter.apiValue,
@@ -1010,7 +1041,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     });
     try {
       final effectiveChatId = await _resolveChatId();
-      final records = await ref.read(messageRepositoryProvider).searchChatHistory(
+      final records = await ref
+          .read(messageRepositoryProvider)
+          .searchChatHistory(
             chatId: effectiveChatId,
             keyword: '',
             category: _filter.apiValue,
@@ -1095,7 +1128,9 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     final mimeType = contentData['mimeType']?.isNotEmpty == true
         ? contentData['mimeType']!
         : (contentData['fileType'] ?? '');
-    final fileSize = int.tryParse(contentData['fileSize'] ?? contentData['size'] ?? '0') ?? 0;
+    final fileSize =
+        int.tryParse(contentData['fileSize'] ?? contentData['size'] ?? '0') ??
+        0;
 
     if (item.messageType == MessageType.image) {
       _previewImageFile(fileId, fileUrl, fileName);
@@ -1131,12 +1166,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   Map<String, String> _parseContentData(ChatHistoryItem item) {
     final content = item.content.trim();
-    
+
     final extraData = _parseExtraFromItem(item);
     if (extraData.isNotEmpty) {
       return extraData;
     }
-    
+
     if (content.isEmpty) {
       return {};
     }
@@ -1150,8 +1185,15 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         for (final pair in pairs) {
           final parts = pair.split(':');
           if (parts.length >= 2) {
-            final key = parts[0].trim().replaceAll(_historyQuoteCharPattern, '');
-            final value = parts.sublist(1).join(':').trim().replaceAll(_historyQuoteCharPattern, '');
+            final key = parts[0].trim().replaceAll(
+              _historyQuoteCharPattern,
+              '',
+            );
+            final value = parts
+                .sublist(1)
+                .join(':')
+                .trim()
+                .replaceAll(_historyQuoteCharPattern, '');
             map[key] = value;
           }
         }
@@ -1163,10 +1205,17 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
     return {};
   }
 
-  Future<void> _previewImageFile(String fileId, String fileUrl, String fileName) async {
+  Future<void> _previewImageFile(
+    String fileId,
+    String fileUrl,
+    String fileName,
+  ) async {
     try {
       final url = fileId.isNotEmpty
-          ? (await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId)).toString()
+          ? (await ref
+                    .read(fileRepositoryProvider)
+                    .getPresignedGetUrl(fileId: fileId))
+                .toString()
           : fileUrl;
       if (!mounted || url.isEmpty) {
         return;
@@ -1258,10 +1307,7 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         return SafeArea(
           child: Material(
             color: ThemeColors.scaffoldBg(context),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: menuItems,
-            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: menuItems),
           ),
         );
       },
@@ -1287,10 +1333,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
       final contentData = _parseContentData(item);
       String fileId = contentData['fileId'] ?? '';
       final fileName = contentData['fileName'] ?? _contentText(strings, item);
-      
+
       Uri uri;
       if (fileId.isNotEmpty) {
-        uri = await ref.read(fileRepositoryProvider).getPresignedGetUrl(fileId: fileId);
+        uri = await ref
+            .read(fileRepositoryProvider)
+            .getPresignedGetUrl(fileId: fileId);
       } else {
         final directUrl = contentData['url']?.isNotEmpty == true
             ? contentData['url']!
@@ -1301,8 +1349,10 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         fileId = item.messageId;
         uri = Uri.parse(directUrl);
       }
-      
-      await ref.read(fileDownloadServiceProvider).download(uri, suggestedFileName: fileName);
+
+      await ref
+          .read(fileDownloadServiceProvider)
+          .download(uri, suggestedFileName: fileName);
       if (!mounted) {
         return;
       }
@@ -1420,55 +1470,35 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
 
   String _buildCallRecordPreviewText(ChatHistoryItem item) {
     final content = item.content.trim();
-    if (content.isEmpty) {
-      return '通话记录';
-    }
-    
-    // 尝试解析 JSON 格式的通话记录
-    if (content.startsWith('{') && content.endsWith('}')) {
+    final extra = item.extra?.trim() ?? '';
+    final rawRecord = content.startsWith('{') && content.endsWith('}')
+        ? content
+        : extra;
+
+    // 服务端把权威通话字段放在 extra，content 仅是会话摘要。
+    if (rawRecord.startsWith('{') && rawRecord.endsWith('}')) {
       try {
-        final map = jsonDecode(content) as Map<String, dynamic>;
-        final status = map['status']?.toString() ?? '';
-        final duration = map['duration'] as int? ?? 0;
-        final callType = map['callType']?.toString() ?? '';
-        
-        final typeText = callType == 'video' || callType == '2' ? '视频通话' : '语音通话';
-        
-        // 根据状态显示不同文本
-        if (status == 'completed' || status == '1') {
-          final durationText = _formatCallDuration(duration);
-          return '$typeText · 通话时长 $durationText';
-        } else if (status == 'missed' || status == '2') {
-          return '$typeText · 未接听';
-        } else if (status == 'rejected' || status == '3') {
-          return '$typeText · 已拒绝';
-        } else if (status == 'busy' || status == '4') {
-          return '$typeText · 对方忙线中';
-        } else if (status == 'cancelled' || status == '5') {
-          return '$typeText · 已取消';
-        }
-        
-        return '$typeText · 通话记录';
+        final map = jsonDecode(rawRecord) as Map<String, dynamic>;
+        final duration = (map['duration'] as num?)?.toInt() ?? 0;
+        final callType = (map['callType'] as num?)?.toInt() ?? 1;
+        final status = CallStatus.fromValue(map['status'] ?? map['callStatus']);
+        final isOutgoing =
+            item.senderId == ref.read(authSessionProvider).userId;
+        return callRecordDisplayText(
+          strings: AppLocalizations.of(context),
+          callType: callType == 2 ? CallType.video : CallType.audio,
+          status: status,
+          durationSeconds: duration,
+          isGroupCall: map['isGroupCall'] == true,
+          isOutgoing: isOutgoing,
+          callerName: map['callerName']?.toString() ?? item.senderName,
+        );
       } catch (e) {
         debugPrint('[ChatHistory] parse call record failed: $e');
       }
     }
-    
-    return '通话记录';
-  }
 
-  String _formatCallDuration(int seconds) {
-    if (seconds <= 0) {
-      return '00:00';
-    }
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    return '通话记录';
   }
 
   Color _avatarColorFor(String seed) {
@@ -1505,7 +1535,10 @@ class _DateFilterButton extends StatelessWidget {
                 '$label $value',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: ThemeColors.textPrimary(context)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: ThemeColors.textPrimary(context),
+                ),
               ),
             ),
             AppIcon(
@@ -1542,7 +1575,10 @@ class _HistoryEmptyState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: ThemeColors.emptyText(context)),
+              style: TextStyle(
+                fontSize: 15,
+                color: ThemeColors.emptyText(context),
+              ),
             ),
           ],
         ),
@@ -1574,9 +1610,7 @@ class _HighlightedContent extends StatelessWidget {
       );
     }
     return RichText(
-      text: TextSpan(
-        children: _buildHighlightedEmojiSpans(context),
-      ),
+      text: TextSpan(children: _buildHighlightedEmojiSpans(context)),
     );
   }
 
@@ -1590,45 +1624,54 @@ class _HighlightedContent extends StatelessWidget {
     var lastEnd = 0;
     for (final match in ChatEmojiCatalog.tokenRegExp.allMatches(normalized)) {
       if (match.start > lastEnd) {
-        segments.add(_EmojiSegment(
-          text: normalized.substring(lastEnd, match.start),
-          isEmoji: false,
-        ));
+        segments.add(
+          _EmojiSegment(
+            text: normalized.substring(lastEnd, match.start),
+            isEmoji: false,
+          ),
+        );
       }
-      segments.add(_EmojiSegment(
-        text: match.group(0) ?? '',
-        isEmoji: true,
-        emojiToken: match.group(0),
-      ));
+      segments.add(
+        _EmojiSegment(
+          text: match.group(0) ?? '',
+          isEmoji: true,
+          emojiToken: match.group(0),
+        ),
+      );
       lastEnd = match.end;
     }
     if (lastEnd < normalized.length) {
-      segments.add(_EmojiSegment(
-        text: normalized.substring(lastEnd),
-        isEmoji: false,
-      ));
+      segments.add(
+        _EmojiSegment(text: normalized.substring(lastEnd), isEmoji: false),
+      );
     }
 
     for (final segment in segments) {
       if (segment.isEmoji) {
         final assets = ChatEmojiCatalog.candidateAssetsFor(
-            segment.emojiToken ?? segment.text);
+          segment.emojiToken ?? segment.text,
+        );
         if (assets.isNotEmpty) {
-          spans.add(WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1.5),
-              child: ChatEmojiAssetImage(assets: assets, size: 20),
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: ChatEmojiAssetImage(assets: assets, size: 20),
+              ),
             ),
-          ));
+          );
         } else {
-          spans.add(TextSpan(
+          spans.add(
+            TextSpan(
               text: segment.text,
               style: TextStyle(
                 fontSize: 14,
                 height: 1.6,
                 color: defaultTextColor,
-              )));
+              ),
+            ),
+          );
         }
       } else {
         final lowerSource = segment.text.toLowerCase();
@@ -1637,33 +1680,41 @@ class _HighlightedContent extends StatelessWidget {
           final idx = lowerSource.indexOf(lowerKeyword, searchStart);
           if (idx < 0) {
             if (searchStart < segment.text.length) {
-              spans.add(TextSpan(
+              spans.add(
+                TextSpan(
                   text: segment.text.substring(searchStart),
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.6,
                     color: defaultTextColor,
-                  )));
+                  ),
+                ),
+              );
             }
             break;
           }
           if (idx > searchStart) {
-            spans.add(TextSpan(
+            spans.add(
+              TextSpan(
                 text: segment.text.substring(searchStart, idx),
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.6,
                   color: defaultTextColor,
-                )));
+                ),
+              ),
+            );
           }
-          spans.add(TextSpan(
-            text: segment.text.substring(idx, idx + keyword.length),
-            style: const TextStyle(
-              color: Color(0xFF246BFD),
-              backgroundColor: Color(0xFFEAF1FF),
-              fontWeight: FontWeight.w600,
+          spans.add(
+            TextSpan(
+              text: segment.text.substring(idx, idx + keyword.length),
+              style: const TextStyle(
+                color: Color(0xFF246BFD),
+                backgroundColor: Color(0xFFEAF1FF),
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ));
+          );
           searchStart = idx + keyword.length;
         }
       }
@@ -1684,8 +1735,7 @@ class _CustomTextMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOutgoing = message.isOutgoing;
-    final alignment =
-        isOutgoing ? Alignment.centerRight : Alignment.centerLeft;
+    final alignment = isOutgoing ? Alignment.centerRight : Alignment.centerLeft;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -1695,13 +1745,12 @@ class _CustomTextMessageBubble extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isOutgoing ? const Color(0xFF246BFD) : ThemeColors.chatBubbleIncoming(context),
+            color: isOutgoing
+                ? const Color(0xFF246BFD)
+                : ThemeColors.chatBubbleIncoming(context),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: _HighlightedContent(
-            text: message.content,
-            keyword: keyword,
-          ),
+          child: _HighlightedContent(text: message.content, keyword: keyword),
         ),
       ),
     );
@@ -1772,7 +1821,9 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? Colors.white : ThemeColors.categoryInactiveText(context),
+              color: selected
+                  ? Colors.white
+                  : ThemeColors.categoryInactiveText(context),
             ),
           ),
         ),

@@ -98,7 +98,11 @@ public class CallLifecycleJob implements JobHandler {
                         && !ImCallStateEnum.CONNECTING.getState().equals(before.getState())) {
                     return;
                 }
-                callService.cancelCall(before.getCallId(), before.getCallerId(), reason);
+                // 超时不是主叫取消。必须保存为 MISSED，避免客户端把“对方无应答”
+                // 错误显示为“已取消”。
+                callService.timeoutCall(before.getCallId());
+                // timeoutCall 已在同一业务事务中投递 call.timeout，不能重复发送。
+                return;
             }
             ImCallRecordDO ended = callRecordMapper.selectByCallId(before.getCallId());
             if (ended != null && ImCallStateEnum.ENDED.getState().equals(ended.getState())

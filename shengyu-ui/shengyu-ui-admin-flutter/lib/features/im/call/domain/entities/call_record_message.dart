@@ -2,8 +2,9 @@ import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart'
 
 /// 通话状态枚举
 enum CallStatus {
-  completed(1, '已接通'),
-  missed(2, '未接听'),
+  /// 与服务端 ImCallStatusEnum 保持严格一致：1=未接听，2=已接通。
+  missed(1, '未接听'),
+  completed(2, '已接通'),
   rejected(3, '已拒绝'),
   busy(4, '忙线'),
   cancelled(5, '已取消');
@@ -13,10 +14,15 @@ enum CallStatus {
 
   const CallStatus(this.value, this.label);
 
-  static CallStatus fromValue(int value) {
+  static CallStatus fromValue(Object? raw) {
+    final value = switch (raw) {
+      num value => value.toInt(),
+      String value => int.tryParse(value),
+      _ => null,
+    };
     return CallStatus.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => CallStatus.completed,
+      orElse: () => CallStatus.missed,
     );
   }
 }
@@ -84,11 +90,11 @@ class CallRecordMessage {
     return CallRecordMessage(
       callId: json['callId']?.toString() ?? '',
       callType: _parseCallType(json['callType']),
-      status: CallStatus.fromValue(json['status'] as int? ?? 1),
-      duration: json['duration'] as int? ?? 0,
+      status: CallStatus.fromValue(json['status'] ?? json['callStatus']),
+      duration: _parseInt(json['duration']),
       callerId: json['callerId']?.toString() ?? '',
       calleeId: json['calleeId']?.toString() ?? '',
-      initiateTime: json['initiateTime'] as int? ?? 0,
+      initiateTime: _parseInt(json['initiateTime']),
       callerName: json['callerName']?.toString(),
       calleeName: json['calleeName']?.toString(),
       isGroupCall: json['isGroupCall'] as bool? ?? false,
@@ -103,6 +109,11 @@ class CallRecordMessage {
       return raw.map((e) => e.toString()).toList();
     }
     return const [];
+  }
+
+  static int _parseInt(dynamic raw) {
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
   }
 
   /// 解析通话类型

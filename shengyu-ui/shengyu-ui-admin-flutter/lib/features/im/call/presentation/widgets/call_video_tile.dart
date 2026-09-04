@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/call_participant_view_model.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 class CallVideoTile extends StatelessWidget {
   const CallVideoTile({
@@ -26,7 +27,7 @@ class CallVideoTile extends StatelessWidget {
           if (track != null && participant.cameraEnabled)
             VideoTrackRenderer(track, fit: fit)
           else
-            _placeholder(),
+            _placeholder(context),
           if (showName)
             Positioned(
               left: 0,
@@ -46,7 +47,9 @@ class CallVideoTile extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(10, 0, 10, 7),
                     child: Text(
-                      participant.isLocal ? '我' : participant.name,
+                      participant.isLocal
+                          ? AppLocalizations.of(context).callMe
+                          : participant.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -60,15 +63,21 @@ class CallVideoTile extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(BuildContext context) {
     if (participant.waitingForTrack) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-            SizedBox(height: 10),
-            Text('视频连接中…', style: TextStyle(color: Colors.white70)),
+            const CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white70,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              AppLocalizations.of(context).callVideoConnecting,
+              style: const TextStyle(color: Colors.white70),
+            ),
           ],
         ),
       );

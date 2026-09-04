@@ -26,6 +26,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/g
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/group_avatar.dart';
 
@@ -210,6 +211,7 @@ class _LiveKitCallPageState extends ConsumerState<LiveKitCallPage> {
   }
 
   CallVisualState get _visualState => CallVisualStateResolver.resolve(
+    strings: AppLocalizations.of(context),
     args: widget.args,
     accepted: _accepted,
     accepting: _accepting,
@@ -593,7 +595,11 @@ class _LiveKitCallPageState extends ConsumerState<LiveKitCallPage> {
         !restoring;
     final destructive = CallControlButton(
       icon: Icons.call_end,
-      label: callDestructiveLabel(args: widget.args, phase: visual.phase),
+      label: callDestructiveLabel(
+        strings: AppLocalizations.of(context),
+        args: widget.args,
+        phase: visual.phase,
+      ),
       kind: CallControlKind.destructive,
       large: true,
       enabled: !_closing,

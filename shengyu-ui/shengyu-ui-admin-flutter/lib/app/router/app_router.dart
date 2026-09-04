@@ -309,7 +309,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is ContactGroupMembersArgs
               ? state.extra! as ContactGroupMembersArgs
-              : const ContactGroupMembersArgs(groupId: '', groupName: '群成员');
+              : const ContactGroupMembersArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: ContactGroupMembersPage(args: args),
@@ -359,7 +359,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               state: state,
               child: ContactProfilePage(
                 userId: userId,
-                name: extra['name'] ?? '用户',
+                name: extra['name'] ?? '',
                 departmentName: extra['departmentName'] ?? '',
               ),
             );
@@ -368,7 +368,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             state: state,
             child: ContactProfilePage(
               userId: userId,
-              name: '用户',
+              name: '',
               departmentName: '',
             ),
           );
@@ -572,7 +572,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
-              : const GroupContextArgs(groupId: '', groupName: '群聊设置');
+              : const GroupContextArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: GroupSettingsPage(args: args),
@@ -585,7 +585,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
-              : const GroupContextArgs(groupId: '', groupName: '群成员');
+              : const GroupContextArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: GroupMembersPage(args: args),
@@ -598,7 +598,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
+              : const GroupSettingDetailArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: GroupQrCodePage(args: args),
@@ -611,7 +611,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
+              : const GroupSettingDetailArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: GroupAnnouncementPage(args: args),
@@ -624,7 +624,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
+              : const GroupSettingDetailArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: ChatHistoryPage(groupArgs: args),
@@ -637,7 +637,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final args = state.extra is GroupContextArgs
               ? state.extra! as GroupContextArgs
-              : const GroupContextArgs(groupId: '', groupName: '群聊设置');
+              : const GroupContextArgs(groupId: '', groupName: '');
           return _buildRoutePage(
             state: state,
             child: GroupJoinRequestsPage(args: args),
@@ -653,10 +653,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : const GroupMemberDetailArgs(
                   groupContext: GroupContextArgs(
                     groupId: '',
-                    groupName: '群聊设置',
+                    groupName: '',
                   ),
                   memberUserId: '',
-                  memberName: '成员',
+                  memberName: '',
                   memberRoleCode: 0,
                   colorValue: 0xFF8FB8F7,
                   canTransferOwner: false,

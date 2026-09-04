@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_record_message.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/call_record_display_text.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 /// 通话记录消息气泡组件
 ///
@@ -72,7 +74,7 @@ class CallRecordMessageBubble extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              _buildDisplayText(),
+              _buildDisplayText(context),
               style: TextStyle(fontSize: 15, color: textColor, height: 1.5),
             ),
           ),
@@ -84,55 +86,16 @@ class CallRecordMessageBubble extends StatelessWidget {
   }
 
   /// 构建展示文本（微信风格）
-  String _buildDisplayText() {
-    final callTypeText = message.callType == CallType.video ? '视频' : '语音';
-    final callerName = message.callerName ?? '对方';
-
-    // 群通话特殊处理（理论上群聊不走此组件，但保留兜底）
-    if (message.isGroupCall) {
-      return _buildGroupCallText(callerName, callTypeText);
-    }
-
-    // 1v1 通话
-    return _buildOneToOneCallText(callerName, callTypeText);
-  }
-
-  /// 构建1v1通话展示文本
-  String _buildOneToOneCallText(String callerName, String callTypeText) {
-    switch (message.status) {
-      case CallStatus.completed:
-        // 已接通：显示通话时长
-        final duration = _formatDuration(message.duration);
-        return '$callTypeText通话时长 $duration';
-      case CallStatus.missed:
-        // 未接听
-        return isOutgoing ? '对方无应答' : '未接听';
-      case CallStatus.rejected:
-        // 已拒绝
-        return isOutgoing ? '对方已拒绝' : '已拒绝';
-      case CallStatus.busy:
-        // 忙线
-        return '对方正在通话中';
-      case CallStatus.cancelled:
-        // 已取消
-        return isOutgoing ? '已取消' : '对方已取消';
-    }
-  }
-
-  /// 构建群通话展示文本（兜底逻辑）
-  String _buildGroupCallText(String callerName, String callTypeText) {
-    switch (message.status) {
-      case CallStatus.completed:
-        final duration = _formatDuration(message.duration);
-        return '$callTypeText通话时长 $duration';
-      case CallStatus.missed:
-      case CallStatus.rejected:
-        return '"$callerName"发起了$callTypeText通话';
-      case CallStatus.cancelled:
-        return '群$callTypeText通话已取消';
-      case CallStatus.busy:
-        return '所选成员正在通话中';
-    }
+  String _buildDisplayText(BuildContext context) {
+    return callRecordDisplayText(
+      strings: AppLocalizations.of(context),
+      callType: message.callType,
+      status: message.status,
+      durationSeconds: message.duration,
+      isGroupCall: message.isGroupCall,
+      isOutgoing: isOutgoing,
+      callerName: message.callerName,
+    );
   }
 
   /// 通话图标
@@ -140,20 +103,5 @@ class CallRecordMessageBubble extends StatelessWidget {
     return message.callType == CallType.video
         ? Icons.videocam_outlined
         : Icons.call_outlined;
-  }
-
-  /// 格式化通话时长
-  String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    } else if (minutes > 0) {
-      return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    } else {
-      return '00:${secs.toString().padLeft(2, '0')}';
-    }
   }
 }

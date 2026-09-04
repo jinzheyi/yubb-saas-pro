@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/features/im/call/presentation/controllers/livekit_call_controller.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 enum CallVisualPhase {
   incoming,
@@ -43,6 +44,7 @@ class CallVisualStateResolver {
   const CallVisualStateResolver._();
 
   static CallVisualState resolve({
+    required AppLocalizations strings,
     required CallLaunchArgs args,
     required bool accepted,
     required bool accepting,
@@ -70,19 +72,24 @@ class CallVisualStateResolver {
     );
     final count = (hasLocalParticipant ? 1 : 0) + remoteParticipantCount;
     final elapsed = formatCallDuration(elapsedSeconds);
-    final name = _displayName(args);
+    final name = _displayName(args, strings);
     return CallVisualState(
       phase: phase,
       displayName: name,
       statusText: _status(
         phase: phase,
+        strings: strings,
         args: args,
         elapsed: elapsed,
         participantCount: count,
       ),
       avatarUrl: _avatarUrl(args),
       elapsedText: elapsed,
-      endText: callEndDisplayText(endReason, isGroup: args.isGroupCall),
+      endText: callEndDisplayText(
+        strings,
+        endReason,
+        isGroup: args.isGroupCall,
+      ),
       isGroup: args.isGroupCall,
       isVideo: args.callType == CallType.video,
       participantCount: count,
@@ -120,6 +127,7 @@ class CallVisualStateResolver {
   }
 
   static String _status({
+    required AppLocalizations strings,
     required CallVisualPhase phase,
     required CallLaunchArgs args,
     required String elapsed,
@@ -128,29 +136,45 @@ class CallVisualStateResolver {
     return switch (phase) {
       CallVisualPhase.incoming =>
         args.isGroupCall
-            ? '${args.callerName ?? '成员'}邀请你加入群${args.callType == CallType.video ? '视频' : '语音'}通话'
-            : '邀请你${args.callType == CallType.video ? '视频' : '语音'}通话',
-      CallVisualPhase.accepting => '正在接通…',
-      CallVisualPhase.dialing => '正在呼叫…',
-      CallVisualPhase.waitingRemote => args.isGroupCall ? '等待成员加入…' : '等待对方接听…',
-      CallVisualPhase.restoring => '正在恢复通话…',
+            ? strings.callIncomingGroupInvite(
+                args.callerName ?? strings.callMemberFallback,
+                args.callType == CallType.video
+                    ? strings.callTypeVideoShort
+                    : strings.callTypeVoiceShort,
+              )
+            : strings.callIncomingInvite(
+                args.callType == CallType.video
+                    ? strings.callTypeVideoShort
+                    : strings.callTypeVoiceShort,
+              ),
+      CallVisualPhase.accepting => strings.callAccepting,
+      CallVisualPhase.dialing => strings.callDialing,
+      CallVisualPhase.waitingRemote =>
+        args.isGroupCall
+            ? strings.callWaitingForMembers
+            : strings.callWaitingForAnswer,
+      CallVisualPhase.restoring => strings.callRestoring,
       CallVisualPhase.connected =>
-        args.isGroupCall ? '$participantCount 人通话中 · $elapsed' : elapsed,
-      CallVisualPhase.reconnecting => '网络不稳定，正在恢复…',
+        args.isGroupCall
+            ? strings.callGroupParticipants(participantCount, elapsed)
+            : elapsed,
+      CallVisualPhase.reconnecting => strings.callNetworkRestoring,
       CallVisualPhase.ending || CallVisualPhase.failed => '',
     };
   }
 
-  static String _displayName(CallLaunchArgs args) {
-    final fallback = args.callType == CallType.video ? '视频通话' : '语音通话';
+  static String _displayName(CallLaunchArgs args, AppLocalizations strings) {
+    final fallback = args.callType == CallType.video
+        ? strings.callVideo
+        : strings.callVoice;
     if (args.isGroupCall) {
-      return _firstNonEmpty([
+      return _firstNonEmpty(strings, [
         args.conversationTitle,
         args.entryMode == CallEntryMode.incoming ? args.callerName : args.title,
-        '群$fallback',
+        strings.callGroupFallback(fallback),
       ]);
     }
-    return _firstNonEmpty([
+    return _firstNonEmpty(strings, [
       args.conversationTitle,
       args.callerName,
       args.title,
@@ -163,11 +187,11 @@ class CallVisualStateResolver {
     return args.callerAvatarUrl ?? args.peerAvatarUrl;
   }
 
-  static String _firstNonEmpty(List<String?> values) {
+  static String _firstNonEmpty(AppLocalizations strings, List<String?> values) {
     for (final value in values) {
       if (value != null && value.trim().isNotEmpty) return value.trim();
     }
-    return '通话';
+    return strings.callGenericFallback;
   }
 }
 
@@ -186,38 +210,44 @@ String formatCallDuration(int seconds) {
 }
 
 String callEndDisplayText(
+  AppLocalizations strings,
   CallEndDisplayReason? reason, {
   required bool isGroup,
 }) {
   return switch (reason) {
-    CallEndDisplayReason.localCancel => '已取消',
-    CallEndDisplayReason.localReject => '已拒绝',
-    CallEndDisplayReason.localHangup => '通话已结束',
-    CallEndDisplayReason.remoteReject => '对方已拒绝',
-    CallEndDisplayReason.remoteCancel => '对方已取消',
-    CallEndDisplayReason.remoteHangup => '对方已挂断',
-    CallEndDisplayReason.noAnswer => '对方无应答',
-    CallEndDisplayReason.otherDeviceAccepted => '通话已在其他设备接听',
-    CallEndDisplayReason.networkLost => '网络连接中断，通话已结束',
-    CallEndDisplayReason.maxDuration => '通话时长已达上限，通话已结束',
-    CallEndDisplayReason.groupEnded => '群通话已结束',
-    CallEndDisplayReason.restoreFailed => '恢复通话失败',
-    CallEndDisplayReason.acceptFailed => '接听失败',
-    CallEndDisplayReason.microphonePermissionDenied => '需要麦克风权限才能通话',
-    CallEndDisplayReason.mediaPermissionDenied => '需要摄像头和麦克风权限才能视频通话',
-    CallEndDisplayReason.failed => '通话连接失败，请稍后重试',
-    null => isGroup ? '群通话已结束' : '通话已结束',
+    CallEndDisplayReason.localCancel => strings.callCancelled,
+    CallEndDisplayReason.localReject => strings.callRejected,
+    CallEndDisplayReason.localHangup => strings.callEnded,
+    CallEndDisplayReason.remoteReject => strings.callRecordOutgoingRejected,
+    CallEndDisplayReason.remoteCancel => strings.callRecordIncomingCancelled,
+    CallEndDisplayReason.remoteHangup => strings.callRemoteHangup,
+    CallEndDisplayReason.noAnswer => strings.callRecordOutgoingNoAnswer,
+    CallEndDisplayReason.otherDeviceAccepted => strings.callOtherDeviceAnswered,
+    CallEndDisplayReason.networkLost => strings.callNetworkLostEnded,
+    CallEndDisplayReason.maxDuration => strings.callMaxDurationEnded,
+    CallEndDisplayReason.groupEnded => strings.callEnded,
+    CallEndDisplayReason.restoreFailed => strings.callRestoreFailed,
+    CallEndDisplayReason.acceptFailed => strings.callAcceptFailed,
+    CallEndDisplayReason.microphonePermissionDenied =>
+      strings.callMicrophonePermissionRequired,
+    CallEndDisplayReason.mediaPermissionDenied =>
+      strings.callMediaPermissionRequired,
+    CallEndDisplayReason.failed => strings.callConnectFailed,
+    null => strings.callEnded,
   };
 }
 
 String callDestructiveLabel({
+  required AppLocalizations strings,
   required CallLaunchArgs args,
   required CallVisualPhase phase,
 }) {
   if (args.isGroupCall) {
-    return args.isGroupOwner == true ? '结束通话' : '退出通话';
+    return args.isGroupOwner == true
+        ? strings.callEndGroup
+        : strings.callLeaveGroup;
   }
-  if (phase == CallVisualPhase.restoring) return '退出通话';
+  if (phase == CallVisualPhase.restoring) return strings.callLeaveGroup;
   if (phase == CallVisualPhase.dialing ||
       phase == CallVisualPhase.waitingRemote) {
     return '取消';

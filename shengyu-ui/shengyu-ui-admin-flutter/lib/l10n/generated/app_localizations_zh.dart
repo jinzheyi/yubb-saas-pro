@@ -2976,4 +2976,194 @@ class AppLocalizationsZh extends AppLocalizations {
   String deviceTimeDaysAgo(Object days) {
     return '$days 天前';
   }
+
+  @override
+  String get callRecordOutgoingNoAnswer => '对方无应答';
+
+  @override
+  String get callRecordIncomingMissed => '未接听';
+
+  @override
+  String get callRecordOutgoingRejected => '对方已拒绝';
+
+  @override
+  String get callRecordIncomingRejected => '已拒绝';
+
+  @override
+  String get callRecordOutgoingBusy => '对方忙线中';
+
+  @override
+  String get callRecordIncomingBusy => '忙线未接听';
+
+  @override
+  String get callRecordOutgoingCancelled => '已取消';
+
+  @override
+  String get callRecordIncomingCancelled => '对方已取消';
+
+  @override
+  String callRecordGroupCompleted(String type, String duration) {
+    return '群$type通话已结束 · $duration';
+  }
+
+  @override
+  String callRecordGroupMissed(String callerName, String type) {
+    return '$callerName发起了群$type通话，无人接听';
+  }
+
+  @override
+  String callRecordGroupRejected(String callerName, String type) {
+    return '$callerName发起的群$type通话已被拒绝';
+  }
+
+  @override
+  String callRecordGroupBusy(String callerName, String type) {
+    return '$callerName发起的群$type通话，成员忙线中';
+  }
+
+  @override
+  String callRecordGroupCancelled(String callerName, String type) {
+    return '$callerName取消了群$type通话';
+  }
+
+  @override
+  String get callTypeVoiceShort => '语音';
+
+  @override
+  String get callTypeVideoShort => '视频';
+
+  @override
+  String get callPeerFallback => '对方';
+
+  @override
+  String get callMemberFallback => '成员';
+
+  @override
+  String get callSheetTitle => '选择通话方式';
+
+  @override
+  String callSheetWithName(String name) {
+    return '与「$name」通话';
+  }
+
+  @override
+  String get callVideoConnecting => '视频连接中…';
+
+  @override
+  String get callStartingCamera => '正在开启摄像头…';
+
+  @override
+  String get callWaitingForAnswer => '等待对方接听…';
+
+  @override
+  String get callMe => '我';
+
+  @override
+  String callIncomingGroupInvite(String name, String type) {
+    return '$name邀请你加入群$type通话';
+  }
+
+  @override
+  String callIncomingInvite(String type) {
+    return '邀请你$type通话';
+  }
+
+  @override
+  String get callAccepting => '正在接通…';
+
+  @override
+  String get callDialing => '正在呼叫…';
+
+  @override
+  String get callWaitingForMembers => '等待成员加入…';
+
+  @override
+  String get callRestoring => '正在恢复通话…';
+
+  @override
+  String callGroupParticipants(int count, String elapsed) {
+    return '$count 人通话中 · $elapsed';
+  }
+
+  @override
+  String get callNetworkRestoring => '网络不稳定，正在恢复…';
+
+  @override
+  String callGroupFallback(String type) {
+    return '群$type通话';
+  }
+
+  @override
+  String get callGenericFallback => '通话';
+
+  @override
+  String get callRemoteHangup => '对方已挂断';
+
+  @override
+  String get callOtherDeviceAnswered => '通话已在其他设备接听';
+
+  @override
+  String get callNetworkLostEnded => '网络连接中断，通话已结束';
+
+  @override
+  String get callMaxDurationEnded => '通话时长已达上限，通话已结束';
+
+  @override
+  String get callRestoreFailed => '恢复通话失败';
+
+  @override
+  String get callAcceptFailed => '接听失败';
+
+  @override
+  String get callMicrophonePermissionRequired => '需要麦克风权限才能通话';
+
+  @override
+  String get callMediaPermissionRequired => '需要摄像头和麦克风权限才能视频通话';
+
+  @override
+  String get callConnectFailed => '通话连接失败，请稍后重试';
+
+  @override
+  String get callEndGroup => '结束通话';
+
+  @override
+  String get callLeaveGroup => '退出通话';
+
+  @override
+  String get networkDisconnectedOpenSettings => '网络连接已断开，点击前往设置';
+
+  @override
+  String get serverConnecting => '正在连接服务器...';
+
+  @override
+  String serverReconnecting(int current, int maximum) {
+    return '正在重连服务器 ($current/$maximum)...';
+  }
+
+  @override
+  String get serverDisconnectedRetry => '连接已断开，点击重试';
+
+  @override
+  String get accountSecurityAlertTitle => '账号异常';
+
+  @override
+  String get accountSecurityPasswordHint => '如非本人操作，请及时修改密码。';
+
+  @override
+  String accountKickedWithTimeAndDevice(String device, String time) {
+    return '你的账号于 $time 在 $device 上登录，你已被迫下线。';
+  }
+
+  @override
+  String accountKickedWithDevice(String device) {
+    return '你的账号在 $device 上登录，你已被迫下线。';
+  }
+
+  @override
+  String accountKickedWithTime(String time) {
+    return '你的账号于 $time 在其他设备上登录，你已被迫下线。';
+  }
+
+  @override
+  String get accountKicked => '你的账号已被迫下线。';
 }

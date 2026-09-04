@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/network/network_monitor_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,14 +16,14 @@ class NetworkStatusNoticeBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 监听网络状态
     final status = ref.watch(networkStatusProvider);
-    
+
     // wifi / mobile / unknown 均为可用网络（Web 平台 unknown 视为可用）
-    if (status == NetworkStatus.wifi || 
+    if (status == NetworkStatus.wifi ||
         status == NetworkStatus.mobile ||
         status == NetworkStatus.unknown) {
       return const SizedBox.shrink(); // 网络正常不显示
     }
-    
+
     return GestureDetector(
       onTap: () => _showNetworkSettings(context),
       child: Container(
@@ -31,10 +32,14 @@ class NetworkStatusNoticeBar extends ConsumerWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.signal_wifi_off, size: 16, color: Color(0xFF856404)),
+            const Icon(
+              Icons.signal_wifi_off,
+              size: 16,
+              color: Color(0xFF856404),
+            ),
             const SizedBox(width: 6),
             Text(
-              '网络连接已断开，点击前往设置',
+              AppLocalizations.of(context).networkDisconnectedOpenSettings,
               style: const TextStyle(fontSize: 12, color: Color(0xFF856404)),
             ),
           ],
@@ -53,7 +58,7 @@ class NetworkStatusNoticeBar extends ConsumerWidget {
     } else {
       return;
     }
-    
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
@@ -70,6 +75,7 @@ class _NetworkStatusNotifier extends StateNotifier<NetworkStatus> {
 }
 
 /// Riverpod Provider 用于监听网络状态
-final networkStatusProvider = StateNotifierProvider<_NetworkStatusNotifier, NetworkStatus>((ref) {
-  return _NetworkStatusNotifier();
-});
+final networkStatusProvider =
+    StateNotifierProvider<_NetworkStatusNotifier, NetworkStatus>((ref) {
+      return _NetworkStatusNotifier();
+    });

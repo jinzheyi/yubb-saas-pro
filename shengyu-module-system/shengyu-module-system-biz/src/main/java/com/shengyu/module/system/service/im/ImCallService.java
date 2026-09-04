@@ -56,6 +56,17 @@ public interface ImCallService {
     void cancelCall(String callId, Long userId, String reason);
 
     /**
+     * 结束无人接听的呼叫。
+     *
+     * <p>超时是系统终态，不是主叫主动取消。该方法只允许结束尚未接通的
+     * RINGING / CONNECTING 会话，并持久化为 {@code MISSED}，从而保证聊天
+     * 记录、会话摘要和实时事件使用一致的语义。</p>
+     *
+     * @param callId 通话 ID
+     */
+    void timeoutCall(String callId);
+
+    /**
      * 挂断通话
      * 更新通话记录状态并计算通话时长
      *

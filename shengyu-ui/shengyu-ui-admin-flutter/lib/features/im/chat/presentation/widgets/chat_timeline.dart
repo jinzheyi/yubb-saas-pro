@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/group_call_record_text.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/domain/entities/call_record_message.dart';
+import 'package:shengyu_ui_admin_im/features/im/call/presentation/models/call_record_display_text.dart';
 import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/core/i18n/system_message_renderer.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
@@ -865,7 +867,7 @@ class _CallRecordCenteredMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayText = _buildDisplayText();
+    final displayText = _buildDisplayText(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -883,9 +885,8 @@ class _CallRecordCenteredMessage extends StatelessWidget {
   }
 
   /// 构建展示文本（微信风格）
-  String _buildDisplayText() {
+  String _buildDisplayText(BuildContext context) {
     final extra = message.extra;
-    final callTypeText = (extra.callType ?? 1) == 2 ? '视频' : '语音';
     // 优先使用 extra.callerName，其次才是 senderName
     final callerName = extra.callerName?.isNotEmpty == true
         ? extra.callerName!
@@ -894,62 +895,15 @@ class _CallRecordCenteredMessage extends StatelessWidget {
     final isGroupCall = extra.isGroupCall ?? false;
     final duration = extra.duration ?? 0;
 
-    // 群通话特殊处理
-    if (isGroupCall) {
-      return groupCallRecordText(
-        callerName: callerName,
-        isVideo: (extra.callType ?? 1) == 2,
-        status: callStatus,
-        durationSeconds: duration,
-      );
-    }
-
-    // 1v1 通话（虽然 1v1 走气泡流程，但保留此方法以防万一）
-    return _buildOneToOneCallText(
-      callerName,
-      callTypeText,
-      callStatus,
-      duration,
+    return callRecordDisplayText(
+      strings: AppLocalizations.of(context),
+      callType: (extra.callType ?? 1) == 2 ? CallType.video : CallType.audio,
+      status: CallStatus.fromValue(callStatus),
+      durationSeconds: duration,
+      isGroupCall: isGroupCall,
+      isOutgoing: message.isOutgoing,
+      callerName: callerName,
     );
-  }
-
-  /// 构建1v1通话展示文本
-  String _buildOneToOneCallText(
-    String callerName,
-    String callTypeText,
-    int callStatus,
-    int duration,
-  ) {
-    switch (callStatus) {
-      case 1: // 已接通
-        final durationText = _formatDuration(duration);
-        return '$callTypeText通话时长 $durationText';
-      case 2: // 未接听
-        return '未接听';
-      case 3: // 已拒绝
-        return '$callTypeText通话已拒绝';
-      case 4: // 忙线
-        return '对方忙线中';
-      case 5: // 已取消
-        return '$callTypeText通话已取消';
-      default:
-        return '$callTypeText通话';
-    }
-  }
-
-  /// 格式化通话时长
-  String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    } else if (minutes > 0) {
-      return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    } else {
-      return '00:${secs.toString().padLeft(2, '0')}';
-    }
   }
 }
 

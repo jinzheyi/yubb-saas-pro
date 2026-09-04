@@ -42,9 +42,9 @@ class CallRecordDto {
     return CallRecordDto(
       callId: json['callId']?.toString() ?? '',
       chatId: json['chatId']?.toString() ?? '',
-      callType: json['callType'] as int? ?? 1,
-      status: json['status'] as int? ?? 1,
-      duration: json['duration'] as int? ?? 0,
+      callType: _asInt(json['callType'], fallback: 1),
+      status: _asInt(json['status'], fallback: 1),
+      duration: _asInt(json['duration']),
       callerId: json['callerId']?.toString() ?? '',
       calleeId: json['calleeId']?.toString() ?? '',
       callerName: json['callerName']?.toString(),
@@ -58,13 +58,18 @@ class CallRecordDto {
           ? DateTime.tryParse(json['endTime'].toString())
           : null,
       isCaller: json['isCaller'] as bool? ?? false,
-      conversationType: (json['conversationType'] as int? ?? 1) == 2
+      conversationType: _asInt(json['conversationType'], fallback: 1) == 2
           ? ConversationType.group
           : ConversationType.direct,
       inviteeNames: json['inviteeNames'] is List
           ? (json['inviteeNames'] as List).map((e) => e.toString()).toList()
           : const [],
     );
+  }
+
+  static int _asInt(Object? value, {int fallback = 0}) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 
   Map<String, dynamic> toJson() {

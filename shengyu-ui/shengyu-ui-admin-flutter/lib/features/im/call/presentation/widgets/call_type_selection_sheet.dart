@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/call_launch_args.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
+import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
 class CallTypeSelectionSheet extends StatelessWidget {
   const CallTypeSelectionSheet({
@@ -36,6 +37,7 @@ class CallTypeSelectionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -52,7 +54,7 @@ class CallTypeSelectionSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '选择通话方式',
+              strings.callSheetTitle,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -61,7 +63,7 @@ class CallTypeSelectionSheet extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              '与「$displayName」通话',
+              strings.callSheetWithName(displayName),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

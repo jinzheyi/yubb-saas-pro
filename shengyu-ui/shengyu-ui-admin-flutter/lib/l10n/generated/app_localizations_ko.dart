@@ -3155,4 +3155,199 @@ class AppLocalizationsKo extends AppLocalizations {
   String deviceTimeDaysAgo(Object days) {
     return '$days일 전';
   }
+
+  @override
+  String get callRecordOutgoingNoAnswer => 'No answer';
+
+  @override
+  String get callRecordIncomingMissed => 'Missed call';
+
+  @override
+  String get callRecordOutgoingRejected => 'Declined';
+
+  @override
+  String get callRecordIncomingRejected => 'Declined';
+
+  @override
+  String get callRecordOutgoingBusy => 'Line busy';
+
+  @override
+  String get callRecordIncomingBusy => 'Missed due to busy line';
+
+  @override
+  String get callRecordOutgoingCancelled => 'Cancelled';
+
+  @override
+  String get callRecordIncomingCancelled => 'Caller cancelled';
+
+  @override
+  String callRecordGroupCompleted(String type, String duration) {
+    return 'Group $type call ended · $duration';
+  }
+
+  @override
+  String callRecordGroupMissed(String callerName, String type) {
+    return '$callerName started a group $type call. No one answered.';
+  }
+
+  @override
+  String callRecordGroupRejected(String callerName, String type) {
+    return '$callerName\'s group $type call was declined';
+  }
+
+  @override
+  String callRecordGroupBusy(String callerName, String type) {
+    return '$callerName\'s group $type call: members are busy';
+  }
+
+  @override
+  String callRecordGroupCancelled(String callerName, String type) {
+    return '$callerName cancelled the group $type call';
+  }
+
+  @override
+  String get callTypeVoiceShort => 'voice';
+
+  @override
+  String get callTypeVideoShort => 'video';
+
+  @override
+  String get callPeerFallback => 'the other person';
+
+  @override
+  String get callMemberFallback => 'Member';
+
+  @override
+  String get callSheetTitle => 'Choose call type';
+
+  @override
+  String callSheetWithName(String name) {
+    return 'Call $name';
+  }
+
+  @override
+  String get callVideoConnecting => 'Connecting video…';
+
+  @override
+  String get callStartingCamera => 'Starting camera…';
+
+  @override
+  String get callWaitingForAnswer => 'Waiting for an answer…';
+
+  @override
+  String get callMe => 'Me';
+
+  @override
+  String callIncomingGroupInvite(String name, String type) {
+    return '$name invited you to a group $type call';
+  }
+
+  @override
+  String callIncomingInvite(String type) {
+    return 'Invited you to a $type call';
+  }
+
+  @override
+  String get callAccepting => 'Connecting…';
+
+  @override
+  String get callDialing => 'Calling…';
+
+  @override
+  String get callWaitingForMembers => 'Waiting for members to join…';
+
+  @override
+  String get callRestoring => 'Restoring call…';
+
+  @override
+  String callGroupParticipants(int count, String elapsed) {
+    return '$count in call · $elapsed';
+  }
+
+  @override
+  String get callNetworkRestoring => 'Network is unstable. Reconnecting…';
+
+  @override
+  String callGroupFallback(String type) {
+    return 'Group $type call';
+  }
+
+  @override
+  String get callGenericFallback => 'Call';
+
+  @override
+  String get callRemoteHangup => 'The other person ended the call';
+
+  @override
+  String get callOtherDeviceAnswered => 'Answered on another device';
+
+  @override
+  String get callNetworkLostEnded => 'Network connection lost. Call ended';
+
+  @override
+  String get callMaxDurationEnded =>
+      'Maximum call duration reached. Call ended';
+
+  @override
+  String get callRestoreFailed => 'Failed to restore call';
+
+  @override
+  String get callAcceptFailed => 'Failed to answer';
+
+  @override
+  String get callMicrophonePermissionRequired =>
+      'Microphone permission is required for calls';
+
+  @override
+  String get callMediaPermissionRequired =>
+      'Camera and microphone permissions are required for video calls';
+
+  @override
+  String get callConnectFailed => 'Failed to connect call. Please try again';
+
+  @override
+  String get callEndGroup => 'End call';
+
+  @override
+  String get callLeaveGroup => 'Leave call';
+
+  @override
+  String get networkDisconnectedOpenSettings =>
+      'Network disconnected. Tap to open settings';
+
+  @override
+  String get serverConnecting => 'Connecting to server…';
+
+  @override
+  String serverReconnecting(int current, int maximum) {
+    return 'Reconnecting to server ($current/$maximum)…';
+  }
+
+  @override
+  String get serverDisconnectedRetry => 'Connection lost. Tap to retry';
+
+  @override
+  String get accountSecurityAlertTitle => 'Account security alert';
+
+  @override
+  String get accountSecurityPasswordHint =>
+      'If this wasn\'t you, change your password immediately.';
+
+  @override
+  String accountKickedWithTimeAndDevice(String device, String time) {
+    return 'Your account signed in on $device at $time. You have been signed out.';
+  }
+
+  @override
+  String accountKickedWithDevice(String device) {
+    return 'Your account signed in on $device. You have been signed out.';
+  }
+
+  @override
+  String accountKickedWithTime(String time) {
+    return 'Your account signed in on another device at $time. You have been signed out.';
+  }
+
+  @override
+  String get accountKicked => 'Your account has been signed out.';
 }
