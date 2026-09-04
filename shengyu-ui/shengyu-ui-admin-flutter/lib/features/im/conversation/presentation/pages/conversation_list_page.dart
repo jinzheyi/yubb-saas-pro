@@ -98,35 +98,37 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 仅访问内存缓存，必须发生在首帧前。缓存命中时直接绘制会话列表，
-    // 不让登录、登出或 tab 返回产生骨架屏闪烁。
-    ref
-        .read(conversationListControllerProvider.notifier)
-        .hydrateFromMemory();
-    Future.microtask(() async {
-      // 先恢复 L2 磁盘缓存；首次安装且无缓存时才会进入骨架加载。
-      await ref.read(conversationListControllerProvider.notifier).warmStart();
+    // Riverpod provider 只能在 widget tree 完成首帧构建后更新。缓存恢复、
+    // 设备预取都可能同步写入状态，统一放到 post-frame，避免冷启动异常。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(conversationListControllerProvider.notifier).hydrateFromMemory();
+      unawaited(() async {
+        // 先恢复 L2 磁盘缓存；首次安装且无缓存时才会进入骨架加载。
+        await ref.read(conversationListControllerProvider.notifier).warmStart();
+        if (!mounted) return;
 
-      // 有缓存时 load 不会阻塞 UI；无缓存时才执行首装拉取。
-      final error = await ref
-          .read(conversationListControllerProvider.notifier)
-          .load();
-      if (!mounted) return;
-      if (error == null) {
-        _markConversationSynced();
-      }
-      // 无论 load 是否跳过 API，都执行一次增量同步，确保从聊天页返回时获取最新未读数
-      await ref
-          .read(conversationListControllerProvider.notifier)
-          .syncIncrementally();
-      if (!mounted) return;
-      await _consumeGroupRemovalNotice();
-      if (!mounted) return;
-      await _syncOnForegroundIfNeeded();
+        // 有缓存时 load 不会阻塞 UI；无缓存时才执行首装拉取。
+        final error = await ref
+            .read(conversationListControllerProvider.notifier)
+            .load();
+        if (!mounted) return;
+        if (error == null) {
+          _markConversationSynced();
+        }
+        // 无论 load 是否跳过 API，都执行一次增量同步，确保从聊天页返回时获取最新未读数
+        await ref
+            .read(conversationListControllerProvider.notifier)
+            .syncIncrementally();
+        if (!mounted) return;
+        await _consumeGroupRemovalNotice();
+        if (!mounted) return;
+        await _syncOnForegroundIfNeeded();
+      }());
+
+      // 设备入口不属于会话首屏关键路径，避免它阻塞缓存直出。
+      unawaited(ref.read(deviceListProvider.notifier).load());
     });
-    // 设备入口不属于会话首屏关键路径，避免它阻塞缓存直出。
-    unawaited(ref.read(deviceListProvider.notifier).load());
   }
 
   @override

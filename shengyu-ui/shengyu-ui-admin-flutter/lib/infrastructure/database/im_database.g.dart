@@ -1289,6 +1289,28 @@ class $ConversationsTable extends Conversations
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _groupMemberAvatarsJsonMeta =
+      const VerificationMeta('groupMemberAvatarsJson');
+  @override
+  late final GeneratedColumn<String> groupMemberAvatarsJson =
+      GeneratedColumn<String>(
+        'group_member_avatars_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _groupMemberItemsJsonMeta =
+      const VerificationMeta('groupMemberItemsJson');
+  @override
+  late final GeneratedColumn<String> groupMemberItemsJson =
+      GeneratedColumn<String>(
+        'group_member_items_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     chatId,
@@ -1314,6 +1336,8 @@ class $ConversationsTable extends Conversations
     cachedAt,
     groupMemberCount,
     groupMemberStatus,
+    groupMemberAvatarsJson,
+    groupMemberItemsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1515,6 +1539,24 @@ class $ConversationsTable extends Conversations
         ),
       );
     }
+    if (data.containsKey('group_member_avatars_json')) {
+      context.handle(
+        _groupMemberAvatarsJsonMeta,
+        groupMemberAvatarsJson.isAcceptableOrUnknown(
+          data['group_member_avatars_json']!,
+          _groupMemberAvatarsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('group_member_items_json')) {
+      context.handle(
+        _groupMemberItemsJsonMeta,
+        groupMemberItemsJson.isAcceptableOrUnknown(
+          data['group_member_items_json']!,
+          _groupMemberItemsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1618,6 +1660,14 @@ class $ConversationsTable extends Conversations
         DriftSqlType.int,
         data['${effectivePrefix}group_member_status'],
       ),
+      groupMemberAvatarsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_member_avatars_json'],
+      ),
+      groupMemberItemsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_member_items_json'],
+      ),
     );
   }
 
@@ -1700,6 +1750,15 @@ class Conversation extends DataClass implements Insertable<Conversation> {
 
   /// === 群成员状态（1=已退出, 2=已被踢, 3=已解散） ===
   final int? groupMemberStatus;
+
+  /// 用于组合群头像的成员头像列表 JSON。
+  ///
+  /// 冷启动时会话列表直接从本地缓存恢复；若不持久化这些资料，群头像会
+  /// 退化为首字母占位符。
+  final String? groupMemberAvatarsJson;
+
+  /// 用于组合群头像的成员信息 JSON（最多只在 UI 使用前几个成员）。
+  final String? groupMemberItemsJson;
   const Conversation({
     required this.chatId,
     required this.type,
@@ -1724,6 +1783,8 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     required this.cachedAt,
     required this.groupMemberCount,
     this.groupMemberStatus,
+    this.groupMemberAvatarsJson,
+    this.groupMemberItemsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1769,6 +1830,14 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     if (!nullToAbsent || groupMemberStatus != null) {
       map['group_member_status'] = Variable<int>(groupMemberStatus);
     }
+    if (!nullToAbsent || groupMemberAvatarsJson != null) {
+      map['group_member_avatars_json'] = Variable<String>(
+        groupMemberAvatarsJson,
+      );
+    }
+    if (!nullToAbsent || groupMemberItemsJson != null) {
+      map['group_member_items_json'] = Variable<String>(groupMemberItemsJson);
+    }
     return map;
   }
 
@@ -1811,6 +1880,12 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       groupMemberStatus: groupMemberStatus == null && nullToAbsent
           ? const Value.absent()
           : Value(groupMemberStatus),
+      groupMemberAvatarsJson: groupMemberAvatarsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupMemberAvatarsJson),
+      groupMemberItemsJson: groupMemberItemsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupMemberItemsJson),
     );
   }
 
@@ -1851,6 +1926,12 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       cachedAt: serializer.fromJson<int>(json['cachedAt']),
       groupMemberCount: serializer.fromJson<int>(json['groupMemberCount']),
       groupMemberStatus: serializer.fromJson<int?>(json['groupMemberStatus']),
+      groupMemberAvatarsJson: serializer.fromJson<String?>(
+        json['groupMemberAvatarsJson'],
+      ),
+      groupMemberItemsJson: serializer.fromJson<String?>(
+        json['groupMemberItemsJson'],
+      ),
     );
   }
   @override
@@ -1884,6 +1965,10 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       'cachedAt': serializer.toJson<int>(cachedAt),
       'groupMemberCount': serializer.toJson<int>(groupMemberCount),
       'groupMemberStatus': serializer.toJson<int?>(groupMemberStatus),
+      'groupMemberAvatarsJson': serializer.toJson<String?>(
+        groupMemberAvatarsJson,
+      ),
+      'groupMemberItemsJson': serializer.toJson<String?>(groupMemberItemsJson),
     };
   }
 
@@ -1911,6 +1996,8 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     int? cachedAt,
     int? groupMemberCount,
     Value<int?> groupMemberStatus = const Value.absent(),
+    Value<String?> groupMemberAvatarsJson = const Value.absent(),
+    Value<String?> groupMemberItemsJson = const Value.absent(),
   }) => Conversation(
     chatId: chatId ?? this.chatId,
     type: type ?? this.type,
@@ -1945,6 +2032,12 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     groupMemberStatus: groupMemberStatus.present
         ? groupMemberStatus.value
         : this.groupMemberStatus,
+    groupMemberAvatarsJson: groupMemberAvatarsJson.present
+        ? groupMemberAvatarsJson.value
+        : this.groupMemberAvatarsJson,
+    groupMemberItemsJson: groupMemberItemsJson.present
+        ? groupMemberItemsJson.value
+        : this.groupMemberItemsJson,
   );
   Conversation copyWithCompanion(ConversationsCompanion data) {
     return Conversation(
@@ -2001,6 +2094,12 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       groupMemberStatus: data.groupMemberStatus.present
           ? data.groupMemberStatus.value
           : this.groupMemberStatus,
+      groupMemberAvatarsJson: data.groupMemberAvatarsJson.present
+          ? data.groupMemberAvatarsJson.value
+          : this.groupMemberAvatarsJson,
+      groupMemberItemsJson: data.groupMemberItemsJson.present
+          ? data.groupMemberItemsJson.value
+          : this.groupMemberItemsJson,
     );
   }
 
@@ -2029,7 +2128,9 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           ..write('userId: $userId, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('groupMemberCount: $groupMemberCount, ')
-          ..write('groupMemberStatus: $groupMemberStatus')
+          ..write('groupMemberStatus: $groupMemberStatus, ')
+          ..write('groupMemberAvatarsJson: $groupMemberAvatarsJson, ')
+          ..write('groupMemberItemsJson: $groupMemberItemsJson')
           ..write(')'))
         .toString();
   }
@@ -2059,6 +2160,8 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     cachedAt,
     groupMemberCount,
     groupMemberStatus,
+    groupMemberAvatarsJson,
+    groupMemberItemsJson,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2086,7 +2189,9 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           other.userId == this.userId &&
           other.cachedAt == this.cachedAt &&
           other.groupMemberCount == this.groupMemberCount &&
-          other.groupMemberStatus == this.groupMemberStatus);
+          other.groupMemberStatus == this.groupMemberStatus &&
+          other.groupMemberAvatarsJson == this.groupMemberAvatarsJson &&
+          other.groupMemberItemsJson == this.groupMemberItemsJson);
 }
 
 class ConversationsCompanion extends UpdateCompanion<Conversation> {
@@ -2113,6 +2218,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
   final Value<int> cachedAt;
   final Value<int> groupMemberCount;
   final Value<int?> groupMemberStatus;
+  final Value<String?> groupMemberAvatarsJson;
+  final Value<String?> groupMemberItemsJson;
   final Value<int> rowid;
   const ConversationsCompanion({
     this.chatId = const Value.absent(),
@@ -2138,6 +2245,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     this.cachedAt = const Value.absent(),
     this.groupMemberCount = const Value.absent(),
     this.groupMemberStatus = const Value.absent(),
+    this.groupMemberAvatarsJson = const Value.absent(),
+    this.groupMemberItemsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ConversationsCompanion.insert({
@@ -2164,6 +2273,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     required int cachedAt,
     this.groupMemberCount = const Value.absent(),
     this.groupMemberStatus = const Value.absent(),
+    this.groupMemberAvatarsJson = const Value.absent(),
+    this.groupMemberItemsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : chatId = Value(chatId),
        type = Value(type),
@@ -2197,6 +2308,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     Expression<int>? cachedAt,
     Expression<int>? groupMemberCount,
     Expression<int>? groupMemberStatus,
+    Expression<String>? groupMemberAvatarsJson,
+    Expression<String>? groupMemberItemsJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2227,6 +2340,10 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       if (cachedAt != null) 'cached_at': cachedAt,
       if (groupMemberCount != null) 'group_member_count': groupMemberCount,
       if (groupMemberStatus != null) 'group_member_status': groupMemberStatus,
+      if (groupMemberAvatarsJson != null)
+        'group_member_avatars_json': groupMemberAvatarsJson,
+      if (groupMemberItemsJson != null)
+        'group_member_items_json': groupMemberItemsJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2255,6 +2372,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     Value<int>? cachedAt,
     Value<int>? groupMemberCount,
     Value<int?>? groupMemberStatus,
+    Value<String?>? groupMemberAvatarsJson,
+    Value<String?>? groupMemberItemsJson,
     Value<int>? rowid,
   }) {
     return ConversationsCompanion(
@@ -2282,6 +2401,9 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       cachedAt: cachedAt ?? this.cachedAt,
       groupMemberCount: groupMemberCount ?? this.groupMemberCount,
       groupMemberStatus: groupMemberStatus ?? this.groupMemberStatus,
+      groupMemberAvatarsJson:
+          groupMemberAvatarsJson ?? this.groupMemberAvatarsJson,
+      groupMemberItemsJson: groupMemberItemsJson ?? this.groupMemberItemsJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2364,6 +2486,16 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     if (groupMemberStatus.present) {
       map['group_member_status'] = Variable<int>(groupMemberStatus.value);
     }
+    if (groupMemberAvatarsJson.present) {
+      map['group_member_avatars_json'] = Variable<String>(
+        groupMemberAvatarsJson.value,
+      );
+    }
+    if (groupMemberItemsJson.present) {
+      map['group_member_items_json'] = Variable<String>(
+        groupMemberItemsJson.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2396,6 +2528,8 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
           ..write('cachedAt: $cachedAt, ')
           ..write('groupMemberCount: $groupMemberCount, ')
           ..write('groupMemberStatus: $groupMemberStatus, ')
+          ..write('groupMemberAvatarsJson: $groupMemberAvatarsJson, ')
+          ..write('groupMemberItemsJson: $groupMemberItemsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3865,6 +3999,8 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       required int cachedAt,
       Value<int> groupMemberCount,
       Value<int?> groupMemberStatus,
+      Value<String?> groupMemberAvatarsJson,
+      Value<String?> groupMemberItemsJson,
       Value<int> rowid,
     });
 typedef $$ConversationsTableUpdateCompanionBuilder =
@@ -3892,6 +4028,8 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<int> cachedAt,
       Value<int> groupMemberCount,
       Value<int?> groupMemberStatus,
+      Value<String?> groupMemberAvatarsJson,
+      Value<String?> groupMemberItemsJson,
       Value<int> rowid,
     });
 
@@ -4019,6 +4157,16 @@ class $$ConversationsTableFilterComposer
     column: $table.groupMemberStatus,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get groupMemberAvatarsJson => $composableBuilder(
+    column: $table.groupMemberAvatarsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupMemberItemsJson => $composableBuilder(
+    column: $table.groupMemberItemsJson,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$ConversationsTableOrderingComposer
@@ -4144,6 +4292,16 @@ class $$ConversationsTableOrderingComposer
     column: $table.groupMemberStatus,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get groupMemberAvatarsJson => $composableBuilder(
+    column: $table.groupMemberAvatarsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get groupMemberItemsJson => $composableBuilder(
+    column: $table.groupMemberItemsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ConversationsTableAnnotationComposer
@@ -4253,6 +4411,16 @@ class $$ConversationsTableAnnotationComposer
     column: $table.groupMemberStatus,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get groupMemberAvatarsJson => $composableBuilder(
+    column: $table.groupMemberAvatarsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get groupMemberItemsJson => $composableBuilder(
+    column: $table.groupMemberItemsJson,
+    builder: (column) => column,
+  );
 }
 
 class $$ConversationsTableTableManager
@@ -4309,6 +4477,8 @@ class $$ConversationsTableTableManager
                 Value<int> cachedAt = const Value.absent(),
                 Value<int> groupMemberCount = const Value.absent(),
                 Value<int?> groupMemberStatus = const Value.absent(),
+                Value<String?> groupMemberAvatarsJson = const Value.absent(),
+                Value<String?> groupMemberItemsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationsCompanion(
                 chatId: chatId,
@@ -4334,6 +4504,8 @@ class $$ConversationsTableTableManager
                 cachedAt: cachedAt,
                 groupMemberCount: groupMemberCount,
                 groupMemberStatus: groupMemberStatus,
+                groupMemberAvatarsJson: groupMemberAvatarsJson,
+                groupMemberItemsJson: groupMemberItemsJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4361,6 +4533,8 @@ class $$ConversationsTableTableManager
                 required int cachedAt,
                 Value<int> groupMemberCount = const Value.absent(),
                 Value<int?> groupMemberStatus = const Value.absent(),
+                Value<String?> groupMemberAvatarsJson = const Value.absent(),
+                Value<String?> groupMemberItemsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationsCompanion.insert(
                 chatId: chatId,
@@ -4386,6 +4560,8 @@ class $$ConversationsTableTableManager
                 cachedAt: cachedAt,
                 groupMemberCount: groupMemberCount,
                 groupMemberStatus: groupMemberStatus,
+                groupMemberAvatarsJson: groupMemberAvatarsJson,
+                groupMemberItemsJson: groupMemberItemsJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

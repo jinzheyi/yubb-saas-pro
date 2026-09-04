@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/application/usecases/sync_conversations_incrementally_use_case.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/repositories/conversation_repository.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/dtos/conversation_dto.dart';
@@ -18,6 +19,8 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart'
     show markLocalConversationUpdate;
+import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_member.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/repositories/group_settings_repository.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/cursor_version_store.dart';
 
@@ -29,6 +32,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     this.activeConversationService,
     this._unifiedCacheManager,
     this._cursorVersionStore,
+    this._groupSettingsRepository,
     this._currentUserId,
   ) : super(const ConversationListState());
 
@@ -39,6 +43,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   final ActiveConversationService activeConversationService;
   final UnifiedCacheManager _unifiedCacheManager;
   final CursorVersionStore _cursorVersionStore;
+  final GroupSettingsRepository _groupSettingsRepository;
   final String _currentUserId;
 
   /// 同步恢复进程内缓存，供页面在首帧前调用。
@@ -87,6 +92,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     debugPrint(
       '[ConversationList] Warm start restored ${cached.data.length} conversations',
     );
+    _hydrateMissingGroupAvatarPreviews();
     _backgroundIncrementalSync();
     // 将最近会话也放入 L1，使紧接着进入聊天页时可以首帧显示消息。
     await _warmRecentMessageCaches(cached.data);
@@ -110,6 +116,130 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       // 消息预热失败不影响会话列表恢复；进入聊天页仍会按缓存/网络路径处理。
       debugPrint('[ConversationList] Recent message warm-up failed: $error');
     }
+  }
+
+  /// 为旧版磁盘缓存补齐组合群头像资料。
+  ///
+  /// 增量同步只返回发生变化的会话，不能保证补发成员头像字段；因此对缓存
+  /// 中缺失资料的群会话单独查询成员列表，并将结果写回 L1/L2。请求失败
+  /// 不影响会话列表可用性，下次冷启动会再次尝试。
+  void _hydrateMissingGroupAvatarPreviews() {
+    final candidates = state.conversations
+        .where(
+          (conversation) =>
+              conversation.conversationType == ConversationType.group &&
+              (conversation.targetId ?? conversation.chatId).isNotEmpty &&
+              conversation.targetAvatar?.isNotEmpty != true &&
+              conversation.groupMemberItems.isEmpty,
+        )
+        .take(12)
+        .toList(growable: false);
+    if (candidates.isEmpty) return;
+
+    unawaited(_fetchAndCacheGroupAvatarPreviews(candidates));
+  }
+
+  Future<void> _fetchAndCacheGroupAvatarPreviews(
+    List<Conversation> candidates,
+  ) async {
+    final previews = await Future.wait(
+      candidates.map((conversation) async {
+        final groupId = conversation.targetId ?? conversation.chatId;
+        try {
+          final members = await _groupSettingsRepository.getGroupMembers(
+            groupId,
+          );
+          final memberItems = _toGroupMemberItems(members);
+          if (memberItems.isNotEmpty) {
+            return MapEntry(conversation.chatId, memberItems);
+          }
+
+          // 历史测试群、已解散群等场景可能没有可查询的成员列表。此时从
+          // 当前群的本地消息中提取去重后的发送者，仍可稳定显示组合头像。
+          final cachedMessages = await _unifiedCacheManager.getMessages(
+            _currentUserId,
+            conversation.chatId,
+          );
+          return MapEntry(
+            conversation.chatId,
+            _toGroupMemberItemsFromMessages(cachedMessages?.data ?? const []),
+          );
+        } catch (error) {
+          debugPrint(
+            '[ConversationList] Group avatar refresh failed for $groupId: $error',
+          );
+          return null;
+        }
+      }),
+    );
+    if (!mounted) return;
+
+    final membersByChatId = <String, List<GroupMemberItem>>{
+      for (final preview in previews)
+        if (preview != null && preview.value.isNotEmpty)
+          preview.key: preview.value,
+    };
+    if (membersByChatId.isEmpty) return;
+
+    var changed = false;
+    final conversations = state.conversations
+        .map((conversation) {
+          final members = membersByChatId[conversation.chatId];
+          if (members == null || conversation.groupMemberItems.isNotEmpty) {
+            return conversation;
+          }
+          changed = true;
+          return conversation.copyWith(
+            groupMemberItems: members,
+            groupMemberAvatars: members
+                .map((member) => member.avatar ?? '')
+                .where((avatar) => avatar.isNotEmpty)
+                .toList(growable: false),
+          );
+        })
+        .toList(growable: false);
+    if (!changed) return;
+
+    state = state.copyWith(conversations: conversations);
+    await _unifiedCacheManager.setConversationList(
+      _currentUserId,
+      conversations,
+      state.cursorVersion,
+    );
+  }
+
+  List<GroupMemberItem> _toGroupMemberItems(List<GroupMember> members) {
+    return members
+        .take(4)
+        .map(
+          (member) => GroupMemberItem(
+            userId: member.userId,
+            name: member.nickname.trim().isNotEmpty
+                ? member.nickname
+                : member.userName,
+            avatar: member.avatarUrl,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<GroupMemberItem> _toGroupMemberItemsFromMessages(
+    List<Message> messages,
+  ) {
+    final membersById = <String, GroupMemberItem>{};
+    for (final message in messages.reversed) {
+      if (message.senderId.isEmpty ||
+          membersById.containsKey(message.senderId)) {
+        continue;
+      }
+      membersById[message.senderId] = GroupMemberItem(
+        userId: message.senderId,
+        name: message.senderName,
+        avatar: message.senderAvatar,
+      );
+      if (membersById.length == 4) break;
+    }
+    return membersById.values.toList(growable: false);
   }
 
   Future<AppError?> load() async {
@@ -146,6 +276,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         '[ConversationList] Cache hit, loading from cache (${cached.data.length} conversations)',
       );
 
+      _hydrateMissingGroupAvatarPreviews();
       // 后台增量同步（不阻塞 UI）
       _backgroundIncrementalSync();
       return null;

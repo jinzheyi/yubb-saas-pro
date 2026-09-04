@@ -151,6 +151,8 @@ class ConversationDao extends DatabaseAccessor<ImDatabase>
           cachedAt: companion.cachedAt,
           groupMemberCount: companion.groupMemberCount,
           groupMemberStatus: companion.groupMemberStatus,
+          groupMemberAvatarsJson: companion.groupMemberAvatarsJson,
+          groupMemberItemsJson: companion.groupMemberItemsJson,
         );
         batch.insert(
           conversations,

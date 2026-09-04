@@ -22,7 +22,7 @@ class ReadReceiptSummaryStore
 
   ReadReceiptSummary? getSummary(String messageId) {
     final normalized = messageId.trim();
-    if (normalized.isEmpty) {
+    if (!_isServerMessageId(normalized)) {
       return null;
     }
     return state.entries[normalized]?.summary;
@@ -30,7 +30,7 @@ class ReadReceiptSummaryStore
 
   bool hasFreshSummary(String messageId) {
     final normalized = messageId.trim();
-    if (normalized.isEmpty) {
+    if (!_isServerMessageId(normalized)) {
       return false;
     }
     final entry = state.entries[normalized];
@@ -42,7 +42,7 @@ class ReadReceiptSummaryStore
 
   Future<ReadReceiptSummary?> ensureSummary(String messageId) async {
     final normalized = messageId.trim();
-    if (normalized.isEmpty) {
+    if (!_isServerMessageId(normalized)) {
       return null;
     }
     final cached = state.entries[normalized];
@@ -68,9 +68,7 @@ class ReadReceiptSummaryStore
     final candidates = <String>[];
     for (final rawId in messageIds.reversed) {
       final messageId = rawId.trim();
-      if (messageId.isEmpty ||
-          messageId == '0' ||
-          candidates.contains(messageId)) {
+      if (!_isServerMessageId(messageId) || candidates.contains(messageId)) {
         continue;
       }
       if (hasFreshSummary(messageId) || _inFlight.contains(messageId)) {
@@ -95,7 +93,8 @@ class ReadReceiptSummaryStore
 
   void invalidate(String messageId) {
     final normalized = messageId.trim();
-    if (normalized.isEmpty || !state.entries.containsKey(normalized)) {
+    if (!_isServerMessageId(normalized) ||
+        !state.entries.containsKey(normalized)) {
       return;
     }
     final nextEntries = Map<String, ReadReceiptSummaryCacheEntry>.from(
@@ -105,7 +104,7 @@ class ReadReceiptSummaryStore
   }
 
   void hydrate(ReadReceiptSummary? summary) {
-    if (summary == null || summary.messageId.trim().isEmpty) {
+    if (summary == null || !_isServerMessageId(summary.messageId.trim())) {
       return;
     }
     _putSummary(summary.messageId.trim(), summary);
@@ -189,5 +188,12 @@ class ReadReceiptSummaryStore
   void dispose() {
     _prefetchTimer?.cancel();
     super.dispose();
+  }
+
+  /// 读回执 REST 接口的 messageId 参数是后端雪花 ID（Long）。
+  /// 客户端发送中的临时消息使用 UUID，不能作为该接口的查询参数。
+  static bool _isServerMessageId(String value) {
+    final parsed = int.tryParse(value);
+    return parsed != null && parsed > 0;
   }
 }

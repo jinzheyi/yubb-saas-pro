@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/database/im_database.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/database/tables/conversations_table.dart';
-import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart' as domain;
+import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart'
+    as domain;
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -37,6 +40,20 @@ class ConversationDbMapper {
       cachedAt: Value(DateTime.now().millisecondsSinceEpoch),
       groupMemberCount: Value(entity.groupMemberCount),
       groupMemberStatus: Value(entity.groupMemberStatus),
+      groupMemberAvatarsJson: Value(jsonEncode(entity.groupMemberAvatars)),
+      groupMemberItemsJson: Value(
+        jsonEncode(
+          entity.groupMemberItems
+              .map(
+                (item) => <String, String?>{
+                  'userId': item.userId,
+                  'name': item.name,
+                  'avatar': item.avatar,
+                },
+              )
+              .toList(),
+        ),
+      ),
     );
   }
 
@@ -63,6 +80,8 @@ class ConversationDbMapper {
       isMuted: row.isMuted,
       groupMemberCount: row.groupMemberCount,
       groupMemberStatus: row.groupMemberStatus,
+      groupMemberAvatars: _parseStringList(row.groupMemberAvatarsJson),
+      groupMemberItems: _parseGroupMemberItems(row.groupMemberItemsJson),
     );
   }
 
@@ -100,5 +119,39 @@ class ConversationDbMapper {
       (e) => e.name == raw,
       orElse: () => MessageStatus.sent,
     );
+  }
+
+  static List<String> _parseStringList(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .map((value) => value?.toString() ?? '')
+          .where((value) => value.isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static List<domain.GroupMemberItem> _parseGroupMemberItems(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => domain.GroupMemberItem(
+              userId: item['userId']?.toString(),
+              name: item['name']?.toString(),
+              avatar: item['avatar']?.toString(),
+            ),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 }

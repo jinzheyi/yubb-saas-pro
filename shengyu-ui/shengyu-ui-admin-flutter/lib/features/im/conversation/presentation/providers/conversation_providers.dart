@@ -10,6 +10,7 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/infrastructure/repo
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/active_conversation_service.dart';
+import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/cursor_version_store.dart';
 import 'package:shengyu_ui_admin_im/infrastructure/cache/memory_cache_manager.dart';
@@ -59,6 +60,7 @@ final conversationListControllerProvider =
         ref.read(activeConversationServiceProvider.notifier),
         ref.read(unifiedCacheManagerProvider),
         ref.read(cursorVersionStoreProvider),
+        ref.read(groupSettingsRepositoryProvider),
         currentUserId,
       );
     });
@@ -86,7 +88,9 @@ class UnreadCountSummary {
 
 final unreadCountSummaryProvider = Provider<UnreadCountSummary>((ref) {
   // 精确订阅：仅监听 conversations 字段变化
-  final conversations = ref.watch(conversationListControllerProvider.select((state) => state.conversations));
+  final conversations = ref.watch(
+    conversationListControllerProvider.select((state) => state.conversations),
+  );
   int total = 0;
   int mutedTotal = 0;
   for (final c in conversations) {

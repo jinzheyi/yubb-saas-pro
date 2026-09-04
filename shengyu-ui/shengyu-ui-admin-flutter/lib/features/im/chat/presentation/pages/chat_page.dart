@@ -210,24 +210,22 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _startVoicePlayedCompensation();
     _startTypingCleanupTimer();
 
-    // 2. L1 缓存是纯内存读取，必须在首帧前水合。否则即使已有会话
-    //    缓存，首帧仍会先绘制骨架屏，造成每次进入聊天都闪一下的体验。
-    //    这里不做 I/O，只更新同一 chatId 的 provider 状态，网络刷新仍
-    //    放在首帧后异步执行。
-    ref
-        .read(chatControllerProvider(widget.args.chatId).notifier)
-        .hydrateFromMemory(widget.args);
-
-    // 3. 延迟到首帧渲染完成后执行，避免阻塞首帧
+    // 2. 延迟到首帧渲染完成后执行。Riverpod 不允许在 widget tree
+    //    构建期间修改 provider；缓存命中时 hydrateFromMemory 会同步更新
+    //    ChatController 和 ChatTimelineController，因此必须在此处执行。
+    //    网络刷新仍在水合后异步执行。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref
+          .read(chatControllerProvider(widget.args.chatId).notifier)
+          .hydrateFromMemory(widget.args);
       // 激活当前会话（角标处理）
       _activateCurrentConversation();
       // 初始化聊天页面（关键路径：加载消息数据）
       unawaited(_initializeChatPage());
     });
 
-    // 4. 次优先级任务：延迟到第二帧后执行（贴纸预热、撤回配置、语音补偿恢复）
+    // 3. 次优先级任务：延迟到第二帧后执行（贴纸预热、撤回配置、语音补偿恢复）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2975,14 +2973,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
 
   String _resolveReadReceiptTargetMessageId(Message message) {
     final messageId = message.messageId.trim();
-    if (messageId.isNotEmpty && messageId != '0') {
+    if (_isServerMessageId(messageId)) {
       return messageId;
     }
-    final clientMessageId = message.clientMessageId?.trim() ?? '';
-    if (clientMessageId.isNotEmpty && clientMessageId != '0') {
-      return clientMessageId;
-    }
     return '';
+  }
+
+  bool _isServerMessageId(String value) {
+    final parsed = int.tryParse(value);
+    return parsed != null && parsed > 0;
   }
 
   bool _isReadReceiptMessageConfirmed(Message message) {

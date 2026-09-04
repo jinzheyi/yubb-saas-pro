@@ -78,6 +78,15 @@ class Conversations extends Table {
   /// === 群成员状态（1=已退出, 2=已被踢, 3=已解散） ===
   IntColumn get groupMemberStatus => integer().nullable()();
 
+  /// 用于组合群头像的成员头像列表 JSON。
+  ///
+  /// 冷启动时会话列表直接从本地缓存恢复；若不持久化这些资料，群头像会
+  /// 退化为首字母占位符。
+  TextColumn get groupMemberAvatarsJson => text().nullable()();
+
+  /// 用于组合群头像的成员信息 JSON（最多只在 UI 使用前几个成员）。
+  TextColumn get groupMemberItemsJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {chatId};
 }

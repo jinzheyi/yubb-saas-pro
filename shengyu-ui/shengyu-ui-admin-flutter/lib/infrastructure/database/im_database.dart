@@ -20,7 +20,7 @@ class ImDatabase extends _$ImDatabase {
   ImDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -104,6 +104,16 @@ class ImDatabase extends _$ImDatabase {
           // chat_id 本身已是主键，无需额外唯一约束。
           // ignore: experimental_member_use
           await m.alterTable(TableMigration(conversations));
+        }
+
+        if (from < 5) {
+          // 版本 4 → 5：持久化组合群头像所需的成员资料。旧缓存保留，
+          // 缺失数据会由会话列表的后台回填流程补齐。
+          await m.addColumn(
+            conversations,
+            conversations.groupMemberAvatarsJson,
+          );
+          await m.addColumn(conversations, conversations.groupMemberItemsJson);
         }
       },
     );
