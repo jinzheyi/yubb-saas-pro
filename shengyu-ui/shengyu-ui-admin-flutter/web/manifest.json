@@ -1,11 +1,11 @@
 {
-    "name": "shengyu_ui_admin_im",
-    "short_name": "shengyu_ui_admin_im",
+    "name": "钰信",
+    "short_name": "钰信",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "类似企业微信设计的圣钰SaaS即时通讯系统",
+    "description": "钰信即时通讯",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,6 +1,6 @@
 # shengyu_ui_admin_im
 
-类似企业微信设计的圣钰SaaS即时通讯系统
+钰信即时通讯
 
 ## Getting Started
 

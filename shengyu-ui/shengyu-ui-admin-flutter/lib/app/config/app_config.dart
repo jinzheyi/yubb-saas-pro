@@ -14,10 +14,10 @@ import 'package:shengyu_ui_admin_im/core/platform/video_compression_config.dart'
 /// - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`
 abstract final class AppConfig {
   /// 公司名称。
-  static const String companyName = '圣钰科技';
+  static const String companyName = '钰信';
 
   /// 应用展示名称。
-  static const String appName = '圣钰科技 IM';
+  static const String appName = '钰信';
 
   /// App 端 HTTP 地址。
   ///

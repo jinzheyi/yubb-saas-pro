@@ -9,7 +9,7 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appName => '圣钰科技 IM';
+  String get appName => '钰信';
 
   @override
   String get loginIntro => '企业级即时通讯与协同入口';
@@ -2250,7 +2250,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguageSummary => '跟随系统 / 简体中文 / English';
 
   @override
-  String get settingsAboutApp => '关于圣钰 IM';
+  String get settingsAboutApp => '关于钰信';
 
   @override
   String get settingsVersionValue => '版本 1.0.0';
@@ -2328,7 +2328,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUnknownUser => '未命名用户';
 
   @override
-  String get profileCompanyLabel => '圣钰科技';
+  String get profileCompanyLabel => '钰信';
 
   @override
   String get profileSectionSettings => '设置';

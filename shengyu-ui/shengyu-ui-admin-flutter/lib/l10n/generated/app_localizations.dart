@@ -105,7 +105,7 @@ abstract class AppLocalizations {
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
-  /// **'Shengyu IM'**
+  /// **'钰信'**
   String get appName;
 
   /// No description provided for @loginIntro.
@@ -4266,7 +4266,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAboutApp.
   ///
   /// In en, this message translates to:
-  /// **'About Shengyu IM'**
+  /// **'About 钰信'**
   String get settingsAboutApp;
 
   /// No description provided for @settingsVersionValue.

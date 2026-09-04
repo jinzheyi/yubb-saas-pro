@@ -10,10 +10,6 @@ import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
-const _debugUsername = 'jin_zheyicn@qq.com';
-const _debugUsername2 = '136870475@qq.com';
-const _debugPassword = '123456';
-
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -28,8 +24,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: _debugUsername);
-    _passwordController = TextEditingController(text: _debugPassword);
+    _usernameController = TextEditingController();
+    _passwordController = TextEditingController();
   }
 
   @override
@@ -109,7 +105,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                '圣钰',
+                                '钰信',
                                 style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(
                                       color: const Color(0xFF246BFD),
@@ -235,37 +231,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      alignment: WrapAlignment.center,
-                                      children: [
-                                        _DebugAccountChip(
-                                          label: _debugUsername,
-                                          onTap: () => _applyDebugAccount(
-                                            _debugUsername,
-                                            ref,
-                                          ),
-                                        ),
-                                        _DebugAccountChip(
-                                          label: _debugUsername2,
-                                          onTap: () => _applyDebugAccount(
-                                            _debugUsername2,
-                                            ref,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      '测试环境密码已临时固定为 123456',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF98A1B2),
-                                      ),
-                                    ),
                                     if (state.error != null) ...[
                                       const SizedBox(height: 12),
                                       AppErrorView(
@@ -325,7 +290,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 18),
                   child: Text(
-                    'Copyright © 2026 圣钰科技',
+                    'Copyright © 2026 钰信',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -402,12 +367,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     };
   }
 
-  void _applyDebugAccount(String username, WidgetRef ref) {
-    _usernameController.text = username;
-    _passwordController.text = _debugPassword;
-    ref.read(loginControllerProvider.notifier).updateUsername(username);
-    ref.read(loginControllerProvider.notifier).updatePassword(_debugPassword);
-  }
 }
 
 class _LanguageOptionTile extends StatelessWidget {
@@ -436,36 +395,6 @@ class _LanguageOptionTile extends StatelessWidget {
               color: Color(0xFF246BFD),
             )
           : null,
-    );
-  }
-}
-
-class _DebugAccountChip extends StatelessWidget {
-  const _DebugAccountChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F5FA),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF5E6778),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
     );
   }
 }

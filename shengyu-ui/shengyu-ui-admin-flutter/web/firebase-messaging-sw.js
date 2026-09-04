@@ -16,7 +16,7 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   const data = payload.data || {};
-  const title = data.kind === 'call_invite' ? '圣钰科技 IM' : '圣钰科技 IM';
+  const title = '钰信';
   const body = data.kind === 'call_invite' ? '来电提醒' : '你收到一条新消息';
   self.registration.showNotification(title, {
     body,

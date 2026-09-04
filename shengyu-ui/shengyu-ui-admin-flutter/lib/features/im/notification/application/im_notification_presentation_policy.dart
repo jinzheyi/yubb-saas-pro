@@ -11,7 +11,7 @@ class ImNotificationPresentationPolicy {
   ImNotificationPresentation forMessage(ImMessageNotificationEvent event) {
     if (event.isMention) {
       return const ImNotificationPresentation(
-        title: '圣钰科技 IM',
+        title: '钰信',
         body: '你有一条重要群消息',
         androidChannelId: 'im_mentions',
         androidChannelName: 'IM 提醒',
@@ -20,7 +20,7 @@ class ImNotificationPresentationPolicy {
       );
     }
     return const ImNotificationPresentation(
-      title: '圣钰科技 IM',
+      title: '钰信',
       body: '你收到一条新消息',
       androidChannelId: 'im_messages',
       androidChannelName: 'IM 消息',

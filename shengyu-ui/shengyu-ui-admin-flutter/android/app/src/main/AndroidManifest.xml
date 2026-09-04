@@ -24,7 +24,7 @@
     <!-- 小米/华为等厂商自启动权限（后台保活辅助） -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
-        android:label="shengyu_ui_admin_im"
+        android:label="钰信"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

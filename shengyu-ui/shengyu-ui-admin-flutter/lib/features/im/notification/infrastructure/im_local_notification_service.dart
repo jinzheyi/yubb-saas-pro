@@ -155,7 +155,7 @@ class ImLocalNotificationService {
     if (!event.isMention && _recentChats.length > 1) {
       await _plugin.show(
         _summaryId,
-        '圣钰科技 IM',
+        '钰信',
         '你有 ${_recentChats.length} 个会话的新消息',
         const NotificationDetails(
           android: AndroidNotificationDetails(

@@ -34,7 +34,6 @@ import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import com.shengyu.module.system.service.im.push.ImNotificationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -2088,20 +2087,21 @@ public class ImMessageServiceImpl implements ImMessageService {
         chatUser.setIsPinned(false);
         chatUser.setNoDisturb(false);
         chatUser.setDeletedByUser(false);
-        try {
-            chatUserMapper.insert(chatUser);
-        } catch (DuplicateKeyException e) {
-            ImChatUserDO existing = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
-            if (existing != null) {
-                if (Boolean.TRUE.equals(existing.getDeletedByUser())) {
-                    chatUserMapper.reviveSoftDeleted(existing.getId());
-                    existing.setDeletedByUser(false);
-                }
-                return existing;
-            }
-            throw e;
+        if (chatUserMapper.insertIgnore(chatUser) > 0) {
+            return chatUser;
         }
-        return chatUser;
+        // A concurrent group-conversation bootstrap inserted the same row.
+        // The database unique key makes this deterministic instead of relying
+        // on timing-sensitive retries in the message send transaction.
+        ImChatUserDO existing = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+        if (existing == null) {
+            throw new IllegalStateException("创建会话成员失败: " + userId + "/" + chatId);
+        }
+        if (Boolean.TRUE.equals(existing.getDeletedByUser())) {
+            chatUserMapper.reviveSoftDeleted(existing.getId());
+            existing.setDeletedByUser(false);
+        }
+        return existing;
     }
 
     private void fillSenderInfo(AppImMessageRespVO respVO, Long senderId, Long chatId) {

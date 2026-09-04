@@ -134,7 +134,10 @@
         <tika-core.version>2.9.3</tika-core.version> <!-- JDK8 不能从 2.9.3 升级到 3.X，会报 JDK8 不支持 -->
         <ip2region.version>2.7.0</ip2region.version>
         <bizlog-sdk.version>3.0.6</bizlog-sdk.version>
-        <netty.version>4.2.9.Final</netty.version>
+        <!-- Spring Boot 2.7、Reactor Netty 1.0 与 Redisson 3.x 均基于 Netty 4.1。
+             4.2 移除了 4.1 中仍被这些组件调用的内部类，导致首个 WebSocket
+             连接抛出 NoClassDefFoundError 并使 boss event loop 失效。 -->
+        <netty.version>4.1.124.Final</netty.version>
         <protobuf.version>3.21.7</protobuf.version>
         <mqtt.version>1.2.5</mqtt.version>
         <pf4j-spring.version>0.9.0</pf4j-spring.version>

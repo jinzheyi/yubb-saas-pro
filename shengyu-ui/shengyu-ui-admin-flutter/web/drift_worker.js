@@ -29648,5 +29648,3 @@
     }
   });
 })();
-
-//# sourceMappingURL=drift_worker.js.map

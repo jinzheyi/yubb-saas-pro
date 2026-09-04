@@ -2,7 +2,7 @@
   "@@locale": "en",
 
   "@@@APP_COMMON": "Section: App Common",
-  "appName": "Shengyu IM",
+  "appName": "钰信",
   "loginIntro": "Enterprise IM and collaboration entry",
   "enterConversation": "Enter Conversations",
   "backAction": "Back",
@@ -1338,7 +1338,7 @@
   "settingsThemeModeSummary": "System / Light / Dark",
   "settingsLanguage": "Language",
   "settingsLanguageSummary": "System / Simplified Chinese / English",
-  "settingsAboutApp": "About Shengyu IM",
+  "settingsAboutApp": "About 钰信",
   "settingsVersionValue": "Version 1.0.0",
 
   "@@@THEME": "Section: Theme",

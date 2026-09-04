@@ -210,21 +210,24 @@ class _ChatPageState extends ConsumerState<ChatPage>
     _startVoicePlayedCompensation();
     _startTypingCleanupTimer();
 
-    // 2. 延迟到首帧渲染完成后执行，避免阻塞首帧
+    // 2. L1 缓存是纯内存读取，必须在首帧前水合。否则即使已有会话
+    //    缓存，首帧仍会先绘制骨架屏，造成每次进入聊天都闪一下的体验。
+    //    这里不做 I/O，只更新同一 chatId 的 provider 状态，网络刷新仍
+    //    放在首帧后异步执行。
+    ref
+        .read(chatControllerProvider(widget.args.chatId).notifier)
+        .hydrateFromMemory(widget.args);
+
+    // 3. 延迟到首帧渲染完成后执行，避免阻塞首帧
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // 缓存水合会修改时间线 Provider。必须在首帧完成后执行，避免在
-      // initState 的构建阶段写 Provider 而导致通知点击后的聊天页白屏。
-      ref
-          .read(chatControllerProvider(widget.args.chatId).notifier)
-          .hydrateFromMemory(widget.args);
       // 激活当前会话（角标处理）
       _activateCurrentConversation();
       // 初始化聊天页面（关键路径：加载消息数据）
       unawaited(_initializeChatPage());
     });
 
-    // 3. 次优先级任务：延迟到第二帧后执行（贴纸预热、撤回配置、语音补偿恢复）
+    // 4. 次优先级任务：延迟到第二帧后执行（贴纸预热、撤回配置、语音补偿恢复）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {

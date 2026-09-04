@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// 使用场景：
 /// - 通讯录"我的群组"有待处理的入群申请
-/// - 设置"关于圣钰IM"有版本更新
+/// - 设置“关于钰信”有版本更新
 class BadgeDot extends StatelessWidget {
   const BadgeDot({
     super.key,

@@ -5,6 +5,7 @@ import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -14,6 +15,17 @@ import java.util.List;
 
 @Mapper
 public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
+
+    /**
+     * Creates a chat-user row without surfacing a concurrent creator as an
+     * application failure. The unique key is the synchronization primitive.
+     */
+    @Insert("INSERT IGNORE INTO im_chat_user " +
+            "(id, chat_id, user_id, unread_count, is_pinned, no_disturb, deleted_by_user, " +
+            "create_time, update_time, creator, updater, tenant_id, deleted) " +
+            "VALUES (#{id}, #{chatId}, #{userId}, #{unreadCount}, #{isPinned}, #{noDisturb}, " +
+            "#{deletedByUser}, #{createTime}, #{updateTime}, #{creator}, #{updater}, #{tenantId}, #{deleted})")
+    int insertIgnore(ImChatUserDO chatUser);
 
     default ImChatUserDO selectByUserIdAndChatId(Long userId, Long chatId) {
         return selectOne(new LambdaQueryWrapperX<ImChatUserDO>()

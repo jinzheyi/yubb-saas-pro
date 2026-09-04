@@ -53,4 +53,4 @@ LiveKit Server 为 Apache-2.0；Java 后端不引入要求 Java 17 的 LiveKit S
 
 - Android：`/Users/zsy/app/flutter/bin/flutter build apk --debug --no-pub`
 - Web：`/Users/zsy/app/flutter/bin/flutter build web --no-pub --no-tree-shake-icons`
-- iOS 模拟器：在 Flutter 工程执行 `./tool/build_ios_simulator.sh`。脚本固定使用本机用户级 CocoaPods 路径并补齐 UTF-8 环境，避免不同终端 PATH 导致构建结果不一致。
+- iOS 模拟器：在 Flutter 工程执行 `flutter build ios --simulator --debug`。

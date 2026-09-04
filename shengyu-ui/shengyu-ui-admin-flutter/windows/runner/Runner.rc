@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.shengyu.im" "\0"
-            VALUE "FileDescription", "shengyu_ui_admin_im" "\0"
+            VALUE "FileDescription", "钰信" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "shengyu_ui_admin_im" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.shengyu.im. All rights reserved." "\0"
             VALUE "OriginalFilename", "shengyu_ui_admin_im.exe" "\0"
-            VALUE "ProductName", "shengyu_ui_admin_im" "\0"
+            VALUE "ProductName", "钰信" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

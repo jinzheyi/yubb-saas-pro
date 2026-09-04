@@ -98,12 +98,17 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 仅访问内存缓存，必须发生在首帧前。缓存命中时直接绘制会话列表，
+    // 不让登录、登出或 tab 返回产生骨架屏闪烁。
+    ref
+        .read(conversationListControllerProvider.notifier)
+        .hydrateFromMemory();
     Future.microtask(() async {
-      // 加载设备列表（用于显示设备管理入口）
-      await ref.read(deviceListProvider.notifier).load();
+      // 先恢复 L2 磁盘缓存；首次安装且无缓存时才会进入骨架加载。
+      await ref.read(conversationListControllerProvider.notifier).warmStart();
       if (!mounted) return;
 
-      // 先执行 load（有缓存时跳过 API）
+      // 有缓存时 load 不会阻塞 UI；无缓存时才执行首装拉取。
       final error = await ref
           .read(conversationListControllerProvider.notifier)
           .load();
@@ -120,6 +125,8 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
       if (!mounted) return;
       await _syncOnForegroundIfNeeded();
     });
+    // 设备入口不属于会话首屏关键路径，避免它阻塞缓存直出。
+    unawaited(ref.read(deviceListProvider.notifier).load());
   }
 
   @override

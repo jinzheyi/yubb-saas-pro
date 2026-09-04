@@ -2,7 +2,7 @@
   "@@locale": "zh",
 
   "@@@APP_COMMON": "Section: App Common",
-  "appName": "圣钰科技 IM",
+  "appName": "钰信",
   "loginIntro": "企业级即时通讯与协同入口",
   "enterConversation": "进入会话",
   "backAction": "返回",
@@ -1331,7 +1331,7 @@
   "settingsThemeModeSummary": "跟随系统 / 浅色 / 深色",
   "settingsLanguage": "语言设置",
   "settingsLanguageSummary": "跟随系统 / 简体中文 / English",
-  "settingsAboutApp": "关于圣钰 IM",
+  "settingsAboutApp": "关于钰信",
   "settingsVersionValue": "版本 1.0.0",
 
   "@@@THEME": "Section: Theme",
@@ -1363,7 +1363,7 @@
   "@@@PROFILE": "Section: Profile",
   "profileTitle": "我的",
   "profileUnknownUser": "未命名用户",
-  "profileCompanyLabel": "圣钰科技",
+  "profileCompanyLabel": "钰信",
   "profileSectionSettings": "设置",
   "profileSectionAbout": "关于",
   "profileNotifications": "消息通知",

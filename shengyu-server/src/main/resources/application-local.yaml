@@ -175,7 +175,9 @@ logging:
     com.shengyu.module.infra.dal.mysql.file.FileConfigMapper: INFO # 配置 FileConfigMapper 的日志级别为 info
     com.shengyu.module.pay.dal.mysql: debug
     com.shengyu.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO # 配置 PayNotifyTaskMapper 的日志级别为 info
-    com.shengyu.module.system.dal.mysql: debug
+    # 禁止记录 MyBatis 参数：认证 Token、刷新 Token 和 IM 正文都可能出现在 SQL 参数中。
+    # 需要排障时请只临时开启具体 Mapper，不能在本地/生产环境全量 DEBUG。
+    com.shengyu.module.system.dal.mysql: INFO
     com.shengyu.module.system.dal.mysql.sms.SmsChannelMapper: INFO # 配置 SmsChannelMapper 的日志级别为 info
     com.shengyu.module.tool.dal.mysql: debug
     com.shengyu.module.member.dal.mysql: debug

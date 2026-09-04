@@ -46,7 +46,7 @@ class NativeCallUiGateway {
         nameCaller: args.isGroupCall
             ? args.conversationTitle ?? '${args.callerName ?? '成员'} · 群通话'
             : args.conversationTitle ?? args.callerName ?? args.title ?? '来电',
-        appName: '圣钰 IM',
+        appName: '钰信',
         handle: args.fromUserId ?? args.callSessionId,
         type: args.callType == CallType.video ? 1 : 0,
         duration: 30000,

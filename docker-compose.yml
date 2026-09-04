@@ -15,7 +15,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
     volumes:
       - mysql:/var/lib/mysql/
-      - ./sql/mysql/shengyu-saas.sql:/docker-entrypoint-initdb.d/shengyu-saas.sql:ro
+      - ./sql/mysql/1.0/shengyu-saas.sql:/docker-entrypoint-initdb.d/shengyu-saas.sql:ro
 
   redis:
     container_name: shengyu-redis
@@ -55,6 +55,9 @@ services:
     restart: unless-stopped
     ports:
       - "48080:48080"
+      # Flutter IM 客户端通过 Netty WebSocket 直连；未暴露该端口时，
+      # HTTP 登录成功后会一直处于离线/重连状态。
+      - "${IM_WEBSOCKET_HOST_PORT:-9000}:9000"
     extra_hosts:
       # 让容器内可用 host.docker.internal 访问宿主机服务（MySQL/Redis 等）
       - "host.docker.internal:host-gateway"

@@ -41,6 +41,27 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   final CursorVersionStore _cursorVersionStore;
   final String _currentUserId;
 
+  /// 同步恢复进程内缓存，供页面在首帧前调用。
+  ///
+  /// L1 命中时不等待任何 I/O，避免用户在登录、切换 tab 或返回会话页时
+  /// 看到一帧无意义的骨架屏。L2 恢复仍由 [warmStart] 处理。
+  bool hydrateFromMemory() {
+    if (state.conversations.isNotEmpty) {
+      return true;
+    }
+    final cached = _unifiedCacheManager.peekConversationList(_currentUserId);
+    if (cached == null || cached.data.isEmpty) {
+      return false;
+    }
+    state = state.copyWith(
+      status: ConversationListStatus.ready,
+      conversations: cached.data,
+      cursorVersion: cached.cursorVersion,
+      error: null,
+    );
+    return true;
+  }
+
   /// 在路由进入会话页前恢复本地会话快照。
   ///
   /// 这条路径只读取本地缓存，不依赖网络；成功时会先将页面置为 ready，

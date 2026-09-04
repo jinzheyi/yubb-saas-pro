@@ -11,8 +11,6 @@ import 'package:shengyu_ui_admin_im/features/im/notification/presentation/provid
 import 'package:shengyu_ui_admin_im/features/login/application/usecases/login_use_case.dart';
 import 'package:shengyu_ui_admin_im/features/login/presentation/states/login_page_state.dart';
 
-const _hardcodedPassword = '123456';
-
 class LoginController extends StateNotifier<LoginPageState> {
   LoginController(this._loginUseCase, this._authSessionController, this._ref)
     : super(const LoginPageState());
@@ -46,7 +44,7 @@ class LoginController extends StateNotifier<LoginPageState> {
 
       final session = await _loginUseCase(
         username: state.username.trim(),
-        password: _hardcodedPassword,
+        password: state.password,
         locale: locale,
       );
       await _authSessionController.saveSession(session);

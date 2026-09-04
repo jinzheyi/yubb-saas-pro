@@ -5,8 +5,8 @@ enum LoginPageStatus { idle, submitting, failed }
 class LoginPageState {
   const LoginPageState({
     this.status = LoginPageStatus.idle,
-    this.username = 'jin_zheyicn@qq.com',
-    this.password = '123456',
+    this.username = '',
+    this.password = '',
     this.error,
   });
 

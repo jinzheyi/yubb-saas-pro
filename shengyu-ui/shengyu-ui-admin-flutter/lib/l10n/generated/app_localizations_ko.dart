@@ -9,7 +9,7 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
-  String get appName => 'Shengyu IM';
+  String get appName => '钰信';
 
   @override
   String get loginIntro => 'Enterprise IM and collaboration entry';
@@ -2415,7 +2415,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsLanguageSummary => 'System / Simplified Chinese / English';
 
   @override
-  String get settingsAboutApp => 'About Shengyu IM';
+  String get settingsAboutApp => 'About 钰信';
 
   @override
   String get settingsVersionValue => 'Version 1.0.0';
