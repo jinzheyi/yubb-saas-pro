@@ -52,6 +52,23 @@ CallLaunchFailure classifyCallLaunchFailure(
 
 /// 唯一的媒体编排器：业务 HTTP 决定邀请和状态，LiveKit SDK 仅管理媒体连接。
 class LiveKitCallController extends ChangeNotifier {
+  /// Keep the WebRTC audio device module in communication mode from its first
+  /// initialization. On Android this must happen before a Room creates media
+  /// tracks; otherwise the platform can retain media-playback routing and its
+  /// weaker echo-control behaviour for the lifetime of the process.
+  static Future<void>? _liveKitInitialization;
+
+  static const RoomOptions _communicationRoomOptions = RoomOptions(
+    defaultAudioCaptureOptions: AudioCaptureOptions(
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      highPassFilter: true,
+      voiceIsolation: true,
+      typingNoiseDetection: true,
+    ),
+  );
+
   LiveKitCallController({
     required Dio dio,
     required DeviceInfoService deviceInfoService,
@@ -371,7 +388,8 @@ class LiveKitCallController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final room = Room();
+      await _ensureLiveKitInitialized();
+      final room = Room(roomOptions: _communicationRoomOptions);
       _room = room;
       room.addListener(_onRoomChanged);
       _roomEvents = room.createListener()
@@ -383,14 +401,18 @@ class LiveKitCallController extends ChangeNotifier {
       // a permission sheet is dismissed or a proxy silently drops the media
       // connection. A call UI must always converge to a terminal state.
       await room.connect(url, token).timeout(const Duration(seconds: 15));
+      if (!kIsWeb) {
+        // A voice call should start on the earpiece to avoid an acoustic loop
+        // in close-range use. Video calls keep the expected hands-free speaker
+        // route. `force` remains false so wired/Bluetooth headsets win.
+        final preferSpeaker = args.callType == CallType.video;
+        await AudioManager.instance.setSpeakerOutputPreferred(preferSpeaker);
+        _speakerEnabled = preferSpeaker;
+      }
       await room.localParticipant?.setMicrophoneEnabled(true);
       if (args.callType == CallType.video) {
         await room.localParticipant?.setCameraEnabled(true);
         _cameraEnabled = true;
-        if (!kIsWeb) {
-          await AudioManager.instance.setSpeakerOutputPreferred(true);
-          _speakerEnabled = true;
-        }
       }
       _room = room;
       _connected = true;
@@ -404,6 +426,16 @@ class LiveKitCallController extends ChangeNotifier {
       _connecting = false;
       if (!_disposed) notifyListeners();
     }
+  }
+
+  static Future<void> _ensureLiveKitInitialized() {
+    return _liveKitInitialization ??= LiveKitClient.initialize(
+      bypassVoiceProcessing: false,
+      // The pinned LiveKit SDK marks platform session options experimental;
+      // communication mode is required before Android's WebRTC ADM starts.
+      // ignore: experimental_member_use
+      initialAudioSessionOptions: const AudioSessionOptions.communication(),
+    );
   }
 
   void _onRoomChanged() {
