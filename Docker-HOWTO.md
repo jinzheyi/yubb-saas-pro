@@ -51,6 +51,7 @@ docker compose --env-file docker.env up -d server kkfileview
 ## kkFileView（文件在线预览服务）
 
 kkFileView 用于 Office/PDF 等文件的在线预览（服务端转换 + 浏览器渲染）。本项目已在 `docker-compose.yml` 中内置 `kkfileview` 服务。
+前端镜像构建固定使用 `pnpm@9.15.9`，避免 Corepack 自动拉取与 Node 20 不兼容的最新版 pnpm。
 
 ### 可配置项（集中在 docker.env）
 
@@ -89,6 +90,16 @@ kkFileView 用于 Office/PDF 等文件的在线预览（服务端转换 + 浏览
 docker compose --env-file docker.env up -d
 ```
 
+阿里云生产单机建议不要直接改仓库里的 `docker.env` 写真实密码。可以在服务器复制生产模板：
+
+```shell
+cp deploy/aliyun/docker.prod.env.example docker.prod.env
+vi docker.prod.env
+docker compose --env-file docker.prod.env -f docker-compose.yml -f deploy/aliyun/docker-compose.prod-host.yml up -d server kkfileview admin-vue3 platform-vue3
+```
+
+该模板默认复用宿主机 MySQL/Redis，并把前端构建时的 API 域名指向 `apisaas.shengyukj.top`。
+
 查看运行状态：
 
 ```shell
@@ -117,8 +128,25 @@ docker compose ps
 可选（文件预览域名建议）：
 
 - `preview.shengyukj.top` -> 反代到 `127.0.0.1:${KKFILEVIEW_HOST_PORT:-48090}`
+- `apisaas.shengyukj.top` 同时承载 `/admin-api`、`/platform-api`、`/app-api`，并将 IM WebSocket `/ws` 反代到 `127.0.0.1:9000`
+- `im.shengyukj.top` -> 钰信 Flutter Web 页面，反代到 `127.0.0.1:8082`
+- `rtc.shengyukj.top` -> LiveKit 信令反代到 `127.0.0.1:7880`；同时放行 `7881/tcp`、`7882/udp`、`3478/udp`、`41000-41040/udp`
 
-如需 HTTPS，可用 Certbot/阿里云证书，把 TLS 终止放在 Nginx。
+如需 HTTPS，可用 Certbot/阿里云证书，把 TLS 终止放在 Nginx。阿里云 ECS 还需要在安全组入方向放行 `443/tcp`，否则 Nginx 本机监听正常但公网浏览器会一直超时。
+
+低成本证书建议：
+
+- 可自动化：使用 Let's Encrypt + Certbot，适合 Nginx 自建反代，证书约 90 天有效并可自动续期。
+- 阿里云控制台：个人测试证书免费版每个实名认证主体每自然年有额度，但通常是单域名、约 90 天，ECS 自建 Nginx 仍需要下载/部署或购买部署服务。
+
+HTTPS 切换后，前端和后端通信也要同步切换：
+
+- App API：`https://apisaas.shengyukj.top/app-api`
+- App IM WebSocket：`wss://apisaas.shengyukj.top/ws`
+- LiveKit：`wss://rtc.shengyukj.top`
+- 文件预览：`https://preview.shengyukj.top`
+
+在 `443/tcp` 未放行前，不要强制把 HTTP 重定向到 HTTPS，否则现有 HTTP 入口会跳到不可达的 HTTPS。
 
 首次运行会自动构建容器。可以通过`docker compose build [service]`来手动构建所有或某个docker镜像
 

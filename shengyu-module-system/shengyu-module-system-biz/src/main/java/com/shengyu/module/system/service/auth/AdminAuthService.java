@@ -37,6 +37,16 @@ public interface AdminAuthService {
     AuthLoginRespVO login(@Valid AuthLoginReqVO reqVO);
 
     /**
+     * App 账号登录。
+     *
+     * App 端不受 Web 管理端图形验证码开关影响，账号密码认证和 Token 创建逻辑保持一致。
+     *
+     * @param reqVO 登录信息
+     * @return 登录结果
+     */
+    AuthLoginRespVO appLogin(@Valid AuthLoginReqVO reqVO);
+
+    /**
      * 基于 token 退出登录
      *
      * @param token token

@@ -89,9 +89,8 @@ public class AppAuthController {
         log.info("[移动端登录] 用户: {}, 设备类型: {}, 设备ID: {}", 
                 reqVO.getUsername(), reqVO.getDeviceType(), reqVO.getDeviceId());
         
-        // 转换为 Web 端的 VO（Service 层复用）
-        // 注意：设备信息会在后续的 WebSocket 认证时使用
-        return success(adminAuthService.login(AuthConvert.INSTANCE.convert(reqVO)));
+        // App 端不受 Web 管理端图形验证码开关影响；设备信息会在后续的 WebSocket 认证时使用。
+        return success(adminAuthService.appLogin(AuthConvert.INSTANCE.convert(reqVO)));
     }
 
     @PostMapping("/logout")

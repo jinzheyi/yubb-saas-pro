@@ -152,6 +152,13 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     @Override
+    public AuthLoginRespVO appLogin(AuthLoginReqVO reqVO) {
+        // App 端账号密码登录不使用 Web 管理端图形验证码。
+        AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
+        return createTokenAfterLoginSuccess(user, reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+    }
+
+    @Override
     public void sendSmsCode(AuthSmsSendReqVO reqVO) {
         // 登录场景，验证是否存在
         if (saasUserService.getUserByMobile(reqVO.getMobile()) == null) {

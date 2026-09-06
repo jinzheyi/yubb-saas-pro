@@ -1,0 +1,13 @@
+services:
+  server:
+    ports:
+      - "${SERVER_HOST_PORT:-48080}:48080"
+      - "${IM_WEBSOCKET_HOST_PORT:-9000}:9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      IM_KKFILEVIEW_ENABLED: ${IM_KKFILEVIEW_ENABLED:-true}
+      IM_KKFILEVIEW_AUTO_START: ${IM_KKFILEVIEW_AUTO_START:-false}
+      IM_KKFILEVIEW_BASE_URL: ${IM_KKFILEVIEW_BASE_URL:-https://preview.shengyukj.top}
+      IM_KKFILEVIEW_SOURCE_BASE_URL: ${IM_KKFILEVIEW_SOURCE_BASE_URL:-https://apisaas.shengyukj.top}
+      IM_KKFILEVIEW_STOP_ON_SHUTDOWN: ${IM_KKFILEVIEW_STOP_ON_SHUTDOWN:-false}

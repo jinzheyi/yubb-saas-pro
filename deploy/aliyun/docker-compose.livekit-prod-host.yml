@@ -1,0 +1,43 @@
+name: shengyu-livekit-prod
+
+services:
+  livekit:
+    image: livekit/livekit-server:${LIVEKIT_VERSION:-v1.13.1}
+    container_name: shengyu-livekit
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      NODE_IP: ${LIVEKIT_NODE_IP:?LIVEKIT_NODE_IP is required}
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        redis:
+          address: ${LIVEKIT_REDIS_ADDRESS:-host.docker.internal:6379}
+          password: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+        keys:
+          ${IM_CALL_LIVEKIT_API_KEY:?IM_CALL_LIVEKIT_API_KEY is required}: ${IM_CALL_LIVEKIT_API_SECRET:?IM_CALL_LIVEKIT_API_SECRET is required}
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-false}
+        turn:
+          enabled: true
+          domain: ${LIVEKIT_DOMAIN:?LIVEKIT_DOMAIN is required}
+          udp_port: 3478
+          relay_range_start: 41000
+          relay_range_end: 41040
+        room:
+          empty_timeout: 30
+          departure_timeout: 10
+        webhook:
+          api_key: ${IM_CALL_LIVEKIT_API_KEY:?IM_CALL_LIVEKIT_API_KEY is required}
+          urls:
+            - ${LIVEKIT_WEBHOOK_URL:?LIVEKIT_WEBHOOK_URL is required}
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "3478:3478/udp"
+      - "41000-41040:41000-41040/udp"

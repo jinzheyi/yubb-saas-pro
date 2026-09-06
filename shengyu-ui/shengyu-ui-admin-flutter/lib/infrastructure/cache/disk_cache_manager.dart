@@ -19,6 +19,9 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_viewpo
 class DiskCacheManager {
   /// 获取会话列表缓存
   Future<List<conv.Conversation>?> getConversationList(String userId) async {
+    if (kIsWeb) {
+      return null;
+    }
     try {
       final db = ImDatabase.instance;
       final rows = await db.conversationDao.getConversationListByUser(
@@ -39,6 +42,9 @@ class DiskCacheManager {
     String userId,
     List<conv.Conversation> conversations,
   ) async {
+    if (kIsWeb) {
+      return;
+    }
     try {
       final db = ImDatabase.instance;
       final companions = conversations
@@ -60,6 +66,9 @@ class DiskCacheManager {
     String chatId, {
     int limit = 500,
   }) async {
+    if (kIsWeb) {
+      return null;
+    }
     try {
       final db = ImDatabase.instance;
       final rows = await db.messageDao.getMessagesByChatIdForUser(
@@ -89,6 +98,9 @@ class DiskCacheManager {
     List<msg.Message> messages, {
     ChatViewportState? viewportState,
   }) async {
+    if (kIsWeb) {
+      return;
+    }
     try {
       final db = ImDatabase.instance;
       final companions = messages
@@ -140,6 +152,9 @@ class DiskCacheManager {
 
   /// 清空指定会话的消息缓存（clearAll 时调用）
   Future<void> clearMessages(String userId, String chatId) async {
+    if (kIsWeb) {
+      return;
+    }
     try {
       final db = ImDatabase.instance;
       await db.messageDao.deleteMessagesByChatIdForUser(
@@ -156,6 +171,9 @@ class DiskCacheManager {
 
   /// 清理过期缓存
   Future<void> cleanup(String userId) async {
+    if (kIsWeb) {
+      return;
+    }
     try {
       final db = ImDatabase.instance;
       final messageExpiry = DateTime.now().subtract(CachePolicy.messages.diskTtl);

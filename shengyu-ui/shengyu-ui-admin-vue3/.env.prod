@@ -4,7 +4,7 @@ NODE_ENV=production
 VITE_DEV=false
 
 # 请求路径
-VITE_BASE_URL='http://apisaas.shengyukj.top'
+VITE_BASE_URL='https://apisaas.shengyukj.top'
 
 # 文件上传类型：server - 后端上传， client - 前端直连上传，仅支持 S3 服务
 VITE_UPLOAD_TYPE=server

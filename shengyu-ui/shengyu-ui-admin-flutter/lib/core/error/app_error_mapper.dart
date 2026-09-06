@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:shengyu_ui_admin_im/core/network/api_exception.dart';
+
 import 'app_error.dart';
 
 /// App 错误映射器
@@ -13,29 +15,50 @@ abstract final class AppErrorMapper {
       return error;
     }
 
-    // 2. Dio 异常：转换为用户友好的网络提示
+    // 2. 服务端业务异常：优先展示后端返回的 msg/message
+    if (error is ApiException) {
+      return AppError(
+        message: error.message.isEmpty ? '请求失败，请稍后重试' : error.message,
+        code: error.code.toString(),
+        cause: error,
+      );
+    }
+
+    // 3. Dio 异常：转换为用户友好的网络提示
     if (error is DioException) {
       return _mapDioException(error);
     }
 
-    // 3. 其他异常：返回通用友好提示
+    // 4. 其他异常：返回通用友好提示
     return AppError(message: '请求失败，请稍后重试', cause: error);
   }
 
   /// 将 Dio 异常映射为友好错误信息
   static AppError _mapDioException(DioException e) {
+    final serverMessage = _extractServerMessage(e.response?.data);
     final message = switch (e.type) {
       DioExceptionType.connectionTimeout => '服务器连接超时，请检查网络后重试',
       DioExceptionType.sendTimeout => '请求发送超时，请稍后重试',
       DioExceptionType.receiveTimeout => '服务器响应超时，请稍后重试',
       DioExceptionType.transformTimeout => '数据转换超时，请稍后重试',
       DioExceptionType.badCertificate => '安全证书验证失败',
-      DioExceptionType.badResponse => _mapBadResponse(e.response?.statusCode),
+      DioExceptionType.badResponse =>
+        serverMessage ?? _mapBadResponse(e.response?.statusCode),
       DioExceptionType.cancel => '请求已取消',
       DioExceptionType.connectionError => _mapConnectionError(e.message),
       DioExceptionType.unknown => _mapUnknownError(e.message),
     };
     return AppError(message: message, code: e.message, cause: e);
+  }
+
+  static String? _extractServerMessage(Object? data) {
+    if (data is Map) {
+      final message = data['msg'] ?? data['message'];
+      if (message != null && message.toString().isNotEmpty) {
+        return message.toString();
+      }
+    }
+    return null;
   }
 
   /// HTTP 状态码映射

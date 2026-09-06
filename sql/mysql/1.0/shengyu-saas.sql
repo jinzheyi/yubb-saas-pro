@@ -2640,26 +2640,27 @@ CREATE TABLE `system_user_role`  (
 -- Table structure for system_users
 -- ----------------------------
 DROP TABLE IF EXISTS `system_users`;
-CREATE TABLE `system_users`  (
+CREATE TABLE `system_users` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户ID',
-  `saas_user_id` bigint NOT NULL DEFAULT 0 COMMENT '所属SaaS用户表id',
+  `saas_user_id` bigint NOT NULL DEFAULT '0' COMMENT '所属SaaS用户表id',
   `nickname` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户昵称',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注',
-  `dept_id` bigint NULL DEFAULT NULL COMMENT '部门ID',
-  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '头像地址',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '帐号状态（0正常 1停用）',
-  `login_ip` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '最后登录IP',
-  `open_account` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '在当前租户下用户唯一标识值',
-  `login_date` datetime NULL DEFAULT NULL COMMENT '最后登录时间',
-  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注',
+  `dept_id` bigint DEFAULT NULL COMMENT '部门ID',
+  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '头像地址',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '帐号状态（0正常 1停用）',
+  `login_ip` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '最后登录IP',
+  `open_account` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '在当前租户下用户唯一标识值',
+  `login_date` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_saas_user_tenant`(`saas_user_id` ASC, `tenant_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1790399770972667906 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户信息表' ROW_FORMAT = DYNAMIC;
+  KEY `idx_tenant_nickname_deleted` (`tenant_id`,`nickname`,`deleted`),
+  KEY `idx_saas_user_tenant` (`saas_user_id`,`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='用户信息表';
 
 -- ----------------------------
 -- Records of system_users
@@ -3187,5 +3188,1026 @@ CREATE TABLE `system_user_dept`  (
                                      `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
                                      PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户和部门关联表' ROW_FORMAT = DYNAMIC;
+
+
+-- ----------------------------
+-- Table structures synchronized from development schema
+-- ----------------------------
+-- ----------------------------
+-- Table structure for im_audit_log
+-- ----------------------------
+DROP TABLE IF EXISTS `im_audit_log`;
+CREATE TABLE `im_audit_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  `user_id` bigint NOT NULL COMMENT '用户编号',
+  `event_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件类型(LOGIN/LOGOUT/KICKED/DEVICE_MANAGE/AUTH_FAILURE 等)',
+  `event_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件名称(中文描述)',
+  `device_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备ID',
+  `device_type` int DEFAULT NULL COMMENT '设备类型(1-Web 2-Android 3-iOS 4-Desktop)',
+  `ip_address` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'IP地址',
+  `user_agent` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '客户端信息',
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '详细信息(JSON格式)',
+  `timestamp` bigint DEFAULT NULL COMMENT '事件时间戳(毫秒)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_tenant_user_time` (`tenant_id`,`user_id`,`timestamp` DESC) USING BTREE COMMENT '租户+用户+时间索引',
+  KEY `idx_tenant_event_time` (`tenant_id`,`event_type`,`timestamp` DESC) USING BTREE COMMENT '租户+事件类型+时间索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM审计日志表(等保三级合规)';
+
+-- ----------------------------
+-- Table structure for im_call_event
+-- ----------------------------
+DROP TABLE IF EXISTS `im_call_event`;
+CREATE TABLE `im_call_event` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '事件ID',
+  `call_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通话ID',
+  `event_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件ID（messageId，用于幂等）',
+  `signal_type` tinyint NOT NULL COMMENT '信令类型(1-呼叫 2-接听 3-拒绝 4-挂断 5-忙线 6-切换摄像头)',
+  `sender_id` bigint NOT NULL COMMENT '发送者用户ID',
+  `device_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备ID',
+  `payload_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '事件载荷（extraData，JSON格式）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_call_event` (`call_id`,`event_id`) USING BTREE COMMENT '通话+事件唯一索引',
+  KEY `idx_call_id` (`call_id`) USING BTREE COMMENT '通话ID索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM通话事件表';
+
+-- ----------------------------
+-- Table structure for im_call_event_outbox
+-- ----------------------------
+DROP TABLE IF EXISTS `im_call_event_outbox`;
+CREATE TABLE `im_call_event_outbox` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `tenant_id` bigint NOT NULL,
+  `call_id` varchar(64) NOT NULL,
+  `event_type` varchar(64) NOT NULL,
+  `event_version` int NOT NULL,
+  `recipient_id` bigint DEFAULT NULL,
+  `payload` json NOT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'PENDING',
+  `retry_count` int NOT NULL DEFAULT '0',
+  `next_retry_at` datetime DEFAULT NULL,
+  `published_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_im_call_outbox_event` (`call_id`,`event_version`,`event_type`,`recipient_id`),
+  KEY `idx_im_call_outbox_pending` (`status`,`next_retry_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='IM 通话事件事务 outbox';
+
+-- ----------------------------
+-- Table structure for im_call_participant
+-- ----------------------------
+DROP TABLE IF EXISTS `im_call_participant`;
+CREATE TABLE `im_call_participant` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `call_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通话ID',
+  `user_id` bigint NOT NULL COMMENT '参与者用户ID',
+  `device_id` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '实际加入设备',
+  `role` tinyint NOT NULL DEFAULT '1' COMMENT '角色：1-主叫 2-被叫',
+  `join_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+  `leave_time` datetime DEFAULT NULL COMMENT '离开时间',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：1-在线 2-离线 3-已离开',
+  `invite_state` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/ACCEPTED/REJECTED/BUSY/TIMEOUT',
+  `join_state` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_JOINED' COMMENT 'NOT_JOINED/JOINED/LEFT',
+  `joined_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_call_user_device` (`call_id`,`user_id`,`device_id`,`deleted`) USING BTREE,
+  KEY `idx_call_id` (`call_id`) USING BTREE,
+  KEY `idx_user_id` (`user_id`) USING BTREE,
+  KEY `idx_tenant` (`tenant_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM 通话参与者表（群组通话）';
+
+-- ----------------------------
+-- Table structure for im_call_record
+-- ----------------------------
+DROP TABLE IF EXISTS `im_call_record`;
+CREATE TABLE `im_call_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通话记录ID',
+  `call_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通话ID(唯一标识)',
+  `call_type` tinyint NOT NULL COMMENT '通话类型(1-语音通话 2-视频通话)',
+  `caller_id` bigint NOT NULL COMMENT '呼叫者ID',
+  `callee_id` bigint NOT NULL COMMENT '被叫者ID',
+  `start_time` datetime NOT NULL COMMENT '通话开始时间',
+  `end_time` datetime DEFAULT NULL COMMENT '通话结束时间',
+  `connected_at` datetime DEFAULT NULL COMMENT '媒体双方/首个群成员连接时间',
+  `duration` int NOT NULL DEFAULT '0' COMMENT '通话时长(秒)',
+  `status` tinyint NOT NULL COMMENT '通话状态(1-未接听 2-已接听 3-已拒绝 4-忙线 5-已取消)',
+  `state` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'INIT' COMMENT '状态机状态(INIT/RINGING/CONNECTING/CONNECTED/ENDED)',
+  `state_version` int NOT NULL DEFAULT '0' COMMENT '通话事件版本，客户端去重与状态对账',
+  `end_reason` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '结束原因(HANGUP/REJECT/TIMEOUT/BUSY/CANCEL/CALLEE_OFFLINE/ERROR)',
+  `accepted_device_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '接听设备ID（CAS 裁决写入，用于 SDP/ICE 定向转发）',
+  `chat_id` bigint DEFAULT NULL COMMENT '关联会话ID（通话结束时填入）',
+  `group_id` bigint DEFAULT NULL COMMENT '群组ID（群通话时使用）',
+  `record_message_id` bigint DEFAULT NULL COMMENT '通话记录消息ID（CALL_RECORD=209 生成后回填）',
+  `caller_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '主叫方昵称',
+  `caller_avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '主叫方头像',
+  `callee_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '被叫方昵称',
+  `callee_avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '被叫方头像',
+  `room_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Janus 房间ID',
+  `provider` varchar(24) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'LIVEKIT' COMMENT 'RTC 提供方：LIVEKIT；历史数据仅用于展示',
+  `call_mode` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'DIRECT' COMMENT 'DIRECT/GROUP',
+  `owner_id` bigint DEFAULT NULL COMMENT '通话创建者，群通话拥有结束全体权限',
+  `livekit_room` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'LiveKit 房间名',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_tenant_call_id` (`tenant_id`,`call_id`) USING BTREE COMMENT '租户+通话ID唯一索引',
+  UNIQUE KEY `uk_im_call_livekit_room` (`livekit_room`),
+  KEY `idx_caller` (`caller_id`,`start_time` DESC) USING BTREE COMMENT '呼叫者+时间索引',
+  KEY `idx_callee` (`callee_id`,`start_time` DESC) USING BTREE COMMENT '被叫者+时间索引',
+  KEY `idx_callee_state` (`callee_id`,`state`) USING BTREE COMMENT '被叫者+状态索引（忙线检测）',
+  KEY `idx_chat_started_at` (`chat_id`,`start_time` DESC) USING BTREE COMMENT '会话+时间索引（通话记录查询）',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引',
+  KEY `idx_im_call_provider_state` (`tenant_id`,`provider`,`state`),
+  KEY `idx_im_call_owner_state` (`tenant_id`,`owner_id`,`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM通话记录表';
+
+-- ----------------------------
+-- Table structure for im_chat
+-- ----------------------------
+DROP TABLE IF EXISTS `im_chat`;
+CREATE TABLE `im_chat` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ChatID',
+  `chat_type` tinyint NOT NULL COMMENT '会话类型(1-单聊 2-群聊)',
+  `single_user1` bigint DEFAULT NULL COMMENT '单聊用户1(较小ID)',
+  `single_user2` bigint DEFAULT NULL COMMENT '单聊用户2(较大ID)',
+  `group_id` bigint DEFAULT NULL COMMENT '群ID',
+  `last_sequence` bigint NOT NULL DEFAULT '0' COMMENT '会话内消息序列号水位（自增）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态(1-正常 2-已解散)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_single_chat` (`tenant_id`,`chat_type`,`single_user1`,`single_user2`,`deleted`) USING BTREE,
+  UNIQUE KEY `uk_group_chat` (`tenant_id`,`chat_type`,`group_id`,`deleted`) USING BTREE,
+  KEY `idx_tenant` (`tenant_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM全局会话表';
+
+-- ----------------------------
+-- Table structure for im_chat_clear_watermark
+-- ----------------------------
+DROP TABLE IF EXISTS `im_chat_clear_watermark`;
+CREATE TABLE `im_chat_clear_watermark` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `clear_sequence` bigint NOT NULL DEFAULT '0' COMMENT '清空水位（单调递增）：消息 sequence <= clear_sequence 对该用户不可见',
+  `cleared_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '清空时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_chat` (`tenant_id`,`user_id`,`chat_id`,`deleted`) USING BTREE,
+  KEY `idx_user_time` (`tenant_id`,`user_id`,`update_time` DESC) USING BTREE,
+  KEY `idx_chat` (`tenant_id`,`chat_id`,`deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM会话清空水位表(对我清空，多端一致)';
+
+-- ----------------------------
+-- Table structure for im_chat_message
+-- ----------------------------
+DROP TABLE IF EXISTS `im_chat_message`;
+CREATE TABLE `im_chat_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `sequence` bigint NOT NULL DEFAULT '0' COMMENT '会话内序列号（单调递增，用于排序与断线补偿）',
+  `sender_id` bigint NOT NULL COMMENT '发送者ID',
+  `message_type` tinyint NOT NULL COMMENT '消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸 10-系统消息)',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
+  `extra` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '扩展信息(JSON格式,存储文件URL、时长、大小等)',
+  `send_time` datetime NOT NULL COMMENT '发送时间',
+  `rev` bigint NOT NULL DEFAULT '1' COMMENT '消息版本号（最终态：撤回/编辑/删除等变更时 rev+1，用于乱序合并）',
+  `status` tinyint NOT NULL DEFAULT '2' COMMENT '消息状态(2-已发送 6-已撤回)',
+  `recall_time` datetime DEFAULT NULL COMMENT '撤回时间',
+  `recall_by` bigint DEFAULT NULL COMMENT '撤回人ID',
+  `quote_message_id` bigint DEFAULT NULL COMMENT '引用消息ID',
+  `forwarded_from` json DEFAULT NULL COMMENT '转发来源信息(JSON: {originalMessageId, originalChatId, originalSenderId, originalSenderName, forwardTime})',
+  `client_message_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '客户端消息ID(幂等键，用于重发)',
+  `mentions` json DEFAULT NULL COMMENT '被@提及用户列表(JSON数组: [{userId, nickname}])',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_client_message_id` (`client_message_id`),
+  KEY `idx_chat_seq` (`tenant_id`,`chat_id`,`sequence` DESC) USING BTREE,
+  KEY `idx_sender_time` (`tenant_id`,`sender_id`,`send_time` DESC) USING BTREE,
+  KEY `idx_tenant` (`tenant_id`) USING BTREE,
+  KEY `idx_search_scope` (`tenant_id`,`chat_id`,`message_type`,`send_time` DESC,`deleted`),
+  KEY `idx_chat_type_sendtime` (`chat_id`,`deleted`,`message_type`,`send_time` DESC),
+  KEY `idx_tenant_chat_sendtime` (`tenant_id`,`chat_id`,`send_time` DESC),
+  KEY `idx_tenant_type_sendtime` (`tenant_id`,`deleted`,`message_type`,`send_time` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM消息表(全局会话单份存储)';
+
+-- ----------------------------
+-- Table structure for im_chat_message_tombstone
+-- ----------------------------
+DROP TABLE IF EXISTS `im_chat_message_tombstone`;
+CREATE TABLE `im_chat_message_tombstone` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `message_id` bigint NOT NULL COMMENT '消息ID',
+  `deleted_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '对我删除时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_message` (`tenant_id`,`user_id`,`message_id`,`deleted`) USING BTREE,
+  KEY `idx_user_chat` (`tenant_id`,`user_id`,`chat_id`,`deleted`) USING BTREE,
+  KEY `idx_chat_message` (`tenant_id`,`chat_id`,`message_id`,`deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM消息对我删除墓碑表(多端一致)';
+
+-- ----------------------------
+-- Table structure for im_chat_user
+-- ----------------------------
+DROP TABLE IF EXISTS `im_chat_user`;
+CREATE TABLE `im_chat_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户会话ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `unread_count` int NOT NULL DEFAULT '0' COMMENT '未读消息数',
+  `last_read_message_id` bigint DEFAULT NULL COMMENT '最后已读消息ID',
+  `last_read_sequence` bigint NOT NULL DEFAULT '0' COMMENT '最后已读序列号水位（单调递增）',
+  `last_message_id` bigint DEFAULT NULL COMMENT '最后一条消息ID',
+  `last_message_sequence` bigint NOT NULL DEFAULT '0' COMMENT '最后一条消息序列号水位（单调递增）',
+  `last_message_sender_id` bigint DEFAULT NULL COMMENT '最后一条消息发送者ID（冗余字段，避免回表查询 im_chat_message）',
+  `last_message_type` tinyint DEFAULT NULL COMMENT '最后一条消息类型(同 im_chat_message.message_type)',
+  `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '最后一条消息预览',
+  `last_message_has_at_me` bit(1) NOT NULL DEFAULT b'0' COMMENT '最后一条消息是否@了我（用于会话列表[有人@我]标记）',
+  `last_message_time` datetime DEFAULT NULL COMMENT '最后一条消息时间',
+  `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
+  `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
+  `draft` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '草稿内容',
+  `deleted_by_user` bit(1) NOT NULL DEFAULT b'0' COMMENT '用户是否删除会话',
+  `group_member_status` tinyint NOT NULL DEFAULT '0' COMMENT '群组成员状态：0=正常(在群内), 1=已退出(主动退群), 2=已被踢(被群主/管理员踢出), 3=群已解散',
+  `left_at` datetime DEFAULT NULL COMMENT '离群时间（被踢/退群时间，用于限制只能查询离群前的消息）',
+  `snapshot_data` json DEFAULT NULL COMMENT '群组快照数据JSON（被踢/退群/解散时冻结，包含群名称、公告、成员列表关键信息等）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_chat` (`tenant_id`,`user_id`,`chat_id`,`deleted`) USING BTREE,
+  KEY `idx_user_time` (`tenant_id`,`user_id`,`last_message_time` DESC) USING BTREE,
+  KEY `idx_chat` (`tenant_id`,`chat_id`) USING BTREE,
+  KEY `idx_user_group_status` (`tenant_id`,`user_id`,`group_member_status`) USING BTREE,
+  KEY `idx_user_pinned_time` (`tenant_id`,`user_id`,`deleted_by_user`,`is_pinned`,`last_message_time` DESC),
+  KEY `idx_chat_user_deleted` (`tenant_id`,`chat_id`,`user_id`,`deleted`,`deleted_by_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM用户会话状态表';
+
+-- ----------------------------
+-- Table structure for im_contact_setting
+-- ----------------------------
+DROP TABLE IF EXISTS `im_contact_setting`;
+CREATE TABLE `im_contact_setting` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '设置ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `contact_id` bigint NOT NULL COMMENT '联系人ID',
+  `remark_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注名(保留字段,当前版本未使用)',
+  `star` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否星标',
+  `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_user_contact_deleted` (`user_id`,`contact_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '用户+联系人+删除状态唯一索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM联系人设置表';
+
+-- ----------------------------
+-- Table structure for im_conversation_user_state
+-- ----------------------------
+DROP TABLE IF EXISTS `im_conversation_user_state`;
+CREATE TABLE `im_conversation_user_state` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `cursor_version` bigint NOT NULL DEFAULT '0' COMMENT '会话同步游标版本号（用户维度）',
+  `conversation_version` bigint NOT NULL DEFAULT '0' COMMENT '会话版本号（会话级，用于合并快照）',
+  `unread_count` int NOT NULL DEFAULT '0' COMMENT '未读消息数',
+  `last_read_sequence` bigint NOT NULL DEFAULT '0' COMMENT '最后已读序列号水位（单调递增）',
+  `last_read_time` datetime DEFAULT NULL COMMENT '最后已读时间',
+  `last_message_id` bigint DEFAULT NULL COMMENT '最后一条消息ID',
+  `last_message_sequence` bigint NOT NULL DEFAULT '0' COMMENT '最后一条消息序列号水位（单调递增）',
+  `last_message_sender_id` bigint DEFAULT NULL COMMENT '最后一条消息发送者ID（冗余字段，避免回表查询 im_chat_message）',
+  `last_message_type` tinyint DEFAULT NULL COMMENT '最后一条消息类型(同 im_chat_message.message_type)',
+  `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '最后一条消息预览',
+  `last_message_has_at_me` bit(1) NOT NULL DEFAULT b'0' COMMENT '最后一条消息是否@了我（用于会话列表[有人@我]标记）',
+  `last_message_time` datetime DEFAULT NULL COMMENT '最后一条消息时间',
+  `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
+  `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
+  `draft` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '草稿内容',
+  `deleted_by_user` bit(1) NOT NULL DEFAULT b'0' COMMENT '用户是否删除会话',
+  `group_member_status` tinyint DEFAULT NULL COMMENT '群组成员状态：0=正常(在群内), 1=已退出(主动退群), 2=已被踢(被群主/管理员踢出), 3=群已解散',
+  `left_at` datetime DEFAULT NULL COMMENT '离群时间（被踢/退群时间，用于会话列表展示）',
+  `snapshot_data` json DEFAULT NULL COMMENT '群组快照数据JSON（被踢/退群/解散时冻结，用于会话列表和聊天页展示）',
+  `member_snapshot_json` json DEFAULT NULL COMMENT '群成员快照JSON（在踢人/退群/群解散时保存，用于不在群内的用户查看历史成员）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_chat_state` (`tenant_id`,`user_id`,`chat_id`,`deleted`) USING BTREE,
+  KEY `idx_user_cursor` (`tenant_id`,`user_id`,`cursor_version`) USING BTREE,
+  KEY `idx_chat` (`tenant_id`,`chat_id`) USING BTREE,
+  KEY `idx_user_group_status` (`tenant_id`,`user_id`,`group_member_status`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM会话-用户态表';
+
+-- ----------------------------
+-- Table structure for im_group
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group`;
+CREATE TABLE `im_group` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '群ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '群名称',
+  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '群头像',
+  `owner_id` bigint NOT NULL COMMENT '群主ID',
+  `group_type` tinyint NOT NULL DEFAULT '1' COMMENT '群类型(1-普通群 2-工作群)',
+  `member_count` int NOT NULL DEFAULT '0' COMMENT '成员数量',
+  `max_member_count` int NOT NULL DEFAULT '500' COMMENT '最大成员数量',
+  `notice` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '群公告',
+  `notice_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '群公告是否置顶',
+  `introduction` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '群简介',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '群状态(1-正常 2-已解散)',
+  `allow_member_invite` bit(1) NOT NULL DEFAULT b'1' COMMENT '是否允许成员邀请',
+  `need_approval` bit(1) NOT NULL DEFAULT b'0' COMMENT '加群是否需要审批',
+  `mute_all` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否全员禁言',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_owner` (`owner_id`) USING BTREE COMMENT '群主索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群组表';
+
+-- ----------------------------
+-- Table structure for im_group_file
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_file`;
+CREATE TABLE `im_group_file` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `group_id` bigint NOT NULL COMMENT '群组ID',
+  `file_id` bigint NOT NULL COMMENT '文件ID(关联 infra_file.id)',
+  `uploader_id` bigint NOT NULL COMMENT '上传者ID',
+  `folder_id` bigint DEFAULT '0' COMMENT '文件夹ID(0表示根目录)',
+  `is_favorite` bit(1) DEFAULT b'0' COMMENT '是否收藏',
+  `download_count` int DEFAULT '0' COMMENT '下载次数',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_group_file_deleted` (`group_id`,`file_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '群组文件唯一索引(包含deleted)',
+  KEY `idx_group` (`group_id`,`tenant_id`) USING BTREE COMMENT '群组索引',
+  KEY `idx_uploader` (`uploader_id`) USING BTREE COMMENT '上传者索引',
+  KEY `idx_folder` (`folder_id`) USING BTREE COMMENT '文件夹索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群文件关联表';
+
+-- ----------------------------
+-- Table structure for im_group_folder
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_folder`;
+CREATE TABLE `im_group_folder` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `group_id` bigint NOT NULL COMMENT '群组ID',
+  `folder_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文件夹名称',
+  `parent_id` bigint DEFAULT '0' COMMENT '父文件夹ID(0表示根目录)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_group` (`group_id`,`tenant_id`) USING BTREE COMMENT '群组索引',
+  KEY `idx_parent` (`parent_id`) USING BTREE COMMENT '父文件夹索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群文件夹表';
+
+-- ----------------------------
+-- Table structure for im_group_invite
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_invite`;
+CREATE TABLE `im_group_invite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '邀请ID',
+  `group_id` bigint NOT NULL COMMENT '群ID',
+  `invite_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '邀请码(唯一)',
+  `creator_id` bigint NOT NULL COMMENT '创建者ID',
+  `expire_time` datetime NOT NULL COMMENT '过期时间',
+  `max_use_count` int NOT NULL DEFAULT '0' COMMENT '最大使用次数(0表示不限制)',
+  `used_count` int NOT NULL DEFAULT '0' COMMENT '已使用次数',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态(1-有效 2-已过期 3-已禁用)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_tenant_invite_code` (`tenant_id`,`invite_code`) USING BTREE COMMENT '租户+邀请码唯一索引',
+  KEY `idx_group` (`group_id`) USING BTREE COMMENT '群组索引',
+  KEY `idx_expire` (`expire_time`,`status`) USING BTREE COMMENT '过期时间+状态索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群邀请码表';
+
+-- ----------------------------
+-- Table structure for im_group_join_request
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_join_request`;
+CREATE TABLE `im_group_join_request` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '申请单ID',
+  `group_id` bigint NOT NULL COMMENT '群ID',
+  `applicant_user_id` bigint NOT NULL COMMENT '申请人用户ID',
+  `invite_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '触发申请的邀请码',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态(1-待审批 2-已通过 3-已拒绝)',
+  `reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '拒绝原因',
+  `handled_by` bigint DEFAULT NULL COMMENT '处理人用户ID',
+  `handled_time` datetime DEFAULT NULL COMMENT '处理时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_group_status` (`group_id`,`status`) USING BTREE COMMENT '群组+状态索引',
+  KEY `idx_group_applicant_status` (`group_id`,`applicant_user_id`,`status`) USING BTREE COMMENT '群组+申请人+状态索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群加群申请表';
+
+-- ----------------------------
+-- Table structure for im_group_member
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_member`;
+CREATE TABLE `im_group_member` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '成员ID',
+  `group_id` bigint NOT NULL COMMENT '群ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `role` tinyint NOT NULL DEFAULT '3' COMMENT '角色(1-群主 2-管理员 3-普通成员)',
+  `nickname` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '群昵称',
+  `join_time` datetime NOT NULL COMMENT '加入时间',
+  `mute_end_time` datetime DEFAULT NULL COMMENT '禁言结束时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_group_user_deleted` (`group_id`,`user_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '群+用户+删除状态唯一索引',
+  KEY `idx_user` (`user_id`) USING BTREE COMMENT '用户索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引',
+  KEY `idx_group_deleted` (`group_id`,`deleted`),
+  KEY `idx_group_role_deleted` (`group_id`,`role`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM群成员表';
+
+-- ----------------------------
+-- Table structure for im_message_favorite
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_favorite`;
+CREATE TABLE `im_message_favorite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '收藏用户ID',
+  `message_id` bigint NOT NULL COMMENT '消息ID',
+  `chat_id` bigint NOT NULL COMMENT '会话ID',
+  `anchor_sequence` bigint NOT NULL DEFAULT '0' COMMENT '收藏时锚点序列号',
+  `message_type` tinyint DEFAULT NULL COMMENT '收藏时消息类型快照',
+  `message_preview` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '收藏时消息预览快照',
+  `message_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时消息内容快照',
+  `message_extra` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时消息扩展快照',
+  `message_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时完整消息快照(JSON)',
+  `source_send_time` datetime DEFAULT NULL COMMENT '收藏时原消息发送时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_user_message_deleted` (`tenant_id`,`user_id`,`message_id`,`deleted`) USING BTREE,
+  KEY `idx_user_created` (`tenant_id`,`user_id`,`create_time`,`deleted`) USING BTREE,
+  KEY `idx_chat_anchor` (`tenant_id`,`chat_id`,`anchor_sequence`,`deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM消息收藏表';
+
+-- ----------------------------
+-- Table structure for im_message_read
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_read`;
+CREATE TABLE `im_message_read` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '已读ID',
+  `message_id` bigint NOT NULL COMMENT '消息ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `read_time` datetime NOT NULL COMMENT '已读时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_message_user_deleted` (`message_id`,`user_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '消息+用户+删除状态唯一索引',
+  KEY `idx_user` (`user_id`) USING BTREE COMMENT '用户索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引',
+  KEY `idx_message_deleted` (`message_id`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM消息已读表(群聊)';
+
+-- ----------------------------
+-- Table structure for im_message_voice_play
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_voice_play`;
+CREATE TABLE `im_message_voice_play` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `message_id` bigint NOT NULL COMMENT '语音消息ID',
+  `chat_id` bigint NOT NULL COMMENT '会话ID',
+  `user_id` bigint NOT NULL COMMENT '播放用户ID',
+  `played_time` datetime NOT NULL COMMENT '首次播放时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_message_user_deleted` (`message_id`,`user_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '消息+用户+删除状态唯一索引',
+  KEY `idx_user_chat` (`user_id`,`chat_id`,`tenant_id`,`deleted`) USING BTREE COMMENT '用户会话查询索引',
+  KEY `idx_played_time` (`played_time`,`tenant_id`,`deleted`) USING BTREE COMMENT '首次播放时间查询索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM语音消息播放状态表';
+
+-- ----------------------------
+-- Table structure for im_notification
+-- ----------------------------
+DROP TABLE IF EXISTS `im_notification`;
+CREATE TABLE `im_notification` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+  `user_id` bigint NOT NULL COMMENT '接收用户ID',
+  `notify_type` tinyint NOT NULL COMMENT '通知类型(1-系统公告 2-流程审批 3-待办提醒 4-自定义通知)',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知标题',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知内容',
+  `icon` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '通知图标URL',
+  `extra` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '扩展信息(JSON格式,存储操作按钮、跳转配置、业务数据等)',
+  `is_read` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否已读',
+  `read_time` datetime DEFAULT NULL COMMENT '已读时间',
+  `is_important` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否重要(重要通知需强制阅读)',
+  `expire_time` datetime DEFAULT NULL COMMENT '过期时间',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '通知状态(1-正常 2-已过期 3-已撤回)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_user_time` (`user_id`,`create_time` DESC) USING BTREE COMMENT '用户+时间索引',
+  KEY `idx_user_read` (`user_id`,`is_read`) USING BTREE COMMENT '用户+已读状态索引',
+  KEY `idx_type` (`notify_type`) USING BTREE COMMENT '通知类型索引',
+  KEY `idx_tenant` (`tenant_id`) USING BTREE COMMENT '租户索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM通知表';
+
+-- ----------------------------
+-- Table structure for im_user_cursor
+-- ----------------------------
+DROP TABLE IF EXISTS `im_user_cursor`;
+CREATE TABLE `im_user_cursor` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `next_cursor_version` bigint NOT NULL DEFAULT '0' COMMENT '下一个会话同步游标版本号',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_cursor` (`tenant_id`,`user_id`,`deleted`) USING BTREE,
+  KEY `idx_tenant` (`tenant_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM用户会话游标分配器';
+
+-- ----------------------------
+-- Table structure for im_user_sticker
+-- ----------------------------
+DROP TABLE IF EXISTS `im_user_sticker`;
+CREATE TABLE `im_user_sticker` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `file_id` bigint NOT NULL COMMENT '原图文件ID',
+  `thumb_file_id` bigint DEFAULT NULL COMMENT '缩略图文件ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '表情名称',
+  `md5` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文件MD5或幂等键',
+  `width` int DEFAULT NULL COMMENT '宽度',
+  `height` int DEFAULT NULL COMMENT '高度',
+  `mime_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '媒体类型',
+  `source_type` tinyint NOT NULL DEFAULT '1' COMMENT '来源(1-上传 2-聊天收藏 3-商店)',
+  `source_message_id` bigint DEFAULT NULL COMMENT '来源消息ID',
+  `sort_no` int NOT NULL DEFAULT '0' COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态(1-正常 2-已移除)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_md5_deleted` (`tenant_id`,`user_id`,`md5`,`deleted`) USING BTREE,
+  KEY `idx_user_sort_deleted` (`tenant_id`,`user_id`,`sort_no`,`deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM用户自定义表情表';
+
+-- ----------------------------
+-- Table structure for im_user_sticker_recent
+-- ----------------------------
+DROP TABLE IF EXISTS `im_user_sticker_recent`;
+CREATE TABLE `im_user_sticker_recent` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `sticker_id` bigint NOT NULL COMMENT '表情ID',
+  `last_used_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最近使用时间',
+  `use_count` int NOT NULL DEFAULT '1' COMMENT '使用次数',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_sticker_deleted` (`tenant_id`,`user_id`,`sticker_id`,`deleted`) USING BTREE,
+  KEY `idx_user_last_used_deleted` (`tenant_id`,`user_id`,`last_used_at`,`deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='IM用户最近使用表情表';
+
+-- ----------------------------
+-- Table structure for infra_demo01_contact
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_demo01_contact`;
+CREATE TABLE `infra_demo01_contact` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名字',
+  `sex` tinyint(1) NOT NULL COMMENT '性别',
+  `birthday` datetime NOT NULL COMMENT '出生年',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '简介',
+  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '头像',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='示例联系人表';
+
+-- ----------------------------
+-- Table structure for infra_demo02_category
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_demo02_category`;
+CREATE TABLE `infra_demo02_category` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名字',
+  `parent_id` bigint NOT NULL COMMENT '父级编号',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='示例分类表';
+
+-- ----------------------------
+-- Table structure for infra_demo03_course
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_demo03_course`;
+CREATE TABLE `infra_demo03_course` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `student_id` bigint NOT NULL COMMENT '学生编号',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名字',
+  `score` tinyint NOT NULL COMMENT '分数',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='学生课程表';
+
+-- ----------------------------
+-- Table structure for infra_demo03_grade
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_demo03_grade`;
+CREATE TABLE `infra_demo03_grade` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `student_id` bigint NOT NULL COMMENT '学生编号',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名字',
+  `teacher` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '班主任',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='学生班级表';
+
+-- ----------------------------
+-- Table structure for infra_demo03_student
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_demo03_student`;
+CREATE TABLE `infra_demo03_student` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名字',
+  `sex` tinyint NOT NULL COMMENT '性别',
+  `birthday` datetime NOT NULL COMMENT '出生日期',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '简介',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='学生表';
+
+-- ----------------------------
+-- Table structure for infra_file_upload_chunk
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_file_upload_chunk`;
+CREATE TABLE `infra_file_upload_chunk` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '分片编号',
+  `upload_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '关联的分片上传唯一标识',
+  `chunk_number` int NOT NULL COMMENT '分片序号，从 1 开始',
+  `chunk_size` bigint NOT NULL COMMENT '分片大小（字节）',
+  `etag` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '分片 ETag 或 S3 分片 ID',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-上传中, 1-已完成',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_upload_id_chunk_number` (`upload_id`,`chunk_number`) USING BTREE,
+  KEY `idx_upload_id_status` (`upload_id`,`status`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='分片上传记录表';
+
+-- ----------------------------
+-- Table structure for infra_file_upload_task
+-- ----------------------------
+DROP TABLE IF EXISTS `infra_file_upload_task`;
+CREATE TABLE `infra_file_upload_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务编号',
+  `upload_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '分片上传唯一标识',
+  `config_id` bigint DEFAULT NULL COMMENT '文件配置编号',
+  `name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '原始文件名',
+  `path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '目标文件路径',
+  `type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'MIME 类型',
+  `total_size` bigint NOT NULL COMMENT '文件总大小（字节）',
+  `chunk_size` int NOT NULL COMMENT '分片大小（字节）',
+  `total_chunks` int NOT NULL COMMENT '总分片数',
+  `uploaded_chunks` int NOT NULL DEFAULT '0' COMMENT '已上传分片数',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-初始化, 1-上传中, 2-已完成, 3-已取消, 4-已过期',
+  `expire_time` datetime NOT NULL COMMENT '过期时间',
+  `s3_upload_id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'S3 分片上传 ID',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_upload_id` (`upload_id`) USING BTREE,
+  KEY `idx_expire_time` (`expire_time`) USING BTREE,
+  KEY `idx_status_update_time` (`status`,`update_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='分片上传任务表';
+
+-- ----------------------------
+-- Table structure for QRTZ_BLOB_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_BLOB_TRIGGERS`;
+CREATE TABLE `QRTZ_BLOB_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `BLOB_DATA` blob,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  KEY `SCHED_NAME` (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  CONSTRAINT `qrtz_blob_triggers_ibfk_1` FOREIGN KEY (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) REFERENCES `QRTZ_TRIGGERS` (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_CALENDARS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_CALENDARS`;
+CREATE TABLE `QRTZ_CALENDARS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `CALENDAR_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `CALENDAR` blob NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`CALENDAR_NAME`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_CRON_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_CRON_TRIGGERS`;
+CREATE TABLE `QRTZ_CRON_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `CRON_EXPRESSION` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TIME_ZONE_ID` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  CONSTRAINT `qrtz_cron_triggers_ibfk_1` FOREIGN KEY (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) REFERENCES `QRTZ_TRIGGERS` (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_FIRED_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_FIRED_TRIGGERS`;
+CREATE TABLE `QRTZ_FIRED_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ENTRY_ID` varchar(95) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `INSTANCE_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `FIRED_TIME` bigint NOT NULL,
+  `SCHED_TIME` bigint NOT NULL,
+  `PRIORITY` int NOT NULL,
+  `STATE` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `JOB_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `IS_NONCONCURRENT` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `REQUESTS_RECOVERY` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`ENTRY_ID`) USING BTREE,
+  KEY `IDX_QRTZ_FT_TRIG_INST_NAME` (`SCHED_NAME`,`INSTANCE_NAME`) USING BTREE,
+  KEY `IDX_QRTZ_FT_INST_JOB_REQ_RCVRY` (`SCHED_NAME`,`INSTANCE_NAME`,`REQUESTS_RECOVERY`) USING BTREE,
+  KEY `IDX_QRTZ_FT_J_G` (`SCHED_NAME`,`JOB_NAME`,`JOB_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_FT_JG` (`SCHED_NAME`,`JOB_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_FT_T_G` (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_FT_TG` (`SCHED_NAME`,`TRIGGER_GROUP`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_JOB_DETAILS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_JOB_DETAILS`;
+CREATE TABLE `QRTZ_JOB_DETAILS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `DESCRIPTION` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `JOB_CLASS_NAME` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `IS_DURABLE` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `IS_NONCONCURRENT` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `IS_UPDATE_DATA` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `REQUESTS_RECOVERY` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_DATA` blob,
+  PRIMARY KEY (`SCHED_NAME`,`JOB_NAME`,`JOB_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_J_REQ_RECOVERY` (`SCHED_NAME`,`REQUESTS_RECOVERY`) USING BTREE,
+  KEY `IDX_QRTZ_J_GRP` (`SCHED_NAME`,`JOB_GROUP`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_LOCKS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_LOCKS`;
+CREATE TABLE `QRTZ_LOCKS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `LOCK_NAME` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`LOCK_NAME`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_PAUSED_TRIGGER_GRPS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_PAUSED_TRIGGER_GRPS`;
+CREATE TABLE `QRTZ_PAUSED_TRIGGER_GRPS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_GROUP`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_SCHEDULER_STATE
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_SCHEDULER_STATE`;
+CREATE TABLE `QRTZ_SCHEDULER_STATE` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `INSTANCE_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `LAST_CHECKIN_TIME` bigint NOT NULL,
+  `CHECKIN_INTERVAL` bigint NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`INSTANCE_NAME`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_SIMPLE_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_SIMPLE_TRIGGERS`;
+CREATE TABLE `QRTZ_SIMPLE_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `REPEAT_COUNT` bigint NOT NULL,
+  `REPEAT_INTERVAL` bigint NOT NULL,
+  `TIMES_TRIGGERED` bigint NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  CONSTRAINT `qrtz_simple_triggers_ibfk_1` FOREIGN KEY (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) REFERENCES `QRTZ_TRIGGERS` (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_SIMPROP_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_SIMPROP_TRIGGERS`;
+CREATE TABLE `QRTZ_SIMPROP_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `STR_PROP_1` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `STR_PROP_2` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `STR_PROP_3` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `INT_PROP_1` int DEFAULT NULL,
+  `INT_PROP_2` int DEFAULT NULL,
+  `LONG_PROP_1` bigint DEFAULT NULL,
+  `LONG_PROP_2` bigint DEFAULT NULL,
+  `DEC_PROP_1` decimal(13,4) DEFAULT NULL,
+  `DEC_PROP_2` decimal(13,4) DEFAULT NULL,
+  `BOOL_PROP_1` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `BOOL_PROP_2` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  CONSTRAINT `qrtz_simprop_triggers_ibfk_1` FOREIGN KEY (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) REFERENCES `QRTZ_TRIGGERS` (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for QRTZ_TRIGGERS
+-- ----------------------------
+DROP TABLE IF EXISTS `QRTZ_TRIGGERS`;
+CREATE TABLE `QRTZ_TRIGGERS` (
+  `SCHED_NAME` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `JOB_GROUP` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `DESCRIPTION` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NEXT_FIRE_TIME` bigint DEFAULT NULL,
+  `PREV_FIRE_TIME` bigint DEFAULT NULL,
+  `PRIORITY` int DEFAULT NULL,
+  `TRIGGER_STATE` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `TRIGGER_TYPE` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `START_TIME` bigint NOT NULL,
+  `END_TIME` bigint DEFAULT NULL,
+  `CALENDAR_NAME` varchar(190) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `MISFIRE_INSTR` smallint DEFAULT NULL,
+  `JOB_DATA` blob,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_T_J` (`SCHED_NAME`,`JOB_NAME`,`JOB_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_T_JG` (`SCHED_NAME`,`JOB_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_T_C` (`SCHED_NAME`,`CALENDAR_NAME`) USING BTREE,
+  KEY `IDX_QRTZ_T_G` (`SCHED_NAME`,`TRIGGER_GROUP`) USING BTREE,
+  KEY `IDX_QRTZ_T_STATE` (`SCHED_NAME`,`TRIGGER_STATE`) USING BTREE,
+  KEY `IDX_QRTZ_T_N_STATE` (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`,`TRIGGER_STATE`) USING BTREE,
+  KEY `IDX_QRTZ_T_N_G_STATE` (`SCHED_NAME`,`TRIGGER_GROUP`,`TRIGGER_STATE`) USING BTREE,
+  KEY `IDX_QRTZ_T_NEXT_FIRE_TIME` (`SCHED_NAME`,`NEXT_FIRE_TIME`) USING BTREE,
+  KEY `IDX_QRTZ_T_NFT_ST` (`SCHED_NAME`,`TRIGGER_STATE`,`NEXT_FIRE_TIME`) USING BTREE,
+  KEY `IDX_QRTZ_T_NFT_MISFIRE` (`SCHED_NAME`,`MISFIRE_INSTR`,`NEXT_FIRE_TIME`) USING BTREE,
+  KEY `IDX_QRTZ_T_NFT_ST_MISFIRE` (`SCHED_NAME`,`MISFIRE_INSTR`,`NEXT_FIRE_TIME`,`TRIGGER_STATE`) USING BTREE,
+  KEY `IDX_QRTZ_T_NFT_ST_MISFIRE_GRP` (`SCHED_NAME`,`MISFIRE_INSTR`,`NEXT_FIRE_TIME`,`TRIGGER_GROUP`,`TRIGGER_STATE`) USING BTREE,
+  CONSTRAINT `qrtz_triggers_ibfk_1` FOREIGN KEY (`SCHED_NAME`, `JOB_NAME`, `JOB_GROUP`) REFERENCES `QRTZ_JOB_DETAILS` (`SCHED_NAME`, `JOB_NAME`, `JOB_GROUP`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

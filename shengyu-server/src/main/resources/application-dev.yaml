@@ -4,10 +4,14 @@ server:
 --- #################### 数据库相关配置 ####################
 
 spring:
+  config:
+    # 生产环境可通过环境变量直接注入；也可指定 IM_CALL_CONFIG_FILE 指向受控的 LiveKit/FCM 密钥文件。
+    import: "optional:file:${IM_CALL_CONFIG_FILE:./deploy/livekit/.env}[.properties]"
   autoconfigure:
     # noinspection SpringBootApplicationYaml
     exclude:
       - com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure # 排除 Druid 的自动配置，使用 dynamic-datasource-spring-boot-starter 配置多数据源
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration # 排除积木报表带来的 MongoDB 的自动配置
   datasource:
     druid: # Druid 【监控】相关的全局配置
       web-stat-filter:
@@ -49,12 +53,12 @@ spring:
       primary: master
       datasource:
         master:
-          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas-dev?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
           username: root
           password: 36Zhu@186
         slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
           lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas-dev?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
           username: root
           password: 36Zhu@186
 
@@ -155,6 +159,16 @@ spring:
 logging:
   file:
     name: ${user.home}/logs/${spring.application.name}.log # 日志文件名，全路径
+  level:
+    # 禁止记录 MyBatis 参数：认证 Token、刷新 Token 和 IM 正文都可能出现在 SQL 参数中。
+    # 需要排障时请只临时开启具体 Mapper，不能在生产环境全量 DEBUG。
+    com.shengyu.module.infra.dal.mysql.logger.ApiErrorLogMapper: INFO # 配置 ApiErrorLogMapper 的日志级别为 info，避免和 GlobalExceptionHandler 重复打印
+    com.shengyu.module.infra.dal.mysql.job.JobLogMapper: INFO # 配置 JobLogMapper 的日志级别为 info
+    com.shengyu.module.infra.dal.mysql.file.FileConfigMapper: INFO # 配置 FileConfigMapper 的日志级别为 info
+    com.shengyu.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO # 配置 PayNotifyTaskMapper 的日志级别为 info
+    com.shengyu.module.system.dal.mysql: INFO
+    com.shengyu.module.system.dal.mysql.sms.SmsChannelMapper: INFO # 配置 SmsChannelMapper 的日志级别为 info
+    org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR # TODO 芋艿：先禁用，Spring Boot 3.X 存在部分错误的 WARN 提示
 
 --- #################### 微信公众号相关配置 ####################
 wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-mp-spring-boot-starter/README.md 文档
@@ -206,7 +220,21 @@ shengyu:
     refund-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
     transfer-notify-url: https://yunai.natapp1.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
   demo: false # 开启演示模式
+  wxa-code:
+    env-version: release # 小程序版本: 正式版为 "release"；体验版为 "trial"；开发版为 "develop"
+  wxa-subscribe-message:
+    miniprogram-state: formal # 跳转小程序类型：开发版为 “developer”；体验版为 “trial”为；正式版为 “formal”
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+  # FCM 凭据只从受控的环境变量路径读取；生产环境按需显式启用。
+  im:
+    push:
+      fcm:
+        enabled: ${IM_PUSH_FCM_ENABLED:false}
+        project-id: ${IM_PUSH_FCM_PROJECT_ID:shengyu-im-fcm}
+        credential-file: ${IM_PUSH_FCM_CREDENTIAL_FILE:}
+        connect-timeout-ms: 3000
+        read-timeout-ms: 5000
+        dry-run: ${IM_PUSH_FCM_DRY_RUN:false}
 
 justauth:
   enabled: true
@@ -234,3 +262,13 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+
+# IM 音视频仅使用自建 LiveKit；生产环境必须使用公网可达的 wss 域名。
+im:
+  call:
+    livekit:
+      url: ${IM_CALL_LIVEKIT_URL:}
+      api-key: ${IM_CALL_LIVEKIT_API_KEY:}
+      api-secret: ${IM_CALL_LIVEKIT_API_SECRET:}
+      token-expire-seconds: ${IM_CALL_LIVEKIT_TOKEN_EXPIRE_SECONDS:600}
+      allow-insecure: ${IM_CALL_LIVEKIT_ALLOW_INSECURE:false}

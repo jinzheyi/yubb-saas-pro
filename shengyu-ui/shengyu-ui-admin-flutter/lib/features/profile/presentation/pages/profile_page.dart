@@ -319,7 +319,7 @@ class ProfilePage extends ConsumerWidget {
         : strings.profilePostFallback;
     final dept = profile.departmentName.isNotEmpty
         ? profile.departmentName
-        : strings.profileDepartmentFallback;
+        : strings.departmentFallback;
     return '$post, $dept';
   }
 

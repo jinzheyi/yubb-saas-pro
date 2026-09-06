@@ -14,29 +14,24 @@ import 'package:shengyu_ui_admin_im/core/platform/video_compression_config.dart'
 /// - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`
 abstract final class AppConfig {
   /// 公司名称。
-  static const String companyName = '钰信';
+  static const String companyName = '圣钰科技';
 
   /// 应用展示名称。
   static const String appName = '钰信';
 
   /// App 端 HTTP 地址。
   ///
-  /// 生产环境使用正式域名或 IP，真机调试时使用开发机 IP 地址。
-  /// mDNS (.local) 域名在部分安卓机型（如小米 HyperOS）上解析不稳定，
-  /// 建议生产环境使用 HTTPS 域名，开发环境使用 IP 直连。
-  /// TODO: 生产环境替换为正式 HTTPS 域名，如 https://im.yourdomain.com/app-api
+  /// 生产环境复用后端 API 域名；真机本地调试可通过 dart-define 覆盖为开发机 IP。
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://MacBook-Pro-3.local:48080/app-api',
+    defaultValue: 'https://apisaas.shengyukj.top/app-api',
   );
 
   /// IM WebSocket 地址。
   ///
-  /// 同上，生产环境使用 wss:// 协议 + 正式域名。
-  /// TODO: 生产环境替换为 wss://im.yourdomain.com/ws
   static const String socketUrl = String.fromEnvironment(
     'SOCKET_URL',
-    defaultValue: 'ws://MacBook-Pro-3.local:9000/ws',
+    defaultValue: 'wss://apisaas.shengyukj.top/ws',
   );
 
   /// 网络延迟探测目标地址（Web 平台使用 HTTP 请求）。
@@ -46,17 +41,17 @@ abstract final class AppConfig {
   /// 如果不需要网络探测，可设置为空字符串，此时探测直接返回 9999ms。
   static const String networkProbeUrl = String.fromEnvironment(
     'NETWORK_PROBE_URL',
-    defaultValue: 'http://MacBook-Pro-3.local:48080/app-api',
+    defaultValue: 'https://apisaas.shengyukj.top/app-api',
   );
 
   /// 网络延迟探测目标主机（非 Web 平台使用 Socket 连接）。
   static const String networkProbeHost = String.fromEnvironment(
     'NETWORK_PROBE_HOST',
-    defaultValue: 'MacBook-Pro-3.local',
+    defaultValue: 'apisaas.shengyukj.top',
   );
 
   /// 网络延迟探测目标端口（非 Web 平台使用 Socket 连接）。
-  static const int networkProbePort = 48080;
+  static const int networkProbePort = 443;
 
   /// 文件上传与预览相关接口路径。
   ///

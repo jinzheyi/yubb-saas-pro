@@ -5,7 +5,7 @@ spring:
   profiles:
     # dev: 生产环境
     # local: 本地开发环境
-    active: local
+    active: dev
 
   main:
     allow-circular-references: true # 允许循环依赖，因为项目是三层架构，无法避免这个情况。
