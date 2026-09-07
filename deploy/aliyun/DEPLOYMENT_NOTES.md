@@ -109,6 +109,38 @@ Flutter Web 生产构建后确认：
 - Flutter Web Nginx 配置中 `index.html`、`main.dart.js`、`flutter_bootstrap.js`、`flutter.js`、`flutter_service_worker.js` 不应长缓存。
 - Flutter Web 应优先使用本地 `canvaskit/`，避免生产访问 Google gstatic 导致白屏或慢启动。
 
+## 移动端打包
+
+移动端同样以 `app_config.dart` 为域名基准，打包时显式传入线上域名，避免本地调试参数混入安装包。
+
+Android APK：
+
+```bash
+cd shengyu-ui/shengyu-ui-admin-flutter
+flutter pub get
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=SOCKET_URL=wss://apisaas.shengyukj.top/ws \
+  --dart-define=NETWORK_PROBE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=NETWORK_PROBE_HOST=apisaas.shengyukj.top
+```
+
+iOS：
+
+```bash
+cd shengyu-ui/shengyu-ui-admin-flutter
+export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+flutter build ipa --release \
+  --dart-define=API_BASE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=SOCKET_URL=wss://apisaas.shengyukj.top/ws \
+  --dart-define=NETWORK_PROBE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=NETWORK_PROBE_HOST=apisaas.shengyukj.top
+```
+
+- iOS 使用 Firebase 相关插件后，最低系统版本为 iOS 15.0。
+- 真正可安装或分发的 IPA 必须使用 Apple 证书和 Provisioning Profile 签名；没有证书时只能执行 `flutter build ios --release --no-codesign` 生成未签名的 `Runner.app`。
+- 当前 Flutter stable SDK 不支持 `flutter build hap`，仓库也没有 `ohos`/`harmony` 工程；鸿蒙包需要先接入鸿蒙 Flutter SDK 和 Harmony 工程后再打 HAP/APP。
+
 ## 部署步骤
 
 在本机完成构建后，将产物上传到服务器并在 `/opt/shengyu/saas-deploy` 中重建镜像。当前服务器已具备 Compose 覆盖文件：
