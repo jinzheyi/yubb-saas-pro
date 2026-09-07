@@ -230,3 +230,4 @@ cat /tmp/upload-check-response.txt
 - 真机图片上传服务器异常已定位为 Nginx 默认请求体大小限制；`apisaas.shengyukj.top` 已显式配置 `client_max_body_size 200m;`。
 - 用户详情页发消息/发起语音视频通话已修复：创建单聊成员时必须写入当前租户 `tenant_id`，避免对方会话列表能看到但进入提示“会话不存在”；详情页发起通话按单聊会话两端用户校验，不再要求被叫方已提前生成 `im_chat_user` 成员行。
 - 若生产出现历史单聊会话成员缺失，先备份数据库，再按 `im_conversation_user_state` 中的当前租户状态补齐缺失的 `im_chat_user` 行；最近一次备份：`/opt/shengyu/backups/shengyu-saas-20260907170821-before-chat-user-tenant-repair.sql`。
+- 1v1 通话主叫端 30 秒无人接听时，Flutter 客户端会调用 `/app-api/system/im/call/timeout`，由后端落库为 `TIMEOUT/MISSED` 并广播 `call.timeout` 给双方；服务端 `CallLifecycleJob` 仍作为兜底，避免被叫端持续响铃。

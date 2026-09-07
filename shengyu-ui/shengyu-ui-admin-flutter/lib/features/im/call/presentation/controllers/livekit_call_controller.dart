@@ -633,10 +633,9 @@ class LiveKitCallController extends ChangeNotifier {
       _shouldClose = true;
       notifyListeners();
       try {
-        // “无人接听”由服务端生命周期任务以 TIMEOUT/MISSED 权威落库。
-        // 这里若调用 hangup，会把仍处于 RINGING 的会话改写为 CANCELLED，
-        // 导致消息记录错误显示“已取消”。客户端只关闭媒体并等待权威事件。
-        await _reconcileState();
+        // 主叫端 30 秒自然超时时，立即通知服务端生成 TIMEOUT/MISSED
+        // 终态并广播给被叫端停止响铃；生命周期任务仍作为服务端兜底。
+        await _endServerSessionBestEffort('/system/im/call/timeout');
         await disposeCall();
       } catch (error) {
         debugPrint('[LiveKitCallController] 通话超时状态对账失败: $error');

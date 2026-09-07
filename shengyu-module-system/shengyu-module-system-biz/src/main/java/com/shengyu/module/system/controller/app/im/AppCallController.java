@@ -175,6 +175,28 @@ public class AppCallController {
         }
     }
 
+    @PostMapping("/timeout")
+    @Operation(summary = "通话无人接听超时")
+    public CommonResult<Boolean> timeoutCall(@Valid @RequestBody AppCallSessionReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (userId == null) {
+            return CommonResult.error(401, "用户未登录");
+        }
+        if (StrUtil.isBlank(reqVO.getCallSessionId())) {
+            return CommonResult.error(400, "通话会话ID不能为空");
+        }
+
+        try {
+            callApplicationService.timeout(reqVO.getCallSessionId(), userId);
+            log.info("[timeoutCall] 通话无人接听超时, callSessionId={}, userId={}", reqVO.getCallSessionId(), userId);
+            return success(true);
+        } catch (Exception e) {
+            log.error("[timeoutCall] 通话无人接听超时失败, callSessionId={}, userId={}, error={}",
+                    reqVO.getCallSessionId(), userId, e.getMessage(), e);
+            return CommonResult.error(500, "通话超时处理失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/hangup")
     @Operation(summary = "挂断通话")
     public CommonResult<Boolean> hangupCall(@Valid @RequestBody AppCallSessionReqVO reqVO) {

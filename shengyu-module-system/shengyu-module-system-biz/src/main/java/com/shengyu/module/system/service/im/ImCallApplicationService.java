@@ -179,6 +179,15 @@ public class ImCallApplicationService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public void timeout(String callId, Long userId) {
+        ImCallRecordDO record = getAuthorizedState(callId, userId);
+        if (record == null || ImCallStateEnum.ENDED.getState().equals(record.getState())) {
+            return;
+        }
+        callService.timeoutCall(callId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void hangup(String callId, Long userId) {
         callService.hangupCall(callId, userId, "HANGUP");
         publishState(callId, "call.ended", userId, "HANGUP");
