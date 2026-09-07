@@ -80,7 +80,12 @@ services:
         --spring.redis.database=${REDIS_DATABASE:-0}
         --spring.redis.password=${REDIS_PASSWORD:-}
         --shengyu.captcha.enable=${SHENGYU_CAPTCHA_ENABLE:-true}
-        --im.call.livekit.url=${IM_CALL_LIVEKIT_URL:-wss://rtc.example.com}
+        --shengyu.security.mock-enable=${SHENGYU_SECURITY_MOCK_ENABLE:-false}
+        --shengyu.access-log.enable=${SHENGYU_ACCESS_LOG_ENABLE:-false}
+        --shengyu.pay.order-notify-url=${SHENGYU_PAY_ORDER_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/order}
+        --shengyu.pay.refund-notify-url=${SHENGYU_PAY_REFUND_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/refund}
+        --shengyu.pay.transfer-notify-url=${SHENGYU_PAY_TRANSFER_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/transfer}
+        --im.call.livekit.url=${IM_CALL_LIVEKIT_URL:-wss://rtc.shengyukj.top}
         --im.call.livekit.api-key=${IM_CALL_LIVEKIT_API_KEY:-change-me}
         --im.call.livekit.api-secret=${IM_CALL_LIVEKIT_API_SECRET:-change-me}
         --im.call.livekit.token-expire-seconds=${IM_CALL_LIVEKIT_TOKEN_EXPIRE_SECONDS:-600}

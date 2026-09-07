@@ -215,11 +215,17 @@ shengyu:
     sender-redis:
       channel: ${spring.application.name}-websocket-channel # Redis 频道名称
   
+  captcha:
+    enable: ${SHENGYU_CAPTCHA_ENABLE:false} # 默认对齐 local 关闭验证码；生产可通过环境变量开启，App 登录不受此开关控制
+  security:
+    mock-enable: ${SHENGYU_SECURITY_MOCK_ENABLE:false} # dev/生产默认关闭 mock；local 可按需开启
   pay:
-    order-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
-    refund-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
-    transfer-notify-url: https://yunai.natapp1.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
-  demo: false # 开启演示模式
+    order-notify-url: ${SHENGYU_PAY_ORDER_NOTIFY_URL:https://apisaas.shengyukj.top/admin-api/pay/notify/order} # 支付渠道的【支付】回调地址
+    refund-notify-url: ${SHENGYU_PAY_REFUND_NOTIFY_URL:https://apisaas.shengyukj.top/admin-api/pay/notify/refund} # 支付渠道的【退款】回调地址
+    transfer-notify-url: ${SHENGYU_PAY_TRANSFER_NOTIFY_URL:https://apisaas.shengyukj.top/admin-api/pay/notify/transfer} # 支付渠道的【转账】回调地址
+  access-log: # 访问日志的配置项
+    enable: ${SHENGYU_ACCESS_LOG_ENABLE:false}
+  demo: false # 关闭演示模式
   wxa-code:
     env-version: release # 小程序版本: 正式版为 "release"；体验版为 "trial"；开发版为 "develop"
   wxa-subscribe-message:

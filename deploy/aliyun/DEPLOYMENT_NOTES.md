@@ -51,17 +51,29 @@
 
 - 后端生产环境变量：`/opt/shengyu/saas-deploy/docker.prod.env`，权限保持 `600`。
 - LiveKit 生产环境变量：`/opt/shengyu/livekit/livekit.prod.env`，权限保持 `600`。
+- 配置基准：后端行为先看 `shengyu-server/src/main/resources/application-local.yaml`，App/Flutter 域名先看 `shengyu-ui/shengyu-ui-admin-flutter/lib/app/config/app_config.dart`；上线前需要把对应变更同步到 `application-dev.yaml`、`deploy/aliyun/nginx/*.conf` 和生产环境变量文件。
 - 后端 API：`https://apisaas.shengyukj.top/app-api`。
 - IM WebSocket：`wss://apisaas.shengyukj.top/ws`。
 - LiveKit URL：`wss://rtc.shengyukj.top`。
 - kkFileView URL：`https://preview.shengyukj.top`。
 - Flutter Web 浏览器入口：`https://im.shengyukj.top`。
 - `im.shengyukj.top` 只作为 Flutter Web 页面域名，不作为 App API 域名。
+- `apisaas.shengyukj.top` 的 Nginx 站点块必须配置 `client_max_body_size 200m;`，与后端 `spring.servlet.multipart.max-file-size=200MB` 保持一致，避免真机拍照图片上传被 Nginx 拦截为 `413`。
+- `application-dev.yaml` 当前随生产容器加载，不能保留 natapp/yunai 这类临时回调域名；支付回调默认使用 `https://apisaas.shengyukj.top/admin-api/pay/notify/*`，特殊环境通过 `SHENGYU_PAY_*_NOTIFY_URL` 覆盖。
+- `docker-compose.yml` 需要显式透传 `SHENGYU_CAPTCHA_ENABLE`、`SHENGYU_SECURITY_MOCK_ENABLE`、`SHENGYU_ACCESS_LOG_ENABLE`、`SHENGYU_PAY_*_NOTIFY_URL`，保证生产只改 `docker.prod.env` 也能覆盖 dev 配置。
+- `im.shengyukj.top` 的公网 Nginx 只代理 Flutter Web 页面到 `127.0.0.1:8082`，API 和 WebSocket 必须走 `apisaas.shengyukj.top`，避免 App 页面域名和后端域名混用。
 
 ## 上线前检查
 
 ```bash
 git status --short
+rg -n "natapp|yunai|example\\.com|http://apisaas|ws://apisaas|im\\.shengyukj\\.top.*/app-api" \
+  shengyu-server/src/main/resources/application-dev.yaml \
+  shengyu-ui/shengyu-ui-admin-flutter/lib/app/config/app_config.dart \
+  deploy/aliyun/nginx \
+  docker-compose.yml \
+  deploy/aliyun/docker.prod.env.example \
+  deploy/aliyun/livekit.prod.env.example
 mvn -pl shengyu-server -am clean package -DskipTests
 ```
 
@@ -149,6 +161,13 @@ curl -sS -H "Content-Type: application/json" \
 curl -sS -H "Content-Type: application/json" \
   -d '{"username":"jin_zheyicn@qq.com","password":"wrong-password"}' \
   https://apisaas.shengyukj.top/admin-api/system/auth/login
+
+dd if=/dev/zero of=/tmp/upload-3m.bin bs=1M count=3
+curl -sS -o /tmp/upload-check-response.txt -w "%{http_code}\n" \
+  -F "file=@/tmp/upload-3m.bin;filename=upload-check.jpg;type=image/jpeg" \
+  -F "directory=im/chat/deploy-check/image" \
+  https://apisaas.shengyukj.top/app-api/infra/file/upload-and-return-id
+cat /tmp/upload-check-response.txt
 ```
 
 预期：
@@ -157,6 +176,7 @@ curl -sS -H "Content-Type: application/json" \
 - Web 管理端登录继续遵循图形验证码开关。
 - `http://im.shengyukj.top/` 应跳转到 HTTPS。
 - `https://im.shengyukj.top/` 标题应为 `钰信`。
+- 3MB 上传检查不应返回 Nginx `413 Request Entity Too Large`，即使因未登录返回业务错误，也说明请求已越过 Nginx 限制。
 
 ## 回滚
 
@@ -171,3 +191,4 @@ curl -sS -H "Content-Type: application/json" \
 - Flutter Web 页面标题和登录品牌已调整为 `钰信`。
 - `profile_page.dart` 已修复错误的本地化字段调用：使用 `departmentFallback`，不再调用不存在的 `profileDepartmentFallback`。
 - Flutter Web 的 Nginx 缓存策略已调整，入口 JS 和 service worker 不再长缓存。
+- 真机图片上传服务器异常已定位为 Nginx 默认请求体大小限制；`apisaas.shengyukj.top` 已显式配置 `client_max_body_size 200m;`。
