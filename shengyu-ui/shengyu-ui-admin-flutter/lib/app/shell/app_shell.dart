@@ -13,6 +13,7 @@ import 'package:shengyu_ui_admin_im/core/widgets/connection_status_notice_bar.da
 import 'package:shengyu_ui_admin_im/core/widgets/kicked_dialog.dart';
 import 'package:shengyu_ui_admin_im/core/widgets/network_status_notice_bar.dart';
 import 'package:shengyu_ui_admin_im/features/im/badge/badge_service.dart';
+import 'package:shengyu_ui_admin_im/features/update/presentation/widgets/update_check_binding.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -77,7 +78,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           children: [
             const NetworkStatusNoticeBar(),
             const ConnectionStatusNoticeBar(),
-            Expanded(child: widget.child),
+            Expanded(child: UpdateCheckBinding(child: widget.child)),
           ],
         ),
       ),
@@ -150,7 +151,9 @@ class _AppBottomNavigationBar extends ConsumerWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ThemeColors.bottomNavBg(context),
-        border: Border(top: BorderSide(color: ThemeColors.bottomNavBorder(context))),
+        border: Border(
+          top: BorderSide(color: ThemeColors.bottomNavBorder(context)),
+        ),
       ),
       child: SafeArea(
         top: false,

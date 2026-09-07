@@ -28,6 +28,8 @@ dependencies:
   camera: ^0.11.1
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
+  package_info_plus: ^8.3.0
+  open_filex: ^4.7.0
   # 7.3.x 使用新 Xcode SDK 的 NWPath.isUltraConstrained；本项目 Xcode 16.3 固定 7.0.0。
   connectivity_plus: 7.0.0
   # 12.4.0 调用了仅新 SDK 暴露的 NSProcessInfo.isiOSAppOnVision；LiveKit 2.9 官方示例也固定 <12.4。

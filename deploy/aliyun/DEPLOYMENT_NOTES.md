@@ -64,6 +64,15 @@
 - `docker-compose.yml` 需要显式透传 `SHENGYU_CAPTCHA_ENABLE`、`SHENGYU_SECURITY_MOCK_ENABLE`、`SHENGYU_ACCESS_LOG_ENABLE`、`SHENGYU_PAY_*_NOTIFY_URL`，保证生产只改 `docker.prod.env` 也能覆盖 dev 配置。
 - `im.shengyukj.top` 的公网 Nginx 只代理 Flutter Web 页面到 `127.0.0.1:8082`，API 和 WebSocket 必须走 `apisaas.shengyukj.top`，避免 App 页面域名和后端域名混用。
 
+## 钰信版本更新中心
+
+- 版本更新管理属于平台层，后台入口为 `系统管理 -> 应用版本`，菜单权限前缀为 `system:app-release`。
+- 移动端和 Flutter Web 使用免租户公开接口 `GET /app-api/system/app-release/check` 检查更新，参数固定包含 `appKey=yuxin`、`platform`、`channel=prod`、当前版本号和构建号。
+- Android 正式用户当前采用整包 APK 更新：平台发布记录中的 `packageUrl` 应填写 HTTPS 可下载地址，建议同步填写 `sha256` 用于客户端下载后校验。
+- iOS、鸿蒙和 Flutter Web 当前只打开平台配置的下载/分发地址；Dart OTA 补丁能力属于二期，后台字段已预留但生产不要发布 `PATCH` 类型记录。
+- 启动进入 App 主界面会自动检查一次版本。普通更新只在“设置 -> 关于钰信”显示红点和详情；强制更新会弹出不可关闭更新框。
+- 上线新增或变更此功能时，需要先执行数据库增量 `sql/mysql/1.0/prod_add.sql`，否则平台后台没有菜单和数据表。
+
 ## 上线前检查
 
 ```bash
@@ -144,7 +153,7 @@ flutter build ipa --release \
 
 ## 部署步骤
 
-在本机完成构建后，将产物上传到服务器并在 `/opt/shengyu/saas-deploy` 中重建镜像。当前服务器已具备 Compose 覆盖文件：
+在本机完成构建后，将产物上传到服务器并在 `/opt/shengyu/saas-deploy` 中重建镜像。当前服务器已具备 Compose 覆盖文件，Docker Hub 网络正常时优先使用：
 
 ```bash
 cd /opt/shengyu/saas-deploy
@@ -152,6 +161,34 @@ docker compose --env-file docker.prod.env \
   -f docker-compose.yml \
   -f docker-compose.prod-host.yml \
   up -d --build server admin-vue3 platform-vue3 im-flutter-web kkfileview
+```
+
+如果服务器访问 Docker Hub 超时或被拒，且本次只是替换已构建好的后端 Jar、平台端静态文件、Flutter Web 静态文件，可使用当前生产可用的容器内产物替换方式：
+
+```bash
+# 后端：先上传 shengyu-server.jar 到 /opt/shengyu/saas-deploy/shengyu-server/target/shengyu-server.jar
+docker cp /opt/shengyu/saas-deploy/shengyu-server/target/shengyu-server.jar \
+  shengyu-server:/shengyu-server/app.jar
+docker restart shengyu-server
+
+# 平台端：先在本机执行 VITE_OUT_DIR=dist-platform 的生产构建，再将 dist-platform 内容复制进容器
+docker exec shengyu-platform-vue3 sh -c \
+  'ts=$(date +%Y%m%d%H%M%S); mv /usr/share/nginx/html /usr/share/nginx/html.bak.$ts; mkdir -p /usr/share/nginx/html'
+docker cp - shengyu-platform-vue3:/usr/share/nginx/html
+docker exec shengyu-platform-vue3 nginx -s reload
+
+# Flutter Web：先在本机执行 flutter build web，再将 build/web 内容复制进容器
+docker exec shengyu-im-flutter-web sh -c \
+  'ts=$(date +%Y%m%d%H%M%S); mv /usr/share/nginx/html /usr/share/nginx/html.bak.$ts; mkdir -p /usr/share/nginx/html'
+docker cp - shengyu-im-flutter-web:/usr/share/nginx/html
+docker exec shengyu-im-flutter-web nginx -s reload
+```
+
+从 macOS 传 Flutter Web tar 包时需要禁用扩展属性，避免容器文件系统不支持 `com.apple.quarantine`：
+
+```bash
+COPYFILE_DISABLE=1 tar --no-xattrs -C shengyu-ui/shengyu-ui-admin-flutter/build/web -czf - . | \
+  ssh aliyun-saas-prod 'docker cp - shengyu-im-flutter-web:/usr/share/nginx/html'
 ```
 
 LiveKit 单独部署：
@@ -175,6 +212,7 @@ systemctl reload nginx
 - 增量 SQL 放在 `sql/mysql/1.0/prod_add.sql` 或后续版本对应增量文件。
 - 执行生产 SQL 前必须备份数据库。
 - 当前历史备份位置示例：`/opt/shengyu/backups/shengyu-saas-20260905230217-before-prod-add.sql`。
+- 本次版本更新中心增量会创建 `platform_app_release` 表，并写入平台菜单 `应用版本` 及查询、创建、更新、删除、发布、暂停权限。
 
 ## 验证命令
 
@@ -198,6 +236,8 @@ curl -sS -H "Content-Type: application/json" \
   -d '{"username":"jin_zheyicn@qq.com","password":"wrong-password"}' \
   https://apisaas.shengyukj.top/admin-api/system/auth/login
 
+curl -sS "https://apisaas.shengyukj.top/app-api/system/app-release/check?appKey=yuxin&platform=android&channel=prod&versionName=1.0.0&versionCode=1"
+
 dd if=/dev/zero of=/tmp/upload-3m.bin bs=1M count=3
 curl -sS -o /tmp/upload-check-response.txt -w "%{http_code}\n" \
   -F "file=@/tmp/upload-3m.bin;filename=upload-check.jpg;type=image/jpeg" \
@@ -212,6 +252,7 @@ cat /tmp/upload-check-response.txt
 - Web 管理端登录继续遵循图形验证码开关。
 - `http://im.shengyukj.top/` 应跳转到 HTTPS。
 - `https://im.shengyukj.top/` 标题应为 `钰信`。
+- 平台后台 `系统管理 -> 应用版本` 应可打开列表页；发布高版本记录后，钰信 App “设置 -> 关于钰信”应能检查到更新。
 - 3MB 上传检查不应返回 Nginx `413 Request Entity Too Large`，即使因未登录返回业务错误，也说明请求已越过 Nginx 限制。
 
 ## 回滚

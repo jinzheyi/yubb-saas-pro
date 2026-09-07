@@ -69,6 +69,7 @@ import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/language
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/profile_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/theme_settings_page.dart';
+import 'package:shengyu_ui_admin_im/features/update/presentation/pages/about_app_page.dart';
 import 'package:shengyu_ui_admin_im/features/workbench/presentation/pages/workbench_page.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 
@@ -214,6 +215,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: RouteNames.settings,
             pageBuilder: (context, state) =>
                 _buildRoutePage(state: state, child: const SettingsPage()),
+          ),
+          GoRoute(
+            path: RoutePaths.aboutApp,
+            name: RouteNames.aboutApp,
+            pageBuilder: (context, state) =>
+                _buildRoutePage(state: state, child: const AboutAppPage()),
           ),
           GoRoute(
             path: RoutePaths.themeSettings,
@@ -651,10 +658,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final args = state.extra is GroupMemberDetailArgs
               ? state.extra! as GroupMemberDetailArgs
               : const GroupMemberDetailArgs(
-                  groupContext: GroupContextArgs(
-                    groupId: '',
-                    groupName: '',
-                  ),
+                  groupContext: GroupContextArgs(groupId: '', groupName: ''),
                   memberUserId: '',
                   memberName: '',
                   memberRoleCode: 0,

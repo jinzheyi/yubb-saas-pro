@@ -7,6 +7,7 @@ abstract final class RouteNames {
   static const favorites = 'favorites';
   static const favoriteDetail = 'favoriteDetail';
   static const settings = 'settings';
+  static const aboutApp = 'aboutApp';
   static const themeSettings = 'themeSettings';
   static const languageSettings = 'languageSettings';
   static const contactsOrg = 'contactsOrg';

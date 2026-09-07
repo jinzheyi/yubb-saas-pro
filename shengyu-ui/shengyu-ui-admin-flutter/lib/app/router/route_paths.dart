@@ -7,6 +7,7 @@ abstract final class RoutePaths {
   static const favorites = '/favorites';
   static const favoriteDetail = '/favorites/detail';
   static const settings = '/settings';
+  static const aboutApp = '/settings/about';
   static const themeSettings = '/settings/theme';
   static const languageSettings = '/settings/language';
   static const contactsOrg = '/contacts/org';

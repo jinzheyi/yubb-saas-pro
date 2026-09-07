@@ -106,6 +106,12 @@ public interface ErrorCodeConstants {
     // ========== 通知公告 1-002-008-000 ==========
     ErrorCode NOTICE_NOT_FOUND = new ErrorCode(1_002_008_001, "当前通知公告不存在");
 
+    // ========== 平台应用版本 1-001-002-000 ==========
+    ErrorCode APP_RELEASE_NOT_EXISTS = new ErrorCode(1_001_002_000, "应用版本不存在");
+    ErrorCode APP_RELEASE_VERSION_DUPLICATE = new ErrorCode(1_001_002_001, "该平台下已存在相同应用版本");
+    ErrorCode APP_RELEASE_PUBLISHED_CAN_NOT_DELETE = new ErrorCode(1_001_002_002, "已发布应用版本不能删除，请先暂停");
+    ErrorCode APP_RELEASE_PACKAGE_URL_REQUIRED = new ErrorCode(1_001_002_003, "整包更新必须填写下载或跳转地址");
+
     // ========== 短信渠道 1-002-011-000 ==========
     ErrorCode SMS_CHANNEL_NOT_EXISTS = new ErrorCode(1_002_011_000, "短信渠道不存在");
     ErrorCode SMS_CHANNEL_DISABLE = new ErrorCode(1_002_011_001, "短信渠道不处于开启状态，不允许选择");

@@ -8,6 +8,7 @@ import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/app/theme/theme_colors.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/entities/user_profile.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
+import 'package:shengyu_ui_admin_im/features/update/presentation/providers/update_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_avatar.dart';
 
@@ -19,6 +20,8 @@ class SettingsPage extends ConsumerWidget {
     final strings = AppLocalizations.of(context);
     final profileAsync = ref.watch(currentUserProfileProvider);
     final profile = profileAsync.valueOrNull;
+    final updateInfo = ref.watch(updateControllerProvider).valueOrNull;
+    final hasUpdate = updateInfo?.hasUpdate == true;
     return Scaffold(
       backgroundColor: ThemeColors.scaffoldBg(context),
       appBar: AppBar(
@@ -42,7 +45,10 @@ class SettingsPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Text(
                 profileAsync.error.toString(),
-                style: TextStyle(fontSize: 13, color: ThemeColors.errorText(context)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: ThemeColors.errorText(context),
+                ),
               ),
             ),
           if (profileAsync.isLoading)
@@ -87,13 +93,29 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.info_outline_rounded,
                 iconColor: const Color(0xFF8F96A3),
                 title: strings.settingsAboutApp,
-                trailing: Text(
-                  strings.settingsVersionValue,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: ThemeColors.textSecondary(context),
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasUpdate)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE5484D),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    if (hasUpdate) const SizedBox(width: 8),
+                    Text(
+                      strings.settingsVersionValue,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ThemeColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
                 ),
+                onTap: () => context.pushNamed(RouteNames.aboutApp),
               ),
             ],
           ),
@@ -103,7 +125,10 @@ class SettingsPage extends ConsumerWidget {
   }
 
   /// 弹出头像操作面板
-  Future<void> _showAvatarActionSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _showAvatarActionSheet(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final strings = AppLocalizations.of(context);
     final profile = ref.read(currentUserProfileProvider).valueOrNull;
     final hasAvatar = profile != null && profile.avatarUrl.isNotEmpty;
@@ -118,8 +143,15 @@ class SettingsPage extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3D6FF5)),
-                title: Text(hasAvatar ? strings.profileReuploadAvatar : strings.profileUploadAvatar),
+                leading: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Color(0xFF3D6FF5),
+                ),
+                title: Text(
+                  hasAvatar
+                      ? strings.profileReuploadAvatar
+                      : strings.profileUploadAvatar,
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndUploadAvatar(context, ref);
@@ -128,7 +160,10 @@ class SettingsPage extends ConsumerWidget {
               if (hasAvatar) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Color(0xFFFF4B4B)),
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFFF4B4B),
+                  ),
                   title: Text(
                     strings.profileRemoveCustomAvatar,
                     style: const TextStyle(color: Color(0xFFFF4B4B)),
@@ -169,7 +204,10 @@ class SettingsPage extends ConsumerWidget {
             return Material(
               color: Colors.transparent,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 24,
+                ),
                 decoration: BoxDecoration(
                   color: ThemeColors.surface(dialogContext),
                   borderRadius: BorderRadius.circular(12),
@@ -179,12 +217,18 @@ class SettingsPage extends ConsumerWidget {
                   children: [
                     if (uploadState.isUploading) ...[
                       CircularProgressIndicator(
-                        value: uploadState.progress > 0 ? uploadState.progress : null,
+                        value: uploadState.progress > 0
+                            ? uploadState.progress
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       Text(strings.profileAvatarUploading),
                     ] else ...[
-                      const Icon(Icons.check_circle, size: 48, color: Color(0xFF07C160)),
+                      const Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: Color(0xFF07C160),
+                      ),
                       const SizedBox(height: 16),
                       Text(strings.profileAvatarUploadSuccess),
                     ],
@@ -197,10 +241,9 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
 
-    final success = await ref.read(avatarUploadStateProvider.notifier).upload(
-      fileName: fileName,
-      bytes: bytes,
-    );
+    final success = await ref
+        .read(avatarUploadStateProvider.notifier)
+        .upload(fileName: fileName, bytes: bytes);
 
     // 关闭进度对话框
     if (context.mounted) {
@@ -210,8 +253,14 @@ class SettingsPage extends ConsumerWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? strings.profileAvatarUploadSuccess : strings.profileAvatarUploadFailed),
-          backgroundColor: success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+          content: Text(
+            success
+                ? strings.profileAvatarUploadSuccess
+                : strings.profileAvatarUploadFailed,
+          ),
+          backgroundColor: success
+              ? const Color(0xFF07C160)
+              : const Color(0xFFFF4B4B),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -234,7 +283,9 @@ class SettingsPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF4B4B)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFFF4B4B),
+            ),
             child: Text(strings.confirmAction),
           ),
         ],
@@ -265,8 +316,14 @@ class SettingsPage extends ConsumerWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? strings.profileAvatarRemoveSuccess : strings.profileAvatarRemoveFailed),
-          backgroundColor: success ? const Color(0xFF07C160) : const Color(0xFFFF4B4B),
+          content: Text(
+            success
+                ? strings.profileAvatarRemoveSuccess
+                : strings.profileAvatarRemoveFailed,
+          ),
+          backgroundColor: success
+              ? const Color(0xFF07C160)
+              : const Color(0xFFFF4B4B),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -335,8 +392,9 @@ class _SettingsProfileCard extends StatelessWidget {
                   children: [
                     AppAvatar(
                       name: profile.nickname,
-                      avatarUrl:
-                          profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
+                      avatarUrl: profile.avatarUrl.isNotEmpty
+                          ? profile.avatarUrl
+                          : null,
                       seed: profile.userId,
                       size: 56,
                       borderRadius: 14,
