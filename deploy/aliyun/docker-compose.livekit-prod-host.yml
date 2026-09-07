@@ -21,11 +21,11 @@ services:
         rtc:
           tcp_port: 7881
           udp_port: 7882
-          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-false}
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-true}
         turn:
           enabled: true
           domain: ${LIVEKIT_DOMAIN:?LIVEKIT_DOMAIN is required}
-          udp_port: 3478
+          udp_port: ${LIVEKIT_TURN_UDP_PORT:-443}
           relay_range_start: 41000
           relay_range_end: 41040
         room:
@@ -39,5 +39,5 @@ services:
       - "127.0.0.1:7880:7880"
       - "7881:7881"
       - "7882:7882/udp"
-      - "3478:3478/udp"
+      - "${LIVEKIT_TURN_UDP_PORT:-443}:${LIVEKIT_TURN_UDP_PORT:-443}/udp"
       - "41000-41040:41000-41040/udp"

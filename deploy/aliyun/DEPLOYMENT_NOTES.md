@@ -26,7 +26,8 @@
 - `im.shengyukj.top`：钰信 Flutter Web，Nginx 代理到 `127.0.0.1:8082`。
 - `preview.shengyukj.top`：kkFileView，Nginx 代理到 `127.0.0.1:48090`。
 - `rtc.shengyukj.top`：LiveKit signaling，Nginx 代理到 `127.0.0.1:7880`。
-- LiveKit 直连端口：`7881/tcp`、`7882/udp`、`3478/udp`、`41000-41040/udp`。
+- LiveKit 直连端口：`7881/tcp`、`7882/udp`、`443/udp`、`41000-41040/udp`。
+- 阿里云安全组必须按协议放通 LiveKit 端口：`443/tcp` 用于 HTTPS 信令入口，`443/udp` 用于 TURN 中继，`7881/tcp`、`7882/udp`、`41000-41040/udp` 用于 WebRTC 媒体链路。
 
 ## HTTPS
 
@@ -45,7 +46,7 @@
 - `shengyu-platform-vue3`：平台管理前端，宿主机端口 `8081`。
 - `shengyu-im-flutter-web`：钰信 Flutter Web，宿主机端口 `8082`。
 - `shengyu-kkfileview`：文件预览，宿主机端口 `48090`。
-- `shengyu-livekit`：LiveKit，宿主机端口 `7880`、`7881`、`7882/udp`、`3478/udp`、`41000-41040/udp`。
+- `shengyu-livekit`：LiveKit，宿主机端口 `7880`、`7881`、`7882/udp`、`443/udp`、`41000-41040/udp`。
 
 ## 关键配置
 
@@ -185,6 +186,9 @@ curl -I https://saasadmin.shengyukj.top/
 curl -I https://im.shengyukj.top/
 curl -I https://preview.shengyukj.top/
 curl -I https://rtc.shengyukj.top/
+nc -vz -w 5 rtc.shengyukj.top 7881
+nc -vzu -w 5 rtc.shengyukj.top 7882
+nc -vzu -w 5 rtc.shengyukj.top 443
 
 curl -sS -H "Content-Type: application/json" \
   -d '{"username":"jin_zheyicn@qq.com","password":"wrong-password","deviceType":20,"deviceId":"deploy-check","clientVersion":"web"}' \
@@ -224,3 +228,5 @@ cat /tmp/upload-check-response.txt
 - `profile_page.dart` 已修复错误的本地化字段调用：使用 `departmentFallback`，不再调用不存在的 `profileDepartmentFallback`。
 - Flutter Web 的 Nginx 缓存策略已调整，入口 JS 和 service worker 不再长缓存。
 - 真机图片上传服务器异常已定位为 Nginx 默认请求体大小限制；`apisaas.shengyukj.top` 已显式配置 `client_max_body_size 200m;`。
+- 用户详情页发消息/发起语音视频通话已修复：创建单聊成员时必须写入当前租户 `tenant_id`，避免对方会话列表能看到但进入提示“会话不存在”；详情页发起通话按单聊会话两端用户校验，不再要求被叫方已提前生成 `im_chat_user` 成员行。
+- 若生产出现历史单聊会话成员缺失，先备份数据库，再按 `im_conversation_user_state` 中的当前租户状态补齐缺失的 `im_chat_user` 行；最近一次备份：`/opt/shengyu/backups/shengyu-saas-20260907170821-before-chat-user-tenant-repair.sql`。

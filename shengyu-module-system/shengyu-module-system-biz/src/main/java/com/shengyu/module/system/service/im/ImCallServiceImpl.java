@@ -29,6 +29,7 @@ import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImCallStateEnum;
 import com.shengyu.module.system.enums.im.ImCallStatusEnum;
 import com.shengyu.module.system.enums.im.ImCallTypeEnum;
+import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.vo.CallInviteResultVO;
@@ -597,10 +598,16 @@ public class ImCallServiceImpl implements ImCallService {
         } catch (Exception e) {
             throw new IllegalArgumentException("会话ID无效");
         }
-        // A user may only start a direct call inside a conversation that both
-        // parties currently belong to. This prevents arbitrary user-ID dialing.
-        if (chatUserMapper.selectByUserIdAndChatId(callerId, chatIdLong) == null
-                || chatUserMapper.selectByUserIdAndChatId(calleeId, chatIdLong) == null) {
+        // The caller must use an existing direct conversation whose persisted
+        // chat endpoints match caller/callee. The callee may not have opened
+        // or materialized im_chat_user yet, especially for calls launched from
+        // a contact profile before the first message is sent.
+        ImChatDO chat = chatMapper.selectById(chatIdLong);
+        boolean validDirectChat = chat != null
+                && ImConversationTypeEnum.SINGLE.getType().equals(chat.getChatType())
+                && ((Objects.equals(chat.getSingleUser1(), callerId) && Objects.equals(chat.getSingleUser2(), calleeId))
+                || (Objects.equals(chat.getSingleUser1(), calleeId) && Objects.equals(chat.getSingleUser2(), callerId)));
+        if (!validDirectChat || chatUserMapper.selectByUserIdAndChatId(callerId, chatIdLong) == null) {
             throw exception(CALL_PERMISSION_DENIED);
         }
         // Quartz 任务可能尚未配置、暂停或发生短暂故障。创建新通话前先回收两端已经

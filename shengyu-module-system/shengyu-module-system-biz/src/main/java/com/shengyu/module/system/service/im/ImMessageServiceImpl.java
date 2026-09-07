@@ -2081,6 +2081,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             return deletedChatUser;
         }
         chatUser = new ImChatUserDO();
+        chatUser.setTenantId(getCurrentTenantId());
         chatUser.setUserId(userId);
         chatUser.setChatId(chatId);
         chatUser.setUnreadCount(0);

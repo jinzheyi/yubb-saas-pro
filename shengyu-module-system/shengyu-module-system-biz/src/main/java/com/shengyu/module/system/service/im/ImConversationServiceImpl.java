@@ -1500,6 +1500,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             return deletedChatUser;
         }
         chatUser = new ImChatUserDO();
+        chatUser.setTenantId(resolveTenantId());
         chatUser.setUserId(userId);
         chatUser.setChatId(chatId);
         chatUser.setUnreadCount(0);
