@@ -11,6 +11,8 @@ PODS:
     - Flutter
     - flutter_webrtc
     - WebRTC-SDK (= 144.7559.09)
+  - open_filex (0.0.2):
+    - Flutter
   - video_compress (0.3.0):
     - Flutter
   - WebRTC-SDK (144.7559.09)
@@ -21,6 +23,7 @@ DEPENDENCIES:
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - flutter_webrtc (from `.symlinks/plugins/flutter_webrtc/ios`)
   - livekit_client (from `.symlinks/plugins/livekit_client/ios`)
+  - open_filex (from `.symlinks/plugins/open_filex/ios`)
   - video_compress (from `.symlinks/plugins/video_compress/ios`)
 
 SPEC REPOS:
@@ -38,6 +41,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_webrtc/ios"
   livekit_client:
     :path: ".symlinks/plugins/livekit_client/ios"
+  open_filex:
+    :path: ".symlinks/plugins/open_filex/ios"
   video_compress:
     :path: ".symlinks/plugins/video_compress/ios"
 
@@ -47,6 +52,7 @@ SPEC CHECKSUMS:
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   flutter_webrtc: 3ee86aa10e0313c38c93fdb215dd86e77014f96a
   livekit_client: 08c2f86ab9d5f69bd617525a97d085e7f4b70d4a
+  open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   video_compress: f2133a07762889d67f0711ac831faa26f956980e
   WebRTC-SDK: e6006119cd730d6315d875e4a421b6cc8bb88833
 

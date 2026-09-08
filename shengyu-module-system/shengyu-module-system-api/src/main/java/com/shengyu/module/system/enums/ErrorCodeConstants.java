@@ -111,6 +111,7 @@ public interface ErrorCodeConstants {
     ErrorCode APP_RELEASE_VERSION_DUPLICATE = new ErrorCode(1_001_002_001, "该平台下已存在相同应用版本");
     ErrorCode APP_RELEASE_PUBLISHED_CAN_NOT_DELETE = new ErrorCode(1_001_002_002, "已发布应用版本不能删除，请先暂停");
     ErrorCode APP_RELEASE_PACKAGE_URL_REQUIRED = new ErrorCode(1_001_002_003, "整包更新必须填写下载或跳转地址");
+    ErrorCode APP_RELEASE_PACKAGE_TYPE_INVALID = new ErrorCode(1_001_002_004, "安装包类型与所选平台不匹配");
 
     // ========== 短信渠道 1-002-011-000 ==========
     ErrorCode SMS_CHANNEL_NOT_EXISTS = new ErrorCode(1_002_011_000, "短信渠道不存在");

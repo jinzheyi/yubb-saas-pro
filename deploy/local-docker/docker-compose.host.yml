@@ -26,6 +26,8 @@ services:
       context: ../../shengyu-server/
     image: shengyu-server-local
     restart: unless-stopped
+    volumes:
+      - ${FILE_STORAGE_HOST_PATH:-../../data/file}:/usr/www/app/saas/file
     ports:
       - "${SERVER_HOST_PORT:-48080}:48080"
     environment:

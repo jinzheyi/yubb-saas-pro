@@ -1,5 +1,8 @@
 services:
   server:
+    # 本地文件客户端（包含应用版本安装包）使用宿主机目录，容器重建后文件仍然保留。
+    volumes:
+      - ${FILE_STORAGE_HOST_PATH:-/opt/shengyu/saas-deploy/data/file}:/usr/www/app/saas/file
     ports:
       - "${SERVER_HOST_PORT:-48080}:48080"
       - "${IM_WEBSOCKET_HOST_PORT:-9000}:9000"

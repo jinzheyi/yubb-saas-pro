@@ -24,6 +24,13 @@ export interface AppReleaseVO {
   updateTime?: Date
 }
 
+export interface AppReleasePackageUploadRespVO {
+  packageUrl: string
+  fileName: string
+  packageSize: number
+  sha256: string
+}
+
 export const getAppReleasePage = (params: PageParam) => {
   return request.get({ url: '/system/app-release/page', params })
 }
@@ -50,4 +57,13 @@ export const publishAppRelease = (id: number) => {
 
 export const pauseAppRelease = (id: number) => {
   return request.put({ url: '/system/app-release/pause?id=' + id })
+}
+
+export const uploadAppReleasePackage = (data: {
+  appKey: string
+  platform: string
+  channel: string
+  file: File
+}) => {
+  return request.upload({ url: '/system/app-release/upload-package', data })
 }

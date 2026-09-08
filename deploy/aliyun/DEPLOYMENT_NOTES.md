@@ -73,6 +73,93 @@
 - 启动进入 App 主界面会自动检查一次版本。普通更新只在“设置 -> 关于钰信”显示红点和详情；强制更新会弹出不可关闭更新框。
 - 上线新增或变更此功能时，需要先执行数据库增量 `sql/mysql/1.0/prod_add.sql`，否则平台后台没有菜单和数据表。
 
+### Android 单服务器分发与日常发版
+
+当前阶段不需要应用商店或第三方分发平台。所有 Android APK 统一由现有 HTTPS 域名提供：
+
+`https://preview.shengyukj.top/app/<文件名>.apk`
+
+公网 Nginx 的 `preview.shengyukj.top` 站点中，`/app/` 必须静态映射到服务器目录 `/opt/shengyu/downloads/yuxin/`；其他 URL 继续代理给 kkFileView。对应的版本库模板是 `deploy/aliyun/nginx/preview-container.conf`。首次配置或迁移服务器时执行：
+
+```bash
+sudo install -d -m 755 /opt/shengyu/downloads/yuxin
+sudo cp /etc/nginx/conf.d/preview.conf \
+  /etc/nginx/conf.d/preview.conf.bak.$(date +%Y%m%d%H%M%S)
+# 按 deploy/aliyun/nginx/preview-container.conf 将 location /app/ 块加入 preview.conf 的 80/443 server 中
+sudo nginx -t && sudo systemctl reload nginx
+curl -I https://preview.shengyukj.top/app/not-found.apk # 预期 404，不应被 kkFileView 接管
+```
+
+Android 首次正式安装与本次体验：
+
+1. Android 更新必须使用同一发布签名。当前发布密钥位于本机 `shengyu-ui/shengyu-ui-admin-flutter/android/app/yuxin-release.jks`，配置位于 `android/key.properties`，两者均被 Git 忽略且权限为 `600`。
+2. 此密钥的 SHA-256 证书指纹为 `2F:C6:B0:56:FC:96:11:79:FE:00:C4:F6:F4:51:46:C3:CF:9B:68:85:B4:9B:70:CF:D0:3C:CA:1C:4C:82:AE:5D`。密钥密码已保存到本机 macOS 钥匙串项目 `shengyu-im-android-release-keystore-password`，账户名 `yuxin-release`。请将 JKS 与密码各自做离线加密备份；丢失后无法给已安装用户正常升级。
+3. 已安装旧调试签名包的测试手机，第一次必须先卸载旧包，再安装同一发布签名的首装 APK；以后都可在 App 内升级，无须再连电脑。
+4. 本次体验先安装 `yuxin-android-1.0.0+1-release.apk`，再打开“设置 -> 关于钰信 -> 检查更新”。后台发布 `1.0.1 (2)` 后，App 会显示新版本，点击“立即更新”即可下载和唤起 Android 系统安装页。
+
+每次 Android 发版先构建安装包，然后在平台后台的版本表单中上传。上传专用接口会将文件归档到后端文件存储，并自动回填下载地址、字节大小和 SHA-256；这些字段依然允许人工修改，以支持外部商店或第三方分发链接。
+
+生产文件存储固定挂载为宿主机 `/opt/shengyu/saas-deploy/data/file` 到后端容器 `/usr/www/app/saas/file`。该目录同时承载后端本地文件客户端存储的文件，升级或重建 `shengyu-server` 容器时必须保留，禁止清理。
+
+```bash
+cd shengyu-ui/shengyu-ui-admin-flutter
+/Users/zsy/app/flutter/bin/flutter build apk --release \
+  --dart-define=API_BASE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=SOCKET_URL=wss://apisaas.shengyukj.top/ws \
+  --dart-define=NETWORK_PROBE_URL=https://apisaas.shengyukj.top/app-api \
+  --dart-define=NETWORK_PROBE_HOST=apisaas.shengyukj.top
+```
+
+随后进入 `https://saasadmin.shengyukj.top` 的 `系统管理 -> 应用版本 -> 新增`。选择平台后，点击“安装包上传”上传本次构建的 APK；等待提示“发行信息已自动回填”后，再补充版本说明并保存。当前生产环境单次上传上限为 `200MB`，钰信 APK 约 `145MB`，可直接使用。
+
+不同平台的上传和分发规则：
+
+| 平台 | 后台允许上传 | 用户点击更新后的行为 | 正式发行建议 |
+| --- | --- | --- | --- |
+| Android | `.apk` | 下载、校验 SHA-256，并唤起系统安装页 | 直接上传正式签名 APK；也可填写 HTTPS APK 直链。 |
+| iOS | `.ipa` | 打开配置的地址 | 优先填写 TestFlight、App Store、MDM 或企业分发页；IPA 必须有有效 Apple 签名，后台不会绕过 Apple 分发规则。 |
+| 鸿蒙 | `.hap`、`.app` | 打开配置的地址 | 鸿蒙客户端工程接入后可上传 HAP/APP 或填写华为应用市场/企业分发链接。 |
+
+当前客户端未接入 Dart OTA 执行器，表单中的 Dart OTA 项已标为二期不可选，生产版本只使用“整包更新”。
+
+主要字段填写规则：
+
+| 页面字段 | Android 正式发行填写规则 | 本次体验值 |
+| --- | --- | --- |
+| 应用标识 | 固定 `yuxin` | `yuxin` |
+| 渠道 | 固定 `prod` | `prod` |
+| 平台 | 选择 `Android` | `Android` |
+| 更新类型 | 一期固定选 `整包更新` | `整包更新` |
+| 版本名 | 与 `pubspec.yaml` 的 `version` 中 `+` 前一致 | `1.0.1` |
+| 构建号 | 与 `+` 后的数字一致，必须大于已发布构建号 | `2` |
+| 最低可用构建号 | 普通更新填当前最低仍允许使用的版本；强制淘汰旧版时调高 | `1` |
+| 强制更新 | 普通功能更新关闭；安全/协议不兼容才打开 | 关闭 |
+| 更新标题、更新日志 | 给用户看的简短中文说明 | `钰信 1.0.1 更新`、`正式更新链路体验` |
+| 安装包上传 | Android 选择本次 `app-release.apk`；iOS 选择已签名 IPA；鸿蒙选择 HAP/APP | 本次 APK |
+| 下载/跳转地址 | 上传后自动生成；也可人工替换成平台对应的商店或分发链接 | 自动生成 |
+| 包大小(Byte) | 上传后自动计算；外部链接可按发行方给出的实际值修改 | 自动生成 |
+| SHA-256 | 上传后自动计算；Android 建议保留，外部链接可填写发行方提供值或留空 | 自动生成 |
+| 内部备注 | 运维记录，不向用户展示 | `首个在线更新体验包` |
+
+点击“确定”只会保存为草稿；在列表确认版本、链接、大小和 SHA-256 无误后，再点击“发布”。发布后使用以下接口核验，`hasUpdate` 为 `true` 才会向 `1.0.0 (1)` 客户端提供更新：
+
+```bash
+curl -sS 'https://apisaas.shengyukj.top/app-api/system/app-release/check?appKey=yuxin&platform=android&channel=prod&versionName=1.0.0&versionCode=1'
+```
+
+普通更新的“推送”是 App 在进入主界面时自动检查并在“关于钰信”显示更新提示；它不是系统通知。用户也可以随时在“关于钰信”手动点“检查更新”。强制更新才会立即显示不可跳过的更新对话框。
+
+出现问题时，先在后台点击“暂停”即可停止继续下发该版本；不要删除已发布记录，也不要替换同名 APK。需要修复时重新构建更高的构建号、上传新文件、创建并发布新记录。
+
+### 2026-09-08 首次在线更新体验记录
+
+- 首装 APK：`shengyu-ui/shengyu-ui-admin-flutter/build/distributions/20260907-235610-release/yuxin-android-1.0.0+1-release.apk`，版本 `1.0.0 (1)`，SHA-256 `ad4a2b25b27a1ec0d8f678e7be62cc82ac6312490b7b6752844c3be170163205`。
+- 已发布更新 APK：`shengyu-ui/shengyu-ui-admin-flutter/build/distributions/20260908-000000-online-update/yuxin-android-1.0.1+2-release.apk`，版本 `1.0.1 (2)`，大小 `151945511` bytes，SHA-256 `d7367140948c503e4cb3e89a34993d88ef78a21a1f368798025ebc325da1626e`。
+- 生产下载地址：`https://preview.shengyukj.top/app/yuxin-android-1.0.1+2-release.apk`。
+- 生产发布记录：`yuxin / android / prod / 1.0.1 / 2 / FULL / PUBLISHED`，普通更新，最低可用构建号 `1`。发布前数据备份：`/opt/shengyu/backups/platform_app_release-20260908001415-before-1.0.1.sql`。
+- 体验顺序：手机若已有旧调试包，先卸载；安装上述 `1.0.0 (1)` 首装 APK；打开钰信并进入“设置 -> 关于钰信 -> 检查更新”；看到 `1.0.1` 后点“立即更新”，在 Android 系统安装页确认安装。
+- iOS 归档：`shengyu-ui/shengyu-ui-admin-flutter/build/distributions/20260908-000000-online-update/yuxin-ios-1.0.1+2-unsigned.ipa`，未签名，不要配置到 iOS 发布记录。获取 Apple Distribution 证书和 Provisioning Profile 后，改为签名 IPA 并用 TestFlight 或 App Store 分发。
+
 ## 上线前检查
 
 ```bash

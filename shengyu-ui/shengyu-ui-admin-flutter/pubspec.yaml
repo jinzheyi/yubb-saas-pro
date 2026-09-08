@@ -2,7 +2,7 @@ name: shengyu_ui_admin_im
 description: "钰信即时通讯"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.5
