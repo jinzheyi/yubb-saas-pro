@@ -378,7 +378,19 @@ yubb-saas-pro/
 
 ## 🎨 系统截图
 
-详见项目 `shengyu-ui/shengyu-ui-platform-vue3/.image/` 目录
+### 平台运营与多端发布
+
+![圣钰 SaaS 平台应用版本运营界面](docs/images/product/platform-app-release.jpg)
+
+平台端可统一维护钰信 Android、iOS、鸿蒙等不同平台与渠道的版本记录、最低可用构建、强制更新策略、发布状态、安装包信息及校验摘要。上图为已脱敏的线上运行界面截图，不包含客户、员工或会话数据。
+
+### 钰信移动协作与音视频通话
+
+![钰信移动协作与音视频通话场景图](docs/images/product/yuxin-call-collaboration.png)
+
+钰信围绕企业通讯录提供会话、文件、消息状态和单聊/群聊语音视频通话。媒体传输由可私有化部署的 LiveKit 承担，呼叫状态、租户与权限校验、事件投递和审计仍由项目服务端控制；图片为无客户资料的产品场景展示。
+
+更多历史后台功能界面可在 `shengyu-ui/shengyu-ui-platform-vue3/.image/` 目录查阅。该目录中包含上游基础功能的历史演示素材，商务展示应优先使用本节与官网中的当前品牌素材。
 
 ## 📊 版本说明
 
