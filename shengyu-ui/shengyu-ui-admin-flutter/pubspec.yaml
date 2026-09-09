@@ -96,9 +96,6 @@ flutter:
     - assets/sounds/
 
   fonts:
-    - family: AppSans
-      fonts:
-        - asset: assets/fonts/ArialUnicode.ttf
     - family: ShengyuIconFont
       fonts:
         - asset: assets/fonts/iconfont/iconfont.ttf

@@ -350,6 +350,13 @@ cat /tmp/upload-check-response.txt
 
 ## 当前已知修复
 
+### 2026-09-09 Flutter Web 首屏加载优化
+
+- 根因：Flutter Web 全局配置了 `ArialUnicode.ttf`，产物约 22 MB；该字体未命中容器 Nginx 的静态缓存规则，刷新时可能重复下载。`main.dart.js` 也被配置为 `no-store`，每次刷新都会重新下载并解析约 6 MB 主程序。
+- 修复：取消全局大字体，改用浏览器/系统中文字体回退；`main.dart.js`、`flutter_bootstrap.js`、`flutter.js` 改为 `public, max-age=0, must-revalidate`，浏览器保留副本并用 ETag 校验新版本；WASM、字体与其他内容资源设为 30 天不可变缓存。
+- 验证：生产 `ArialUnicode.ttf` 返回 404；主程序 ETag 校验返回 `304`、无下载正文，实测约 0.2 秒。CanvasKit WASM 返回 `Cache-Control: public, immutable`。
+- 每次 Flutter Web 发布必须同步容器 `/etc/nginx/conf.d/default.conf`，即本项目 `shengyu-ui/shengyu-ui-admin-flutter/nginx.conf`，否则仅替换静态文件不会更新缓存策略。
+
 ## 2026-09-09 企业注册与加入闭环发布记录
 
 - 已发布后端、租户 Vue 管理端和 Flutter Web；后端容器 `shengyu-server` 于本次发布后通过 `http://127.0.0.1:48080/actuator/health` 健康检查。
