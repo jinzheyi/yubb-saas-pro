@@ -350,6 +350,15 @@ cat /tmp/upload-check-response.txt
 
 ## 当前已知修复
 
+## 2026-09-09 企业注册与加入闭环发布记录
+
+- 已发布后端、租户 Vue 管理端和 Flutter Web；后端容器 `shengyu-server` 于本次发布后通过 `http://127.0.0.1:48080/actuator/health` 健康检查。
+- App 自助创建企业统一接口为 `POST /app-api/system/register/tenant`；历史 `/trial-tenant`、`/demo-tenant` 仅作旧客户端兼容，不再作为产品文案或新客户端入口。
+- 企业邀请核心链路：租户管理员在 `系统管理 -> 企业邀请` 创建或停用邀请码；App 登录用户输入邀请码后自动通过时获得“待确认加入”企业，主动切换企业后正式加入；关闭自动通过的邀请码进入管理员通过/拒绝流程。
+- 生产增量 SQL 已执行，创建 `system_tenant_invite`、`system_tenant_join_apply`，并将菜单 `企业邀请` 写入当前所有有效租户套餐。数据库发布前备份：`/opt/shengyu/backups/shengyu-saas-20260909162642-before-tenant-join.sql`。
+- 生产库的 `tenant_menu` 使用 `plug_app_sn` 字段，与开源脚本旧字段 `plug_id` 不同；后续执行菜单增量必须以生产库实际字段为准。当前 `prod_add.sql` 已使用 `plug_app_sn`。
+- 本阶段刻意未上线独立审计日志、邀请码二维码、公开企业搜索、运营统计与 CRM 链路。
+
 - App 登录已与 Web 管理端验证码校验解耦。
 - Flutter Web 登录错误展示已改为优先显示服务端返回的 `msg/message`。
 - Flutter Web 页面标题和登录品牌已调整为 `钰信`。

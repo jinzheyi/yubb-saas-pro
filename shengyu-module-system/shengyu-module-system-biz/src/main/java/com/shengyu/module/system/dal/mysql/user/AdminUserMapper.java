@@ -29,6 +29,12 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         return selectOne(AdminUserDO::getSaasUserId, saasUserId);
     }
 
+    default AdminUserDO selectByTenantIdAndSaasUserId(Long tenantId, Long saasUserId) {
+        return selectOne(new LambdaQueryWrapperX<AdminUserDO>()
+                .eq(AdminUserDO::getTenantId, tenantId)
+                .eq(AdminUserDO::getSaasUserId, saasUserId));
+    }
+
     default AdminUserDO selectByOpenAccount(String openAccount) {
         return selectOne(AdminUserDO::getOpenAccount, openAccount);
     }

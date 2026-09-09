@@ -2,6 +2,65 @@
 -- 执行范围：生产库增量升级，可重复执行
 -- 日期：2026-09-07
 
+-- 2026-09-09 App 自助注册/企业加入闭环
+SET @column_needs_modify := (
+  SELECT COUNT(1) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'system_saas_user'
+    AND COLUMN_NAME = 'username'
+    AND CHARACTER_MAXIMUM_LENGTH < 50
+);
+SET @ddl := IF(@column_needs_modify > 0,
+  'ALTER TABLE `system_saas_user` MODIFY COLUMN `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT ''邮箱，第一登录方式账号没有用手机号是因为邮箱验证免费''',
+  'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @column_exists := (
+  SELECT COUNT(1) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenant' AND COLUMN_NAME = 'owner_saas_user_id'
+);
+SET @ddl := IF(@column_exists = 0,
+  'ALTER TABLE `tenant` ADD COLUMN `owner_saas_user_id` bigint NULL DEFAULT NULL COMMENT ''企业所有者SaaS用户编号'' AFTER `contact_user_id`',
+  'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists := (
+  SELECT COUNT(1) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenant' AND INDEX_NAME = 'idx_owner_saas_user_deleted'
+);
+SET @ddl := IF(@index_exists = 0,
+  'ALTER TABLE `tenant` ADD INDEX `idx_owner_saas_user_deleted` (`owner_saas_user_id`, `deleted`)',
+  'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists := (
+  SELECT COUNT(1) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'system_users' AND INDEX_NAME = 'uk_tenant_saas_user_deleted'
+);
+SET @ddl := IF(@index_exists = 0,
+  'ALTER TABLE `system_users` ADD UNIQUE INDEX `uk_tenant_saas_user_deleted` (`tenant_id`, `saas_user_id`, `deleted`)',
+  'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists := (
+  SELECT COUNT(1) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'system_saas_user' AND INDEX_NAME = 'uk_username_deleted'
+);
+SET @ddl := IF(@index_exists = 0,
+  'ALTER TABLE `system_saas_user` ADD UNIQUE INDEX `uk_username_deleted` (`username`, `deleted`)',
+  'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS `platform_app_release` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
   `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '应用标识',
@@ -42,3 +101,48 @@ VALUES
 (506900000000005, '应用版本删除', 'system:app-release:delete', 3, 4, 506900000000001, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'),
 (506900000000006, '应用版本发布', 'system:app-release:publish', 3, 5, 506900000000001, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'),
 (506900000000007, '应用版本暂停', 'system:app-release:pause', 3, 6, 506900000000001, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+-- ----------------------------
+-- App 企业加入闭环（第二阶段）
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `system_tenant_invite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `tenant_id` bigint NOT NULL COMMENT '租户编号',
+  `invite_code` varchar(32) NOT NULL COMMENT '邀请码',
+  `name` varchar(64) NOT NULL DEFAULT '' COMMENT '邀请名称',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用）',
+  `expire_time` datetime DEFAULT NULL COMMENT '过期时间',
+  `max_use_count` int NOT NULL DEFAULT 0 COMMENT '最多使用次数，0不限',
+  `used_count` int NOT NULL DEFAULT 0 COMMENT '已使用次数',
+  `default_dept_id` bigint DEFAULT NULL COMMENT '默认部门',
+  `default_role_id` bigint DEFAULT NULL COMMENT '默认角色',
+  `auto_approve` bit(1) NOT NULL DEFAULT b'1' COMMENT '是否自动通过',
+  `creator` varchar(64) NOT NULL DEFAULT '', `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NOT NULL DEFAULT '', `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0',
+  PRIMARY KEY (`id`), UNIQUE KEY `uk_invite_code_deleted` (`invite_code`,`deleted`), KEY `idx_tenant_deleted` (`tenant_id`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='企业邀请码';
+
+CREATE TABLE IF NOT EXISTS `system_tenant_join_apply` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
+  `tenant_id` bigint NOT NULL COMMENT '目标租户编号',
+  `saas_user_id` bigint NOT NULL COMMENT '申请 SaaS 用户编号',
+  `invite_id` bigint DEFAULT NULL COMMENT '邀请码编号',
+  `source` varchar(16) NOT NULL DEFAULT 'invite' COMMENT '来源',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0待审批 1已通过 2已拒绝）',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '申请说明',
+  `auditor_id` bigint DEFAULT NULL COMMENT '审批人', `audit_time` datetime DEFAULT NULL COMMENT '审批时间',
+  `creator` varchar(64) NOT NULL DEFAULT '', `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NOT NULL DEFAULT '', `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0',
+  PRIMARY KEY (`id`), UNIQUE KEY `uk_tenant_saas_deleted` (`tenant_id`,`saas_user_id`,`deleted`), KEY `idx_tenant_status_deleted` (`tenant_id`,`status`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='企业加入申请';
+
+-- 企业邀请工作台菜单（系统管理目录 ID=1；按钮权限复用现有邀请成员权限）
+INSERT INTO `tenant_menu` (`id`,`name`,`permission`,`type`,`sort`,`parent_id`,`path`,`icon`,`component`,`component_name`,`status`,`visible`,`keep_alive`,`always_show`,`dimension`,`plug_app_sn`,`creator`,`create_time`,`updater`,`update_time`,`deleted`)
+SELECT 1900000000000000001, '企业邀请', 'system:user:create', 2, 99, 1, 'tenant-invite', 'connection', 'system/tenant-invite/index', 'TenantInvite', 0, b'1', b'1', b'1', 0, NULL, 'admin', NOW(), 'admin', NOW(), b'0'
+WHERE NOT EXISTS (SELECT 1 FROM `tenant_menu` WHERE `id` = 1900000000000000001);
+
+UPDATE `tenant_package`
+SET `menu_ids` = JSON_ARRAY_APPEND(`menu_ids`, '$', CAST(1900000000000000001 AS UNSIGNED))
+WHERE `deleted` = b'0'
+  AND NOT JSON_CONTAINS(`menu_ids`, '1900000000000000001', '$');

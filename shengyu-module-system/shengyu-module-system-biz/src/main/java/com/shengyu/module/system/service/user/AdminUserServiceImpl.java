@@ -216,13 +216,16 @@ public class AdminUserServiceImpl implements AdminUserService {
             createReqVO.getMobile(), createReqVO.getDeptIdList(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
+        if (reqDTO.getSaasUserId() != null) {
+            user.setSaasUserId(reqDTO.getSaasUserId());
+        }
         //优先取邮箱账号的SaaS用户
-        if (StrUtil.isNotBlank(createReqVO.getUsername())) {
+        if (Objects.isNull(user.getSaasUserId()) && StrUtil.isNotBlank(createReqVO.getUsername())) {
             SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(createReqVO.getUsername());
             if (Objects.nonNull(userNameSaasDO)) {
                 user.setSaasUserId(userNameSaasDO.getId());
             }
-        } else {
+        } else if (Objects.isNull(user.getSaasUserId())) {
             SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(createReqVO.getMobile());
             if (Objects.nonNull(mobileSaasDO)) {
                 user.setSaasUserId(mobileSaasDO.getId());
@@ -680,7 +683,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (saasUserId == null) {
             return;
         }
-        AdminUserDO user = userMapper.selectBySaasUserId(saasUserId);
+        AdminUserDO user = userMapper.selectByTenantIdAndSaasUserId(TenantContextHolder.getTenantId(), saasUserId);
         if (user == null) {
             return;
         }
@@ -772,6 +775,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                     tenant.setId(tenantRespDTO.getId());
                     tenant.setTenantName(tenantRespDTO.getName());
                     tenant.setStatus(CommonStatusEnum.isEnable(tenantRespDTO.getStatus())? "正常" : "禁用");
+                    tenant.setUserStatus(userDO.getStatus());
+                    tenant.setWaitingConfirm(CommonStatusEnum.isAwait(userDO.getStatus()));
                     tenant.setLoginDate(userDO.getLoginDate());
                     tenantList.add(tenant);
                 }

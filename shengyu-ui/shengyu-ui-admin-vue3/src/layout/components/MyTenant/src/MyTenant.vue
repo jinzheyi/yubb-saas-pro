@@ -18,14 +18,25 @@ const { push } = useRouter()
 const permissionStore = usePermissionStore()
 const userStore = useUserStore()
 const tagsViewStore = useTagsViewStore()
+const message = useMessage()
 
 const getList = async () => {
   list.value = await UserApi.getMyTenantList()
 }
 
 // 跳转到目标租户
-const toTenant = async (id: number) => {
-  const res = await LoginApi.toTenant(id)
+const toTenant = async (item: any) => {
+  if (item.waitingConfirm || item.userStatus === -1) {
+    try {
+      await message.confirm(
+        `你已被邀请加入“${item.tenantName}”。切换进入后，将正式加入该企业并启用对应员工身份。`,
+        '确认加入企业'
+      )
+    } catch {
+      return
+    }
+  }
+  const res = await LoginApi.toTenant(item.id)
   if (!res) {
     return
   }
@@ -53,11 +64,11 @@ const toTenant = async (id: number) => {
         <ElTabPane label="我的企业/租户" name="myTenant">
           <el-scrollbar class="message-list">
             <template v-for="item in list" :key="item.id">
-              <div class="message-item" @click="toTenant(item.id)" :class="item.id==getTenantId()? 'back-blue' : ''">
+              <div class="message-item" @click="toTenant(item)" :class="item.id==getTenantId()? 'back-blue' : ''">
                 <!--                <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />-->
                 <div class="message-content">
                   <span class="message-title">
-                    {{ item.tenantName }}【{{ item.status }}】
+                    {{ item.tenantName }}【{{ item.waitingConfirm || item.userStatus === -1 ? '待确认加入' : item.status }}】
                   </span>
                   <span class="message-date">
                     最后登录时间：{{ formatDate(item.loginDate) }}

@@ -70,7 +70,7 @@
               @click="openForm('create')"
               v-hasPermi="['system:user:create']"
             >
-              <Icon icon="ep:plus" /> 新增
+              <Icon icon="ep:plus" /> 邀请成员
             </el-button>
 <!--            <el-button-->
 <!--              type="warning"-->
@@ -118,7 +118,7 @@
           <el-table-column label="状态" key="status">
             <template #default="scope">
               <template v-if="scope.row.status == -1">
-                <el-tag type="warning">等待确认</el-tag>
+                <el-tag type="warning">待确认加入</el-tag>
               </template>
               <template v-else>
                 <el-switch
@@ -270,9 +270,6 @@ const openForm = (type: string, id?: number) => {
 
 /** 用户导入 */
 const importFormRef = ref()
-const handleImport = () => {
-  importFormRef.value.open()
-}
 
 /** 修改用户状态 */
 const handleStatusChange = async (row: UserApi.UserVO) => {

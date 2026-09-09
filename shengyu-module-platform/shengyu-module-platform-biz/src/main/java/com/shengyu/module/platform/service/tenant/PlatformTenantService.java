@@ -1,6 +1,7 @@
 package com.shengyu.module.platform.service.tenant;
 
 import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantCreateReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantExportReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantPageReqVO;
@@ -26,6 +27,14 @@ public interface PlatformTenantService {
      * @return 编号
      */
     Long createTenant(@Valid TenantCreateReqVO createReqVO);
+
+    /**
+     * App 自助创建试用租户
+     *
+     * @param reqDTO 创建信息
+     * @return 编号
+     */
+    Long createTrialTenant(@Valid TenantTrialCreateReqDTO reqDTO);
 
     /**
      * 更新租户
@@ -96,6 +105,14 @@ public interface PlatformTenantService {
      * @return 租户
      */
     TenantDO getTenantByWebsite(String website);
+
+    /**
+     * 获得指定 SaaS 用户拥有的自有租户
+     *
+     * @param ownerSaasUserId 企业所有者 SaaS 用户编号
+     * @return 租户
+     */
+    TenantDO getTenantByOwnerSaasUserId(Long ownerSaasUserId);
 
     /**
      * 获得使用指定套餐的租户数量

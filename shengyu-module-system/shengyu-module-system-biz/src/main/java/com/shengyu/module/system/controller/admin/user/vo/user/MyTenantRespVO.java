@@ -21,6 +21,12 @@ public class MyTenantRespVO {
     @Schema(description = "租户状态")
     private String status;
 
+    @Schema(description = "当前账号在该租户下的成员状态")
+    private Integer userStatus;
+
+    @Schema(description = "是否等待用户主动确认加入")
+    private Boolean waitingConfirm;
+
     @Schema(description = "最后登录时间", example = "时间戳格式")
     private LocalDateTime loginDate;
 

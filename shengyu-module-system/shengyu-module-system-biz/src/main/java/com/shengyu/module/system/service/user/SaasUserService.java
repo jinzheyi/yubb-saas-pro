@@ -49,4 +49,17 @@ public interface SaasUserService {
      */
     SaasUserDO getUserByMobile(String mobile);
 
+    /**
+     * 注册或校验邮箱主账号。
+     *
+     * 如果邮箱已存在，需要密码匹配，避免别人用同一个邮箱创建企业。
+     * 如果邮箱不存在，则创建新的 SaaS 自然人账号。
+     *
+     * @param username 邮箱账号
+     * @param password 明文密码
+     * @param mobile 预留手机号
+     * @return SaaS 用户
+     */
+    SaasUserDO registerOrValidateEmailUser(String username, String password, String mobile);
+
 }

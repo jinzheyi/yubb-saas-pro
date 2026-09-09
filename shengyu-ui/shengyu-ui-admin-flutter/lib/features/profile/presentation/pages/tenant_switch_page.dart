@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/auth/tenant_list_item_dto.dart';
 import 'package:shengyu_ui_admin_im/features/profile/domain/services/tenant_switch_service.dart';
@@ -21,10 +23,7 @@ class TenantSwitchPage extends ConsumerStatefulWidget {
           position: Tween<Offset>(
             begin: const Offset(-1, 0),
             end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: anim1,
-            curve: Curves.easeOutCubic,
-          )),
+          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
           child: child,
         );
       },
@@ -72,7 +71,8 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
             _buildHeader(context, strings),
             _buildSearchBar(strings),
             Expanded(
-              child: state.switchStatus == TenantSwitchStatus.loading &&
+              child:
+                  state.switchStatus == TenantSwitchStatus.loading &&
                       state.tenantList.isEmpty
                   ? _buildLoading(strings)
                   : _buildTenantList(context, state, strings),
@@ -95,10 +95,7 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
           Expanded(
             child: Text(
               strings.tenantSwitchTitle,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
           IconButton(
@@ -160,11 +157,17 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
     // 过滤搜索结果
     final filteredList = _searchQuery.isEmpty
         ? tenantList
-        : tenantList.where((t) => t.tenantName.toLowerCase().contains(_searchQuery)).toList();
+        : tenantList
+              .where((t) => t.tenantName.toLowerCase().contains(_searchQuery))
+              .toList();
 
     if (filteredList.isEmpty) {
       return Center(
-        child: Text(_searchQuery.isEmpty ? strings.tenantNoTenants : strings.tenantNoSearchResults),
+        child: Text(
+          _searchQuery.isEmpty
+              ? strings.tenantNoTenants
+              : strings.tenantNoSearchResults,
+        ),
       );
     }
 
@@ -181,7 +184,7 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
           canSwitch: canSwitch,
           strings: strings,
           onTap: canSwitch
-              ? () => _handleTenantSwitch(context, tenant.id, strings)
+              ? () => _handleTenantSwitch(context, tenant, strings)
               : null,
         );
       },
@@ -202,10 +205,7 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
           child: OutlinedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: 跳转到创建/加入企业页面
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(strings.tenantCreateOrJoinComingSoon)),
-              );
+              context.pushNamed(RouteNames.register);
             },
             icon: const Icon(Icons.add, size: 18),
             label: Text(strings.tenantCreateOrJoin),
@@ -224,16 +224,43 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
 
   Future<void> _handleTenantSwitch(
     BuildContext context,
-    String tenantId,
+    TenantListItemDto tenant,
     AppLocalizations strings,
   ) async {
-    final result = await ref.read(tenantSwitchServiceProvider.notifier).switchTenant(targetTenantId: tenantId);
+    if (tenant.waitingConfirm) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('确认加入企业'),
+          content: Text(
+            '你已被邀请加入“${tenant.tenantName}”。切换进入后，将正式加入该企业并同步企业通讯录。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('确认加入'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    final result = await ref
+        .read(tenantSwitchServiceProvider.notifier)
+        .switchTenant(targetTenantId: tenant.id);
 
     if (!context.mounted) return;
 
     if (result.success) {
       Navigator.pop(context);
-      
+
       // 显示切换成功提示
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -241,18 +268,16 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
-      
+
       // 切换成功后导航到会话列表页（根页面）
       Navigator.of(context).popUntil((route) => route.isFirst);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
     }
   }
 }
@@ -281,10 +306,7 @@ class _TenantListTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isCurrent ? const Color(0xFFF0F7FF) : Colors.transparent,
           border: Border(
-            bottom: BorderSide(
-              color: const Color(0xFFE5E5E5),
-              width: 0.5,
-            ),
+            bottom: BorderSide(color: const Color(0xFFE5E5E5), width: 0.5),
           ),
         ),
         child: Row(
@@ -302,7 +324,9 @@ class _TenantListTile extends StatelessWidget {
                           tenant.tenantName,
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: isCurrent
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: canSwitch || isCurrent ? null : Colors.grey,
                           ),
                           maxLines: 1,
@@ -312,9 +336,14 @@ class _TenantListTile extends StatelessWidget {
                       if (isCurrent) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1677FF).withValues(alpha: 0.1),
+                            color: const Color(
+                              0xFF1677FF,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -333,9 +362,16 @@ class _TenantListTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       strings.tenantLastLogin(_formatTime(tenant.loginDate!)),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                  if (tenant.userStatusText.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      tenant.userStatusText,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.grey,
+                        color: Color(0xFFB7791F),
                       ),
                     ),
                   ],
@@ -370,12 +406,14 @@ class _TenantListTile extends StatelessWidget {
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    
+
     if (diff.inMinutes < 1) return strings.tenantTimeJustNow;
-    if (diff.inMinutes < 60) return strings.tenantTimeMinutesAgo(diff.inMinutes);
+    if (diff.inMinutes < 60) {
+      return strings.tenantTimeMinutesAgo(diff.inMinutes);
+    }
     if (diff.inHours < 24) return strings.tenantTimeHoursAgo(diff.inHours);
     if (diff.inDays < 7) return strings.tenantTimeDaysAgo(diff.inDays);
-    
+
     return '${time.month}-${time.day}';
   }
 }

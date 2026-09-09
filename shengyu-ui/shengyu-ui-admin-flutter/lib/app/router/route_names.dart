@@ -1,5 +1,6 @@
 abstract final class RouteNames {
   static const login = 'login';
+  static const register = 'register';
   static const conversations = 'conversations';
   static const contacts = 'contacts';
   static const workbench = 'workbench';

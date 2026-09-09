@@ -215,6 +215,12 @@ shengyu:
     sender-redis:
       channel: ${spring.application.name}-websocket-channel # Redis 频道名称
   
+  app-register:
+    enabled: ${SHENGYU_APP_REGISTER_ENABLED:true}
+    default-package-id: ${SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID:1790399764110786000}
+    trial-days: ${SHENGYU_APP_REGISTER_TRIAL_DAYS:0}
+    account-count: ${SHENGYU_APP_REGISTER_ACCOUNT_COUNT:10}
+
   captcha:
     enable: ${SHENGYU_CAPTCHA_ENABLE:false} # 默认对齐 local 关闭验证码；生产可通过环境变量开启，App 登录不受此开关控制
   security:

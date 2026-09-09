@@ -32,8 +32,8 @@
           <el-form-item v-if="formData.id === undefined" label="邮箱账号" prop="username">
             <template #label>
               <Tooltip
-                message="成员通过验证该邮箱账号后可加入租户企业,添加用户时邮箱账号或手机号必输一个"
-                title="账号"
+                message="现阶段以邮箱作为成员登录主账号。新增后成员处于待确认加入状态，成员登录并切换到本企业后才正式加入。"
+                title="邮箱账号"
               />
             </template>
             <el-input v-model="formData.username" placeholder="请输入成员邮箱账号" />
@@ -43,7 +43,7 @@
           <el-form-item v-if="formData.id === undefined" label="手机号" prop="mobile">
             <template #label>
               <Tooltip
-                message="成员通过验证该手机号码后可加入租户企业,添加用户时邮箱账号或手机号必输一个"
+                message="手机号为预留字段，当前不依赖短信验证码；后续配置短信后可用于辅助登录、验证与找回。"
                 title="手机号"
               />
             </template>
@@ -80,7 +80,6 @@
   </Dialog>
 </template>
 <script lang="ts" setup>
-import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { CommonStatusEnum } from '@/utils/constants'
 import { defaultProps, handleTree } from '@/utils/tree'
 import * as PostApi from '@/api/system/post'
@@ -113,6 +112,11 @@ const formData = ref({
 const formRules = reactive<FormRules>({
   nickname: [{ required: true, message: '用户昵称不能为空', trigger: 'blur' }],
   username: [
+    {
+      required: true,
+      message: '成员邮箱账号不能为空',
+      trigger: ['blur', 'change']
+    },
     {
       type: 'email',
       message: '请输入正确的邮箱账号地址',
@@ -165,8 +169,8 @@ const submitForm = async () => {
   try {
     const data = formData.value as unknown as UserApi.UserVO
     if (formType.value === 'create') {
-      if (isBlank(formData.value.username) && isBlank(formData.value.mobile)) {
-        message.error('添加用户时邮箱账号或手机号不能都为空')
+      if (isBlank(formData.value.username)) {
+        message.error('成员邮箱账号不能为空')
         return
       }
       await UserApi.createUser(data)
@@ -183,7 +187,7 @@ const submitForm = async () => {
   }
 }
 
-const isBlank = function (str: string) {
+const isBlank = function (str?: string) {
   return str === '' || str === null || str === undefined;
 }
 

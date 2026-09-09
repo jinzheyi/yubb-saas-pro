@@ -69,6 +69,7 @@ import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/language
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/profile_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/theme_settings_page.dart';
+import 'package:shengyu_ui_admin_im/features/register/presentation/pages/register_page.dart';
 import 'package:shengyu_ui_admin_im/features/update/presentation/pages/about_app_page.dart';
 import 'package:shengyu_ui_admin_im/features/workbench/presentation/pages/workbench_page.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
@@ -79,11 +80,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: RoutePaths.conversations,
     redirect: (context, state) {
       final session = ref.read(authSessionProvider);
-      final isLoginRoute = state.matchedLocation == RoutePaths.login;
-      if (!session.isAuthenticated && !isLoginRoute) {
+      final publicRoutes = {RoutePaths.login, RoutePaths.register};
+      final isPublicRoute = publicRoutes.contains(state.matchedLocation);
+      if (!session.isAuthenticated && !isPublicRoute) {
         return RoutePaths.login;
       }
-      if (session.isAuthenticated && isLoginRoute) {
+      if (session.isAuthenticated &&
+          state.matchedLocation == RoutePaths.login) {
         return RoutePaths.conversations;
       }
       return null;
@@ -94,6 +97,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.login,
         pageBuilder: (context, state) =>
             _buildRoutePage(state: state, child: const LoginPage()),
+      ),
+      GoRoute(
+        path: RoutePaths.register,
+        name: RouteNames.register,
+        pageBuilder: (context, state) =>
+            _buildRoutePage(state: state, child: const RegisterPage()),
       ),
       GoRoute(
         path: RoutePaths.browser,

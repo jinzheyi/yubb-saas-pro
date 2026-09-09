@@ -19,6 +19,7 @@ public interface TenantConvert {
         AdminUserCreateReqDTO reqVO = new AdminUserCreateReqDTO();
         reqVO.setUsername(bean.getUsername());
         reqVO.setNickname(bean.getContactName()).setMobile(bean.getContactMobile());
+        reqVO.setSaasUserId(bean.getOwnerSaasUserId());
         return reqVO;
     }
 

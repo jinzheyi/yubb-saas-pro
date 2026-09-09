@@ -42,6 +42,38 @@ class AuthRemoteDataSource {
     return result.requireData();
   }
 
+  Future<AuthTokenDto> registerTenant({
+    required String username,
+    required String password,
+    required String nickname,
+    required String tenantName,
+    String? mobile,
+    required int deviceType,
+    required String deviceId,
+    required String clientVersion,
+  }) async {
+    final response = await _dio.post(
+      '/system/register/tenant',
+      data: {
+        'username': username,
+        'password': password,
+        'nickname': nickname,
+        'tenantName': tenantName,
+        if (mobile != null && mobile.trim().isNotEmpty) 'mobile': mobile,
+        'deviceType': deviceType,
+        'deviceId': deviceId,
+        'clientVersion': clientVersion,
+      },
+    );
+    final result = ApiResult.fromJson<AuthTokenDto>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) {
+        return AuthTokenDto.fromJson(raw as Map<String, dynamic>? ?? const {});
+      },
+    );
+    return result.requireData();
+  }
+
   Future<AuthTokenDto> refreshToken({
     required String refreshToken,
     String? tenantId,
@@ -125,7 +157,9 @@ class AuthRemoteDataSource {
         if (raw is! List) return [];
         return raw
             .whereType<Map>()
-            .map((e) => TenantListItemDto.fromJson(Map<String, dynamic>.from(e)))
+            .map(
+              (e) => TenantListItemDto.fromJson(Map<String, dynamic>.from(e)),
+            )
             .toList();
       },
     );
@@ -143,6 +177,18 @@ class AuthRemoteDataSource {
       dataParser: (raw) {
         return AuthTokenDto.fromJson(raw as Map<String, dynamic>? ?? const {});
       },
+    );
+    return result.requireData();
+  }
+
+  Future<Map<String, dynamic>> joinByInviteCode(String inviteCode) async {
+    final response = await _dio.post(
+      '/system/tenant-join/by-invite',
+      data: {'inviteCode': inviteCode},
+    );
+    final result = ApiResult.fromJson<Map<String, dynamic>>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) => Map<String, dynamic>.from(raw as Map? ?? const {}),
     );
     return result.requireData();
   }

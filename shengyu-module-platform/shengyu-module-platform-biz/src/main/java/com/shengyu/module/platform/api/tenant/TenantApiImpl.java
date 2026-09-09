@@ -2,6 +2,7 @@ package com.shengyu.module.platform.api.tenant;
 
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
 import com.shengyu.module.platform.service.tenant.PlatformTenantService;
 
 import java.util.Collection;
@@ -48,6 +49,16 @@ public class TenantApiImpl implements TenantApi {
     @Override
     public TenantRespDTO getTenantByWebsite(String website) {
         return BeanUtils.toBean(platformTenantService.getTenantByWebsite(website), TenantRespDTO.class);
+    }
+
+    @Override
+    public Long createTrialTenant(TenantTrialCreateReqDTO reqDTO) {
+        return platformTenantService.createTrialTenant(reqDTO);
+    }
+
+    @Override
+    public TenantRespDTO getTenantByOwnerSaasUserId(Long ownerSaasUserId) {
+        return BeanUtils.toBean(platformTenantService.getTenantByOwnerSaasUserId(ownerSaasUserId), TenantRespDTO.class);
     }
 
 }

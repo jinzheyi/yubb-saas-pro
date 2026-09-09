@@ -37,4 +37,9 @@ public class AdminUserCreateReqDTO {
     @Mobile
     private String mobile;
 
+    /**
+     * 已创建/已校验的 SaaS 用户编号。
+     */
+    private Long saasUserId;
+
 }

@@ -197,6 +197,11 @@ shengyu:
   web:
     admin-ui:
       url: http://dashboard.shengyu.iocoder.cn # Admin 管理后台 UI 的地址
+  app-register:
+    enabled: ${SHENGYU_APP_REGISTER_ENABLED:true} # 是否开放 App 邮箱自助创建企业
+    default-package-id: ${SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID:1790399764110786000} # 默认企业套餐
+    trial-days: ${SHENGYU_APP_REGISTER_TRIAL_DAYS:0} # 企业有效天数，0 表示不设置到期时间
+    account-count: ${SHENGYU_APP_REGISTER_ACCOUNT_COUNT:10} # 默认账号数
   xss:
     enable: false
     exclude-urls: # 如下两个 url，仅仅是为了演示，去掉配置也没关系
@@ -296,6 +301,9 @@ shengyu:
       - /app-api/system/auth/social-login # 社交登录，和租户无关
       - /app-api/system/auth/sms-login # 短信登录，和租户无关
       - /app-api/system/auth/send-sms-code
+      - /app-api/system/register/trial-tenant # App 邮箱注册试用企业，注册前没有租户上下文
+      - /app-api/system/register/demo-tenant # App 邮箱注册演示企业，注册前没有租户上下文
+      - /app-api/system/register/tenant # App 邮箱注册企业，注册前没有租户上下文
       - /app-api/system/app-release/check # App 版本更新检查，读取平台版本表，和租户无关
       - /app-api/system/im/group/invite/qrcode-image # 群二维码图片，扫码加群无需租户信息
       # 平台运营端

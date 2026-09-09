@@ -74,6 +74,11 @@ public interface ErrorCodeConstants {
     ErrorCode USER_SAAS_USERNAME_NOT_EXISTS = new ErrorCode(1_002_003_011, "邮箱账号对应体系用户不存在");
     ErrorCode USER_SAAS_MOBILE_NOT_EXISTS = new ErrorCode(1_002_003_012, "手机号对应体系用户不存在");
     ErrorCode USER_SAAS_ID_UNIQUE = new ErrorCode(1_002_003_013, "输入的邮箱账号或手机号已被昵称为【{}】员工绑定");
+    ErrorCode USER_OWNED_TENANT_EXISTS = new ErrorCode(1_002_003_014, "当前邮箱账号已创建过企业，不能重复创建");
+    ErrorCode USER_INVITED_TENANT_EXISTS = new ErrorCode(1_002_003_015, "当前邮箱账号已在该企业中，无需重复加入");
+    ErrorCode USER_REGISTER_DISABLED = new ErrorCode(1_002_003_016, "当前暂未开放 App 自助注册，请联系管理员");
+    ErrorCode USER_TENANT_INVITE_INVALID = new ErrorCode(1_002_003_017, "邀请码无效、已过期或已用完");
+    ErrorCode USER_TENANT_JOIN_APPLY_INVALID = new ErrorCode(1_002_003_018, "加入申请不存在或状态已变更");
 
     // ========== 部门模块 1-002-004-000 ==========
     ErrorCode DEPT_NAME_DUPLICATE = new ErrorCode(1_002_004_000, "已经存在该名字的部门");

@@ -277,6 +277,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       ),
                                       child: Text(strings.loginAction),
                                     ),
+                                    const SizedBox(height: 10),
+                                    TextButton(
+                                      onPressed: () => context.pushNamed(
+                                        RouteNames.register,
+                                      ),
+                                      child: const Text('注册/加入企业'),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -366,7 +373,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       AppLanguageMode.ko => strings.languageModeKoTitle,
     };
   }
-
 }
 
 class _LanguageOptionTile extends StatelessWidget {

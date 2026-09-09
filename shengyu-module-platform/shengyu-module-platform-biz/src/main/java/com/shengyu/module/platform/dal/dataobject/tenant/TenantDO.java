@@ -43,6 +43,12 @@ public class TenantDO extends BaseDO {
      */
     private Long contactUserId;
     /**
+     * 企业所有者 SaaS 用户编号
+     *
+     * 用于限制 App 自助注册场景下，一个自然人账号只能创建一个自有企业。
+     */
+    private Long ownerSaasUserId;
+    /**
      * 租户管理员账号
      */
     private String contactUserName;

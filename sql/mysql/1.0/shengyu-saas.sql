@@ -2301,6 +2301,35 @@ CREATE TABLE `system_login_log`  (
 -- ----------------------------
 -- Table structure for system_notice
 -- ----------------------------
+DROP TABLE IF EXISTS `system_tenant_invite`;
+CREATE TABLE `system_tenant_invite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号', `tenant_id` bigint NOT NULL COMMENT '租户编号',
+  `invite_code` varchar(32) NOT NULL COMMENT '邀请码', `name` varchar(64) NOT NULL DEFAULT '' COMMENT '邀请名称',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用）', `expire_time` datetime NULL DEFAULT NULL COMMENT '过期时间',
+  `max_use_count` int NOT NULL DEFAULT 0 COMMENT '最多使用次数，0不限', `used_count` int NOT NULL DEFAULT 0 COMMENT '已使用次数',
+  `default_dept_id` bigint NULL DEFAULT NULL COMMENT '默认部门', `default_role_id` bigint NULL DEFAULT NULL COMMENT '默认角色',
+  `auto_approve` bit(1) NOT NULL DEFAULT b'1' COMMENT '是否自动通过',
+  `creator` varchar(64) NULL DEFAULT '', `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NULL DEFAULT '', `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0', PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_invite_code_deleted` (`invite_code`,`deleted`), KEY `idx_tenant_deleted` (`tenant_id`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='企业邀请码';
+
+DROP TABLE IF EXISTS `system_tenant_join_apply`;
+CREATE TABLE `system_tenant_join_apply` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号', `tenant_id` bigint NOT NULL COMMENT '目标租户编号',
+  `saas_user_id` bigint NOT NULL COMMENT '申请 SaaS 用户编号', `invite_id` bigint NULL DEFAULT NULL COMMENT '邀请码编号',
+  `source` varchar(16) NOT NULL DEFAULT 'invite' COMMENT '来源', `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0待审批 1已通过 2已拒绝）',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '申请说明', `auditor_id` bigint NULL DEFAULT NULL COMMENT '审批人', `audit_time` datetime NULL DEFAULT NULL COMMENT '审批时间',
+  `creator` varchar(64) NULL DEFAULT '', `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NULL DEFAULT '', `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0', PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_saas_deleted` (`tenant_id`,`saas_user_id`,`deleted`), KEY `idx_tenant_status_deleted` (`tenant_id`,`status`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='企业加入申请';
+
+-- ----------------------------
+-- Table structure for system_notice
+-- ----------------------------
 DROP TABLE IF EXISTS `system_notice`;
 CREATE TABLE `system_notice`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '公告ID',
@@ -2598,7 +2627,7 @@ CREATE TABLE `system_role_menu`  (
 DROP TABLE IF EXISTS `system_saas_user`;
 CREATE TABLE `system_saas_user`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
-  `username` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '邮箱，第一登录方式账号没有用手机号是因为邮箱验证免费',
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '邮箱，第一登录方式账号没有用手机号是因为邮箱验证免费',
   `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码',
   `open_id` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '用户唯一标识值',
   `default_tenant` bigint NULL DEFAULT NULL COMMENT '默认所属租户，这个租户是指每次选定的租户，即记录上次登录的租户',
@@ -2609,7 +2638,8 @@ CREATE TABLE `system_saas_user`  (
   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  PRIMARY KEY (`id`) USING BTREE
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_username_deleted` (`username`,`deleted`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1790399764110786563 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '租户saas单一用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
@@ -2704,7 +2734,8 @@ CREATE TABLE `system_users` (
   `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_tenant_nickname_deleted` (`tenant_id`,`nickname`,`deleted`),
-  KEY `idx_saas_user_tenant` (`saas_user_id`,`tenant_id`)
+  KEY `idx_saas_user_tenant` (`saas_user_id`,`tenant_id`),
+  UNIQUE KEY `uk_tenant_saas_user_deleted` (`tenant_id`,`saas_user_id`,`deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='用户信息表';
 
 -- ----------------------------
@@ -2719,6 +2750,7 @@ CREATE TABLE `tenant`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '租户编号',
   `name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '租户名',
   `contact_user_id` bigint NULL DEFAULT NULL COMMENT '联系人的用户编号',
+  `owner_saas_user_id` bigint NULL DEFAULT NULL COMMENT '企业所有者SaaS用户编号',
   `contact_name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '联系人',
   `contact_mobile` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '联系手机',
   `contact_user_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '租户管理员账号',
@@ -2732,7 +2764,8 @@ CREATE TABLE `tenant`  (
   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  PRIMARY KEY (`id`) USING BTREE
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_owner_saas_user_deleted` (`owner_saas_user_id`,`deleted`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1760311914011148291 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '租户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
@@ -2892,6 +2925,7 @@ INSERT INTO `tenant_menu` VALUES (1004, '用户删除', 'system:user:delete', 3,
 INSERT INTO `tenant_menu` VALUES (1005, '用户导出', 'system:user:export', 3, 5, 100, '', '#', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-04-20 17:03:10', b'0');
 INSERT INTO `tenant_menu` VALUES (1006, '用户导入', 'system:user:import', 3, 6, 100, '', '#', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-04-20 17:03:10', b'0');
 INSERT INTO `tenant_menu` VALUES (1007, '重置密码', 'system:user:update-password', 3, 7, 100, '', '', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '1', '2022-04-20 17:03:10', b'0');
+INSERT INTO `tenant_menu` VALUES (1900000000000000001, '企业邀请', 'system:user:create', 2, 99, 1, 'tenant-invite', 'connection', 'system/tenant-invite/index', 'TenantInvite', 0, b'1', b'1', b'1', 0, NULL, 'admin', NOW(), 'admin', NOW(), b'0');
 INSERT INTO `tenant_menu` VALUES (1008, '角色查询', 'system:role:query', 3, 1, 101, '', '#', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-04-20 17:03:10', b'0');
 INSERT INTO `tenant_menu` VALUES (1009, '角色新增', 'system:role:create', 3, 2, 101, '', '', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '1', '2022-04-20 17:03:10', b'0');
 INSERT INTO `tenant_menu` VALUES (1010, '角色修改', 'system:role:update', 3, 3, 101, '', '', '', NULL, 0, b'1', b'1', b'1', 0, NULL, 'admin', '2021-01-05 17:03:48', '1', '2022-04-20 17:03:10', b'0');

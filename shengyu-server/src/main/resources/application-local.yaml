@@ -237,6 +237,12 @@ shengyu:
   websocket:
     sender-type: local # 本地环境使用 local 模式，不依赖外部消息队列
   
+  app-register:
+    enabled: true
+    default-package-id: 1790399764110786000
+    trial-days: 0
+    account-count: 10
+
   captcha:
     enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
   security:

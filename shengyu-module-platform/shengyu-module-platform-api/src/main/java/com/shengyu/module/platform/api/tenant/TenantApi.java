@@ -1,6 +1,7 @@
 package com.shengyu.module.platform.api.tenant;
 
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
 
 import java.util.Collection;
 import java.util.List;
@@ -56,5 +57,21 @@ public interface TenantApi {
      * @return 租户
      */
     TenantRespDTO getTenantByWebsite(String website);
+
+    /**
+     * App 自助创建试用租户
+     *
+     * @param reqDTO 创建信息
+     * @return 租户编号
+     */
+    Long createTrialTenant(TenantTrialCreateReqDTO reqDTO);
+
+    /**
+     * 获得指定 SaaS 用户拥有的自有租户
+     *
+     * @param ownerSaasUserId 企业所有者 SaaS 用户编号
+     * @return 租户
+     */
+    TenantRespDTO getTenantByOwnerSaasUserId(Long ownerSaasUserId);
 
 }

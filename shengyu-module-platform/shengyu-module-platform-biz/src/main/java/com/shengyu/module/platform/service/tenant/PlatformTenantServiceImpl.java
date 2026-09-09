@@ -18,6 +18,7 @@ import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
+import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantCreateReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantExportReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantPageReqVO;
@@ -101,6 +102,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         // 创建租户
         TenantDO tenant = BeanUtils.toBean(createReqVO, TenantDO.class);
         tenant.setContactUserName(createReqVO.getUsername());
+        tenant.setOwnerSaasUserId(createReqVO.getOwnerSaasUserId());
         tenantMapper.insert(tenant);
 
         TenantUtils.execute(tenant.getId(), () -> {
@@ -114,6 +116,14 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
             tenantMapper.updateById(new TenantDO().setId(tenant.getId()).setContactUserId(userId));
         });
         return tenant.getId();
+    }
+
+    @Override
+    public Long createTrialTenant(TenantTrialCreateReqDTO reqDTO) {
+        TenantCreateReqVO createReqVO = BeanUtils.toBean(reqDTO, TenantCreateReqVO.class);
+        createReqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        createReqVO.setWebsite("");
+        return createTenant(createReqVO);
     }
 
     private Long createUser(TenantCreateReqVO createReqVO) {
@@ -236,6 +246,11 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Override
     public TenantDO getTenantByWebsite(String website) {
         return tenantMapper.selectByWebsite(website);
+    }
+
+    @Override
+    public TenantDO getTenantByOwnerSaasUserId(Long ownerSaasUserId) {
+        return tenantMapper.selectByOwnerSaasUserId(ownerSaasUserId);
     }
 
     @Override

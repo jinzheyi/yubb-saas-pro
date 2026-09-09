@@ -8,12 +8,16 @@ class TenantListItemDto {
     required this.id,
     required this.tenantName,
     required this.status,
+    this.userStatus,
+    this.waitingConfirm = false,
     this.loginDate,
   });
 
   final String id;
   final String tenantName;
   final String status; // "正常"=开启，"禁用"=关闭
+  final int? userStatus; // -1=待确认加入 0=正常 1=停用
+  final bool waitingConfirm;
   final DateTime? loginDate;
 
   factory TenantListItemDto.fromJson(Map<String, dynamic> json) {
@@ -24,7 +28,9 @@ class TenantListItemDto {
     DateTime? parsedLoginDate;
     final rawLoginDate = json['loginDate'];
     if (rawLoginDate is num) {
-      parsedLoginDate = DateTime.fromMillisecondsSinceEpoch(rawLoginDate.toInt());
+      parsedLoginDate = DateTime.fromMillisecondsSinceEpoch(
+        rawLoginDate.toInt(),
+      );
     } else if (rawLoginDate != null) {
       parsedLoginDate = DateTime.tryParse(rawLoginDate.toString());
     }
@@ -33,10 +39,25 @@ class TenantListItemDto {
       id: id,
       tenantName: json['tenantName']?.toString().trim() ?? '',
       status: json['status']?.toString() ?? '',
+      userStatus: int.tryParse(json['userStatus']?.toString() ?? ''),
+      waitingConfirm:
+          json['waitingConfirm'] == true ||
+          json['waitingConfirm']?.toString() == 'true' ||
+          json['userStatus']?.toString() == '-1',
       loginDate: parsedLoginDate,
     );
   }
 
   /// 是否可切换（基于租户状态判断）
   bool get isSwitchable => status == '正常' || status == '0';
+
+  String get userStatusText {
+    if (waitingConfirm || userStatus == -1) {
+      return '待确认加入';
+    }
+    if (userStatus == 1) {
+      return '成员已停用';
+    }
+    return '';
+  }
 }

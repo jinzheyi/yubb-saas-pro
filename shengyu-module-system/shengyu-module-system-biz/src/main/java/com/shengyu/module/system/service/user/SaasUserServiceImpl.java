@@ -1,8 +1,11 @@
 package com.shengyu.module.system.service.user;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_BAD_CREDENTIALS;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
+import cn.hutool.core.util.StrUtil;
+import com.shengyu.framework.common.util.string.StrUtils;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
 import com.shengyu.module.system.dal.mysql.user.SaasUserMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -66,6 +69,29 @@ public class SaasUserServiceImpl implements SaasUserService{
     @Override
     public SaasUserDO getUserByMobile(String mobile) {
         return saasUserMapper.selectByMobile(mobile);
+    }
+
+    @Override
+    public SaasUserDO registerOrValidateEmailUser(String username, String password, String mobile) {
+        String email = StrUtil.trim(username).toLowerCase();
+        SaasUserDO user = saasUserMapper.selectByUsername(email);
+        if (user != null) {
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
+            }
+            return user;
+        }
+
+        SaasUserDO createObj = new SaasUserDO();
+        createObj.setUsername(email);
+        createObj.setPassword(passwordEncoder.encode(password));
+        if (StrUtil.isNotBlank(mobile)) {
+            createObj.setMobile(StrUtil.trim(mobile));
+        }
+        saasUserMapper.insert(createObj);
+        createObj.setOpenId(StrUtils.uniqueId(createObj.getId()));
+        saasUserMapper.updateById(createObj);
+        return createObj;
     }
 
 }

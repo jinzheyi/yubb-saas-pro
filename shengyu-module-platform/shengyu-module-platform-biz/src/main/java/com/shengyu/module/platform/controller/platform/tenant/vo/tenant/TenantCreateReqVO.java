@@ -18,4 +18,7 @@ public class TenantCreateReqVO extends TenantBaseVO {
     @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符")
     private String username;
 
+    @Schema(description = "企业所有者 SaaS 用户编号，App 自助创建试用企业时传入", example = "1024")
+    private Long ownerSaasUserId;
+
 }
