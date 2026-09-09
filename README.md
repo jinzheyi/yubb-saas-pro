@@ -214,6 +214,16 @@ docker-compose up -d
 
 官网提供完整的系统文档和使用指南
 
+### 钰信 Android 安装体验
+
+- 正式签名安装包：[下载钰信 Android v1.0.2（构建号 3）](https://shengyukj.top/download/yuxin-android-v1.0.2-build3.apk)
+- 首次安装：使用 Android 手机浏览器下载后，按系统提示允许该浏览器安装应用，再完成安装。已安装旧版钰信的用户可直接覆盖安装，无需卸载。
+- 后续更新：在钰信中进入“设置 -> 关于钰信 -> 检查更新”。应用会从平台版本服务获取更新提示并完成校验下载；无需每次连接电脑安装。
+- iOS：暂不提供可公开下载安装的 IPA。iOS 必须由 Apple Distribution 签名并通过 TestFlight、App Store、MDM 或企业分发授权，未接入这些合规渠道前不提供无法正常安装的包。
+- 鸿蒙：暂不提供安装包。当前客户端工程尚未接入鸿蒙原生工程、华为签名与分发链路；接入完成后将按 `.hap`/`.app` 的正式渠道发布。
+
+安装包大小和 SHA-256 校验值以官网[快速体验](https://shengyukj.top/guide/explain/experience.html)页面展示的当前发布记录为准。
+
 ### 演示环境
 
 **平台端**
