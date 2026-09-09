@@ -1,7 +1,8 @@
 package com.shengyu.module.system.service.register;
 
-import com.shengyu.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import com.shengyu.module.system.controller.app.register.vo.AppTrialTenantRegisterReqVO;
+import com.shengyu.module.system.controller.app.register.vo.AppRegisterResultRespVO;
+import com.shengyu.module.system.controller.app.register.vo.AppTenantJoinByInviteReqVO;
 
 /**
  * App 注册 Service 接口
@@ -11,11 +12,14 @@ import com.shengyu.module.system.controller.app.register.vo.AppTrialTenantRegist
 public interface AppRegisterService {
 
     /**
-     * 创建企业并返回登录态。
+     * 邮箱验证后创建企业。首次账号的初始密码由邮件发送，已有账号不会被改密。
      *
      * @param reqVO 注册信息
      * @return 登录结果
      */
-    AuthLoginRespVO registerTenant(AppTrialTenantRegisterReqVO reqVO);
+    AppRegisterResultRespVO registerTenant(AppTrialTenantRegisterReqVO reqVO);
+
+    /** 通过邀请码和邮箱验证码加入企业。 */
+    AppRegisterResultRespVO joinByInvite(AppTenantJoinByInviteReqVO reqVO);
 
 }

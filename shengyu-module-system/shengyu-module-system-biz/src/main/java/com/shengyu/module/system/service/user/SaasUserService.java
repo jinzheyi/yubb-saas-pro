@@ -62,4 +62,10 @@ public interface SaasUserService {
      */
     SaasUserDO registerOrValidateEmailUser(String username, String password, String mobile);
 
+    /**
+     * 邮箱已完成验证码校验后，获取已有自然人账号或创建新账号。
+     * 新账号使用系统生成的初始密码；已有账号绝不重置密码。
+     */
+    SaasUserDO registerOrGetVerifiedEmailUser(String username, String generatedPassword, String mobile);
+
 }

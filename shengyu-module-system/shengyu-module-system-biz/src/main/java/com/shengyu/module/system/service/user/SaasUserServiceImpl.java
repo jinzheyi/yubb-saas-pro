@@ -94,4 +94,23 @@ public class SaasUserServiceImpl implements SaasUserService{
         return createObj;
     }
 
+    @Override
+    public SaasUserDO registerOrGetVerifiedEmailUser(String username, String generatedPassword, String mobile) {
+        String email = StrUtil.trim(username).toLowerCase();
+        SaasUserDO user = saasUserMapper.selectByUsername(email);
+        if (user != null) {
+            return user;
+        }
+        SaasUserDO createObj = new SaasUserDO();
+        createObj.setUsername(email);
+        createObj.setPassword(passwordEncoder.encode(generatedPassword));
+        if (StrUtil.isNotBlank(mobile)) {
+            createObj.setMobile(StrUtil.trim(mobile));
+        }
+        saasUserMapper.insert(createObj);
+        createObj.setOpenId(StrUtils.uniqueId(createObj.getId()));
+        saasUserMapper.updateById(createObj);
+        return createObj;
+    }
+
 }

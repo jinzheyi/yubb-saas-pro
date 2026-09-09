@@ -42,9 +42,21 @@ class AuthRemoteDataSource {
     return result.requireData();
   }
 
-  Future<AuthTokenDto> registerTenant({
+  Future<void> sendRegisterEmailCode({required String email}) async {
+    final response = await _dio.post(
+      '/system/register/send-email-code',
+      data: {'email': email},
+    );
+    final result = ApiResult.fromJson<bool>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) => raw == true,
+    );
+    result.requireData();
+  }
+
+  Future<Map<String, dynamic>> registerTenant({
     required String username,
-    required String password,
+    required String emailCode,
     required String nickname,
     required String tenantName,
     String? mobile,
@@ -56,7 +68,7 @@ class AuthRemoteDataSource {
       '/system/register/tenant',
       data: {
         'username': username,
-        'password': password,
+        'emailCode': emailCode,
         'nickname': nickname,
         'tenantName': tenantName,
         if (mobile != null && mobile.trim().isNotEmpty) 'mobile': mobile,
@@ -65,11 +77,32 @@ class AuthRemoteDataSource {
         'clientVersion': clientVersion,
       },
     );
-    final result = ApiResult.fromJson<AuthTokenDto>(
+    final result = ApiResult.fromJson<Map<String, dynamic>>(
       response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return AuthTokenDto.fromJson(raw as Map<String, dynamic>? ?? const {});
+      dataParser: (raw) => Map<String, dynamic>.from(raw as Map? ?? const {}),
+    );
+    return result.requireData();
+  }
+
+  Future<Map<String, dynamic>> joinTenantByInvite({
+    required String email,
+    required String emailCode,
+    required String inviteCode,
+    String? nickname,
+  }) async {
+    final response = await _dio.post(
+      '/system/register/join-by-invite',
+      data: {
+        'email': email,
+        'emailCode': emailCode,
+        'inviteCode': inviteCode,
+        if (nickname != null && nickname.trim().isNotEmpty)
+          'nickname': nickname.trim(),
       },
+    );
+    final result = ApiResult.fromJson<Map<String, dynamic>>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) => Map<String, dynamic>.from(raw as Map? ?? const {}),
     );
     return result.requireData();
   }

@@ -282,7 +282,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       onPressed: () => context.pushNamed(
                                         RouteNames.register,
                                       ),
-                                      child: const Text('注册/加入企业'),
+                                      child: const Text('没有账号？加入或创建企业'),
                                     ),
                                   ],
                                 ),

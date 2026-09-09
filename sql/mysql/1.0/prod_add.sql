@@ -146,3 +146,11 @@ UPDATE `tenant_package`
 SET `menu_ids` = JSON_ARRAY_APPEND(`menu_ids`, '$', CAST(1900000000000000001 AS UNSIGNED))
 WHERE `deleted` = b'0'
   AND NOT JSON_CONTAINS(`menu_ids`, '1900000000000000001', '$');
+
+-- App 注册/加入企业邮箱验证码模板。首次账号密码邮件继续复用 tenant-add-user 模板。
+INSERT INTO `tenant_mail_template`
+(`name`,`code`,`account_id`,`nickname`,`title`,`content`,`params`,`status`,`remark`,`creator`,`create_time`,`updater`,`update_time`,`deleted`,`tenant_id`)
+SELECT 'App 注册邮箱验证码', 'app-register-code', 2, '钰信', '钰信邮箱验证码',
+       '<p>您的钰信邮箱验证码：<strong>{code}</strong></p><p>验证码 {expireMinutes} 分钟内有效，请勿向任何人泄露。</p>',
+       '["code","expireMinutes"]', 0, '用于创建企业或通过邀请码加入企业', 'admin', NOW(), 'admin', NOW(), b'0', 0
+WHERE NOT EXISTS (SELECT 1 FROM `tenant_mail_template` WHERE `code` = 'app-register-code' AND `deleted` = b'0');

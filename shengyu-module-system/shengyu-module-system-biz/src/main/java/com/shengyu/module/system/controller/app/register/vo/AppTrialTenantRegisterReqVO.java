@@ -7,9 +7,8 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
-import org.hibernate.validator.constraints.Length;
 
-@Schema(description = "移动端 - 创建试用企业 Request VO")
+@Schema(description = "移动端 - 创建企业 Request VO")
 @Data
 public class AppTrialTenantRegisterReqVO {
 
@@ -19,10 +18,10 @@ public class AppTrialTenantRegisterReqVO {
     @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符")
     private String username;
 
-    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "shengyu123")
-    @NotEmpty(message = "密码不能为空")
-    @Length(min = 6, max = 50, message = "密码长度为 6-50 位")
-    private String password;
+    @Schema(description = "邮箱验证码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
+    @NotEmpty(message = "邮箱验证码不能为空")
+    @Size(min = 6, max = 6, message = "邮箱验证码为 6 位")
+    private String emailCode;
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")
     @NotEmpty(message = "用户昵称不能为空")

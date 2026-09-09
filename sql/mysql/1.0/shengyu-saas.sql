@@ -2875,6 +2875,7 @@ CREATE TABLE `tenant_mail_template`  (
 -- Records of tenant_mail_template
 -- ----------------------------
 INSERT INTO `tenant_mail_template` VALUES (13, '添加用户发送用户密码', 'tenant-add-user', 2, '圣钰科技', '欢迎使用 圣钰SaaS管理系统', '<p><span style=\"font-size: 19px;\"><strong>亲爱的用户您好，欢迎使用 圣钰SaaS管理系统</strong></span></p><p><br></p><p>您的登录邮箱账号：<strong>{mail}</strong></p><p>您的默认密码：<strong>{password}</strong> &nbsp;请勿泄露</p><p>您注册的日期：<strong>{registerTime}</strong></p><p>当您在使用本网站时，遵守当地法律法规</p><p>如果您有什么疑问可以联系管理员，Email: jin_zheyicn@qq.com</p>', '[\"mail\",\"password\",\"registerTime\"]', 0, '', '1', '2021-10-11 08:10:00', '1', '2024-05-16 23:47:04', b'0', 0);
+INSERT INTO `tenant_mail_template` VALUES (14, 'App 注册邮箱验证码', 'app-register-code', 2, '钰信', '钰信邮箱验证码', '<p>您的钰信邮箱验证码：<strong>{code}</strong></p><p>验证码 {expireMinutes} 分钟内有效，请勿向任何人泄露。</p>', '[\"code\",\"expireMinutes\"]', 0, '用于创建企业或通过邀请码加入企业', 'admin', NOW(), 'admin', NOW(), b'0', 0);
 
 -- ----------------------------
 -- Table structure for tenant_menu

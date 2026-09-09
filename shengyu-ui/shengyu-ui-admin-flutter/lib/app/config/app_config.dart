@@ -243,6 +243,7 @@ abstract final class AppConfig {
     '/system/auth/sms-login',
     '/system/auth/refresh-token',
     '/system/tenant/get-id-by-name',
+    '/system/register/',
   ];
 
   /// 租户头白名单。
@@ -253,6 +254,7 @@ abstract final class AppConfig {
     '/system/auth/login',
     '/system/auth/sms-login',
     '/system/tenant/get-id-by-name',
+    '/system/register/',
   ];
 
   /// Bearer Token 统一拼接方式。

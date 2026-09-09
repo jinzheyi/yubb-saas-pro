@@ -79,6 +79,9 @@ public interface ErrorCodeConstants {
     ErrorCode USER_REGISTER_DISABLED = new ErrorCode(1_002_003_016, "当前暂未开放 App 自助注册，请联系管理员");
     ErrorCode USER_TENANT_INVITE_INVALID = new ErrorCode(1_002_003_017, "邀请码无效、已过期或已用完");
     ErrorCode USER_TENANT_JOIN_APPLY_INVALID = new ErrorCode(1_002_003_018, "加入申请不存在或状态已变更");
+    ErrorCode USER_EMAIL_CODE_INVALID = new ErrorCode(1_002_003_019, "邮箱验证码无效或已过期");
+    ErrorCode USER_EMAIL_CODE_FREQUENT = new ErrorCode(1_002_003_020, "验证码发送过于频繁，请稍后再试");
+    ErrorCode USER_TENANT_JOIN_PENDING = new ErrorCode(1_002_003_021, "已提交加入申请，请等待企业管理员审核");
 
     // ========== 部门模块 1-002-004-000 ==========
     ErrorCode DEPT_NAME_DUPLICATE = new ErrorCode(1_002_004_000, "已经存在该名字的部门");

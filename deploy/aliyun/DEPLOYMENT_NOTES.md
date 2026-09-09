@@ -160,6 +160,15 @@ curl -sS 'https://apisaas.shengyukj.top/app-api/system/app-release/check?appKey=
 - 体验顺序：手机若已有旧调试包，先卸载；安装上述 `1.0.0 (1)` 首装 APK；打开钰信并进入“设置 -> 关于钰信 -> 检查更新”；看到 `1.0.1` 后点“立即更新”，在 Android 系统安装页确认安装。
 - iOS 归档：`shengyu-ui/shengyu-ui-admin-flutter/build/distributions/20260908-000000-online-update/yuxin-ios-1.0.1+2-unsigned.ipa`，未签名，不要配置到 iOS 发布记录。获取 Apple Distribution 证书和 Provisioning Profile 后，改为签名 IPA 并用 TestFlight 或 App Store 分发。
 
+## 2026-09-09 App 企业加入与邮箱注册发布
+
+- 发布内容：App 默认优先加入企业；邮箱验证码创建企业或通过邀请码加入企业；新邮箱自动生成初始密码并发送邮件，已有邮箱不改密。
+- 审核状态：自动通过后创建待确认员工身份；人工审核申请会如实返回待审核状态；拒绝后允许使用有效邀请码重新申请；待审核、已通过和已存在员工身份均禁止重复提交。
+- 后端：本机 `mvn -pl shengyu-server -am clean package -DskipTests` 构建，通过容器内 Jar 替换重启 `shengyu-server`。发布前备份：`/opt/shengyu/backups/shengyu-server-app-20260909-214000.jar`。
+- 数据库：执行 `sql/mysql/1.0/prod_add.sql`；生产邮件模板字段为 `title`，脚本已按实际结构兼容。发布前备份：`/opt/shengyu/backups/tenant_mail_template-20260909-214000-before-app-register.sql`。
+- Flutter Web：使用正式 API/WSS 域名构建并更新 `shengyu-im-flutter-web` 静态目录。macOS 上传时使用 `COPYFILE_DISABLE=1 tar --no-xattrs`，避免扩展属性导致 `docker cp` 失败。
+- 验证：`shengyu-server` 健康接口返回 `UP`；`app-register-code` 邮件模板存在；`POST /app-api/system/register/send-email-code` 对非法邮箱返回参数校验错误；`https://im.shengyukj.top/` 标题为“钰信”。
+
 ## 上线前检查
 
 ```bash

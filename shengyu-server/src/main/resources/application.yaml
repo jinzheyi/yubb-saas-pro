@@ -304,6 +304,8 @@ shengyu:
       - /app-api/system/register/trial-tenant # App 邮箱注册试用企业，注册前没有租户上下文
       - /app-api/system/register/demo-tenant # App 邮箱注册演示企业，注册前没有租户上下文
       - /app-api/system/register/tenant # App 邮箱注册企业，注册前没有租户上下文
+      - /app-api/system/register/send-email-code # App 注册/加入企业邮箱校验，注册前没有租户上下文
+      - /app-api/system/register/join-by-invite # App 通过邀请码加入企业，注册前没有租户上下文
       - /app-api/system/app-release/check # App 版本更新检查，读取平台版本表，和租户无关
       - /app-api/system/im/group/invite/qrcode-image # 群二维码图片，扫码加群无需租户信息
       # 平台运营端
