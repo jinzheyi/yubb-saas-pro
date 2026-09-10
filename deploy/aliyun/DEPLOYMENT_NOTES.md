@@ -391,6 +391,12 @@ cat /tmp/upload-check-response.txt
 - 发布：已替换生产 `shengyu-server` Jar 并重启容器，`http://127.0.0.1:48080/actuator/health` 返回 `UP`；本次替换前的 Jar 已备份到 `/opt/shengyu/backups/shengyu-server-app.20260910-113812.before-app-register-audit-final.jar`。
 - 发布后验证应使用真实邮箱验证码完成一次创建企业；无效验证码只用于确认请求可以通过字段校验，不创建任何数据。
 
+### 2026-09-10 App 加入企业审计字段修复
+
+- 现象：受邀邮箱首次加入企业时，`system_saas_user.creator` 不能为空，旧实现的匿名自助注册无法插入 SaaS 用户，App 仅显示“系统异常”。
+- 修复：SaaS 用户服务为两类邮箱自助注册统一写入审计字段；插入前使用系统操作者保证约束满足，生成用户编号后回写为该用户本人。加入企业链路在用户取得后绑定请求审计操作者，确保申请记录、租户成员等后续写入也可正确审计。
+- 发布：已替换生产 `shengyu-server` Jar 并重启容器，健康接口返回 `UP`；替换前 Jar 已备份到 `/opt/shengyu/backups/shengyu-server-app.20260910-123529.before-join-enterprise-audit.jar`。
+
 ## 2026-09-09 企业注册与加入闭环发布记录
 
 - 已发布后端、租户 Vue 管理端和 Flutter Web；后端容器 `shengyu-server` 于本次发布后通过 `http://127.0.0.1:48080/actuator/health` 健康检查。

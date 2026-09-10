@@ -85,10 +85,12 @@ public class SaasUserServiceImpl implements SaasUserService{
         SaasUserDO createObj = new SaasUserDO();
         createObj.setUsername(email);
         createObj.setPassword(passwordEncoder.encode(password));
+        initializeSelfRegisteredAuditFields(createObj);
         if (StrUtil.isNotBlank(mobile)) {
             createObj.setMobile(StrUtil.trim(mobile));
         }
         saasUserMapper.insert(createObj);
+        completeSelfRegisteredAuditFields(createObj);
         createObj.setOpenId(StrUtils.uniqueId(createObj.getId()));
         saasUserMapper.updateById(createObj);
         return createObj;
@@ -104,13 +106,29 @@ public class SaasUserServiceImpl implements SaasUserService{
         SaasUserDO createObj = new SaasUserDO();
         createObj.setUsername(email);
         createObj.setPassword(passwordEncoder.encode(generatedPassword));
+        initializeSelfRegisteredAuditFields(createObj);
         if (StrUtil.isNotBlank(mobile)) {
             createObj.setMobile(StrUtil.trim(mobile));
         }
         saasUserMapper.insert(createObj);
+        completeSelfRegisteredAuditFields(createObj);
         createObj.setOpenId(StrUtils.uniqueId(createObj.getId()));
         saasUserMapper.updateById(createObj);
         return createObj;
+    }
+
+    /**
+     * 邮箱自助注册没有既有登录人。先使用系统操作者使插入可审计，拿到用户编号后再回写为用户本人。
+     */
+    private void initializeSelfRegisteredAuditFields(SaasUserDO user) {
+        user.setCreator("0");
+        user.setUpdater("0");
+    }
+
+    private void completeSelfRegisteredAuditFields(SaasUserDO user) {
+        String userId = String.valueOf(user.getId());
+        user.setCreator(userId);
+        user.setUpdater(userId);
     }
 
 }

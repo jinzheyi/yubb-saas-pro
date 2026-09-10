@@ -110,6 +110,7 @@ public class AppRegisterServiceImpl implements AppRegisterService {
         boolean newUser = saasUserService.getUserByUsername(email) == null;
         String initialPassword = newInitialPassword();
         SaasUserDO saasUser = saasUserService.registerOrGetVerifiedEmailUser(email, initialPassword, null);
+        bindRequestAuditActor(saasUser);
         TenantJoinApplyDO apply = tenantJoinService.joinByInviteCode(reqVO.getInviteCode(), saasUser.getId(),
                 StrUtil.blankToDefault(StrUtil.trim(reqVO.getNickname()), email));
         if (newUser) {
