@@ -95,6 +95,10 @@ services:
         --shengyu.captcha.enable=${SHENGYU_CAPTCHA_ENABLE:-true}
         --shengyu.security.mock-enable=${SHENGYU_SECURITY_MOCK_ENABLE:-false}
         --shengyu.access-log.enable=${SHENGYU_ACCESS_LOG_ENABLE:-false}
+        --shengyu.app-register.enabled=${SHENGYU_APP_REGISTER_ENABLED:-true}
+        --shengyu.app-register.default-package-id=${SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID:-1790399764110786000}
+        --shengyu.app-register.default-expire-time=${SHENGYU_APP_REGISTER_DEFAULT_EXPIRE_TIME:-2099-12-31T23:59:59}
+        --shengyu.app-register.account-count=${SHENGYU_APP_REGISTER_ACCOUNT_COUNT:-1000}
         --shengyu.pay.order-notify-url=${SHENGYU_PAY_ORDER_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/order}
         --shengyu.pay.refund-notify-url=${SHENGYU_PAY_REFUND_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/refund}
         --shengyu.pay.transfer-notify-url=${SHENGYU_PAY_TRANSFER_NOTIFY_URL:-https://apisaas.shengyukj.top/admin-api/pay/notify/transfer}

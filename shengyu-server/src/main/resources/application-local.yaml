@@ -240,8 +240,8 @@ shengyu:
   app-register:
     enabled: true
     default-package-id: 1790399764110786000
-    trial-days: 0
-    account-count: 10
+    default-expire-time: 2099-12-31T23:59:59
+    account-count: 1000
 
   captcha:
     enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；

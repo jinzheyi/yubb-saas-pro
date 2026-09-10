@@ -8,7 +8,7 @@ import javax.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * App 自助试用租户创建 Request DTO
+ * App 自助企业创建 Request DTO
  *
  * @author 圣钰科技
  */

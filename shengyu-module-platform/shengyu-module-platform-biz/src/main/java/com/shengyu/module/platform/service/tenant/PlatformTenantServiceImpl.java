@@ -122,6 +122,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     public Long createTrialTenant(TenantTrialCreateReqDTO reqDTO) {
         TenantCreateReqVO createReqVO = BeanUtils.toBean(reqDTO, TenantCreateReqVO.class);
         createReqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        // website 用于根据域名唯一识别租户。App 企业共享官网入口，不能写入公共主域名。
         createReqVO.setWebsite("");
         return createTenant(createReqVO);
     }

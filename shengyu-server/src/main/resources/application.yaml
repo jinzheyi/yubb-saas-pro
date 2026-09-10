@@ -200,8 +200,8 @@ shengyu:
   app-register:
     enabled: ${SHENGYU_APP_REGISTER_ENABLED:true} # 是否开放 App 邮箱自助创建企业
     default-package-id: ${SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID:1790399764110786000} # 默认企业套餐
-    trial-days: ${SHENGYU_APP_REGISTER_TRIAL_DAYS:0} # 企业有效天数，0 表示不设置到期时间
-    account-count: ${SHENGYU_APP_REGISTER_ACCOUNT_COUNT:10} # 默认账号数
+    default-expire-time: ${SHENGYU_APP_REGISTER_DEFAULT_EXPIRE_TIME:2099-12-31T23:59:59} # App 自助创建企业的长期到期时间
+    account-count: ${SHENGYU_APP_REGISTER_ACCOUNT_COUNT:1000} # 默认账号额度
   xss:
     enable: false
     exclude-urls: # 如下两个 url，仅仅是为了演示，去掉配置也没关系

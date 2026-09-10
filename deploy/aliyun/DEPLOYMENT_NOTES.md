@@ -66,6 +66,7 @@
 - 当前阿里云规格为 `2C/4G`。后端使用 `Xms/Xmx=512m`，Tomcat 最大线程 `80`、Druid 最大连接 `30`、Redis 最大连接 `40`、Quartz 线程 `8`、Netty worker `8`；这些值均通过 `docker.prod.env` 的 `SHENGYU_*` 参数覆盖。小规模试用不要恢复成 64/100/200 这类高并发预设，以免空闲连接和线程挤占 MySQL/系统可用内存。
 - 服务器当前没有 Swap，常规运行时可用内存约 500MB。用户规模扩大前先扩容实例内存；如短期无法扩容，可按运维窗口配置 1GB Swap 作为 OOM 保护，不能把 Swap 当作常态性能容量。
 - `im.shengyukj.top` 的公网 Nginx 只代理 Flutter Web 页面到 `127.0.0.1:8082`，API 和 WebSocket 必须走 `apisaas.shengyukj.top`，避免 App 页面域名和后端域名混用。
+- App 自助创建企业默认使用套餐 `SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID`、账号额度 `SHENGYU_APP_REGISTER_ACCOUNT_COUNT=1000`、到期时间 `SHENGYU_APP_REGISTER_DEFAULT_EXPIRE_TIME=2099-12-31T23:59:59`。`tenant.website` 是唯一域名映射，创建时保持空值共享官网入口；不要将 `shengyukj.top` 重复绑定给每个企业。
 
 ## 钰信版本更新中心
 
@@ -374,6 +375,14 @@ cat /tmp/upload-check-response.txt
 - 公网 `im.shengyukj.top` 的 TLS 站点已启用 HTTP/2。容器内 `main.dart.js` 和 CanvasKit 本地响应均在 1 秒内完成；HTTP/2 负责减少公网浏览器在同一轮启动中建立和阻塞多个 HTTP/1.1 请求的等待。
 - 当前生产构建未传入 `FCM_ENABLED=true`，因此不再在 `index.html` 的每次页面加载后注册 Firebase Messaging Service Worker，避免无效访问 Firebase 外部脚本。后续若正式启用 Web Push，必须同时恢复该注册块并以 `--dart-define=FCM_ENABLED=true` 构建发布。
 - 已保留原有缓存约束：入口 HTML 不缓存，主程序仅 ETag 校验，CanvasKit/WASM 和静态资源使用不可变长缓存；这三项不可互相替换。
+
+### 2026-09-10 App 创建企业默认值修复
+
+- 根因：App 自助创建企业沿用了平台租户创建的必填 `expireTime`，但历史 `trial-days=0` 配置没有赋值，导致请求在平台 DTO 校验阶段失败。
+- 修复：服务端固定写入长期到期时间 `2099-12-31T23:59:59`、账号额度 `1000`，联系人继续使用 App 输入的昵称；默认套餐仍由 `SHENGYU_APP_REGISTER_DEFAULT_PACKAGE_ID` 控制。
+- 域名：自助创建企业不重复绑定 `shengyukj.top`。`tenant.website` 必须唯一，当前共享官网入口时为空；需要独立域名时，在平台端为企业绑定已解析的唯一子域名。
+- 生产：已更新 `/opt/shengyu/saas-deploy/docker.prod.env` 与 Compose 文件，替换并重启 `shengyu-server`；健康接口返回 `UP`。发布前 Jar、Compose、环境变量均已保存在 `/opt/shengyu/backups/`。
+- 验证：向 `POST /app-api/system/register/tenant` 提交完整字段和无效邮箱验证码后，返回“邮箱验证码无效或已过期”，证明已越过租户到期时间参数校验；未创建任何测试企业或用户。
 
 ## 2026-09-09 企业注册与加入闭环发布记录
 

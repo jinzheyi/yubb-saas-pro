@@ -19,6 +19,7 @@ import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.module.platform.api.mail.MailSendApi;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,10 +45,10 @@ public class AppRegisterServiceImpl implements AppRegisterService {
     @Value("${shengyu.app-register.default-package-id:1790399764110786000}")
     private Long defaultPackageId;
 
-    @Value("${shengyu.app-register.trial-days:0}")
-    private Integer tenantValidDays;
+    @Value("${shengyu.app-register.default-expire-time:2099-12-31T23:59:59}")
+    private String defaultTenantExpireTime;
 
-    @Value("${shengyu.app-register.account-count:10}")
+    @Value("${shengyu.app-register.account-count:1000}")
     private Integer accountCount;
 
     @Resource
@@ -85,10 +86,9 @@ public class AppRegisterServiceImpl implements AppRegisterService {
         createReqDTO.setUsername(email);
         createReqDTO.setOwnerSaasUserId(saasUser.getId());
         createReqDTO.setPackageId(defaultPackageId);
-        if (tenantValidDays != null && tenantValidDays > 0) {
-            createReqDTO.setExpireTime(LocalDateTime.now().plusDays(tenantValidDays));
-        }
-        createReqDTO.setAccountCount(accountCount == null ? 10 : accountCount);
+        // 平台层创建租户要求明确的到期时间，App 自助创建企业采用长期默认值。
+        createReqDTO.setExpireTime(parseDefaultTenantExpireTime());
+        createReqDTO.setAccountCount(accountCount == null ? 1000 : accountCount);
         Long tenantId = tenantApi.createTrialTenant(createReqDTO);
         saasUserService.updateUserDefaultTenant(saasUser.getId(), tenantId);
         if (newUser) {
@@ -121,6 +121,14 @@ public class AppRegisterServiceImpl implements AppRegisterService {
 
     private String newInitialPassword() {
         return "Sy@" + RandomUtil.randomString(10);
+    }
+
+    private LocalDateTime parseDefaultTenantExpireTime() {
+        try {
+            return LocalDateTime.parse(defaultTenantExpireTime);
+        } catch (DateTimeParseException exception) {
+            throw new IllegalStateException("shengyu.app-register.default-expire-time 格式必须为 ISO-8601 日期时间", exception);
+        }
     }
 
     private void sendInitialPassword(String email, String password, String tenantName) {
