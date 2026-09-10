@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +35,7 @@ class GroupMemberRemovedSignal {
 final conversationRealtimeBindingProvider = Provider<void>((ref) {
   // 启动定期清理任务（仅首次初始化）
   _startMapCleanupTimers();
-  
+
   final StreamSubscription<ImSocketEvent> subscription = ref
       .read(socketMessageDispatcherProvider)
       .stream
@@ -58,10 +56,17 @@ Timer? _syncThrottleCleanupTimer;
 /// 本地会话更新时间记录：避免发送消息后 WebSocket 推送触发多余 sync
 /// key: chatId, value: {time: 更新时间戳 (毫秒), isSelf: 是否自己发的消息}
 /// 【泄漏修复】定期清理过期条目，限制最大容量
-final Map<String, Map<String, dynamic>> _localConversationUpdateTimes = <String, Map<String, dynamic>>{};
+final Map<String, Map<String, dynamic>> _localConversationUpdateTimes =
+    <String, Map<String, dynamic>>{};
 const int _localUpdateCooldownMs = 3000; // 3 秒冷却期
 const int _localUpdateMaxEntries = 500;
 Timer? _localUpdateCleanupTimer;
+
+/// 清空旧账号的同步节流与本地更新时间记录。
+void clearConversationRealtimeEphemeralState() {
+  _syncThrottleTimestamps.clear();
+  _localConversationUpdateTimes.clear();
+}
 
 /// 启动定期清理任务（在 Provider 首次创建时调用）
 void _startMapCleanupTimers() {
@@ -70,7 +75,7 @@ void _startMapCleanupTimers() {
     const Duration(minutes: 5),
     (_) => _cleanupSyncThrottleMap(),
   );
-  
+
   // 清理本地更新记录：每 3 分钟清理一次过期条目
   _localUpdateCleanupTimer ??= Timer.periodic(
     const Duration(minutes: 3),
@@ -90,14 +95,16 @@ void _cleanupSyncThrottleMap() {
   for (int i = 0; i < _syncThrottleMaxEntries; i++) {
     _syncThrottleTimestamps[entries[i].key] = entries[i].value;
   }
-  debugPrint('[ConversationRealtime] Cleaned sync throttle map: ${_syncThrottleTimestamps.length} entries');
+  debugPrint(
+    '[ConversationRealtime] Cleaned sync throttle map: ${_syncThrottleTimestamps.length} entries',
+  );
 }
 
 /// 清理本地更新 Map 中过期条目（超过冷却期的条目）
 void _cleanupLocalUpdateMap() {
   final now = DateTime.now().millisecondsSinceEpoch;
   final keysToRemove = <String>[];
-  
+
   for (final entry in _localConversationUpdateTimes.entries) {
     final updateTime = entry.value['time'] as int? ?? 0;
     // 超过冷却期两倍的条目可以安全清理
@@ -105,24 +112,29 @@ void _cleanupLocalUpdateMap() {
       keysToRemove.add(entry.key);
     }
   }
-  
+
   for (final key in keysToRemove) {
     _localConversationUpdateTimes.remove(key);
   }
-  
+
   // 如果仍然超过最大容量，强制清理最旧的条目
   if (_localConversationUpdateTimes.length > _localUpdateMaxEntries) {
     final entries = _localConversationUpdateTimes.entries.toList()
-      ..sort((a, b) => 
-          ((b.value['time'] as int? ?? 0).compareTo(a.value['time'] as int? ?? 0)));
+      ..sort(
+        (a, b) => ((b.value['time'] as int? ?? 0).compareTo(
+          a.value['time'] as int? ?? 0,
+        )),
+      );
     _localConversationUpdateTimes.clear();
     for (int i = 0; i < _localUpdateMaxEntries; i++) {
       _localConversationUpdateTimes[entries[i].key] = entries[i].value;
     }
   }
-  
+
   if (keysToRemove.isNotEmpty) {
-    debugPrint('[ConversationRealtime] Cleaned local update map: ${keysToRemove.length} expired entries');
+    debugPrint(
+      '[ConversationRealtime] Cleaned local update map: ${keysToRemove.length} expired entries',
+    );
   }
 }
 
@@ -141,13 +153,13 @@ bool _shouldSkipSyncForLocalUpdate(String chatId) {
   if (updateRecord == null) {
     return false;
   }
-  
+
   // 如果本地更新是自己发的消息，则跳过 sync（因为本地已更新）
   final wasSelfUpdate = updateRecord['isSelf'] as bool? ?? false;
   if (!wasSelfUpdate) {
     return false;
   }
-  
+
   final updateTime = updateRecord['time'] as int? ?? 0;
   final now = DateTime.now().millisecondsSinceEpoch;
   return now - updateTime < _localUpdateCooldownMs;
@@ -173,21 +185,27 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
       // 注意：对方发来的消息（isSelf=false）不会跳过 sync
       final chatId = event.chatId?.trim() ?? '';
       if (chatId.isNotEmpty && _shouldSkipSyncForLocalUpdate(chatId)) {
-        debugPrint('[ConversationRealtime] Skipping sync for recently updated chat (self message): $chatId');
+        debugPrint(
+          '[ConversationRealtime] Skipping sync for recently updated chat (self message): $chatId',
+        );
         break;
       }
-      
+
       // 优化：如果用户当前正在查看该会话的聊天页面，跳过 sync
       // 因为用户已在聊天页面，会话列表的更新不是关键路径
       // 离开聊天页面时会重新加载会话列表
       if (chatId.isNotEmpty && _isCurrentlyViewingChat(ref, chatId)) {
-        debugPrint('[ConversationRealtime] Skipping sync for active chat: $chatId');
+        debugPrint(
+          '[ConversationRealtime] Skipping sync for active chat: $chatId',
+        );
         break;
       }
-      
+
       // 严格节流：避免高频事件触发频繁同步
       if (!_shouldThrottleSync('conversation_sync')) {
-        ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+        ref
+            .read(conversationListControllerProvider.notifier)
+            .syncIncrementally();
       }
       break;
     case SocketEventTypes.reconnecting:
@@ -273,7 +291,9 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
   if (rawBadges is! List) {
     // 优化：不触发完整 sync，仅记录日志
     // 原因：payload 格式异常时，应等待下一次正常推送，避免频繁请求
-    debugPrint('[ConversationRealtime] badgeUpdated: conversationBadges not a list, skipping sync');
+    debugPrint(
+      '[ConversationRealtime] badgeUpdated: conversationBadges not a list, skipping sync',
+    );
     return;
   }
   final badges = <String, int>{};
@@ -282,7 +302,8 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
       continue;
     }
     // 兼容 HTTP (chatId) 和 WebSocket (conversationId) 两种字段名
-    final chatId = (item['chatId'] ?? item['conversationId'])?.toString().trim() ?? '';
+    final chatId =
+        (item['chatId'] ?? item['conversationId'])?.toString().trim() ?? '';
     if (chatId.isEmpty || chatId == '0') {
       continue;
     }
@@ -297,7 +318,7 @@ void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
 void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
   final payload = event.payload;
   final action = payload['action']?.toString().trim() ?? '';
-  
+
   // 优化：群生命周期事件需要特殊处理，不受当前查看状态影响
   if (_isGroupLifecycleAction(action)) {
     _handleGroupLifecycleAction(ref, action, payload);
@@ -362,7 +383,9 @@ void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
     // 离开聊天页面时会重新加载会话列表
     final activeState = ref.read(activeConversationServiceProvider);
     if (activeState.isViewing) {
-      debugPrint('[ConversationRealtime] Skipping sync in systemNotify for active chat');
+      debugPrint(
+        '[ConversationRealtime] Skipping sync in systemNotify for active chat',
+      );
       return;
     }
     ref.read(conversationListControllerProvider.notifier).syncIncrementally();
@@ -412,8 +435,9 @@ void _handleGroupLifecycleAction(
   }
 
   if (action == 'group_disbanded') {
-    ref.read(groupMemberRemovedSignalProvider.notifier).state =
-        GroupMemberRemovedSignal(
+    ref
+        .read(groupMemberRemovedSignalProvider.notifier)
+        .state = GroupMemberRemovedSignal(
       groupId: groupId,
       reason: 'group_disbanded',
       token: DateTime.now().microsecondsSinceEpoch,
@@ -430,8 +454,9 @@ void _handleGroupLifecycleAction(
         '';
     final currentUserId = ref.read(authSessionProvider).userId;
     if (removedUserId.isNotEmpty && removedUserId == currentUserId) {
-      ref.read(groupMemberRemovedSignalProvider.notifier).state =
-          GroupMemberRemovedSignal(
+      ref
+          .read(groupMemberRemovedSignalProvider.notifier)
+          .state = GroupMemberRemovedSignal(
         groupId: groupId,
         reason: 'kicked_from_group',
         token: DateTime.now().microsecondsSinceEpoch,

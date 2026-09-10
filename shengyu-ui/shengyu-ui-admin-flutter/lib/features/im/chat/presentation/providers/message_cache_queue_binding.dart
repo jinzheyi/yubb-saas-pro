@@ -16,31 +16,32 @@ final messageCacheQueueProvider = Provider<MessageCacheQueue>((ref) {
 /// 1. 注册发送回调（使用 SendMessageUseCase 实际发送）
 /// 2. 注册状态变更回调（通知 UI 更新消息状态）
 /// 3. 监听网络状态变化，网络恢复时触发重发
-final messageCacheQueueInitBindingProvider =
-    Provider.autoDispose.family<void, SendMessageUseCase>((ref, sendUseCase) {
-  final queue = ref.read(messageCacheQueueProvider);
+final messageCacheQueueInitBindingProvider = Provider.autoDispose
+    .family<void, SendMessageUseCase>((ref, sendUseCase) {
+      final queue = ref.read(messageCacheQueueProvider);
 
-  // 注册发送回调
-  queue.registerSendCallback((message) async {
-    try {
-      await sendUseCase(
-        chatId: message.chatId,
-        text: message.content,
-        clientMessageId: message.clientMessageId,
-        receiverId: message.receiverId,
-        groupId: message.groupId,
-      );
-      return true;
-    } catch (_) {
-      return false;
-    }
-  });
+      // 注册发送回调
+      queue.registerSendCallback((message) async {
+        try {
+          await sendUseCase(
+            chatId: message.chatId,
+            text: message.content,
+            clientMessageId: message.clientMessageId,
+            receiverId: message.receiverId,
+            groupId: message.groupId,
+          );
+          return true;
+        } catch (_) {
+          return false;
+        }
+      });
 
-  // 监听网络状态变化
-  final networkService = NetworkMonitorService();
-  networkService.statusStream.listen((status) {
-    if (networkService.isNetworkAvailable && queue.hasPendingMessages) {
-      queue.onNetworkRecovered();
-    }
-  });
-});
+      // 监听网络状态变化
+      final networkService = NetworkMonitorService();
+      final subscription = networkService.statusStream.listen((status) {
+        if (networkService.isNetworkAvailable && queue.hasPendingMessages) {
+          queue.onNetworkRecovered();
+        }
+      });
+      ref.onDispose(subscription.cancel);
+    });

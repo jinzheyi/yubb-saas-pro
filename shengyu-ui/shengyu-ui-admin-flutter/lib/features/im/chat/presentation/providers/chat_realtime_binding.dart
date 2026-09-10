@@ -30,8 +30,26 @@ final _messageDeduplicator = MessageDeduplicator(maxSize: 1000);
 final Map<String, Timer> _singleChatPresenceRefreshTimers = <String, Timer>{};
 
 // 批量消息缓冲：key 为 chatId，用于节流高频 WebSocket 消息
-final Map<String, List<Map<String, dynamic>>> _messageBatchBuffers = <String, List<Map<String, dynamic>>>{};
+final Map<String, List<Map<String, dynamic>>> _messageBatchBuffers =
+    <String, List<Map<String, dynamic>>>{};
 final Map<String, Timer> _messageBatchTimers = <String, Timer>{};
+
+/// 清空与当前登录态相关的全局实时处理状态。
+///
+/// 这些对象不受 autoDispose Provider 管理；账号或企业切换时必须主动释放，
+/// 避免旧会话的节流消息、在线状态刷新或去重记录影响新会话。
+void clearChatRealtimeEphemeralState() {
+  for (final timer in _singleChatPresenceRefreshTimers.values) {
+    timer.cancel();
+  }
+  _singleChatPresenceRefreshTimers.clear();
+  for (final timer in _messageBatchTimers.values) {
+    timer.cancel();
+  }
+  _messageBatchTimers.clear();
+  _messageBatchBuffers.clear();
+  _messageDeduplicator.clear();
+}
 
 final chatRealtimeBindingProvider = Provider.autoDispose.family<void, String>((
   ref,
@@ -80,7 +98,14 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       }
 
       // 使用批量节流机制：将消息加入缓冲队列
-      _enqueueMessageForBatch(ref, chatId, raw, isSelf, senderId, currentUserId);
+      _enqueueMessageForBatch(
+        ref,
+        chatId,
+        raw,
+        isSelf,
+        senderId,
+        currentUserId,
+      );
       break;
     case SocketEventTypes.readReceiptChanged:
       final messageId =
@@ -118,7 +143,9 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
       if (!_belongsToCurrentConversation(ref, chatId, raw)) {
         return;
       }
-      ref.read(chatRealtimeSignalProvider(chatId).notifier).state = ChatRealtimeSignal(
+      ref
+          .read(chatRealtimeSignalProvider(chatId).notifier)
+          .state = ChatRealtimeSignal(
         chatId: chatId,
         action: 'typing',
         payload: event.payload,
@@ -179,19 +206,20 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             targetId: pageState.entryArgs.targetId,
             messageId: effectiveRecalled.messageId,
             messageSequence: effectiveRecalled.sequence,
-            preview: createConversationPreviewFormatter(
-              ref.read(appLocaleProvider),
-            ).call(
-              type: effectiveRecalled.type,
-              content: effectiveRecalled.content,
-              customType: effectiveRecalled.extra.customType,
-              fileName: effectiveRecalled.extra.fileName,
-              systemEventKey: effectiveRecalled.extra.systemEventKey,
-              systemEventParams: effectiveRecalled.extra.systemEventParams,
-              conversationType: pageState.entryArgs.conversationType,
-              isSelf: effectiveRecalled.isOutgoing,
-              senderName: effectiveRecalled.senderName,
-            ),
+            preview:
+                createConversationPreviewFormatter(
+                  ref.read(appLocaleProvider),
+                ).call(
+                  type: effectiveRecalled.type,
+                  content: effectiveRecalled.content,
+                  customType: effectiveRecalled.extra.customType,
+                  fileName: effectiveRecalled.extra.fileName,
+                  systemEventKey: effectiveRecalled.extra.systemEventKey,
+                  systemEventParams: effectiveRecalled.extra.systemEventParams,
+                  conversationType: pageState.entryArgs.conversationType,
+                  isSelf: effectiveRecalled.isOutgoing,
+                  senderName: effectiveRecalled.senderName,
+                ),
             messageType: effectiveRecalled.type,
             senderName: effectiveRecalled.senderName,
             isSelf: effectiveRecalled.isOutgoing,
@@ -225,8 +253,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         );
       } else if (entryArgs.conversationType == ConversationType.group) {
         final groupId = entryArgs.targetId?.trim() ?? '';
-        if (groupId.isNotEmpty) {
-        }
+        if (groupId.isNotEmpty) {}
       }
       // 根治方案：WebSocket 重连成功后，拉取离线消息（包含对方发来的消息+自己消息状态确认）
       // 原因：后台期间 WebSocket 断开，messageReceived 事件全部丢失
@@ -309,7 +336,9 @@ int? _tryParseInt(Object? value) {
 bool _isGroupLeftStatus(Ref ref, String chatId) {
   final pageState = ref.read(chatControllerProvider(chatId));
   final groupMemberStatus = pageState.groupMemberStatus;
-  return groupMemberStatus == 1 || groupMemberStatus == 2 || groupMemberStatus == 3;
+  return groupMemberStatus == 1 ||
+      groupMemberStatus == 2 ||
+      groupMemberStatus == 3;
 }
 
 bool _belongsToCurrentConversation(
@@ -377,7 +406,9 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
       action == 'group_member_removed' ||
       action == 'group_owner_transferred' ||
       action == 'group_disbanded') {
-    ref.read(chatRealtimeSignalProvider(chatId).notifier).state = ChatRealtimeSignal(
+    ref
+        .read(chatRealtimeSignalProvider(chatId).notifier)
+        .state = ChatRealtimeSignal(
       chatId: chatId,
       action: action,
       payload: payload,
@@ -398,7 +429,9 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
     return;
   }
 
-  final timelineController = ref.read(chatTimelineControllerProvider(chatId).notifier);
+  final timelineController = ref.read(
+    chatTimelineControllerProvider(chatId).notifier,
+  );
   final matchedMessage = candidates
       .map(timelineController.findByAnyMessageId)
       .whereType<Message>()
@@ -426,7 +459,9 @@ void _handleSystemNotify(Ref ref, String chatId, Map<String, Object?> payload) {
     'GROUP_NOT_EXISTS',
     'GROUP_DISBANDED',
   ];
-  ref.read(chatRuntimeNoticeProvider(chatId).notifier).state = ChatRuntimeNotice(
+  ref
+      .read(chatRuntimeNoticeProvider(chatId).notifier)
+      .state = ChatRuntimeNotice(
     chatId: chatId,
     message: denyMessage,
     code: denyCode.isEmpty ? null : denyCode,
@@ -488,9 +523,7 @@ void _handleGroupInfoUpdatedNotify(
   if (newName.isEmpty || pageState.chatTitle == newName) {
     return;
   }
-  ref
-      .read(chatControllerProvider(chatId).notifier)
-      .updateChatTitle(newName);
+  ref.read(chatControllerProvider(chatId).notifier).updateChatTitle(newName);
 }
 
 int? _parseNotifyTime(Object? raw) {
@@ -659,7 +692,7 @@ void _enqueueMessageForBatch(
   if (!isSelf && _messageDeduplicator.isDuplicate(raw)) {
     return;
   }
-  
+
   // 对于自己发送的消息，也需要加入去重器（避免后续重复推送）
   if (isSelf) {
     _messageDeduplicator.isDuplicate(raw);
@@ -704,7 +737,9 @@ void _flushMessageBatch(Ref ref, String chatId) {
   }
 
   // 调用批量添加方法（Controller 内部会去重合并）
-  final timelineController = ref.read(chatTimelineControllerProvider(chatId).notifier);
+  final timelineController = ref.read(
+    chatTimelineControllerProvider(chatId).notifier,
+  );
   timelineController.appendMessagesBatch(messages);
 
   // 使用最后一条消息更新会话列表
@@ -713,7 +748,9 @@ void _flushMessageBatch(Ref ref, String chatId) {
   final effectiveMessage =
       timelineController.findByAnyMessageId(lastMessage.messageId) ??
       (lastMessage.clientMessageId?.trim().isNotEmpty == true
-          ? timelineController.findByAnyMessageId(lastMessage.clientMessageId!.trim())
+          ? timelineController.findByAnyMessageId(
+              lastMessage.clientMessageId!.trim(),
+            )
           : null) ??
       lastMessage;
 
@@ -727,19 +764,18 @@ void _flushMessageBatch(Ref ref, String chatId) {
         targetId: pageState.entryArgs.targetId,
         messageId: effectiveMessage.messageId,
         messageSequence: effectiveMessage.sequence,
-        preview: createConversationPreviewFormatter(
-          ref.read(appLocaleProvider),
-        ).call(
-          type: effectiveMessage.type,
-          content: effectiveMessage.content,
-          customType: effectiveMessage.extra.customType,
-          fileName: effectiveMessage.extra.fileName,
-          systemEventKey: effectiveMessage.extra.systemEventKey,
-          systemEventParams: effectiveMessage.extra.systemEventParams,
-          conversationType: pageState.entryArgs.conversationType,
-          isSelf: effectiveMessage.isOutgoing,
-          senderName: effectiveMessage.senderName,
-        ),
+        preview: createConversationPreviewFormatter(ref.read(appLocaleProvider))
+            .call(
+              type: effectiveMessage.type,
+              content: effectiveMessage.content,
+              customType: effectiveMessage.extra.customType,
+              fileName: effectiveMessage.extra.fileName,
+              systemEventKey: effectiveMessage.extra.systemEventKey,
+              systemEventParams: effectiveMessage.extra.systemEventParams,
+              conversationType: pageState.entryArgs.conversationType,
+              isSelf: effectiveMessage.isOutgoing,
+              senderName: effectiveMessage.senderName,
+            ),
         messageType: effectiveMessage.type,
         senderName: effectiveMessage.senderName,
         isSelf: effectiveMessage.isOutgoing,

@@ -23,10 +23,16 @@ class AuthRefreshService {
       refreshToken: current.refreshToken,
       tenantId: current.tenantId,
     );
+    if (!_isCurrentSession(current)) {
+      return _ref.read(authSessionProvider);
+    }
     final permissionInfo = await _remoteDataSource.getPermissionInfoWithSession(
       accessToken: token.accessToken,
       tenantId: token.tenantId,
     );
+    if (!_isCurrentSession(current)) {
+      return _ref.read(authSessionProvider);
+    }
     final next = current.copyWith(
       userId: permissionInfo.userId,
       accessToken: token.accessToken,
@@ -35,5 +41,13 @@ class AuthRefreshService {
     );
     await _ref.read(authSessionProvider.notifier).saveSession(next);
     return next;
+  }
+
+  bool _isCurrentSession(AuthSession snapshot) {
+    final latest = _ref.read(authSessionProvider);
+    return latest.userId == snapshot.userId &&
+        latest.accessToken == snapshot.accessToken &&
+        latest.refreshToken == snapshot.refreshToken &&
+        latest.tenantId == snapshot.tenantId;
   }
 }
