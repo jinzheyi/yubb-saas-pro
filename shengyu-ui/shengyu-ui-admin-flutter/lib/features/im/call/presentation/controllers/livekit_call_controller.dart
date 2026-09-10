@@ -271,11 +271,11 @@ class LiveKitCallController extends ChangeNotifier {
     return CallEndDisplayReason.localCancel;
   }
 
-  /// Acquire media permissions before creating or accepting server-side call
-  /// state. On Web this performs a short getUserMedia preflight, so a missing
-  /// microphone, camera, or browser permission never creates a server call
-  /// that must immediately be cancelled after joining LiveKit.
+  /// Acquire native media permissions before creating or accepting server-side
+  /// call state. Web must let LiveKit request getUserMedia during media setup,
+  /// which preserves the browser's native microphone/camera prompt.
   Future<void> _ensureMediaPermissions() async {
+    if (kIsWeb) return;
     final permissions = <Permission>[Permission.microphone];
     if (args.callType == CallType.video) permissions.add(Permission.camera);
     final statuses = await permissions.request();
