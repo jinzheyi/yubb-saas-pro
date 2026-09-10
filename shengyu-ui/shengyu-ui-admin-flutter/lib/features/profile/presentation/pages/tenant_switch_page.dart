@@ -49,10 +49,12 @@ class _TenantSwitchPageState extends ConsumerState<TenantSwitchPage> {
   @override
   void initState() {
     super.initState();
-    // 仅在租户列表为空时加载（避免重复请求）
+    // 仅复用当前账号的列表；账号切换后必须重新加载，不能展示旧账号企业。
     Future.microtask(() {
       final currentState = ref.read(tenantSwitchServiceProvider);
-      if (currentState.tenantList.isEmpty) {
+      final currentUserId = ref.read(authSessionProvider).userId;
+      if (currentState.tenantList.isEmpty ||
+          currentState.loadedForUserId != currentUserId) {
         ref.read(tenantSwitchServiceProvider.notifier).loadTenantList();
       }
     });

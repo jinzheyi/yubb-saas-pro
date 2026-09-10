@@ -9,8 +9,8 @@ import 'package:shengyu_ui_admin_im/features/im/chat/presentation/providers/chat
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_providers.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/providers/conversation_realtime_binding.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
+import 'package:shengyu_ui_admin_im/features/profile/domain/services/tenant_switch_service.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/providers/profile_providers.dart';
-import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.dart';
 
 /// 会话清理服务
 ///
@@ -29,12 +29,9 @@ import 'package:shengyu_ui_admin_im/infrastructure/cache/unified_cache_manager.d
 /// - 只要 previous 和 next 的 userId 不同，就执行清理
 final sessionCleanupServiceProvider = Provider<SessionCleanupService>((ref) {
   final service = SessionCleanupService(ref);
-  ref.listen<AuthSession>(
-    authSessionProvider,
-    (previous, next) {
-      service._onSessionChanged(previous, next);
-    },
-  );
+  ref.listen<AuthSession>(authSessionProvider, (previous, next) {
+    service._onSessionChanged(previous, next);
+  });
   return service;
 });
 
@@ -88,6 +85,7 @@ class SessionCleanupService {
     _ref.invalidate(myGroupsProvider);
     _ref.invalidate(groupSettingsRepositoryProvider);
     _ref.invalidate(groupMemberRemovedSignalProvider);
+    _ref.invalidate(tenantSwitchServiceProvider);
     _ref.invalidate(badgeServiceProvider);
 
     final badgeService = _ref.read(badgeServiceProvider.notifier);
