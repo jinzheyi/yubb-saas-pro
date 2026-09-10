@@ -64,7 +64,11 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: Text(widget.args.isAddMode ? strings.addMemberAction : strings.createGroupAction),
+        title: Text(
+          widget.args.isAddMode
+              ? strings.addMemberAction
+              : strings.createGroupAction,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 22),
           onPressed: _handleBack,
@@ -335,7 +339,9 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         _loading = false;
       });
       if (error is! StateError) {
-        _showMessage(AppLocalizations.of(context).operationFailed(error.toString()));
+        _showMessage(
+          AppLocalizations.of(context).operationFailed(error.toString()),
+        );
       }
     }
   }
@@ -426,7 +432,8 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
     final strings = AppLocalizations.of(context);
     final selectionState = ref.read(contactSelectionControllerProvider);
     final selectedMembers = selectionState.entries.values.toList();
-    if (!widget.args.isAddMode && selectedMembers.length < 2) {
+    // 创建页会自动保留当前登录账号，因此总人数至少为 3 才允许创建群聊。
+    if (!widget.args.isAddMode && selectedMembers.length < 3) {
       _showMessage(strings.atLeastTwoMembers);
       return;
     }
@@ -450,9 +457,9 @@ class _InitiateGroupPageState extends ConsumerState<InitiateGroupPage> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(strings.groupMemberAddedSuccess)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.groupMemberAddedSuccess)),
+        );
         context.pop(true);
       } else {
         final groupName = _trimGroupName(_generateGroupName(selectedMembers));

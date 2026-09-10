@@ -2652,7 +2652,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
       url = directUrl;
     }
 
-    // 优先使用本地缓存，缓存未命中时后台下载后返回本地路径
+    // 浏览器禁止播放器访问 file:// 缓存路径，Web 必须直接播放受控的 HTTPS 地址。
+    if (kIsWeb) {
+      return url;
+    }
+
+    // 原生端优先使用本地缓存，缓存未命中时下载后返回本地路径。
     final localPath = await AudioCacheManager.getAudioFile(url);
     return localPath;
   }

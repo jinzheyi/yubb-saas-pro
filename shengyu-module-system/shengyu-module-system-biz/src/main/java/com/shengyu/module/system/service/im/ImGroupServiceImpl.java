@@ -175,6 +175,11 @@ public class ImGroupServiceImpl implements ImGroupService {
             memberIds.add(userId);
             log.info("[ImGroupService] 群主不在成员列表中，自动添加: {}", userId);
         }
+        // 单聊由会话模块处理；群聊必须至少包含群主和两名其他成员。
+        // 在服务端按去重后的实际成员数校验，避免调用方绕过客户端限制。
+        if (memberIds.size() < 3) {
+            throw exception(GROUP_MEMBER_TOO_FEW);
+        }
         if (memberIds.size() > 500) {
             throw exception(GROUP_MEMBER_FULL);
         }

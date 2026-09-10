@@ -4848,7 +4848,7 @@ abstract class AppLocalizations {
   /// No description provided for @atLeastTwoMembers.
   ///
   /// In en, this message translates to:
-  /// **'Select at least 2 members'**
+  /// **'A group chat needs at least 2 other members'**
   String get atLeastTwoMembers;
 
   /// No description provided for @atLeastOneMember.

@@ -262,6 +262,7 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_MEMBER_KICKED_OUT = new ErrorCode(1_002_030_222, "你已被移出群聊，无法执行此操作");
     ErrorCode GROUP_MEMBER_QUITTED = new ErrorCode(1_002_030_223, "你已退出该群聊，无法执行此操作");
     ErrorCode GROUP_MEMBER_ALREADY_REMOVED = new ErrorCode(1_002_030_224, "你已不在群聊中，无法执行此操作");
+    ErrorCode GROUP_MEMBER_TOO_FEW = new ErrorCode(1_002_030_225, "群聊至少需要 3 名成员");
     
     // 群文件相关 1-002-030-250
     ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");

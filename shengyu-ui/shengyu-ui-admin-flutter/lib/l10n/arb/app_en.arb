@@ -1453,7 +1453,7 @@
   "addMemberAction": "Add Member",
   "createGroupAction": "Create Group Chat",
   "searchMemberHint": "Search members",
-  "atLeastTwoMembers": "Select at least 2 members",
+  "atLeastTwoMembers": "A group chat needs at least 2 other members",
   "atLeastOneMember": "Select at least 1 member",
   "groupNotAllowedAddMember": "This group does not allow adding members",
   "mustRetainCurrentUserInGroup": "The current logged-in account must be retained in the group",

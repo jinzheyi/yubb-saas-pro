@@ -1446,7 +1446,7 @@
   "addMemberAction": "添加成员",
   "createGroupAction": "发起群聊",
   "searchMemberHint": "搜索成员",
-  "atLeastTwoMembers": "至少选择两名成员",
+  "atLeastTwoMembers": "群聊至少需要两名其他成员",
   "atLeastOneMember": "至少选择一名成员",
   "groupNotAllowedAddMember": "当前群不允许添加成员",
   "mustRetainCurrentUserInGroup": "当前登录账号必须保留在群聊中",

@@ -429,3 +429,11 @@ cat /tmp/upload-check-response.txt
 - 用户详情页发消息/发起语音视频通话已修复：创建单聊成员时必须写入当前租户 `tenant_id`，避免对方会话列表能看到但进入提示“会话不存在”；详情页发起通话按单聊会话两端用户校验，不再要求被叫方已提前生成 `im_chat_user` 成员行。
 - 若生产出现历史单聊会话成员缺失，先备份数据库，再按 `im_conversation_user_state` 中的当前租户状态补齐缺失的 `im_chat_user` 行；最近一次备份：`/opt/shengyu/backups/shengyu-saas-20260907170821-before-chat-user-tenant-repair.sql`。
 - 1v1 通话主叫端 30 秒无人接听时，Flutter 客户端会调用 `/app-api/system/im/call/timeout`，由后端落库为 `TIMEOUT/MISSED` 并广播 `call.timeout` 给双方；服务端 `CallLifecycleJob` 仍作为兜底，避免被叫端持续响铃。
+
+### 2026-09-10 Flutter Web 语音播放与群聊人数约束
+
+- 现象：Flutter Web 接收语音消息后播放失败，浏览器控制台出现 `Not allowed to load local resource: file:///.tmp_rand0/...`。
+- 根因：Web 端沿用了原生音频磁盘缓存逻辑，将 `flutter_cache_manager` 生成的浏览器临时 `file://` 路径交给播放器；浏览器安全策略禁止网页读取该本地路径。服务端日志未出现语音文件或签名地址异常。
+- 修复：Web 端直接将文件服务签发的 HTTPS 预签名地址交给播放器；Android/iOS/HarmonyOS 等原生端继续走本地缓存文件播放。聊天页与聊天记录页均已同步处理。
+- 群聊规则：创建群聊总人数必须不少于 3 人（创建者加至少两名其他成员）。客户端在创建页提前拦截，服务端按去重并补齐创建者后的实际人数强制校验，直接调用接口也无法绕过；单聊不受影响。
+- 发布：本次同时替换 `shengyu-server` 的 Jar 和 `shengyu-im-flutter-web` 静态资源。后端替换前 Jar 与 Web 旧目录均保存在 `/opt/shengyu/backups/` 或容器 `html.bak.<timestamp>`；发布后以 `http://127.0.0.1:48080/actuator/health` 和 `https://im.shengyukj.top/` 验证。

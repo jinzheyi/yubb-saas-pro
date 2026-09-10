@@ -2715,7 +2715,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get searchMemberHint => 'Search members';
 
   @override
-  String get atLeastTwoMembers => 'Select at least 2 members';
+  String get atLeastTwoMembers => 'A group chat needs at least 2 other members';
 
   @override
   String get atLeastOneMember => 'Select at least 1 member';

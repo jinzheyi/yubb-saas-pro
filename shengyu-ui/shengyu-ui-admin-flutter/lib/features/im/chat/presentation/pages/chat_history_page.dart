@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -605,9 +606,12 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         }
         return;
       }
-      // 优先使用本地缓存，缓存未命中时后台下载后返回本地路径
-      final localPath = await AudioCacheManager.getAudioFile(url);
-      if (localPath == null) {
+      // Web 端不能将浏览器缓存的 file:// 路径交给播放器；直接使用
+      // 服务端签发的 HTTPS 地址。原生端继续复用本地缓存以减少重复下载。
+      final playbackSource = kIsWeb
+          ? url
+          : await AudioCacheManager.getAudioFile(url);
+      if (playbackSource == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -619,11 +623,13 @@ class _ChatHistoryPageState extends ConsumerState<ChatHistoryPage> {
         }
         return;
       }
-      // 本地缓存文件使用 setFilePath，否则使用 setUrl
-      if (localPath.startsWith('/') || localPath.startsWith('file://')) {
-        await playback.setFilePath(localPath);
+      if (kIsWeb) {
+        await playback.setUrl(playbackSource);
+      } else if (playbackSource.startsWith('/') ||
+          playbackSource.startsWith('file://')) {
+        await playback.setFilePath(playbackSource);
       } else {
-        await playback.setUrl(localPath);
+        await playback.setUrl(playbackSource);
       }
       if (!mounted) return;
       positionSub = playback.positionStream.listen((pos) {

@@ -2543,7 +2543,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchMemberHint => '搜索成员';
 
   @override
-  String get atLeastTwoMembers => '至少选择两名成员';
+  String get atLeastTwoMembers => '群聊至少需要两名其他成员';
 
   @override
   String get atLeastOneMember => '至少选择一名成员';
