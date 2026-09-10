@@ -16,6 +16,7 @@ import com.shengyu.module.system.service.tenant.TenantJoinService;
 import com.shengyu.module.system.dal.dataobject.tenant.TenantJoinApplyDO;
 import com.shengyu.module.system.service.user.SaasUserService;
 import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.web.core.util.WebFrameworkUtils;
 import com.shengyu.module.platform.api.mail.MailSendApi;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.time.LocalDateTime;
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -74,6 +76,7 @@ public class AppRegisterServiceImpl implements AppRegisterService {
         boolean newUser = saasUserService.getUserByUsername(email) == null;
         String initialPassword = newInitialPassword();
         SaasUserDO saasUser = saasUserService.registerOrGetVerifiedEmailUser(email, initialPassword, reqVO.getMobile());
+        bindRequestAuditActor(saasUser);
         TenantRespDTO ownedTenant = tenantApi.getTenantByOwnerSaasUserId(saasUser.getId());
         if (ownedTenant != null) {
             throw exception(USER_OWNED_TENANT_EXISTS);
@@ -128,6 +131,17 @@ public class AppRegisterServiceImpl implements AppRegisterService {
             return LocalDateTime.parse(defaultTenantExpireTime);
         } catch (DateTimeParseException exception) {
             throw new IllegalStateException("shengyu.app-register.default-expire-time 格式必须为 ISO-8601 日期时间", exception);
+        }
+    }
+
+    /**
+     * App 自助创建企业是匿名入口，需在当前请求中明确审计操作者，
+     * 使平台租户、租户管理员和初始化模板的 creator/updater 均可正确落库。
+     */
+    private void bindRequestAuditActor(SaasUserDO saasUser) {
+        HttpServletRequest request = WebFrameworkUtils.getRequest();
+        if (request != null) {
+            WebFrameworkUtils.setLoginUserId(request, saasUser.getId());
         }
     }
 

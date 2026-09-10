@@ -384,6 +384,13 @@ cat /tmp/upload-check-response.txt
 - 生产：已更新 `/opt/shengyu/saas-deploy/docker.prod.env` 与 Compose 文件，替换并重启 `shengyu-server`；健康接口返回 `UP`。发布前 Jar、Compose、环境变量均已保存在 `/opt/shengyu/backups/`。
 - 验证：向 `POST /app-api/system/register/tenant` 提交完整字段和无效邮箱验证码后，返回“邮箱验证码无效或已过期”，证明已越过租户到期时间参数校验；未创建任何测试企业或用户。
 
+### 2026-09-10 App 创建企业审计字段修复
+
+- 现象：生产库 `tenant.creator` 不能为空；App 自助创建入口为匿名请求，旧实现没有后台登录人上下文，租户插入报 `Column 'creator' cannot be null`。
+- 修复：以已校验的 SaaS 企业所有者作为本次请求审计操作者，并在平台创建企业时显式写入租户 `creator/updater`。这样租户管理员、初始化通知模板等后续数据也可获得正确审计字段。
+- 发布：已替换生产 `shengyu-server` Jar 并重启容器，`http://127.0.0.1:48080/actuator/health` 返回 `UP`；本次替换前的 Jar 已备份到 `/opt/shengyu/backups/shengyu-server-app.20260910-113812.before-app-register-audit-final.jar`。
+- 发布后验证应使用真实邮箱验证码完成一次创建企业；无效验证码只用于确认请求可以通过字段校验，不创建任何数据。
+
 ## 2026-09-09 企业注册与加入闭环发布记录
 
 - 已发布后端、租户 Vue 管理端和 Flutter Web；后端容器 `shengyu-server` 于本次发布后通过 `http://127.0.0.1:48080/actuator/health` 健康检查。

@@ -17,6 +17,7 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.web.core.util.WebFrameworkUtils;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantCreateReqVO;
@@ -103,6 +104,13 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         TenantDO tenant = BeanUtils.toBean(createReqVO, TenantDO.class);
         tenant.setContactUserName(createReqVO.getUsername());
         tenant.setOwnerSaasUserId(createReqVO.getOwnerSaasUserId());
+        if (createReqVO.getOwnerSaasUserId() != null
+                && createReqVO.getOwnerSaasUserId().equals(WebFrameworkUtils.getLoginUserId())) {
+            String ownerSaasUserId = String.valueOf(createReqVO.getOwnerSaasUserId());
+            // App 匿名创建入口没有后台登录态，不能依赖 MyBatis 自动填充审计字段。
+            tenant.setCreator(ownerSaasUserId);
+            tenant.setUpdater(ownerSaasUserId);
+        }
         tenantMapper.insert(tenant);
 
         TenantUtils.execute(tenant.getId(), () -> {
