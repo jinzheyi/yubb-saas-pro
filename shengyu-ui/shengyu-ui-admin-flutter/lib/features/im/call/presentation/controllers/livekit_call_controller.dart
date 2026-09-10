@@ -272,8 +272,8 @@ class LiveKitCallController extends ChangeNotifier {
   }
 
   /// Acquire native media permissions before creating or accepting server-side
-  /// call state. Web must let LiveKit request getUserMedia during media setup,
-  /// which preserves the browser's native microphone/camera prompt.
+  /// call state. Web browsers must request through getUserMedia, which the
+  /// LiveKit SDK performs from the user's call action.
   Future<void> _ensureMediaPermissions() async {
     if (kIsWeb) return;
     final permissions = <Permission>[Permission.microphone];
@@ -401,6 +401,14 @@ class LiveKitCallController extends ChangeNotifier {
       // a permission sheet is dismissed or a proxy silently drops the media
       // connection. A call UI must always converge to a terminal state.
       await room.connect(url, token).timeout(const Duration(seconds: 15));
+      if (!kIsWeb) {
+        // A voice call should start on the earpiece to avoid an acoustic loop
+        // in close-range use. Video calls keep the expected hands-free speaker
+        // route. `force` remains false so wired/Bluetooth headsets win.
+        final preferSpeaker = args.callType == CallType.video;
+        await AudioManager.instance.setSpeakerOutputPreferred(preferSpeaker);
+        _speakerEnabled = preferSpeaker;
+      }
       await room.localParticipant?.setMicrophoneEnabled(true);
       if (args.callType == CallType.video) {
         await room.localParticipant?.setCameraEnabled(true);
@@ -410,13 +418,6 @@ class LiveKitCallController extends ChangeNotifier {
       _connected = true;
       _reconnecting = false;
       _startDurationTimer();
-      if (!kIsWeb) {
-        // Output routing is a device convenience, not a media prerequisite.
-        // Some Android audio stacks reject a route switch immediately after
-        // joining a room. It must never turn a successful LiveKit connection
-        // into a cancelled call.
-        unawaited(_applyInitialSpeakerPreference());
-      }
     } catch (error) {
       _error = _friendlyFailure(error);
       await _disposeRoom();
@@ -424,23 +425,6 @@ class LiveKitCallController extends ChangeNotifier {
     } finally {
       _connecting = false;
       if (!_disposed) notifyListeners();
-    }
-  }
-
-  Future<void> _applyInitialSpeakerPreference() async {
-    final preferSpeaker = args.callType == CallType.video;
-    try {
-      await AudioManager.instance.setSpeakerOutputPreferred(preferSpeaker);
-      if (_disposed || !_connected) return;
-      _speakerEnabled = preferSpeaker;
-      notifyListeners();
-    } catch (error, stackTrace) {
-      // Keep LiveKit's current platform-selected output. The user can still
-      // retry from the speaker button once the device audio stack is ready.
-      debugPrint(
-        '[LiveKitCallController] 初始音频输出路由失败，保留默认路由: '
-        '$error\n$stackTrace',
-      );
     }
   }
 
