@@ -78,12 +78,18 @@ class SettingsPage extends ConsumerWidget {
           _SettingsGroup(
             children: [
               _SettingsNavTile(
+                icon: Icons.lock_outline_rounded,
+                iconColor: const Color(0xFF5A7CF3),
+                title: '修改密码',
+                subtitle: '修改当前账号的登录密码',
+                onTap: () => context.pushNamed(RouteNames.changePassword),
+              ),
+              _SettingsNavTile(
                 icon: Icons.devices_outlined,
                 iconColor: const Color(0xFF34C759),
                 title: strings.deviceListTitle,
                 onTap: () => context.pushNamed(RouteNames.deviceList),
               ),
-              const Divider(height: 1, indent: 64, endIndent: 16),
               _SettingsNavTile(
                 icon: Icons.shield_outlined,
                 iconColor: const Color(0xFFFF9F43),

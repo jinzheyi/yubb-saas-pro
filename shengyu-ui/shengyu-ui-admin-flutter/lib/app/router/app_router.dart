@@ -66,6 +66,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/page
 import 'package:shengyu_ui_admin_im/features/im/search/presentation/pages/common_global_search_page.dart';
 import 'package:shengyu_ui_admin_im/features/login/presentation/pages/login_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/language_settings_page.dart';
+import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/change_password_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/profile_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/theme_settings_page.dart';
@@ -224,6 +225,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: RouteNames.settings,
             pageBuilder: (context, state) =>
                 _buildRoutePage(state: state, child: const SettingsPage()),
+          ),
+          GoRoute(
+            path: RoutePaths.changePassword,
+            name: RouteNames.changePassword,
+            pageBuilder: (context, state) => _buildRoutePage(
+              state: state,
+              child: const ChangePasswordPage(),
+            ),
           ),
           GoRoute(
             path: RoutePaths.aboutApp,

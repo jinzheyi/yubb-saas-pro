@@ -225,4 +225,19 @@ class AuthRemoteDataSource {
     );
     return result.requireData();
   }
+
+  Future<void> updatePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final response = await _dio.put(
+      '/system/user/profile/update-password',
+      data: {'oldPassword': oldPassword, 'newPassword': newPassword},
+    );
+    final result = ApiResult.fromJson<bool>(
+      response.data as Map<String, dynamic>,
+      dataParser: (raw) => raw == true,
+    );
+    result.requireData();
+  }
 }

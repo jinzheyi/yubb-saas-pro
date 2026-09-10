@@ -9,6 +9,7 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
+import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserDetailRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserListReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserSimpleRespVO;
@@ -124,6 +125,14 @@ public class AppUserController {
     @Operation(summary = "清除当前用户自定义头像")
     public CommonResult<Boolean> clearCurrentUserAvatar() {
         userService.clearUserAvatar(SecurityFrameworkUtils.getLoginUserId());
+        return success(true);
+    }
+
+    @PutMapping("/profile/update-password")
+    @Operation(summary = "修改当前用户登录密码")
+    public CommonResult<Boolean> updateCurrentUserPassword(
+            @Valid @RequestBody UserProfileUpdatePasswordReqVO reqVO) {
+        userService.updateUserPassword(SecurityFrameworkUtils.getLoginUserId(), reqVO);
         return success(true);
     }
 
