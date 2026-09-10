@@ -45,6 +45,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   final CursorVersionStore _cursorVersionStore;
   final GroupSettingsRepository _groupSettingsRepository;
   final String _currentUserId;
+  Future<AppError?>? _syncInFlight;
 
   /// 同步恢复进程内缓存，供页面在首帧前调用。
   ///
@@ -132,7 +133,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
               conversation.targetAvatar?.isNotEmpty != true &&
               conversation.groupMemberItems.isEmpty,
         )
-        .take(12)
+        .take(6)
         .toList(growable: false);
     if (candidates.isEmpty) return;
 
@@ -142,36 +143,21 @@ class ConversationListController extends StateNotifier<ConversationListState> {
   Future<void> _fetchAndCacheGroupAvatarPreviews(
     List<Conversation> candidates,
   ) async {
-    final previews = await Future.wait(
-      candidates.map((conversation) async {
-        final groupId = conversation.targetId ?? conversation.chatId;
-        try {
-          final members = await _groupSettingsRepository.getGroupMembers(
-            groupId,
-          );
-          final memberItems = _toGroupMemberItems(members);
-          if (memberItems.isNotEmpty) {
-            return MapEntry(conversation.chatId, memberItems);
-          }
-
-          // 历史测试群、已解散群等场景可能没有可查询的成员列表。此时从
-          // 当前群的本地消息中提取去重后的发送者，仍可稳定显示组合头像。
-          final cachedMessages = await _unifiedCacheManager.getMessages(
-            _currentUserId,
-            conversation.chatId,
-          );
-          return MapEntry(
-            conversation.chatId,
-            _toGroupMemberItemsFromMessages(cachedMessages?.data ?? const []),
-          );
-        } catch (error) {
-          debugPrint(
-            '[ConversationList] Group avatar refresh failed for $groupId: $error',
-          );
-          return null;
-        }
-      }),
-    );
+    const maxConcurrentRequests = 3;
+    final previews = <MapEntry<String, List<GroupMemberItem>>?>[];
+    for (
+      var start = 0;
+      start < candidates.length;
+      start += maxConcurrentRequests
+    ) {
+      final end = math.min(start + maxConcurrentRequests, candidates.length);
+      previews.addAll(
+        await Future.wait(
+          candidates.sublist(start, end).map(_loadGroupAvatarPreview),
+        ),
+      );
+      if (!mounted) return;
+    }
     if (!mounted) return;
 
     final membersByChatId = <String, List<GroupMemberItem>>{
@@ -206,6 +192,35 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       conversations,
       state.cursorVersion,
     );
+  }
+
+  Future<MapEntry<String, List<GroupMemberItem>>?> _loadGroupAvatarPreview(
+    Conversation conversation,
+  ) async {
+    final groupId = conversation.targetId ?? conversation.chatId;
+    try {
+      final members = await _groupSettingsRepository.getGroupMembers(groupId);
+      final memberItems = _toGroupMemberItems(members);
+      if (memberItems.isNotEmpty) {
+        return MapEntry(conversation.chatId, memberItems);
+      }
+
+      // 历史测试群、已解散群等场景可能没有可查询的成员列表。此时从
+      // 当前群的本地消息中提取去重后的发送者，仍可稳定显示组合头像。
+      final cachedMessages = await _unifiedCacheManager.getMessages(
+        _currentUserId,
+        conversation.chatId,
+      );
+      return MapEntry(
+        conversation.chatId,
+        _toGroupMemberItemsFromMessages(cachedMessages?.data ?? const []),
+      );
+    } catch (error) {
+      debugPrint(
+        '[ConversationList] Group avatar refresh failed for $groupId: $error',
+      );
+      return null;
+    }
   }
 
   List<GroupMemberItem> _toGroupMemberItems(List<GroupMember> members) {
@@ -382,7 +397,21 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     }
   }
 
-  Future<AppError?> syncIncrementally() async {
+  Future<AppError?> syncIncrementally() {
+    final inFlight = _syncInFlight;
+    if (inFlight != null) return inFlight;
+
+    final future = _syncIncrementallyInternal();
+    _syncInFlight = future;
+    future.whenComplete(() {
+      if (identical(_syncInFlight, future)) {
+        _syncInFlight = null;
+      }
+    });
+    return future;
+  }
+
+  Future<AppError?> _syncIncrementallyInternal() async {
     try {
       final result = await _syncConversationsIncrementallyUseCase(
         cursorVersion: state.cursorVersion,

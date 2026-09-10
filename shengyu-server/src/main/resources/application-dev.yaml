@@ -1,5 +1,11 @@
 server:
   port: 48080
+  tomcat:
+    threads:
+      max: ${SHENGYU_TOMCAT_MAX_THREADS:80}
+      min-spare: ${SHENGYU_TOMCAT_MIN_SPARE_THREADS:10}
+    accept-count: ${SHENGYU_TOMCAT_ACCEPT_COUNT:100}
+    max-connections: ${SHENGYU_TOMCAT_MAX_CONNECTIONS:4096}
 
 --- #################### 数据库相关配置 ####################
 
@@ -32,10 +38,10 @@ spring:
           config:
             multi-statement-allow: true
     dynamic: # 多数据源配置
-      druid: # Druid 【连接池】相关的全局配置（高并发优化）
-        initial-size: 10 # 初始连接数（提高初始性能）
-        min-idle: 20 # 最小连接池数量（保持足够的空闲连接）
-        max-active: 100 # 最大连接池数量（支持高并发，建议 50-200）
+      druid: # 默认适配 2C/4G 单机；扩容时可由环境变量提高连接数
+        initial-size: ${SHENGYU_DRUID_INITIAL_SIZE:2}
+        min-idle: ${SHENGYU_DRUID_MIN_IDLE:5}
+        max-active: ${SHENGYU_DRUID_MAX_ACTIVE:30}
         max-wait: 60000 # 配置获取连接等待超时的时间，单位：毫秒（1 分钟）
         time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒（1 分钟）
         min-evictable-idle-time-millis: 300000 # 配置一个连接在池中最小生存的时间，单位：毫秒（5 分钟，减少连接创建开销）
@@ -68,12 +74,12 @@ spring:
     port: 6379 # 端口
     database: 1 # 数据库索引
     password: 36Zhu@186 # 密码，建议生产环境开启
-    # 连接池配置（高并发优化）
+    # 默认适配单机试用规模；高并发部署可由环境变量单独扩容
     lettuce:
       pool:
-        max-active: 200 # 最大连接数（支持高并发，建议 100-500）
-        max-idle: 50 # 最大空闲连接数
-        min-idle: 10 # 最小空闲连接数
+        max-active: ${SHENGYU_REDIS_POOL_MAX_ACTIVE:40}
+        max-idle: ${SHENGYU_REDIS_POOL_MAX_IDLE:10}
+        min-idle: ${SHENGYU_REDIS_POOL_MIN_IDLE:2}
         max-wait: 3000 # 最大等待时间（毫秒）
       shutdown-timeout: 100ms # 关闭超时时间
     timeout: 3000ms # 连接超时时间（毫秒）
@@ -103,7 +109,7 @@ spring:
             misfireThreshold: 60000 # misfire 阀值，单位：毫秒。
           # 线程池相关配置
           threadPool:
-            threadCount: 25 # 线程池大小。默认为 10 。
+            threadCount: ${SHENGYU_QUARTZ_THREAD_COUNT:8}
             threadPriority: 5 # 线程优先级
             class: org.quartz.simpl.SimpleThreadPool # 线程池类型
     jdbc: # 使用 JDBC 的 JobStore 的时候，JDBC 的配置
@@ -193,12 +199,12 @@ wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-sta
 
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
-  # Netty WebSocket 高并发配置（支持 50w+ 在线用户）
+  # 默认适配 2C/4G 单机；高并发部署可由环境变量单独扩容。
   netty:
     port: 9000 # WebSocket 端口
     use-epoll: true # Linux 环境启用 Epoll 优化（性能提升 30%+）
-    boss-threads: 2 # Boss 线程数（接收连接，2个足够）
-    worker-threads: 64 # Worker 线程数（处理 IO，根据 CPU 核心数调整，建议 CPU 核心数 * 2）
+    boss-threads: ${SHENGYU_NETTY_BOSS_THREADS:1}
+    worker-threads: ${SHENGYU_NETTY_WORKER_THREADS:8}
     reader-idle-time: 90 # 读空闲超时时间（秒，适当放宽避免频繁断线）
     writer-idle-time: 0 # 写空闲超时时间（秒，0 表示不检测）
     all-idle-time: 0 # 读写空闲超时时间（秒，0 表示不检测）

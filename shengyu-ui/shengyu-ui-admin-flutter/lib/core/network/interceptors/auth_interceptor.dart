@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_refresh_service.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/auth/refresh_token_coordinator.dart';
+import 'package:shengyu_ui_admin_im/core/network/api_exception.dart';
 import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
+import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._ref, this._refreshTokenCoordinator);
@@ -45,9 +49,12 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
-    _retryWithRefreshedSession(
-      requestOptions,
-    ).then(handler.resolve).catchError((Object _) => handler.next(response));
+    _retryWithRefreshedSession(requestOptions).then(handler.resolve).catchError(
+      (Object error) {
+        _handleRefreshFailure(error);
+        handler.next(response);
+      },
+    );
   }
 
   @override
@@ -64,10 +71,25 @@ class AuthInterceptor extends Interceptor {
     }
 
     _retryWithRefreshedSession(requestOptions).then(handler.resolve).catchError(
-      (Object _) {
+      (Object error) {
+        _handleRefreshFailure(error);
         handler.next(err);
       },
     );
+  }
+
+  void _handleRefreshFailure(Object error) {
+    // 仅处理刷新接口明确返回的失效/过期令牌；网络抖动不能造成用户被登出。
+    if (error is! ApiException || (error.code != 400 && error.code != 401)) {
+      return;
+    }
+    unawaited(_clearInvalidSession());
+  }
+
+  Future<void> _clearInvalidSession() async {
+    if (!_ref.read(authSessionProvider).isAuthenticated) return;
+    await _ref.read(imSocketClientProvider).disconnect();
+    await _ref.read(authSessionProvider.notifier).clearSession();
   }
 
   Future<Response<dynamic>> _retryWithRefreshedSession(

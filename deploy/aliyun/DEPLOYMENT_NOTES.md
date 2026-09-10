@@ -62,6 +62,8 @@
 - `apisaas.shengyukj.top` 的 Nginx 站点块必须配置 `client_max_body_size 200m;`，与后端 `spring.servlet.multipart.max-file-size=200MB` 保持一致，避免真机拍照图片上传被 Nginx 拦截为 `413`。
 - `application-dev.yaml` 当前随生产容器加载，不能保留 natapp/yunai 这类临时回调域名；支付回调默认使用 `https://apisaas.shengyukj.top/admin-api/pay/notify/*`，特殊环境通过 `SHENGYU_PAY_*_NOTIFY_URL` 覆盖。
 - `docker-compose.yml` 需要显式透传 `SHENGYU_CAPTCHA_ENABLE`、`SHENGYU_SECURITY_MOCK_ENABLE`、`SHENGYU_ACCESS_LOG_ENABLE`、`SHENGYU_PAY_*_NOTIFY_URL`，保证生产只改 `docker.prod.env` 也能覆盖 dev 配置。
+- 当前阿里云规格为 `2C/4G`。后端使用 `Xms/Xmx=512m`，Tomcat 最大线程 `80`、Druid 最大连接 `30`、Redis 最大连接 `40`、Quartz 线程 `8`、Netty worker `8`；这些值均通过 `docker.prod.env` 的 `SHENGYU_*` 参数覆盖。小规模试用不要恢复成 64/100/200 这类高并发预设，以免空闲连接和线程挤占 MySQL/系统可用内存。
+- 服务器当前没有 Swap，常规运行时可用内存约 500MB。用户规模扩大前先扩容实例内存；如短期无法扩容，可按运维窗口配置 1GB Swap 作为 OOM 保护，不能把 Swap 当作常态性能容量。
 - `im.shengyukj.top` 的公网 Nginx 只代理 Flutter Web 页面到 `127.0.0.1:8082`，API 和 WebSocket 必须走 `apisaas.shengyukj.top`，避免 App 页面域名和后端域名混用。
 
 ## 钰信版本更新中心
