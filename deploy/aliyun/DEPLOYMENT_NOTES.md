@@ -38,6 +38,7 @@
 - 当前证书覆盖：`saas.shengyukj.top`、`saasadmin.shengyukj.top`、`apisaas.shengyukj.top`、`preview.shengyukj.top`、`im.shengyukj.top`、`rtc.shengyukj.top`。
 - `certbot-renew.timer` 已启用，用于自动续期。
 - Nginx 已启用 HTTP 到 HTTPS 的 `301` 跳转。
+- `im.shengyukj.top` 的 HTTPS server 必须使用 `listen 443 ssl http2;`。Flutter Web 首次启动会并发请求启动脚本、CanvasKit 和资源；HTTP/2 能复用一个 TLS 连接并多路传输，不能退回为仅 `listen 443 ssl;`。
 
 ## 运行容器
 
@@ -367,6 +368,12 @@ cat /tmp/upload-check-response.txt
 - 修复：取消全局大字体，改用浏览器/系统中文字体回退；`main.dart.js`、`flutter_bootstrap.js`、`flutter.js` 改为 `public, max-age=0, must-revalidate`，浏览器保留副本并用 ETag 校验新版本；WASM、字体与其他内容资源设为 30 天不可变缓存。
 - 验证：生产 `ArialUnicode.ttf` 返回 404；主程序 ETag 校验返回 `304`、无下载正文，实测约 0.2 秒。CanvasKit WASM 返回 `Cache-Control: public, immutable`。
 - 每次 Flutter Web 发布必须同步容器 `/etc/nginx/conf.d/default.conf`，即本项目 `shengyu-ui/shengyu-ui-admin-flutter/nginx.conf`，否则仅替换静态文件不会更新缓存策略。
+
+### 2026-09-10 Flutter Web 刷新链路优化
+
+- 公网 `im.shengyukj.top` 的 TLS 站点已启用 HTTP/2。容器内 `main.dart.js` 和 CanvasKit 本地响应均在 1 秒内完成；HTTP/2 负责减少公网浏览器在同一轮启动中建立和阻塞多个 HTTP/1.1 请求的等待。
+- 当前生产构建未传入 `FCM_ENABLED=true`，因此不再在 `index.html` 的每次页面加载后注册 Firebase Messaging Service Worker，避免无效访问 Firebase 外部脚本。后续若正式启用 Web Push，必须同时恢复该注册块并以 `--dart-define=FCM_ENABLED=true` 构建发布。
+- 已保留原有缓存约束：入口 HTML 不缓存，主程序仅 ETag 校验，CanvasKit/WASM 和静态资源使用不可变长缓存；这三项不可互相替换。
 
 ## 2026-09-09 企业注册与加入闭环发布记录
 
