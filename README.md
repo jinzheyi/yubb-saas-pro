@@ -3,7 +3,7 @@
  <img src="https://img.shields.io/badge/Vue-3.5-brightgreen.svg" alt="Vue">
  <img src="https://img.shields.io/badge/JDK-8-orange.svg" alt="JDK">
  <img src="https://img.shields.io/badge/MySQL-8.0-blue.svg" alt="MySQL">
- <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+ <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="Apache-2.0 License"></a>
 </p>
 
 <h1 align="center">圣钰 SaaS Pro - 企业级多租户管理系统</h1>
@@ -588,7 +588,17 @@ src/
 
 ## 📄 开源协议
 
-本项目采用 [MIT](LICENSE) 开源协议
+本项目采用 [Apache License 2.0](LICENSE) 开源协议。除 `LICENSE`、文件头或第三方依赖声明另有说明外，使用、修改和再分发本项目时应保留 Apache-2.0 许可证、版权声明与必要的变更说明。Apache-2.0 授予源码使用权，不授予“圣钰”“钰信”等名称、标识、商标或品牌素材的商业使用许可；第三方组件、图标、字体、音视频与云服务仍分别受其自身条款约束。
+
+## ⚖️ 合规使用与责任边界
+
+本项目用于企业内部即时消息、组织协作、文件交换及基于互联网的数据通信。当前实现不提供或计划提供电话号码分配、虚拟拨号、运营商网络互联、电话呼叫落地、短信/语音验证码批量接入、号码变造、外呼营销或其他电信业务能力；语音/视频功能是经授权用户之间的互联网实时媒体协作能力，不应被表述或运营为公共电话服务。
+
+`shengyu-spring-boot-starter-websocket` 是本项目的内部基础组件。项目方计划在后续以**独立项目、独立文档、独立版本与独立服务协议**建设面向企业协作场景的通讯信令 SDK 开放体系；在该独立项目正式发布前，本仓库不构成 SDK 服务承诺、运营授权或任何行业准入结论。任何部署者、二次开发者、集成方和实际运营者均应自行完成适用的许可/备案、用户实名与账号管理、内容治理、日志留存、数据与个人信息保护、未成年人保护、投诉举报、反诈风险识别和主管机关协作义务。
+
+严禁将本项目或其衍生版本用于电信网络诈骗、洗钱、出售或非法处理个人信息、批量注册/养号、虚拟拨号或号码伪造、规避监管或溯源、色情赌博、侵权骚扰、传播违法和不良信息，或任何其他违法活动。发现风险线索时，运营者应立即依法采取限制功能、暂停/关闭账号、保存必要记录、处置并按适用法律要求报告或配合调查。
+
+详尽的适用范围、部署者义务、禁止用途、投诉处理与责任限制请阅读官网的[合规使用与责任边界说明](https://shengyukj.top/guide/explain/compliance-notice)。该说明不构成法律意见；面向公众提供服务、跨境处理数据、涉及生成式 AI、音视频内容处理或行业监管场景时，应在上线前取得具备资质的专业法律与合规意见。
 
 ## 💬 联系我们
 
