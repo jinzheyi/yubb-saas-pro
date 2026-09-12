@@ -234,6 +234,12 @@ docker-compose up -d
 - 地址：[http://saas.shengyukj.top](http://saas.shengyukj.top)
 - 账号：jin_zheyicn@qq.com / shengyukj578503
 
+![会话列表](image1.png)
+![企业切换](image2.png)
+![对话页](image3.png)
+![语音通话](image4.png)
+![视频通话](image5.png)
+
 ## 📋 功能模块
 
 ### 平台端功能
