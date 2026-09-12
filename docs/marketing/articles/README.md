@@ -9,6 +9,7 @@
 | 知乎 | `zhihu-enterprise-collaboration-technical-decision.md` | 面向技术负责人，解释方案判断与架构取舍 |
 | B 站 | `bilibili-enterprise-collaboration-tech-video.md` | 8 分钟技术演示脚本、镜头、口播与可选加长段 |
 | 小红书 | `xiaohongshu-enterprise-collaboration-tech-cards.md` | 16 张技术图文卡片与长配文 |
+| 今日头条 | `toutiao-enterprise-collaboration-full-stack-practice.md` | 富文本兼容的全栈技术长文：多租户、实时、音视频、多端与生产交付 |
 
 ## 统一素材
 

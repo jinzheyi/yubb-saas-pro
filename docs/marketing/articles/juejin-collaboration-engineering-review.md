@@ -1,20 +1,8 @@
-# 从后台系统到企业协同产品：一次把多租户、Flutter 与实时通话串起来的工程复盘
-
-> 平台建议：掘金
->
-> 建议分类：后端
->
-> 建议标签：`Java` `Flutter` `架构设计` `WebSocket` `音视频`
-
 做企业协同，最容易犯的错误是把它拆成两个互不相干的项目：一边是“后台管理”，另一边是“聊天 App”。前者有组织、岗位、权限和流程；后者有联系人、会话、群聊和通话。两边各自跑起来不难，难的是它们开始共享同一批员工、同一份租户数据、同一套访问边界之后，如何保持一致。
 
 这篇文章记录我在一个多租户协作系统中做架构收敛时的思路。它不是组件清单，而是从几个会反复出问题的场景出发：用户加入多家企业、部门权限改变、手机与 Web 同时在线、通话超时、Flutter Web 首屏慢、客户服务器没有完整云原生基础设施。
 
-![企业协作系统架构视觉](../assets/enterprise-collaboration-architecture.png)
-
-> 发布时上传本图：`docs/marketing/assets/enterprise-collaboration-architecture.png`。
->
-> **配图位 A（建议放在这里）**：三张界面拼图，依次为平台租户管理、企业组织管理、Flutter 协作首页。图注：`同一套身份与租户边界在三个产品入口中的投射`。
+![企业协作系统架构视觉](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/ca4290a173584412ae30a03dc8cdfd88~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9\&rk3s=e9ecf3d6\&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018\&x-orig-expires=1789304439\&x-orig-sign=yTTE4ageGWKWQmBOBCeenVNRwUs%3D)
 
 ## 从四个端开始，而不是从一条消息开始
 
@@ -22,23 +10,23 @@
 
 ```mermaid
 flowchart LR
-  PM[平台管理端\nVue 3] --> S[Spring Boot 服务端]
-  TM[租户管理端\nVue 3] --> S
-  IM[Flutter 协作端\nAndroid / iOS / Web] --> S
-  IM <-->|Netty WebSocket + Protobuf| WS[实时消息服务]
-  S --> SYS[组织、权限、租户、会话、群组、通话状态]
-  S --> INFRA[文件、任务、日志、配置]
+  PM["平台管理端<br/>Vue 3"] --> S["Spring Boot 服务端"]
+  TM["租户管理端<br/>Vue 3"] --> S
+  IM["Flutter 协作端<br/>Android / iOS / Web"] --> S
+  IM <-->|"实时业务事件"| WS["Netty + Protobuf 实时消息服务"]
+  S --> SYS["组织、权限、租户、会话、群组、通话状态"]
+  S --> INFRA["文件、任务、日志、配置"]
   S --> MYSQL[(MySQL)]
   S --> REDIS[(Redis)]
-  IM <-->|WebRTC| LK[LiveKit 媒体节点]
+  IM <-->|"音视频媒体"| LK["LiveKit 媒体节点"]
   S --> LK
 ```
 
 平台端、租户端和客户端并不是三套独立产品。它们是同一份身份和授权体系的三个入口：
 
-- 平台端处理平台级租户、套餐与公共配置。
-- 租户端处理企业自己的部门、成员、角色、菜单和数据范围。
-- Flutter 客户端消费这些组织边界，提供联系人、会话、群组、文件和通话体验。
+*   平台端处理平台级租户、套餐与公共配置。
+*   租户端处理企业自己的部门、成员、角色、菜单和数据范围。
+*   Flutter 客户端消费这些组织边界，提供联系人、会话、群组、文件和通话体验。
 
 服务端负责把“这个人现在属于哪家企业、能看到什么、能对什么执行操作”变成真实约束；实时消息与媒体能力只是在这个约束下工作。
 
@@ -46,17 +34,17 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph Control[控制面：权威业务规则]
-    U[认证与当前租户] --> P[角色、数据权限、成员关系]
-    P --> B[会话、群组、文件、呼叫状态]
+  subgraph Control["控制面：权威业务规则"]
+    U["认证与当前租户"] --> P["角色、数据权限、成员关系"]
+    P --> B["会话、群组、文件、呼叫状态"]
   end
-  subgraph Data[数据面：实时传递]
-    E[WebSocket 业务事件]
-    M[WebRTC 音视频媒体]
+  subgraph Data["数据面：实时传递"]
+    E["WebSocket 业务事件"]
+    M["WebRTC 音视频媒体"]
   end
   B --> E
   B --> M
-  E --> CL[各端客户端]
+  E --> CL["各端客户端"]
   M --> CL
 ```
 
@@ -118,10 +106,10 @@ im:presence:{tenantId}:{userId}:{deviceId}
 
 更好的路径是：
 
-1. 租户管理员在管理端维护企业组织。
-2. 服务端计算当前用户可见的人与资源。
-3. 客户端按当前租户拉取联系人、会话和群组。
-4. 成员状态变化时，以服务端事件刷新相关会话和实时订阅。
+1.  租户管理员在管理端维护企业组织。
+2.  服务端计算当前用户可见的人与资源。
+3.  客户端按当前租户拉取联系人、会话和群组。
+4.  成员状态变化时，以服务端事件刷新相关会话和实时订阅。
 
 这样做的直接结果是，员工从一个企业切到另一个企业时，换掉的不是页面主题，而是完整的数据域。
 
@@ -129,12 +117,12 @@ im:presence:{tenantId}:{userId}:{deviceId}
 
 实时消息通道适合推送事件，不适合替代全部业务查询。一个比较清晰的分工如下：
 
-| 能力 | 首选方式 | 说明 |
-| --- | --- | --- |
-| 登录、组织树、历史消息、分页列表 | HTTP API | 可重试、可分页、可审计 |
-| 新消息、会话更新、来电、在线状态 | WebSocket | 服务端主动推送、低延迟 |
-| 图片、语音、附件 | 文件服务 | 不占用实时通道的大包传输 |
-| 音视频 | WebRTC 媒体节点 | 低延迟媒体传输与 NAT 穿透 |
+| 能力               | 首选方式        | 说明              |
+| ---------------- | ----------- | --------------- |
+| 登录、组织树、历史消息、分页列表 | HTTP API    | 可重试、可分页、可审计     |
+| 新消息、会话更新、来电、在线状态 | WebSocket   | 服务端主动推送、低延迟     |
+| 图片、语音、附件         | 文件服务        | 不占用实时通道的大包传输    |
+| 音视频              | WebRTC 媒体节点 | 低延迟媒体传输与 NAT 穿透 |
 
 Netty + Protobuf 在这里承担的是长连接和协议承载。Protobuf 的价值不仅是消息更小，还包括消息类型与字段的演进更可控。客户端升级不是同时发生的，协议设计必须允许旧端收到未知字段时安全忽略，新端面对旧字段时能够降级处理。
 
@@ -166,10 +154,10 @@ sequenceDiagram
 
 这也是最容易在真机测试时暴露问题的地方。假如只靠客户端页面处理通话：
 
-- A 发起呼叫后断网，B 还在响铃怎么办？
-- B 在 Web 接听，手机端还显示来电怎么办？
-- 媒体连接成功但权限校验失败，到底算成功还是失败？
-- 服务重启后，正在响铃的呼叫如何收敛？
+*   A 发起呼叫后断网，B 还在响铃怎么办？
+*   B 在 Web 接听，手机端还显示来电怎么办？
+*   媒体连接成功但权限校验失败，到底算成功还是失败？
+*   服务重启后，正在响铃的呼叫如何收敛？
 
 答案是把呼叫做成业务实体，并让每个端只渲染服务端状态：
 
@@ -204,9 +192,9 @@ sequenceDiagram
 
 Flutter 客户端同时面向 Android、iOS 和 Web，不能把一种端的假设带给另一端。
 
-- 真机要面对网络权限、后台限制、通知和实际麦克风/摄像头授权。
-- 浏览器要面对 HTTPS、WSS、安全上下文、用户手势和浏览器媒体权限。
-- Flutter Web 不能强依赖移动端 SQLite/WASM 路径，否则会拖慢甚至阻塞首屏。
+*   真机要面对网络权限、后台限制、通知和实际麦克风/摄像头授权。
+*   浏览器要面对 HTTPS、WSS、安全上下文、用户手势和浏览器媒体权限。
+*   Flutter Web 不能强依赖移动端 SQLite/WASM 路径，否则会拖慢甚至阻塞首屏。
 
 生产构建时，域名应通过显式参数注入，而不是依赖开发默认值：
 
@@ -226,12 +214,12 @@ Nginx 对 Flutter Web 还有一个常被忽略的细节：入口文件不要长�
 
 ```mermaid
 flowchart LR
-  H[index.html\n短缓存/协商缓存] --> B[flutter_bootstrap.js\n短缓存/协商缓存]
-  B --> J[main.dart.js\n版本化静态资源]
-  B --> C[CanvasKit/运行时资源\n站内托管]
-  J --> I[按需初始化 API、缓存、实时连接]
+  H["index.html<br/>短缓存或协商缓存"] --> B["flutter_bootstrap.js<br/>短缓存或协商缓存"]
+  B --> J["main.dart.js<br/>版本化静态资源"]
+  B --> C["CanvasKit / 运行时资源<br/>站内托管"]
+  J --> I["按需初始化 API、缓存、实时连接"]
   C --> I
-  I --> F[首个可交互页面]
+  I --> F["首个可交互页面"]
 ```
 
 入口 HTML 和启动脚本的职责是“指向当前版本”，因此不适合长时间强缓存；带内容哈希或版本路径的静态资源则可以使用更长缓存。运行期初始化也应按优先级拆分：先让登录页或会话骨架可交互，再建立非阻塞的缓存预热、WebSocket 和媒体能力检查。这样弱网用户看到的是可理解的渐进状态，而不是长时间空白页。
@@ -263,14 +251,14 @@ docker compose --env-file docker.prod.env \
 
 建议将发布后的检查从“页面能打开”升级到有证据的验收：
 
-| 维度 | 观测点 | 成功标准 |
-| --- | --- | --- |
-| 容器 | 服务健康、重启次数、资源使用 | 容器稳定、无持续重启 |
-| API | 登录、租户切换、会话查询 | 状态码与业务码符合预期 |
-| 实时 | WebSocket Upgrade、认证、事件抵达 | 可建立连接，事件可去重消费 |
-| 文件 | 小文件/图片上传、下载与预览 | Nginx 与后端大小限制一致 |
-| 音视频 | 双网络环境下建立通话 | 信令、权限、UDP/TURN 均通过 |
-| 前端 | 首次加载、刷新、缓存更新 | 入口资源不混用旧版本 |
+| 维度  | 观测点                       | 成功标准               |
+| --- | ------------------------- | ------------------ |
+| 容器  | 服务健康、重启次数、资源使用            | 容器稳定、无持续重启         |
+| API | 登录、租户切换、会话查询              | 状态码与业务码符合预期        |
+| 实时  | WebSocket Upgrade、认证、事件抵达 | 可建立连接，事件可去重消费      |
+| 文件  | 小文件/图片上传、下载与预览            | Nginx 与后端大小限制一致    |
+| 音视频 | 双网络环境下建立通话                | 信令、权限、UDP/TURN 均通过 |
+| 前端  | 首次加载、刷新、缓存更新              | 入口资源不混用旧版本         |
 
 把 `requestId`、`tenantId`、`conversationId`、`callId`、`connectionId` 贯穿日志，能让一次跨服务问题有共同语言。日志中只记录定位所需的关联 ID 与错误码，Token、密码、媒体密钥和完整消息正文都不应该写进生产日志。
 
@@ -282,14 +270,14 @@ docker compose --env-file docker.prod.env \
 
 ```mermaid
 flowchart TB
-  Token[登录与当前租户上下文] --> Guard[路由/权限守卫]
-  Guard --> Snapshot[服务端权威快照]
-  Snapshot --> Store[内存状态管理]
-  Store --> UI[页面渲染]
-  UI --> Draft[本地草稿/短期体验缓存]
-  WS[实时事件] --> Reducer[事件归并、去重、版本比较]
+  Token["登录与当前租户上下文"] --> Guard["路由 / 权限守卫"]
+  Guard --> Snapshot["服务端权威快照"]
+  Snapshot --> Store["内存状态管理"]
+  Store --> UI["页面渲染"]
+  UI --> Draft["本地草稿 / 短期体验缓存"]
+  WS["实时事件"] --> Reducer["事件归并、去重、版本比较"]
   Reducer --> Store
-  Reconnect[重连或切换企业] --> Snapshot
+  Reconnect["重连或切换企业"] --> Snapshot
 ```
 
 切换企业、重新登录、事件版本缺口、通话结束这类边界事件应触发权威快照刷新；常规新消息、已读状态等则可以通过增量事件更新内存状态。一个实用的 reducer 规则是：事件已处理直接忽略；事件租户不等于当前作用域时不写入页面；版本连续才增量合并；发现版本缺口就标记回拉；通话结束和成员移除等终态不能被旧事件覆盖。
@@ -312,13 +300,13 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Upload[图片/语音上传] --> Proxy[Nginx 大小与 TLS]
-  Proxy --> FileAPI[文件元数据与授权]
-  FileAPI --> Storage[文件存储]
-  FileAPI --> Meta[(文件元数据)]
-  Meta --> Message[会话消息引用]
-  Message --> Push[实时事件]
-  Push --> Preview[客户端下载/预览]
+  Upload["图片 / 语音上传"] --> Proxy["Nginx 大小与 TLS"]
+  Proxy --> FileAPI["文件元数据与授权"]
+  FileAPI --> Storage["文件存储"]
+  FileAPI --> Meta[("文件元数据")]
+  Meta --> Message["会话消息引用"]
+  Message --> Push["实时事件"]
+  Push --> Preview["客户端下载 / 预览"]
 ```
 
 这也解释了为何线上“真机上传失败、Web 正常”时，排查不能只看 Flutter。应该依次检查移动网络、HTTPS 证书、Nginx 大小上限、后端 multipart 上限、文件存储权限、服务器磁盘或对象存储配置，以及消息落库前是否正确等待文件元数据生成。
@@ -333,13 +321,13 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  Migrate[备份与增量 SQL] --> Backend[兼容性后端发布]
-  Backend --> Verify1[API/事件兼容验证]
-  Verify1 --> Web[Vue 与 Flutter Web 发布]
-  Web --> Verify2[核心业务验收]
-  Verify2 --> Mobile[移动端分批升级]
-  Mobile --> Observe[日志与指标观察]
-  Observe --> Rollback[异常时回退到稳定版本]
+  Migrate["备份与增量 SQL"] --> Backend["兼容性后端发布"]
+  Backend --> Verify1["API / 事件兼容验证"]
+  Verify1 --> Web["Vue 与 Flutter Web 发布"]
+  Web --> Verify2["核心业务验收"]
+  Verify2 --> Mobile["移动端分批升级"]
+  Mobile --> Observe["日志与指标观察"]
+  Observe --> Rollback["异常时回退到稳定版本"]
 ```
 
 这个顺序的目的不是追求流程复杂，而是让任意一步失败都能有明确边界：SQL 是否可逆、后端是否兼容旧客户端、静态页面是否可回退、移动端是否被不兼容接口阻塞。
@@ -348,7 +336,24 @@ flowchart LR
 
 从后台系统走到企业协同系统，真正的架构升级不是增加一张“聊天”菜单，而是让组织、权限、实时事件、媒体传输和部署交付拥有清晰边界。边界清楚，系统才能支持二次开发、私有化环境和多端长期演进。
 
+![image.png](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/c27e0d09593849c6a706bfa171181432~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9&rk3s=e9ecf3d6&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1789304541&x-orig-sign=OjhnYcR3SL16RjvfISv7vftS9IM%3D)
+
+
+![image.png](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/4b89d519005b4c35b5f29d13905c021b~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9&rk3s=e9ecf3d6&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1789304564&x-orig-sign=%2FKe0k%2FuSFNbsBW9P01L7UU3u3mY%3D)
+
+
+![image.png](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/4c83455aab93418b8ddd83d872b4d38d~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9&rk3s=e9ecf3d6&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1789304578&x-orig-sign=1CM8v%2FA7dMlDZRGO2sBimF12oXs%3D)
+
+
+![image.png](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/e606eac276ed49d8a8f9c9234bc35015~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9&rk3s=e9ecf3d6&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1789304604&x-orig-sign=Qrhsspbu1qNe4DiEQPDbj8dK7hs%3D)
+
+
+![image.png](https://p0-xtjj-private.juejin.cn/tos-cn-i-73owjymdk6/5fe8694d34294683826733dc4967e55a~tplv-73owjymdk6-jj-mark-v1:0:0:0:0:5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5aW95Zeo5ZOfNTU5:q75.awebp?policy=eyJ2bSI6MywidWlkIjoiMjU2MDExNjQyODEyMDU1MiJ9&rk3s=e9ecf3d6&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1789304614&x-orig-sign=qSCsGg%2Br%2BZE0zA7AfrLeeI9v%2BOY%3D)
+
 开源地址：
 
-- Gitee：<https://gitee.com/jinzheyi/yubb-saas-pro>
-- GitHub：<https://github.com/jinzheyi/yubb-saas-pro>
+*   Gitee：<https://gitee.com/jinzheyi/yubb-saas-pro>
+*   GitHub：<https://github.com/jinzheyi/yubb-saas-pro>
+
+```
+```
