@@ -26,10 +26,10 @@
       </el-button>
       <template v-if="isShowTip" #tip>
         <div style="font-size: 8px">
-          大小不超过 <b style="color: #f56c6c">{{ fileSize }}MB</b>
+          大小不超过 <b style="color: var(--el-color-danger)">{{ fileSize }}MB</b>
         </div>
         <div style="font-size: 8px">
-          格式为 <b style="color: #f56c6c">{{ fileType.join('/') }}</b> 的文件
+          格式为 <b style="color: var(--el-color-danger)">{{ fileType.join('/') }}</b> 的文件
         </div>
       </template>
       <template #file="row">
@@ -210,7 +210,7 @@ const emitUpdateModelValue = () => {
   position: relative;
   margin-bottom: 10px;
   line-height: 2;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
 }
 
 :deep(.el-upload-list__item-file-name) {

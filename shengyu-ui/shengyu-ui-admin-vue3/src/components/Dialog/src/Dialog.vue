@@ -135,8 +135,8 @@ function closedHandler() {
     margin: 0 !important;
 
     &__header {
-      height: 54px;
-      padding: 0;
+      height: 54px !important;
+      padding: 0 !important;
       margin-right: 0 !important;
       border-bottom: 1px solid var(--el-border-color);
     }

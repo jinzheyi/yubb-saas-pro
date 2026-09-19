@@ -174,15 +174,15 @@ const getUserTypeColor = (type: number) => {
   const dict = getDictObj(DICT_TYPE.USER_TYPE, type)
   switch (dict?.colorType) {
     case 'success':
-      return '#67C23A'
+      return 'var(--el-color-success)'
     case 'info':
-      return '#909399'
+      return 'var(--el-color-info)'
     case 'warning':
-      return '#E6A23C'
+      return 'var(--el-color-warning)'
     case 'danger':
-      return '#F56C6C'
+      return 'var(--el-color-danger)'
   }
-  return '#409EFF'
+  return 'var(--el-color-primary)'
 }
 
 /** 获得详情 */
@@ -291,7 +291,7 @@ onMounted(async () => {
       width: 3px;
       height: 20px;
       margin-right: 10px;
-      background-color: #409eff;
+      background-color: var(--el-color-primary);
       content: '';
     }
   }

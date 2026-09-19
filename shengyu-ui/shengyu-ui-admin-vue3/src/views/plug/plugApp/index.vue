@@ -185,18 +185,18 @@ onMounted(() => {
 
 .card-description {
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   line-height: 22px;
 }
 
 .card-type {
   font-size: 14px;
-  color: #909399;
+  color: var(--el-color-info);
   width: 50%;
 }
 
 .card-created-time {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--el-color-info-light-5);
 }
 </style>

@@ -79,8 +79,8 @@ export const useAppStore = defineStore('app', {
       isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
       currentSize: wsCache.get('default') || 'default', // 组件尺寸
       theme: wsCache.get(CACHE_KEY.THEME) || {
-        // 主题色
-        elColorPrimary: '#409eff',
+        // 主题色：默认跟随 Semi Design 主色（与 advance-semi-theme 主题包对齐）
+        elColorPrimary: '#0064FA',
         // 左侧菜单边框颜色
         leftMenuBorderColor: 'inherit',
         // 左侧菜单背景颜色
@@ -201,6 +201,13 @@ export const useAppStore = defineStore('app', {
   },
   actions: {
     setPrimaryLight() {
+      // Semi 主题模式下，Element Plus 衍生色由 styles/index.scss 的桥接层
+      // 统一映射到 --semi-color-* 色板（body.semi !important）。
+      // 此处若继续写 html inline 会被桥接覆盖，且 setAllColorRgbVars 会从
+      // <html> 读到 Element 原色值污染 rgb 变量，故直接 return 让桥接层生效。
+      if (typeof document !== 'undefined' && document.body?.classList.contains('semi')) {
+        return
+      }
       if (this.theme.elColorPrimary) {
         const elColorPrimary = this.theme.elColorPrimary
         const color = this.isDark ? '#000000' : '#ffffff'

@@ -72,10 +72,13 @@ router.beforeEach(async (to, from, next) => {
       if (!dictStore.getIsSetDict) {
         dictStore.setDictMap().then()
       }
-      if (!userStore.getIsSetUser) {
-        isRelogin.show = true
-        await userStore.setUserInfoAction()
-        isRelogin.show = false
+      // 用户信息未设置，或路由尚未生成（预取优化场景下 isSetUser 可能为 true 但路由未生成）
+      if (!userStore.getIsSetUser || permissionStore.getRouters.length === 0) {
+        if (!userStore.getIsSetUser) {
+          isRelogin.show = true
+          await userStore.setUserInfoAction()
+          isRelogin.show = false
+        }
         // 后端过滤菜单
         await permissionStore.generateRoutes()
         permissionStore.getAddRouters.forEach((route) => {

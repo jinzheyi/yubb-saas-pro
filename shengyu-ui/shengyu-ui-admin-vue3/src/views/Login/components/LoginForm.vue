@@ -138,6 +138,8 @@ import { useIcon } from '@/hooks/web/useIcon'
 
 import * as authUtil from '@/utils/auth'
 import { usePermissionStore } from '@/store/modules/permission'
+import { useUserStore } from '@/store/modules/user'
+import { useDictStore } from '@/store/modules/dict'
 import * as LoginApi from '@/api/login'
 import { LoginStateEnum, useFormValid, useLoginState } from './useLogin'
 
@@ -153,6 +155,8 @@ const { validForm } = useFormValid(formLogin)
 const { setLoginState, getLoginState } = useLoginState()
 const { currentRoute, push } = useRouter()
 const permissionStore = usePermissionStore()
+const userStore = useUserStore()
+const dictStore = useDictStore()
 const redirect = ref<string>('')
 const loginLoading = ref(false)
 const verify = ref()
@@ -241,7 +245,7 @@ const handleLogin = async (params) => {
     }
     loading.value = ElLoading.service({
       lock: true,
-      text: '正在加载系统中...',
+      text: '正在加载用户信息...',
       background: 'rgba(0, 0, 0, 0.7)'
     })
     if (loginData.loginForm.rememberMe) {
@@ -250,6 +254,13 @@ const handleLogin = async (params) => {
       authUtil.removeLoginForm()
     }
     authUtil.setToken(res)
+    // 预取用户信息+字典写入缓存，避免路由守卫串行阻塞导致首次登录全屏转圈
+    // 失败不阻塞登录流程，路由守卫会兜底重试
+    try {
+      await Promise.all([userStore.setUserInfoAction(), dictStore.setDictMap()])
+    } catch (e) {
+      // 预取失败，路由守卫 beforeEach 会再次尝试获取
+    }
     if (!redirect.value) {
       redirect.value = '/'
     }

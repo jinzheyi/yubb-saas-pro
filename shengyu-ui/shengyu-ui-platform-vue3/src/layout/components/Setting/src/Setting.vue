@@ -6,7 +6,7 @@ import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import { useDesign } from '@/hooks/web/useDesign'
 
 import { setCssVar, trim } from '@/utils'
-import { colorIsDark, hexToRGB, lighten } from '@/utils/color'
+import { colorIsDark, hexToRGB, lighten, SEMI_PRIMARY_COLOR } from '@/utils/color'
 import { useAppStore } from '@/store/modules/app'
 import { ThemeSwitch } from '@/layout/components/ThemeSwitch'
 import ColorRadioPicker from './components/ColorRadioPicker.vue'
@@ -27,6 +27,16 @@ const drawer = ref(false)
 const systemTheme = ref(appStore.getTheme.elColorPrimary)
 
 const setSystemTheme = (color: string) => {
+  // Semi 主题模式下，--el-color-primary 被 body.semi !important 桥接层锁定为
+  // Semi 主色 SEMI_PRIMARY_COLOR，用户改其它色会被覆盖导致改色失效。
+  // 此处拦截非 Semi 主色的改色操作并提示，避免用户误以为功能损坏。
+  if (document.body?.classList.contains('semi') && color !== SEMI_PRIMARY_COLOR) {
+    ElMessage.warning(
+      'Semi Design 主题已启用，主色已锁定为 #0064FA。如需自定义主题色，请在 main.ts 注释掉 Semi 主题相关代码后重启。'
+    )
+    systemTheme.value = SEMI_PRIMARY_COLOR
+    return
+  }
   setCssVar('--el-color-primary', color)
   appStore.setTheme({ elColorPrimary: color })
   const leftMenuBgColor = useCssVar('--left-menu-bg-color', document.documentElement)
@@ -225,7 +235,7 @@ const clear = () => {
       <ColorRadioPicker
         v-model="systemTheme"
         :schema="[
-          '#409eff',
+          '#0064FA',
           '#009688',
           '#536dfe',
           '#ff5c93',

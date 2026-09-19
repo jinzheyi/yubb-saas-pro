@@ -386,9 +386,9 @@ $toolbar-height: 42px;
       box-shadow: -8px 0 8px -8px rgb(0 0 0 / 12%);
       flex-shrink: 0;
 
-      /* 属性面板顶部：减少内边距 */
+      /* 属性面板顶部：减少内边距（!important 防止被全局 AntD 卡片样式覆盖） */
       :deep(.el-card__header) {
-        padding: 8px 16px;
+        padding: 8px 16px !important;
       }
 
       /* 属性面板分组 */
@@ -401,7 +401,7 @@ $toolbar-height: 42px;
 
         /* 属性分组名称 */
         .el-card__header {
-          padding: 8px 32px;
+          padding: 8px 32px !important;
           background: var(--el-bg-color-page);
           border: none;
         }

@@ -1,6 +1,360 @@
-// .text-color {
-//   color: var(--el-text-color-regular);
-// }
-// .dark .dark\:text-color {
-//   color: rgba(255, 255, 255, var(--dark-text-color));
-// }
+/* ==========================================================================
+ * theme.scss - Ant Design 视觉对齐组件级覆盖
+ * --------------------------------------------------------------------------
+ * 在 Semi 主题 (advance-semi-theme) 基础上，对单个组件做 AntD 风格微调。
+ * 全局变量映射见 index.scss 的 body.semi 块；设计令牌定义见 var.css :root。
+ *
+ * 优先级说明：
+ * - Semi 组件 CSS 多使用 .semi .el-xxx 选择器 (0,2,0,0)
+ * - 此处用 body.semi .el-xxx (0,2,0,1) 或 !important 覆盖
+ * - 保留 Semi 色板，仅调整形态 (圆角/阴影/边距/边框样式)
+ * ========================================================================== */
+
+/* ==========================================================================
+ * 1. 按钮 Button
+ *    AntD: default height=32px, padding=4px 15px, radius=6px, font-weight=400
+ *    Semi 现状: radius=3px, font-weight=600 -> 调大圆角 + 降权重
+ * ========================================================================== */
+body.semi {
+  .el-button {
+    border-radius: var(--antd-border-radius-base) !important;
+    font-weight: var(--antd-font-weight-regular) !important;
+    transition: all var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+
+  .el-button--large,
+  .el-button--small {
+    border-radius: var(--antd-border-radius-base) !important;
+  }
+}
+
+/* ==========================================================================
+ * 2. 输入框 Input / Select / Textarea
+ *    AntD: 描边式 (border #d9d9d9), radius=6px, hover/focus 蓝色边框
+ *    Semi 现状: 填充式 (fill-0 背景, 无边框) -> 转为 AntD 描边式
+ * ========================================================================== */
+body.semi {
+  .el-input__wrapper {
+    background-color: var(--semi-color-bg-0) !important;
+    border: 1px solid var(--antd-input-border-color) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+    box-shadow: none !important;
+    transition: all var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+
+  .el-input__wrapper:hover {
+    border-color: var(--antd-input-hover-border-color) !important;
+    background-color: var(--semi-color-bg-0) !important;
+  }
+
+  .el-input__wrapper.is-focus {
+    border-color: var(--antd-input-focus-border-color) !important;
+    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    background-color: var(--semi-color-bg-0) !important;
+  }
+
+  .el-select__wrapper {
+    background-color: var(--semi-color-bg-0) !important;
+    border: 1px solid var(--antd-input-border-color) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+    box-shadow: none !important;
+  }
+
+  .el-select__wrapper.is-hovering:not(.is-focused) {
+    border-color: var(--antd-input-hover-border-color) !important;
+    background-color: var(--semi-color-bg-0) !important;
+  }
+
+  .el-select__wrapper.is-focused {
+    border-color: var(--antd-input-focus-border-color) !important;
+    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    background-color: var(--semi-color-bg-0) !important;
+  }
+
+  .el-select .el-input__wrapper:hover {
+    border-color: var(--antd-input-hover-border-color) !important;
+    background-color: var(--semi-color-bg-0) !important;
+  }
+
+  .el-select .el-input.is-focus .el-input__wrapper {
+    border-color: var(--antd-input-focus-border-color) !important;
+    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+  }
+
+  .el-textarea__inner {
+    background-color: var(--semi-color-bg-0) !important;
+    border: 1px solid var(--antd-input-border-color) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+    transition: all var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+
+  .el-textarea__inner:hover {
+    border-color: var(--antd-input-hover-border-color) !important;
+  }
+
+  .el-textarea__inner:focus {
+    border-color: var(--antd-input-focus-border-color) !important;
+    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+  }
+
+  .el-input-group__prepend,
+  .el-input-group__append {
+    background-color: var(--semi-color-bg-1) !important;
+    border: 1px solid var(--antd-input-border-color) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+  }
+}
+
+/* ==========================================================================
+ * 3. 表格 Table
+ *    AntD: header #fafafa, row hover #fafafa, border #f0f0f0
+ *    Semi: header fill-0 (略深) -> 微调到 AntD 标准色
+ * ========================================================================== */
+body.semi {
+  .el-table {
+    --el-table-header-bg-color: var(--antd-table-header-bg) !important;
+    --el-table-row-hover-bg-color: var(--antd-table-row-hover-bg) !important;
+    --el-table-border-color: var(--antd-table-border-color) !important;
+    --el-table-border: 1px solid var(--antd-table-border-color) !important;
+  }
+
+  .el-table th.el-table__cell {
+    background-color: var(--antd-table-header-bg) !important;
+    font-weight: var(--antd-font-weight-bold) !important;
+    color: var(--semi-color-text-0) !important;
+  }
+
+  .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+    background-color: var(--antd-table-row-hover-bg) !important;
+  }
+
+  .el-table__body tr.hover-row > td.el-table__cell {
+    background-color: var(--antd-table-row-hover-bg) !important;
+  }
+
+  .el-table--border .el-table__cell {
+    border-right-color: var(--antd-table-border-color) !important;
+  }
+
+  .el-table--border th.el-table__cell,
+  .el-table td.el-table__cell {
+    border-bottom-color: var(--antd-table-border-color) !important;
+  }
+}
+
+/* ==========================================================================
+ * 4. 卡片 Card
+ *    AntD: radius=8px, header padding=12px 24px, body padding=24px, 有阴影
+ *    Semi: radius=medium(6px), 无默认阴影 -> 调大圆角 + 补 AntD 卡片阴影
+ * ========================================================================== */
+body.semi {
+  .el-card {
+    border-radius: var(--antd-border-radius-lg) !important;
+    box-shadow: var(--antd-shadow-card) !important;
+    border: 1px solid var(--antd-table-border-color) !important;
+    transition: box-shadow var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+
+  .el-card__header {
+    padding: 12px 24px !important;
+    font-weight: var(--antd-font-weight-bold) !important;
+    border-bottom: 1px solid var(--antd-table-border-color) !important;
+  }
+
+  .el-card__body {
+    padding: 24px !important;
+  }
+
+  .el-card.is-always-shadow,
+  .el-card.is-hover-shadow:hover {
+    box-shadow: var(--antd-shadow-dropdown) !important;
+  }
+}
+
+/* ==========================================================================
+ * 5. 对话框 Dialog / Drawer
+ *    AntD: radius=8px, header padding=24px, body padding=24px
+ *    Semi: radius=large(8px) 已匹配 -> 仅微调内边距与阴影层级
+ * ========================================================================== */
+body.semi {
+  .el-dialog {
+    border-radius: var(--antd-border-radius-lg) !important;
+    box-shadow: var(--antd-shadow-modal) !important;
+  }
+
+  /*
+   * 项目自定义 Dialog 组件 (.com-dialog) 有自己的 header/body/footer 布局：
+   *   header: height 54px + padding 0（标题与放大/关闭按钮绝对定位居中）
+   *   body:   padding 15px
+   *   footer: border-top
+   * 若用全局 AntD padding 覆盖会导致标题栏高度被撑破、按钮错位。
+   * 因此仅对非自定义 Dialog 应用 AntD 内边距，.com-dialog 保留原有布局，
+   * 圆角与阴影仍统一走 AntD 风格。
+   */
+  .el-dialog:not(.com-dialog) {
+    .el-dialog__header {
+      padding: 24px 24px 12px !important;
+    }
+
+    .el-dialog__body {
+      padding: 0 24px !important;
+      font-size: var(--semi-font-size-regular) !important;
+      line-height: 1.5715 !important;
+    }
+
+    .el-dialog__footer {
+      padding: 12px 24px 20px !important;
+    }
+  }
+
+  .el-drawer {
+    box-shadow: var(--antd-shadow-modal) !important;
+  }
+}
+
+/* ==========================================================================
+ * 6. 标签 Tag
+ *    AntD: radius=4px, height=22px(default)/28px, padding=0 7px
+ *    Semi: radius=3px, height=24px -> 微调圆角到 4px
+ * ========================================================================== */
+body.semi {
+  .el-tag {
+    border-radius: 4px !important;
+    font-weight: var(--antd-font-weight-regular) !important;
+  }
+}
+
+/* ==========================================================================
+ * 7. 表单 Form
+ *    AntD: label font-weight=400 (normal), margin-bottom=24px
+ *    Semi: 已基本匹配 -> 仅确保 label 权重为 normal
+ * ========================================================================== */
+body.semi {
+  .el-form-item__label {
+    font-weight: var(--antd-font-weight-regular) !important;
+    color: var(--semi-color-text-0) !important;
+  }
+}
+
+/* ==========================================================================
+ * 8. 分页 Pagination
+ *    AntD: button 32x32, radius=6px, active 主色背景
+ *    Semi: radius=small(3px) -> 调到 6px 与按钮统一
+ * ========================================================================== */
+body.semi {
+  .el-pagination {
+    --el-pagination-border-radius: var(--antd-border-radius-base) !important;
+  }
+
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pager li {
+    border-radius: var(--antd-border-radius-base) !important;
+    transition: all var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+}
+
+/* ==========================================================================
+ * 9. 下拉菜单 / Popover / Tooltip
+ *    AntD: dropdown radius=8px, shadow=0 6px 16px
+ *    Semi: radius=medium(6px) -> 调到 8px + 使用 AntD 下拉阴影
+ * ========================================================================== */
+body.semi {
+  .el-dropdown-menu,
+  .el-popover,
+  .el-popconfirm {
+    border-radius: var(--antd-border-radius-lg) !important;
+    box-shadow: var(--antd-shadow-dropdown) !important;
+  }
+
+  .el-popper.is-light {
+    border-radius: var(--antd-border-radius-lg) !important;
+    box-shadow: var(--antd-shadow-dropdown) !important;
+  }
+}
+
+/* ==========================================================================
+ * 10. 滚动条 Scrollbar
+ *     AntD: 6px 宽, 圆角, 半透明, hover 加深
+ *     Semi: 8px 宽 -> 收窄到 6px 更精致
+ * ========================================================================== */
+body.semi {
+  .el-scrollbar__bar.is-horizontal {
+    height: 6px !important;
+  }
+
+  .el-scrollbar__bar.is-vertical {
+    width: 6px !important;
+  }
+
+  .el-scrollbar__thumb {
+    background-color: rgba(0, 0, 0, 0.12) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+  }
+
+  .el-scrollbar__thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+  }
+}
+
+/* ==========================================================================
+ * 11. 全局过渡与字体微调
+ *     确保所有 Element Plus 弹出动画使用 AntD 运动曲线
+ * ========================================================================== */
+body.semi {
+  .el-fade-in-linear-enter-active,
+  .el-fade-in-linear-leave-active,
+  .el-fade-in-enter-active,
+  .el-fade-in-leave-active,
+  .el-zoom-in-enter-active,
+  .el-zoom-in-leave-active,
+  .el-zoom-in-top-enter-active,
+  .el-zoom-in-top-leave-active {
+    transition: all var(--antd-transition-duration) var(--antd-transition-timing) !important;
+  }
+}
+
+/* ==========================================================================
+ * 12. 侧边栏菜单层级缩进修复
+ *     --------------------------------------------------------------------------
+ *     问题：advance-semi-theme 的 menu.css 把所有 vertical 菜单项的 padding-left
+ *           强制设为固定 20px，覆盖了 Element Plus 默认的层级缩进公式
+ *           calc(base-level-padding + level * level-padding)，
+ *           导致父级菜单与子级菜单在同一缩进位置显示，视觉上平级。
+ *     修复：恢复 Element Plus 的层级缩进公式，让一级 16px / 二级 32px / 三级 48px…
+ *           形成清晰层级。--el-menu-level 由组件运行时按嵌套深度 inline 设置。
+ * ========================================================================== */
+body.semi {
+  .el-menu--vertical:not(.el-menu--collapse):not(.el-menu--popup-container) {
+    .el-menu-item,
+    .el-sub-menu__title,
+    .el-menu-item-group__title {
+      padding-left: calc(
+        var(--el-menu-base-level-padding, 16px) +
+        var(--el-menu-level, 0) * var(--el-menu-level-padding, 16px)
+      ) !important;
+    }
+  }
+}
+
+/* ==========================================================================
+ * 13. 搜索表单 label 换行修复
+ *     --------------------------------------------------------------------------
+ *     问题：项目搜索表单普遍使用 label-width="68px"，4 个中文字符
+ *           （约 56px 内容 + 12px 右 padding = 68px）正好临界，遇字体微调
+ *           就会换行成两行，观感差。
+ *     修复：
+ *       (1) 所有 .el-form-item__label 加 white-space: nowrap，禁止文本换行；
+ *       (2) 内联表单（.el-form--inline）下 label 设 min-width: 80px 兜底，
+ *           min-width 与 Element Plus inline style 的 width 取最大值，
+ *           所以 68px 会被自动放大到 80px，而 100px/120px 的 label 不受影响。
+ * ========================================================================== */
+body.semi {
+  .el-form-item__label {
+    white-space: nowrap !important;
+  }
+
+  .el-form--inline .el-form-item__label {
+    min-width: 80px !important;
+  }
+}

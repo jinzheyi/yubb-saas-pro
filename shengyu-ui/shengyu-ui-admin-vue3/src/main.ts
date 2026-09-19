@@ -16,8 +16,9 @@ import { setupGlobCom } from '@/components'
 // 引入 element-plus
 import { setupElementPlus } from '@/plugins/elementPlus'
 
-// 引入 form-create
-import { setupFormCreate } from '@/plugins/formCreate'
+// 引入 Semi Design 视觉风格主题（覆盖 Element Plus 默认样式，实测用，可随时回退）
+import { createSemiTheme } from 'advance-semi-theme/element'
+import 'advance-semi-theme/element/styles'
 
 // 引入全局样式
 import '@/styles/index.scss'
@@ -54,7 +55,8 @@ const setupAll = async () => {
 
   setupElementPlus(app)
 
-  setupFormCreate(app)
+  // 应用 Semi Design 视觉风格（实测接入，覆盖 Element Plus 默认样式）
+  app.use(createSemiTheme())
 
   setupRouter(app)
 
@@ -67,6 +69,11 @@ const setupAll = async () => {
   app.use(VueDOMPurifyHTML)
 
   app.mount('#app')
+
+  // 应用挂载后异步加载 form-create，避免阻塞登录页首屏渲染
+  import('@/plugins/formCreate').then(({ setupFormCreate }) => {
+    setupFormCreate(app)
+  })
 }
 
 setupAll()

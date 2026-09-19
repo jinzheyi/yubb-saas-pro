@@ -35,3 +35,126 @@
     border-left-color: var(--el-color-primary);
   }
 }
+
+/* ==========================================================================
+ * Semi Design 主题桥接层
+ * --------------------------------------------------------------------------
+ * advance-semi-theme 已在 :root 层将 --el-color-* 映射到 --semi-color-*，
+ * 但项目 app store (src/store/modules/app.ts#setPrimaryLight) 运行时会把
+ * --el-color-primary-light-* / dark-2 以 inline style 写入 <html>，
+ * 优先级 (1,0,0,0) 高于 :root CSS，导致衍生色仍走 Element 原色调。
+ *
+ * 本桥接在 body.semi 作用域内用 !important 强制 Element Plus 全局 CSS 变量
+ * 跟随 Semi 色板，从而让 input focus、hover、disabled、rgba 叠加等场景
+ * 全部统一到 Semi 视觉体系。
+ * ========================================================================== */
+body.semi {
+  /* ---- 主色 ---- */
+  --el-color-primary: var(--semi-color-primary) !important;
+  --el-color-primary-light-3: var(--semi-color-primary-light-active) !important;
+  --el-color-primary-light-5: var(--semi-color-primary-light-hover) !important;
+  --el-color-primary-light-7: var(--semi-color-primary-light-default) !important;
+  --el-color-primary-light-8: var(--semi-color-primary-light-default) !important;
+  --el-color-primary-light-9: var(--semi-color-primary-light-default) !important;
+  --el-color-primary-dark-2: var(--semi-color-primary-hover) !important;
+
+  /* ---- 成功色 ---- */
+  --el-color-success: var(--semi-color-success) !important;
+  --el-color-success-light-3: var(--semi-color-success-light-hover) !important;
+  --el-color-success-light-5: var(--semi-color-success-light-default) !important;
+  --el-color-success-light-7: var(--semi-color-success-light-default) !important;
+  --el-color-success-light-8: var(--semi-color-success-light-default) !important;
+  --el-color-success-light-9: var(--semi-color-success-light-default) !important;
+  --el-color-success-dark-2: var(--semi-color-success-hover) !important;
+
+  /* ---- 警告色 ---- */
+  --el-color-warning: var(--semi-color-warning) !important;
+  --el-color-warning-light-3: var(--semi-color-warning-light-hover) !important;
+  --el-color-warning-light-5: var(--semi-color-warning-light-default) !important;
+  --el-color-warning-light-7: var(--semi-color-warning-light-default) !important;
+  --el-color-warning-light-8: var(--semi-color-warning-light-default) !important;
+  --el-color-warning-light-9: var(--semi-color-warning-light-default) !important;
+  --el-color-warning-dark-2: var(--semi-color-warning-hover) !important;
+
+  /* ---- 危险色 (danger / error 同义) ---- */
+  --el-color-danger: var(--semi-color-danger) !important;
+  --el-color-danger-light-3: var(--semi-color-danger-light-hover) !important;
+  --el-color-danger-light-5: var(--semi-color-danger-light-default) !important;
+  --el-color-danger-light-7: var(--semi-color-danger-light-default) !important;
+  --el-color-danger-light-8: var(--semi-color-danger-light-default) !important;
+  --el-color-danger-light-9: var(--semi-color-danger-light-default) !important;
+  --el-color-danger-dark-2: var(--semi-color-danger-hover) !important;
+
+  --el-color-error: var(--semi-color-danger) !important;
+  --el-color-error-light-3: var(--semi-color-danger-light-hover) !important;
+  --el-color-error-light-5: var(--semi-color-danger-light-default) !important;
+  --el-color-error-light-7: var(--semi-color-danger-light-default) !important;
+  --el-color-error-light-8: var(--semi-color-danger-light-default) !important;
+  --el-color-error-light-9: var(--semi-color-danger-light-default) !important;
+  --el-color-error-dark-2: var(--semi-color-danger-hover) !important;
+
+  /* ---- 信息色 (Semi 中将 info 映射为中性灰) ---- */
+  --el-color-info: var(--semi-color-text-2) !important;
+  --el-color-info-light-3: var(--semi-color-fill-2) !important;
+  --el-color-info-light-5: var(--semi-color-fill-1) !important;
+  --el-color-info-light-7: var(--semi-color-fill-0) !important;
+  --el-color-info-light-8: var(--semi-color-fill-0) !important;
+  --el-color-info-light-9: var(--semi-color-fill-0) !important;
+  --el-color-info-dark-2: var(--semi-color-fill-2) !important;
+
+  /* ---- rgb 变量：供 rgba(var(--el-color-xxx-rgb), alpha) 透明叠加场景使用 ----
+   * 硬编码 Semi 色值的 rgb 分量，避免 app store 从 <html> 读到 Element 原色值。 */
+  --el-color-primary-rgb: 0, 100, 250 !important;
+  --el-color-success-rgb: 59, 179, 70 !important;
+  --el-color-warning-rgb: 252, 136, 0 !important;
+  --el-color-danger-rgb: 249, 57, 32 !important;
+  --el-color-error-rgb: 249, 57, 32 !important;
+  --el-color-info-rgb: 46, 50, 56 !important;
+
+  /* ---- 菜单：恢复深色侧边栏的菜单文字/背景色 ----
+   * advance-semi-theme 的 menu.css 将 --el-menu-text-color 设为
+   * --semi-color-text-0（浅色模式下为深色），导致深色侧边栏上文字不可见。
+   * 项目使用深色侧边栏（--left-menu-bg-color: #001529），需要浅色文字。 */
+  --el-menu-text-color: var(--left-menu-text-color) !important;
+  --el-menu-bg-color: var(--left-menu-bg-color) !important;
+  --el-menu-active-color: var(--left-menu-text-active-color) !important;
+  --el-menu-hover-text-color: var(--left-menu-text-active-color) !important;
+  --el-menu-hover-bg-color: var(--left-menu-bg-color) !important;
+
+  /* ---- Ant Design 视觉对齐：Element Plus 全局变量映射 ---- */
+  --el-border-radius-base: var(--antd-border-radius-base) !important;
+  --el-border-radius-small: var(--antd-border-radius-sm) !important;
+  --el-border-radius-round: var(--antd-border-radius-base) !important;
+  --el-border-radius-circle: var(--antd-border-radius-base) !important;
+
+  --el-box-shadow: var(--antd-shadow-card) !important;
+  --el-box-shadow-light: var(--antd-shadow-card) !important;
+  --el-box-shadow-lighter: var(--antd-shadow-card) !important;
+  --el-box-shadow-dark: var(--antd-shadow-modal) !important;
+
+  --el-transition-duration: var(--antd-transition-duration) !important;
+  --el-transition-duration-fast: var(--antd-transition-fast) !important;
+
+  --el-font-size-base: var(--semi-font-size-regular) !important;
+  --el-font-size-small: var(--semi-font-size-small) !important;
+}
+
+/* 覆盖 Semi menu.css 中直接设置在 .el-menu-item / .el-sub-menu__title 上的颜色，
+ * 恢复深色侧边栏的浅色文字 */
+body.semi {
+  .el-menu-item,
+  .el-sub-menu__title {
+    color: var(--left-menu-text-color) !important;
+  }
+
+  .el-menu-item:hover,
+  .el-sub-menu__title:hover {
+    color: var(--left-menu-text-active-color) !important;
+  }
+
+  /* 弹出菜单（teleport 到 body）使用浅色背景，文字应为深色 */
+  .el-menu--popup .el-menu-item,
+  .el-menu--popup .el-sub-menu__title {
+    color: var(--semi-color-text-0) !important;
+  }
+}

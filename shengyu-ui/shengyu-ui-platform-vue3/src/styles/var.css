@@ -53,6 +53,34 @@
   --app-footer-height: 50px;
 
   --transition-time-02: 0.2s;
+
+  /* ==========================================================================
+   * Ant Design 视觉令牌
+   * 定义在此处供 index.scss 与 theme.scss 统一引用
+   * ========================================================================== */
+  --antd-border-radius-sm: 2px;
+  --antd-border-radius-base: 6px;
+  --antd-border-radius-lg: 8px;
+
+  --antd-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --antd-shadow-dropdown: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px 0 rgba(0, 0, 0, 0.05), 0 12px 48px 16px rgba(0, 0, 0, 0.03);
+  --antd-shadow-modal: 0 9px 28px 0 rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 8px -1px rgba(0, 0, 0, 0.04);
+
+  --antd-transition-duration: 0.3s;
+  --antd-transition-timing: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --antd-transition-fast: 0.2s;
+
+  --antd-font-weight-regular: 400;
+  --antd-font-weight-medium: 500;
+  --antd-font-weight-bold: 600;
+
+  --antd-table-header-bg: #fafafa;
+  --antd-table-row-hover-bg: #fafafa;
+  --antd-table-border-color: #f0f0f0;
+
+  --antd-input-border-color: #d9d9d9;
+  --antd-input-hover-border-color: #0064fa;
+  --antd-input-focus-border-color: #0064fa;
 }
 
 .dark {

@@ -152,7 +152,8 @@ const subtractLight = (color: string, amount: number) => {
   return c.toString(16).length > 1 ? c.toString(16) : `0${c.toString(16)}`
 }
 
-// 预设颜色
+// 预设颜色：Element 默认色（#409EFF / #909399 / #C0C4CC）已替换为 Semi Design 色板，
+// 避免用户在 Semi 主题下选中 Element 色后被桥接层 !important 覆盖导致改色失效。
 export const PREDEFINE_COLORS = [
   '#ff4500',
   '#ff8c00',
@@ -161,9 +162,9 @@ export const PREDEFINE_COLORS = [
   '#00ced1',
   '#1e90ff',
   '#c71585',
-  '#409EFF',
-  '#909399',
-  '#C0C4CC',
+  '#0064FA', // Semi 主色（原 Element #409EFF）
+  '#2E3238', // Semi 中性灰（原 Element #909399）
+  '#9FA3A8', // Semi disabled 灰（原 Element #C0C4CC）
   '#b7390b',
   '#ff7800',
   '#fad400',
@@ -172,3 +173,6 @@ export const PREDEFINE_COLORS = [
   '#1f73c3',
   '#711f57'
 ]
+
+// Semi Design 主题主色（与 advance-semi-theme 主题包对齐，用于 Setting 拦截判断）
+export const SEMI_PRIMARY_COLOR = '#0064FA'

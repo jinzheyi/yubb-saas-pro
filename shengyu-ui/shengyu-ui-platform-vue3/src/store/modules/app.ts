@@ -67,8 +67,8 @@ export const useAppStore = defineStore('app', {
       isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
       currentSize: wsCache.get('default') || 'default', // 组件尺寸
       theme: wsCache.get(CACHE_KEY.THEME) || {
-        // 主题色
-        elColorPrimary: '#409eff',
+        // 主题色：默认跟随 Semi Design 主色（与 advance-semi-theme 主题包对齐）
+        elColorPrimary: '#0064FA',
         // 左侧菜单边框颜色
         leftMenuBorderColor: 'inherit',
         // 左侧菜单背景颜色

@@ -334,6 +334,6 @@ onMounted(() => {
 
 .card-created-time {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--el-color-info-light-5);
 }
 </style>
