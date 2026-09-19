@@ -270,7 +270,7 @@ export default defineComponent({
     }
 
     return () => (
-      <div v-loading={unref(getProps).loading}>
+      <div class="v-data-table" v-loading={unref(getProps).loading}>
         <ElTable
           // @ts-ignore
           ref={elTableRef}
@@ -289,7 +289,7 @@ export default defineComponent({
           <ElPagination
             v-model:pageSize={pageSizeRef.value}
             v-model:currentPage={currentPageRef.value}
-            class="float-right mb-15px mt-15px"
+            class="v-data-pagination float-right mb-15px mt-15px"
             {...unref(pagination)}
           ></ElPagination>
         ) : undefined}

@@ -58,9 +58,9 @@ const whiteList = [
 
 // 路由加载前
 router.beforeEach(async (to, from, next) => {
-  start()
-  loadStart()
   if (getAccessToken()) {
+    start()
+    loadStart()
     if (to.path === '/login') {
       next({ path: '/' })
     } else {

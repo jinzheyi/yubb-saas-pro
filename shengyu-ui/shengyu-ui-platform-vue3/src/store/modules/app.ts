@@ -67,8 +67,8 @@ export const useAppStore = defineStore('app', {
       isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
       currentSize: wsCache.get('default') || 'default', // 组件尺寸
       theme: wsCache.get(CACHE_KEY.THEME) || {
-        // 主题色：扁平化清新主题品牌深蓝（覆盖 Semi 默认 #0064FA）
-        elColorPrimary: '#2563EB',
+        // Astra Console 品牌色：用于操作、焦点与导航选中。
+        elColorPrimary: '#4F46E5',
         // 左侧菜单边框颜色
         leftMenuBorderColor: 'inherit',
         // 左侧菜单背景颜色（浅色侧边栏，与主背景融合）
@@ -82,7 +82,7 @@ export const useAppStore = defineStore('app', {
         // 左侧菜单字体颜色（正文灰）
         leftMenuTextColor: '#4B5563',
         // 左侧菜单选中字体颜色（品牌深蓝）
-        leftMenuTextActiveColor: '#2563EB',
+        leftMenuTextActiveColor: '#4F46E5',
         // logo字体颜色（近黑标题色）
         logoTitleTextColor: '#1F2937',
         // logo边框颜色
@@ -274,6 +274,8 @@ export const useAppStore = defineStore('app', {
       for (const key in this.theme) {
         setCssVar(`--${humpToUnderline(key)}`, darkMenuVars[key] ?? this.theme[key])
       }
+      // Astra Console 的组件适配层以语义令牌为唯一主色来源，保留设置面板的换肤能力。
+      setCssVar('--ai-primary', this.theme.elColorPrimary)
     },
     setFooter(footer: boolean) {
       this.footer = footer

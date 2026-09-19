@@ -19,13 +19,18 @@
     <div id="app">
       <style>
         .app-loading {
-          display: flex;
+          display: none;
           width: 100%;
           height: 100%;
           justify-content: center;
           align-items: center;
           flex-direction: column;
           background: #f0f2f5;
+        }
+
+        /* 退出后优先呈现登录页，避免无凭证时展示应用启动加载画面。 */
+        .has-access-token .app-loading {
+          display: flex;
         }
 
         .app-loading .app-loading-wrap {
@@ -133,6 +138,24 @@
           }
         }
       </style>
+      <script>
+        ;(() => {
+          let rawToken = null
+          try {
+            rawToken = localStorage.getItem('ACCESS_TOKEN')
+            const cacheItem = rawToken ? JSON.parse(rawToken) : null
+            const isExpired = cacheItem && typeof cacheItem.e === 'number' && cacheItem.e <= Date.now()
+            if (cacheItem && !isExpired) {
+              document.documentElement.classList.add('has-access-token')
+            }
+          } catch {
+            // 兼容旧版本的非缓存格式 token；不可访问存储时则保持登录页优先。
+            if (rawToken) {
+              document.documentElement.classList.add('has-access-token')
+            }
+          }
+        })()
+      </script>
       <div class="app-loading">
         <div class="app-loading-wrap">
           <div class="app-loading-title">
