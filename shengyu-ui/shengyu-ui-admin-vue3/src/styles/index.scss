@@ -49,6 +49,17 @@
  * 全部统一到 Semi 视觉体系。
  * ========================================================================== */
 body.semi {
+  /* ---- Semi 主色 RGB 分量覆盖（让 Semi 色板跟随 #2563EB 扁平化清新主题）----
+   * 原值: semi-blue-5=0,100,250 (#0064FA Semi 主色)
+   * 新值: semi-blue-5=37,99,235 (#2563EB 品牌深蓝)
+   * 衍生色参考 Tailwind blue 色板生成，覆盖后 --semi-color-primary 系列自动跟随 */
+  --semi-blue-0: 239, 246, 255 !important; /* #EFF6FF light-default 背景 */
+  --semi-blue-1: 219, 234, 254 !important; /* #DBEAFE light-hover */
+  --semi-blue-2: 191, 219, 254 !important; /* #BFDBFE light-active */
+  --semi-blue-5: 37, 99, 235 !important;   /* #2563EB primary 主色 */
+  --semi-blue-6: 29, 78, 216 !important;   /* #1D4ED8 primary-hover */
+  --semi-blue-7: 30, 64, 175 !important;   /* #1E40AF primary-active */
+
   /* ---- 主色 ---- */
   --el-color-primary: var(--semi-color-primary) !important;
   --el-color-primary-light-3: var(--semi-color-primary-light-active) !important;
@@ -104,22 +115,23 @@ body.semi {
 
   /* ---- rgb 变量：供 rgba(var(--el-color-xxx-rgb), alpha) 透明叠加场景使用 ----
    * 硬编码 Semi 色值的 rgb 分量，避免 app store 从 <html> 读到 Element 原色值。 */
-  --el-color-primary-rgb: 0, 100, 250 !important;
-  --el-color-success-rgb: 59, 179, 70 !important;
-  --el-color-warning-rgb: 252, 136, 0 !important;
-  --el-color-danger-rgb: 249, 57, 32 !important;
-  --el-color-error-rgb: 249, 57, 32 !important;
+  --el-color-primary-rgb: 37, 99, 235 !important;
+  --el-color-success-rgb: 34, 197, 94 !important;
+  --el-color-warning-rgb: 245, 158, 11 !important;
+  --el-color-danger-rgb: 239, 68, 68 !important;
+  --el-color-error-rgb: 239, 68, 68 !important;
   --el-color-info-rgb: 46, 50, 56 !important;
 
-  /* ---- 菜单：恢复深色侧边栏的菜单文字/背景色 ----
+  /* ---- 菜单：浅色侧边栏文字/背景色 ----
    * advance-semi-theme 的 menu.css 将 --el-menu-text-color 设为
-   * --semi-color-text-0（浅色模式下为深色），导致深色侧边栏上文字不可见。
-   * 项目使用深色侧边栏（--left-menu-bg-color: #001529），需要浅色文字。 */
+   * --semi-color-text-0（浅色模式下为深色），与浅色侧边栏背景对比不足。
+   * 项目使用浅色侧边栏（--left-menu-bg-color: #FFFFFF），需要正文灰文字。
+   * hover 背景使用 --left-menu-bg-light-color (#F9FAFB) 与底色形成对比。 */
   --el-menu-text-color: var(--left-menu-text-color) !important;
   --el-menu-bg-color: var(--left-menu-bg-color) !important;
   --el-menu-active-color: var(--left-menu-text-active-color) !important;
   --el-menu-hover-text-color: var(--left-menu-text-active-color) !important;
-  --el-menu-hover-bg-color: var(--left-menu-bg-color) !important;
+  --el-menu-hover-bg-color: var(--left-menu-bg-light-color) !important;
 
   /* ---- Ant Design 视觉对齐：Element Plus 全局变量映射 ---- */
   --el-border-radius-base: var(--antd-border-radius-base) !important;

@@ -67,24 +67,24 @@ export const useAppStore = defineStore('app', {
       isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
       currentSize: wsCache.get('default') || 'default', // 组件尺寸
       theme: wsCache.get(CACHE_KEY.THEME) || {
-        // 主题色：默认跟随 Semi Design 主色（与 advance-semi-theme 主题包对齐）
-        elColorPrimary: '#0064FA',
+        // 主题色：扁平化清新主题品牌深蓝（覆盖 Semi 默认 #0064FA）
+        elColorPrimary: '#2563EB',
         // 左侧菜单边框颜色
         leftMenuBorderColor: 'inherit',
-        // 左侧菜单背景颜色
-        leftMenuBgColor: '#001529',
-        // 左侧菜单浅色背景颜色
-        leftMenuBgLightColor: '#0f2438',
-        // 左侧菜单选中背景颜色
-        leftMenuBgActiveColor: 'var(--el-color-primary)',
+        // 左侧菜单背景颜色（浅色侧边栏，与主背景融合）
+        leftMenuBgColor: '#FFFFFF',
+        // 左侧菜单浅色背景颜色（hover 态）
+        leftMenuBgLightColor: '#F9FAFB',
+        // 左侧菜单选中背景颜色（用浅色背景，不铺满蓝色，靠左侧指示条+文字高亮区分）
+        leftMenuBgActiveColor: 'var(--left-menu-bg-light-color)',
         // 左侧菜单收起选中背景颜色
-        leftMenuCollapseBgActiveColor: 'var(--el-color-primary)',
-        // 左侧菜单字体颜色
-        leftMenuTextColor: '#bfcbd9',
-        // 左侧菜单选中字体颜色
-        leftMenuTextActiveColor: '#fff',
-        // logo字体颜色
-        logoTitleTextColor: '#fff',
+        leftMenuCollapseBgActiveColor: 'var(--left-menu-bg-light-color)',
+        // 左侧菜单字体颜色（正文灰）
+        leftMenuTextColor: '#4B5563',
+        // 左侧菜单选中字体颜色（品牌深蓝）
+        leftMenuTextActiveColor: '#2563EB',
+        // logo字体颜色（近黑标题色）
+        logoTitleTextColor: '#1F2937',
         // logo边框颜色
         logoBorderColor: 'inherit',
         // 头部背景颜色
@@ -92,9 +92,9 @@ export const useAppStore = defineStore('app', {
         // 头部字体颜色
         topHeaderTextColor: 'inherit',
         // 头部悬停颜色
-        topHeaderHoverColor: '#f6f6f6',
+        topHeaderHoverColor: '#F3F4F6',
         // 头部边框颜色
-        topToolBorderColor: '#eee'
+        topToolBorderColor: '#E5E7EB'
       }
     }
   },
@@ -240,6 +240,10 @@ export const useAppStore = defineStore('app', {
         document.documentElement.classList.remove('dark')
       }
       wsCache.set(CACHE_KEY.IS_DARK, this.isDark)
+      // 切换暗色/浅色时重新应用全部主题变量：setCssVarTheme 会依据 this.isDark
+      // 对菜单/logo 相关变量使用暗色值，避免浅色 inline (#FFFFFF) 覆盖
+      // var.css .dark 块导致暗色下菜单白底
+      this.setCssVarTheme()
     },
     setCurrentSize(currentSize: ElementPlusSize) {
       this.currentSize = currentSize
@@ -253,8 +257,22 @@ export const useAppStore = defineStore('app', {
       wsCache.set(CACHE_KEY.THEME, this.theme)
     },
     setCssVarTheme() {
+      // 暗色模式下菜单/logo 相关变量用暗色值，避免浅色 inline style
+      // (优先级 1,0,0,0) 覆盖 var.css .dark 块 (0,1,0,0) 导致暗色下菜单白底
+      const darkMenuVars: Record<string, string> = this.isDark
+        ? {
+            leftMenuBgColor: '#1F2937',
+            leftMenuBgLightColor: '#111827',
+            leftMenuBgActiveColor: '#374151',
+            leftMenuTextColor: '#9CA3AF',
+            leftMenuTextActiveColor: '#60A5FA',
+            leftMenuCollapseBgActiveColor: 'var(--el-color-primary)',
+            logoTitleTextColor: '#F3F4F6',
+            logoBorderColor: 'inherit'
+          }
+        : {}
       for (const key in this.theme) {
-        setCssVar(`--${humpToUnderline(key)}`, this.theme[key])
+        setCssVar(`--${humpToUnderline(key)}`, darkMenuVars[key] ?? this.theme[key])
       }
     },
     setFooter(footer: boolean) {

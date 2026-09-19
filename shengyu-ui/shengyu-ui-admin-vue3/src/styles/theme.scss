@@ -49,7 +49,7 @@ body.semi {
 
   .el-input__wrapper.is-focus {
     border-color: var(--antd-input-focus-border-color) !important;
-    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
     background-color: var(--semi-color-bg-0) !important;
   }
 
@@ -67,7 +67,7 @@ body.semi {
 
   .el-select__wrapper.is-focused {
     border-color: var(--antd-input-focus-border-color) !important;
-    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
     background-color: var(--semi-color-bg-0) !important;
   }
 
@@ -78,7 +78,7 @@ body.semi {
 
   .el-select .el-input.is-focus .el-input__wrapper {
     border-color: var(--antd-input-focus-border-color) !important;
-    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
   }
 
   .el-textarea__inner {
@@ -94,7 +94,7 @@ body.semi {
 
   .el-textarea__inner:focus {
     border-color: var(--antd-input-focus-border-color) !important;
-    box-shadow: 0 0 0 2px rgba(0, 100, 250, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
   }
 
   .el-input-group__prepend,
@@ -115,13 +115,17 @@ body.semi {
     --el-table-header-bg-color: var(--antd-table-header-bg) !important;
     --el-table-row-hover-bg-color: var(--antd-table-row-hover-bg) !important;
     --el-table-border-color: var(--antd-table-border-color) !important;
-    --el-table-border: 1px solid var(--antd-table-border-color) !important;
+    /* AntD 现代表格：无外框，仅靠淡色横线分隔行 */
+    --el-table-border: none !important;
+    border-radius: var(--antd-border-radius-base) !important;
+    overflow: hidden !important;
   }
 
   .el-table th.el-table__cell {
     background-color: var(--antd-table-header-bg) !important;
     font-weight: var(--antd-font-weight-bold) !important;
     color: var(--semi-color-text-0) !important;
+    border-bottom: 1px solid var(--antd-table-border-color) !important;
   }
 
   .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
@@ -132,13 +136,18 @@ body.semi {
     background-color: var(--antd-table-row-hover-bg) !important;
   }
 
+  /* 默认无竖线，仅行底淡横线；显式 border 属性时才显示竖线 */
+  .el-table td.el-table__cell {
+    border-bottom: 1px solid var(--antd-table-border-color) !important;
+  }
+
   .el-table--border .el-table__cell {
-    border-right-color: var(--antd-table-border-color) !important;
+    border-right: 1px solid var(--antd-table-border-color) !important;
   }
 
   .el-table--border th.el-table__cell,
-  .el-table td.el-table__cell {
-    border-bottom-color: var(--antd-table-border-color) !important;
+  .el-table--border td.el-table__cell {
+    border-bottom: 1px solid var(--antd-table-border-color) !important;
   }
 }
 
@@ -156,18 +165,24 @@ body.semi {
   }
 
   .el-card__header {
-    padding: 12px 24px !important;
+    padding: 14px 20px !important;
     font-weight: var(--antd-font-weight-bold) !important;
     border-bottom: 1px solid var(--antd-table-border-color) !important;
   }
 
   .el-card__body {
-    padding: 24px !important;
+    padding: 20px !important;
   }
 
   .el-card.is-always-shadow,
   .el-card.is-hover-shadow:hover {
     box-shadow: var(--antd-shadow-dropdown) !important;
+  }
+
+  /* 分割线：淡化，AntD 现代风格用极淡灰 */
+  .el-divider {
+    background-color: var(--antd-table-border-color) !important;
+    border-color: var(--antd-table-border-color) !important;
   }
 }
 
@@ -356,5 +371,306 @@ body.semi {
 
   .el-form--inline .el-form-item__label {
     min-width: 80px !important;
+  }
+}
+
+/* ==========================================================================
+ * 14. 暗色模式系统性兼容修复
+ *     --------------------------------------------------------------------------
+ *     根因：advance-semi-theme 的 components/*.css 在组件级硬编码浅色背景
+ *           (#fff) 或固定浅色变量，element/styles/dark.css 仅覆盖少量组件，
+ *           导致暗色模式下菜单嵌套子项/表格/弹层/分页/消息/标签页等仍显示
+ *           白底，与深色框架形成割裂感。
+ *     策略：在 html.dark body.semi 作用域内（优先级 0,2,0,1 高于 Semi 的
+ *           .semi 单类选择器 0,1,0,0），统一用 Element Plus 暗色变量
+ *           (--el-bg-color / --el-bg-color-overlay / --el-fill-color-* 等，
+ *           由 element-plus/theme-chalk/dark/css-vars.css 在 html.dark 下定义)
+ *           系统性覆盖所有硬编码浅色背景，实现完整的暗色适配。
+ *     原则：仅暗色模式生效，白天模式完全不受影响。
+ *     菜单选中态：白天 #F9FAFB / 暗色 #374151，不铺满蓝色，
+ *                 靠左侧指示条 + 文字高亮区分（见 var.css）。
+ * ========================================================================== */
+html.dark body.semi {
+  /* ---- 14.1 卡片 ---- */
+  .el-card {
+    background-color: var(--el-bg-color) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-card__header {
+    border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* ---- 14.2 表格 Table / TableV2 ----
+   * Semi table.css 硬编码 --el-table-bg-color: #fff / tr 背景 #fff
+   * 暗色下表格横线用极淡 rgba 避免突兀，去外框 */
+  .el-table {
+    --el-table-header-bg-color: var(--el-fill-color-light) !important;
+    --el-table-row-hover-bg-color: var(--el-fill-color) !important;
+    --el-table-border-color: rgba(255, 255, 255, 0.06) !important;
+    --el-table-border: none !important;
+    --el-table-bg-color: var(--el-bg-color) !important;
+    --el-table-tr-bg-color: var(--el-bg-color) !important;
+    --el-table-expanded-cell-bg-color: var(--el-bg-color) !important;
+    --el-table-current-row-bg-color: var(--el-fill-color) !important;
+    color: var(--el-text-color-primary) !important;
+    border-radius: var(--antd-border-radius-base) !important;
+    overflow: hidden !important;
+  }
+  .el-table th.el-table__cell {
+    background-color: var(--el-fill-color-light) !important;
+    color: var(--el-text-color-primary) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-table td.el-table__cell,
+  .el-table tr.el-table__row,
+  .el-table tr {
+    background-color: var(--el-bg-color) !important;
+  }
+  .el-table td.el-table__cell {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell,
+  .el-table__body tr.hover-row > td.el-table__cell {
+    background-color: var(--el-fill-color) !important;
+  }
+  .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+    background-color: var(--el-fill-color-light) !important;
+  }
+  .el-table--border .el-table__cell {
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+  /* 虚拟化表格 TableV2（Semi virtualized.css 缺 --el-table-bg-color 覆盖）*/
+  .el-table-v2 {
+    --el-table-bg-color: var(--el-bg-color) !important;
+    --el-table-header-bg-color: var(--el-fill-color-light) !important;
+    --el-table-row-hover-bg-color: var(--el-fill-color) !important;
+    --el-table-border-color: rgba(255, 255, 255, 0.06) !important;
+    background-color: var(--el-bg-color) !important;
+  }
+  .el-table-v2__header-cell {
+    background-color: var(--el-fill-color-light) !important;
+  }
+  .el-table-v2__row .el-table-v2__row-cell {
+    background-color: var(--el-bg-color) !important;
+  }
+
+  /* ---- 14.2.1 分割线 ---- */
+  .el-divider {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* ---- 14.3 弹层（teleport 到 body 的浮层）----
+   * Semi 多个组件 CSS 硬编码 background: #fff */
+  .el-select__popper.el-popper,
+  .el-select-dropdown,
+  .el-popover,
+  .el-dropdown-menu,
+  .el-picker__popper,
+  .el-picker-panel,
+  .el-time-panel,
+  .el-picker-panel__footer,
+  .el-color-picker__panel,
+  .el-tour__content,
+  .el-tour__arrow,
+  .el-autocomplete-suggestion,
+  .el-mention__dropdown,
+  .el-cascader__dropdown,
+  .el-tree-select__popper,
+  .el-select-v2__popper {
+    background-color: var(--el-bg-color-overlay) !important;
+  }
+  /* 弹层箭头跟随背景 */
+  .el-select__popper .el-popper__arrow::before,
+  .el-popover .el-popper__arrow::before,
+  .el-popper.is-light .el-popper__arrow::before {
+    background-color: var(--el-bg-color-overlay) !important;
+  }
+  /* 弹层内文字 */
+  .el-select-dropdown__item,
+  .el-dropdown-menu__item,
+  .el-autocomplete-suggestion li,
+  .el-mention__option,
+  .el-cascader-node {
+    color: var(--el-text-color-primary) !important;
+  }
+  /* 弹层内 hover/选中态背景 */
+  .el-select-dropdown__item:hover,
+  .el-dropdown-menu__item:hover,
+  .el-autocomplete-suggestion li:hover,
+  .el-mention__option:hover,
+  .el-cascader-node:hover,
+  .el-select-dropdown__item.is-selected:hover,
+  .el-autocomplete-suggestion li.highlighted {
+    background-color: var(--el-fill-color) !important;
+  }
+
+  /* ---- 14.4 菜单弹出版本（折叠侧边栏时 teleport 到 body）----
+   * Semi menu.css 硬编码 .el-menu--popup background: #fff */
+  .el-menu--popup {
+    background-color: var(--el-bg-color-overlay) !important;
+  }
+  .el-menu--popup .el-menu-item,
+  .el-menu--popup .el-sub-menu__title {
+    color: var(--el-text-color-primary) !important;
+  }
+
+  /* ---- 14.5 侧边栏内嵌套子菜单背景 ----
+   * 确保暗色侧边栏 (#1F2937) 下嵌套子菜单跟随侧边栏深色，不出现白底 */
+  .el-menu {
+    background-color: var(--left-menu-bg-color) !important;
+  }
+  .el-menu .el-menu {
+    .el-sub-menu__title,
+    .el-menu-item:not(.is-active) {
+      background-color: var(--left-menu-bg-light-color) !important;
+    }
+  }
+  .el-menu-item,
+  .el-sub-menu__title {
+    color: var(--left-menu-text-color) !important;
+  }
+  .el-menu-item:hover,
+  .el-sub-menu__title:hover {
+    background-color: var(--left-menu-bg-active-color) !important;
+    color: var(--left-menu-text-active-color) !important;
+  }
+  .el-menu-item.is-active {
+    color: var(--left-menu-text-active-color) !important;
+    background-color: var(--left-menu-bg-active-color) !important;
+  }
+
+  /* ---- 14.6 对话框/抽屉 ---- */
+  .el-dialog,
+  .el-drawer {
+    background-color: var(--el-bg-color) !important;
+  }
+  .el-dialog__title,
+  .el-dialog__body,
+  .el-drawer__header {
+    color: var(--el-text-color-primary) !important;
+  }
+
+  /* ---- 14.7 输入框/选择器/文本域 ----
+   * 确保暗色下背景跟随 --el-fill-color-blank（base.css 已映射为 bg-1）
+   * 边框用极淡 rgba 避免突兀 */
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner,
+  .el-input-number .el-input__wrapper,
+  .el-cascader .el-input__wrapper,
+  .el-tree-select .el-input__wrapper,
+  .el-autocomplete .el-input__wrapper,
+  .el-mention .el-input__wrapper,
+  .el-select-v2 .el-input__wrapper {
+    background-color: var(--el-fill-color-blank) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  .el-input__wrapper.is-focus,
+  .el-select__wrapper.is-focused,
+  .el-input-number .el-input__wrapper.is-focus,
+  .el-cascader .el-input__wrapper.is-focus,
+  .el-tree-select .el-input__wrapper.is-focus,
+  .el-autocomplete .el-input__wrapper.is-focus,
+  .el-mention .el-input__wrapper.is-focus,
+  .el-select-v2 .el-input__wrapper.is-focus {
+    border-color: var(--el-color-primary) !important;
+  }
+  /* 前后置元素 */
+  .el-input-group__prepend,
+  .el-input-group__append {
+    background-color: var(--el-fill-color-light) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* ---- 14.8 分页 ----
+   * 确保分页跳转输入框/尺寸选择器跟随暗色 */
+  .el-pagination {
+    color: var(--el-text-color-primary) !important;
+  }
+  .el-pagination__editor.el-input .el-input__wrapper,
+  .el-pagination__sizes .el-select .el-input__wrapper {
+    background-color: var(--el-fill-color-blank) !important;
+  }
+
+  /* ---- 14.9 标签页 Tabs ----
+   * Semi tabs.css 硬编码 card is-active / border-card 背景 #fff */
+  .el-tabs--border-card {
+    background-color: var(--el-bg-color) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-tabs--border-card > .el-tabs__header {
+    background-color: var(--el-fill-color-light) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-tabs--card > .el-tabs__header .el-tabs__item.is-active,
+  .el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active {
+    background-color: var(--el-bg-color) !important;
+    border-bottom-color: var(--el-bg-color) !important;
+  }
+  .el-tabs__nav-wrap::after {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* ---- 14.10 反馈：消息/通知 ----
+   * Semi message.css / notification.css 硬编码 background: #fff */
+  .el-message,
+  .el-message.is-plain,
+  .el-notification {
+    background-color: var(--el-bg-color-overlay) !important;
+  }
+  .el-message--success,
+  .el-message--warning,
+  .el-message--error,
+  .el-message--info {
+    --el-message-bg-color: var(--el-bg-color-overlay) !important;
+  }
+
+  /* ---- 14.11 Loading 遮罩 ----
+   * Semi loading.css 硬编码 rgba(255,255,255,0.9) */
+  .el-loading-mask {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  /* ---- 14.12 Segmented 分段控制器 ----
+   * Semi segmented.css 硬编码选中态 background: #fff */
+  .el-segmented {
+    --el-segmented-item-selected-bg-color: var(--el-bg-color-overlay) !important;
+  }
+  .el-segmented__item.is-selected {
+    background-color: var(--el-bg-color-overlay) !important;
+  }
+
+  /* ---- 14.13 返回顶部 ----
+   * Semi backtop.css 硬编码 background: #fff */
+  .el-backtop {
+    background-color: var(--el-bg-color-overlay) !important;
+    color: var(--el-text-color-primary) !important;
+  }
+  .el-backtop:hover {
+    background-color: var(--el-fill-color) !important;
+  }
+
+  /* ---- 14.14 滑块标记点 ----
+   * Semi slider.css 硬编码 --el-slider-stop-bg-color: #fff；
+   * 滑块按钮白色保留（暗色下白色圆圈更清晰）*/
+  .el-slider {
+    --el-slider-stop-bg-color: var(--el-fill-color) !important;
+  }
+  .el-slider__stop {
+    background-color: var(--el-fill-color) !important;
+  }
+
+  /* ---- 14.15 描述列表 ---- */
+  .el-descriptions {
+    --el-descriptions-item-bordered-label-background: var(--el-fill-color-light) !important;
+  }
+  .el-descriptions--bordered .el-descriptions__label,
+  .el-descriptions--bordered .el-descriptions__content,
+  .el-descriptions--bordered {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+  .el-descriptions--bordered .el-descriptions__label {
+    background-color: var(--el-fill-color-light) !important;
   }
 }

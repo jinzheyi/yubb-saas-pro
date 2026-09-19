@@ -1,19 +1,19 @@
 :root {
-  --login-bg-color: #293146;
+  --login-bg-color: #F5F7FA;
 
   --left-menu-max-width: 200px;
 
   --left-menu-min-width: 64px;
 
-  --left-menu-bg-color: #001529;
+  --left-menu-bg-color: #FFFFFF;
 
-  --left-menu-bg-light-color: #0f2438;
+  --left-menu-bg-light-color: #F9FAFB;
 
-  --left-menu-bg-active-color: var(--el-color-primary);
+  --left-menu-bg-active-color: var(--left-menu-bg-light-color);
 
-  --left-menu-text-color: #bfcbd9;
+  --left-menu-text-color: #4B5563;
 
-  --left-menu-text-active-color: #fff;
+  --left-menu-text-active-color: #2563EB;
 
   --left-menu-collapse-bg-active-color: var(--el-color-primary);
   /* left menu end */
@@ -21,7 +21,7 @@
   /* logo start */
   --logo-height: 50px;
 
-  --logo-title-text-color: #fff;
+  --logo-title-text-color: #1F2937;
   /* logo end */
 
   /* header start */
@@ -48,21 +48,21 @@
 
   --app-content-padding: 20px;
 
-  --app-content-bg-color: #f5f7f9;
+  --app-content-bg-color: #F5F7FA;
 
   --app-footer-height: 50px;
 
   --transition-time-02: 0.2s;
 
   /* ==========================================================================
-   * Ant Design 视觉令牌
-   * 定义在此处供 index.scss 与 theme.scss 统一引用
+   * 扁平化清新风格视觉令牌
+   * 参考 AI 生成扁平化设计：浅灰蓝背景 + 纯白卡片 + 品牌深蓝 + 几乎无阴影
    * ========================================================================== */
   --antd-border-radius-sm: 2px;
   --antd-border-radius-base: 6px;
   --antd-border-radius-lg: 8px;
 
-  --antd-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --antd-shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
   --antd-shadow-dropdown: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px 0 rgba(0, 0, 0, 0.05), 0 12px 48px 16px rgba(0, 0, 0, 0.03);
   --antd-shadow-modal: 0 9px 28px 0 rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 8px -1px rgba(0, 0, 0, 0.04);
 
@@ -74,17 +74,33 @@
   --antd-font-weight-medium: 500;
   --antd-font-weight-bold: 600;
 
-  --antd-table-header-bg: #fafafa;
-  --antd-table-row-hover-bg: #fafafa;
+  --antd-table-header-bg: #FAFAFA;
+  --antd-table-row-hover-bg: #FAFAFA;
   --antd-table-border-color: #f0f0f0;
 
   --antd-input-border-color: #d9d9d9;
-  --antd-input-hover-border-color: #0064fa;
-  --antd-input-focus-border-color: #0064fa;
+  --antd-input-hover-border-color: #2563EB;
+  --antd-input-focus-border-color: #2563EB;
+
+  /* ---- 扁平化清新风格：字体四层灰阶 + 状态色令牌 ---- */
+  --text-color-title: #1F2937;
+  --text-color-body: #4B5563;
+  --text-color-muted: #9CA3AF;
+  --text-color-disabled: #D1D5DB;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
 }
 
 .dark {
   --app-content-bg-color: var(--el-bg-color);
+  /* 暗色模式下侧边栏兜底（浅色侧边栏在暗色下切回深底浅字） */
+  --left-menu-bg-color: #1F2937;
+  --left-menu-bg-light-color: #111827;
+  --left-menu-bg-active-color: #374151;
+  --left-menu-text-color: #9CA3AF;
+  --left-menu-text-active-color: #60A5FA;
+  --logo-title-text-color: #F3F4F6;
 }
 
 html,

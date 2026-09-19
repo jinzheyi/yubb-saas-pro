@@ -162,7 +162,7 @@ export const PREDEFINE_COLORS = [
   '#00ced1',
   '#1e90ff',
   '#c71585',
-  '#0064FA', // Semi 主色（原 Element #409EFF）
+  '#2563EB', // Semi 主色（原 Element #409EFF）
   '#2E3238', // Semi 中性灰（原 Element #909399）
   '#9FA3A8', // Semi disabled 灰（原 Element #C0C4CC）
   '#b7390b',
@@ -176,7 +176,7 @@ export const PREDEFINE_COLORS = [
 
 
 // Semi Design 主题主色（与 advance-semi-theme 主题包对齐，用于桥接层锁定主色判断）
-export const SEMI_PRIMARY_COLOR = '#0064FA'
+export const SEMI_PRIMARY_COLOR = '#2563EB'
 
 /**
  * Mixes two colors.

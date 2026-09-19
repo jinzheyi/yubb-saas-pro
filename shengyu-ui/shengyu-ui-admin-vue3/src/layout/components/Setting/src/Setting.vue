@@ -32,7 +32,7 @@ const setSystemTheme = (color: string) => {
   // 此处拦截非 Semi 主色的改色操作并提示，避免用户误以为功能损坏。
   if (document.body?.classList.contains('semi') && color !== SEMI_PRIMARY_COLOR) {
     ElMessage.warning(
-      'Semi Design 主题已启用，主色已锁定为 #0064FA。如需自定义主题色，请在 main.ts 注释掉 Semi 主题相关代码后重启。'
+      'Semi Design 主题已启用，主色已锁定为 #2563EB。如需自定义主题色，请在 main.ts 注释掉 Semi 主题相关代码后重启。'
     )
     systemTheme.value = SEMI_PRIMARY_COLOR
     return
@@ -237,7 +237,7 @@ const clear = () => {
       <ColorRadioPicker
         v-model="systemTheme"
         :schema="[
-          '#0064FA',
+          '#2563EB',
           '#009688',
           '#536dfe',
           '#ff5c93',
