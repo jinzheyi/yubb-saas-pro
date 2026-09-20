@@ -96,4 +96,14 @@ public interface AdminUserApi {
      */
     Long createUser(@Valid AdminUserCreateReqDTO reqVO, String businessName);
 
+    /**
+     * 重置指定租户用户的密码。
+     *
+     * <p>调用方需在目标租户上下文中执行，确保用户编号不会跨租户访问。</p>
+     *
+     * @param id 用户编号
+     * @param password 新密码明文
+     */
+    void resetUserPassword(Long id, String password);
+
 }

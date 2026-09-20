@@ -13,6 +13,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.enums.CommonConstants;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.date.DateUtils;
@@ -20,6 +21,7 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.web.core.util.WebFrameworkUtils;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantTrialCreateReqDTO;
+import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantCreateReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantExportReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantPageReqVO;
@@ -34,9 +36,12 @@ import com.shengyu.module.system.api.permission.PermissionApi;
 import com.shengyu.module.system.api.permission.RoleApi;
 import com.shengyu.module.system.api.permission.dto.RoleSimpleRespDTO;
 import com.shengyu.module.system.api.user.AdminUserApi;
+import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +67,9 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
 
     @Resource
     private AdminUserApi adminUserApi;
+
+    @Resource
+    private MailSendApi mailSendApi;
 
     @Resource
     private RoleApi roleApi;
@@ -159,6 +167,27 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         if (ObjectUtil.notEqual(tenant.getPackageId(), updateReqVO.getPackageId())) {
             updateTenantRoleMenu(tenant.getId(), tenantPackage.getMenuIds());
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetTenantAdminPassword(Long id, String password) {
+        TenantDO tenant = validateUpdateTenant(id);
+        Assert.notNull(tenant.getContactUserId(), "租户未配置超管账号，无法重置密码");
+        AdminUserRespDTO adminUser = TenantUtils.execute(id, () -> {
+            adminUserApi.resetUserPassword(tenant.getContactUserId(), password);
+            return adminUserApi.getUser(tenant.getContactUserId());
+        });
+        Assert.notNull(adminUser, "租户超管账号不存在，无法重置密码");
+        String mail = StrUtil.blankToDefault(adminUser.getEmail(), adminUser.getUsername());
+        Assert.isTrue(StrUtil.isNotBlank(mail), "租户超管未配置邮箱，无法发送新密码");
+
+        Map<String, Object> templateParams = new HashMap<>();
+        templateParams.put("tenantName", tenant.getName());
+        templateParams.put("username", adminUser.getUsername());
+        templateParams.put("password", password);
+        mailSendApi.sendSingleMail(mail, adminUser.getId(), UserTypeEnum.ADMIN.getValue(),
+                "tenant-reset-admin-password", templateParams);
     }
 
     private void validTenantNameDuplicate(String name, Long id) {

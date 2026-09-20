@@ -44,6 +44,14 @@ public interface PlatformTenantService {
     void updateTenant(@Valid TenantUpdateReqVO updateReqVO);
 
     /**
+     * 重置租户超管密码。
+     *
+     * @param id 租户编号
+     * @param password 新密码
+     */
+    void resetTenantAdminPassword(Long id, String password);
+
+    /**
      * 更新租户的角色菜单
      *
      * @param tenantId 租户编号

@@ -674,3 +674,33 @@ html.dark body.semi {
     background-color: var(--el-fill-color-light) !important;
   }
 }
+
+/* 工作台独立卡片的暗色表面。全局作用域确保覆盖页面内硬编码的浅色背景。 */
+html.dark .tenant-workbench {
+  --ink: var(--el-text-color-primary) !important;
+  --muted: var(--el-text-color-secondary) !important;
+
+  .metric-card,
+  .panel {
+    background: var(--el-bg-color) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16) !important;
+  }
+
+  .metric-card:hover,
+  .quick-action:hover { background: var(--el-fill-color-light) !important; }
+  .quick-action { color: var(--el-text-color-primary) !important; }
+  .notice-item { border-bottom-color: rgba(255, 255, 255, 0.07) !important; }
+  .notice-content b { color: var(--el-text-color-primary) !important; }
+  .notice-content small,
+  .panel-hint,
+  .empty-state { color: var(--el-text-color-secondary) !important; }
+  .indigo .metric-icon,
+  .quick-icon.indigo { background: #282550 !important; color: #a9a2ff !important; }
+  .mint .metric-icon { background: #153b35 !important; color: #5fddad !important; }
+  .amber .metric-icon,
+  .quick-icon.amber { background: #472f16 !important; color: #ffbf63 !important; }
+  .quick-icon.violet { background: #38234d !important; color: #d1a8ff !important; }
+  .quick-icon.cyan { background: #153b46 !important; color: #70d7ed !important; }
+  .notice-dot { box-shadow: 0 0 0 4px #29254c !important; }
+}

@@ -4,6 +4,7 @@ export interface TenantVO {
   id: number
   name: string
   contactName: string
+  contactUserName: string
   contactMobile: string
   status: number
   website: string
@@ -54,6 +55,11 @@ export const updateTenant = (data: TenantVO) => {
 // 删除租户
 export const deleteTenant = (id: number) => {
   return request.delete({ url: '/system/tenant/delete?id=' + id })
+}
+
+// 重置租户超管密码
+export const resetTenantAdminPassword = (id: number, password: string) => {
+  return request.put({ url: '/system/tenant/reset-admin-password', data: { id, password } })
 }
 
 // 导出租户

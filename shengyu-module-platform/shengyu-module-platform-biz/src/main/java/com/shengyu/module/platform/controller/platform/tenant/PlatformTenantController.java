@@ -13,6 +13,7 @@ import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantEx
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantExportReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantPageReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantRespVO;
+import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantResetPasswordReqVO;
 import com.shengyu.module.platform.controller.platform.tenant.vo.tenant.TenantUpdateReqVO;
 import com.shengyu.module.platform.dal.dataobject.tenant.TenantDO;
 import com.shengyu.module.platform.service.tenant.PlatformTenantService;
@@ -64,6 +65,14 @@ public class PlatformTenantController {
     @PreAuthorize("@ps.hasPermission('system:tenant:update')")
     public CommonResult<Boolean> updateTenant(@Valid @RequestBody TenantUpdateReqVO updateReqVO) {
         platformTenantService.updateTenant(updateReqVO);
+        return success(true);
+    }
+
+    @PutMapping("/reset-admin-password")
+    @Operation(summary = "重置租户超管密码")
+    @PreAuthorize("@ps.hasPermission('system:tenant:update')")
+    public CommonResult<Boolean> resetTenantAdminPassword(@Valid @RequestBody TenantResetPasswordReqVO reqVO) {
+        platformTenantService.resetTenantAdminPassword(reqVO.getId(), reqVO.getPassword());
         return success(true);
     }
 

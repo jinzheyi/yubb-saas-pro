@@ -674,3 +674,43 @@ html.dark body.semi {
     background-color: var(--el-fill-color-light) !important;
   }
 }
+
+/* 工作台使用了独立的视觉表面，必须在全局暗色作用域强制覆盖其浅色卡片底色。
+ * 不能仅依赖页面 scoped 样式：部分构建场景下 scoped 选择器的注入顺序会晚于主题包。 */
+html.dark .platform-workbench {
+  --ink: var(--el-text-color-primary) !important;
+  --muted: var(--el-text-color-secondary) !important;
+
+  .metric-card,
+  .panel {
+    background: var(--el-bg-color) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16) !important;
+  }
+
+  .metric-card:hover,
+  .tenant-row:hover {
+    background: var(--el-fill-color-light) !important;
+  }
+
+  .insight-panel {
+    background: linear-gradient(135deg, #1d2341, #171d35) !important;
+  }
+
+  .tenant-row { border-bottom-color: rgba(255, 255, 255, 0.07) !important; }
+  .tenant-name b,
+  .notice-row b { color: var(--el-text-color-primary) !important; }
+  .tenant-name small,
+  .notice-row small,
+  .insight-top p,
+  .empty-state,
+  .notice-empty { color: var(--el-text-color-secondary) !important; }
+  .blue { background: #16294e !important; color: #74a8ff !important; }
+  .violet { background: #29234e !important; color: #aaa1ff !important; }
+  .mint { background: #153b35 !important; color: #5fddad !important; }
+  .amber { background: #472f16 !important; color: #ffbf63 !important; }
+  .tenant-avatar { background: linear-gradient(135deg, #282554, #1e2543) !important; color: #b3aeff !important; }
+  .tenant-status { background: #452d17 !important; color: #ffc36a !important; }
+  .tenant-status.healthy { background: #163a31 !important; color: #69d9ae !important; }
+  .progress { background: #303956 !important; }
+}

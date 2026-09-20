@@ -105,4 +105,9 @@ public class AdminUserApiImpl implements AdminUserApi {
         return adminUserService.createUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class));
     }
 
+    @Override
+    public void resetUserPassword(Long id, String password) {
+        adminUserService.updateUserPassword(id, password);
+    }
+
 }

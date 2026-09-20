@@ -150,6 +150,15 @@
             编辑
           </el-button>
           <el-button
+            class="tenant-reset-password-button"
+            link
+            type="warning"
+            @click="handleResetAdminPassword(scope.row)"
+            v-hasPermi="['system:tenant:update']"
+          >
+            <Icon icon="ep:key" />重置密码
+          </el-button>
+          <el-button
             link
             type="danger"
             @click="handleDelete(scope.row.id)"
@@ -244,6 +253,19 @@ const handleDelete = async (id: number) => {
   } catch {}
 }
 
+/** 重置租户超管密码 */
+const handleResetAdminPassword = async (row: TenantApi.TenantVO) => {
+  try {
+    const result = await message.prompt(
+      `请输入租户“${row.name}”超管账号“${row.contactUserName || row.username}”的新密码`,
+      '重置超管密码'
+    )
+    const password = result.value
+    await TenantApi.resetTenantAdminPassword(row.id, password)
+    message.success('密码已重置，最新密码已发送至租户超管邮箱')
+  } catch {}
+}
+
 /** 导出按钮操作 */
 const handleExport = async () => {
   try {
@@ -265,3 +287,25 @@ onMounted(async () => {
   packageList.value = await TenantPackageApi.getTenantPackageList()
 })
 </script>
+
+<style lang="scss" scoped>
+:deep(.tenant-reset-password-button.el-button.is-link) {
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: #b45309;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+:deep(.tenant-reset-password-button.el-button.is-link:hover),
+:deep(.tenant-reset-password-button.el-button.is-link:focus-visible) {
+  color: #92400e;
+  background-color: #fff7ed;
+}
+
+:deep(.tenant-reset-password-button.el-button.is-link:active) {
+  color: #78350f;
+  background-color: #ffedd5;
+}
+</style>

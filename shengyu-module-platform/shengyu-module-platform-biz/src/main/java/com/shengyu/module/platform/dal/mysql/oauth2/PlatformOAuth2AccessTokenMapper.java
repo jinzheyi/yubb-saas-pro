@@ -6,12 +6,17 @@ import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.platform.controller.platform.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import com.shengyu.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
 public interface PlatformOAuth2AccessTokenMapper extends BaseMapperX<PlatformOAuth2AccessTokenDO> {
+
+    @Select("SELECT COUNT(DISTINCT user_id) FROM platform_oauth2_access_token "
+            + "WHERE deleted = 0 AND expires_time > #{now}")
+    Long selectOnlineUserCount(LocalDateTime now);
 
     default PlatformOAuth2AccessTokenDO selectByAccessToken(String accessToken) {
         return selectOne(PlatformOAuth2AccessTokenDO::getAccessToken, accessToken);
